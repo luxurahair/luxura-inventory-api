@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from sqlmodel import SQLModel, Session, select
 from .db import engine
 from .models import Salon, SalonCreate, Product, ProductCreate
@@ -17,7 +17,8 @@ def list_salons():
 
 @app.post("/salons", response_model=Salon)
 def create_salon(payload: SalonCreate):
-    salon = Salon(**payload.dict())
+    # Pydantic v2 → model_dump()
+    salon = Salon(**payload.model_dump())
     with Session(engine) as session:
         session.add(salon)
         session.commit()
@@ -32,7 +33,7 @@ def list_products():
 
 @app.post("/products", response_model=Product)
 def create_product(payload: ProductCreate):
-    prod = Product(**payload.dict())
+    prod = Product(**payload.model_dump())
     with Session(engine) as session:
         session.add(prod)
         session.commit()
