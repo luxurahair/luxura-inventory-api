@@ -1,7 +1,6 @@
 from typing import Optional
 from sqlmodel import SQLModel, Field
 
-# ---- Salon
 class SalonBase(SQLModel):
     name: str
     address: Optional[str] = None
@@ -12,7 +11,7 @@ class Salon(SalonBase, table=True):
 class SalonCreate(SalonBase):
     pass
 
-# ---- Product
+
 class ProductBase(SQLModel):
     sku: str
     name: str
