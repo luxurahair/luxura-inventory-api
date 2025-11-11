@@ -1,64 +1,40 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import select
-from app.db import init_db, get_session
-from app.models import Salon, Product, Inventory, Movement
+from sqlmodel import SQLModel, Session, select
+from .db import engine
+from .models import Salon, SalonCreate, Product, ProductCreate
 
-app = FastAPI(title="Luxura Inventory")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="Luxura Inventory API")
 
 @app.on_event("startup")
-def startup():
-    init_db()
+def on_startup():
+    SQLModel.metadata.create_all(engine)
 
-@app.post("/salons")
-def create_salon(salon: Salon):
-    with get_session() as session:
+# -------- Salons
+@app.get("/salons", response_model=list[Salon])
+def list_salons():
+    with Session(engine) as session:
+        return session.exec(select(Salon)).all()
+
+@app.post("/salons", response_model=Salon)
+def create_salon(payload: SalonCreate):
+    salon = Salon(**payload.dict())
+    with Session(engine) as session:
         session.add(salon)
         session.commit()
         session.refresh(salon)
         return salon
 
-@app.get("/salons")
-def list_salons():
-    with get_session() as session:
-        return session.exec(select(Salon)).all()
-
-@app.post("/products")
-def create_product(product: Product):
-    with get_session() as session:
-        session.add(product)
-        session.commit()
-        session.refresh(product)
-        return product
-
-@app.get("/products")
+# -------- Products
+@app.get("/products", response_model=list[Product])
 def list_products():
-    with get_session() as session:
+    with Session(engine) as session:
         return session.exec(select(Product)).all()
 
-@app.post("/movement")
-def movement(type: str, salon_id: int, product_id: int, qty: int, note: str=""):
-    with get_session() as session:
-        inv = session.exec(select(Inventory).where(Inventory.salon_id==salon_id, Inventory.product_id==product_id)).first()
-        if not inv:
-            inv = Inventory(salon_id=salon_id, product_id=product_id, quantity=0)
-        inv.quantity += qty
-        if inv.quantity < 0:
-            raise HTTPException(400, "Stock insuffisant")
-        session.add(inv)
-        mov = Movement(type=type, salon_id=salon_id, product_id=product_id, qty=qty, note=note)
-        session.add(mov)
+@app.post("/products", response_model=Product)
+def create_product(payload: ProductCreate):
+    prod = Product(**payload.dict())
+    with Session(engine) as session:
+        session.add(prod)
         session.commit()
-        return {"ok": True}
-
-@app.get("/inventory")
-def inventory():
-    with get_session() as session:
-        return session.exec(select(Inventory)).all()
+        session.refresh(prod)
+        return prod
