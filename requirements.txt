@@ -1,13 +1,15 @@
-fastapi==0.103.2
-starlette==0.27.0
-anyio==3.7.1
-typing-extensions==4.8.0
+fastapi==0.115.5
+starlette==0.41.2
+anyio==4.4.0
+typing-extensions==4.12.2
 
-uvicorn[standard]==0.22.0
+uvicorn[standard]==0.30.6
 
-sqlmodel==0.0.16
-SQLAlchemy==2.0.23
-pydantic==1.10.13
+sqlmodel==0.0.22
+SQLAlchemy==2.0.35
+
+pydantic==2.8.2
+pydantic-core==2.20.1
 
 pg8000==1.31.2
 python-dotenv==1.0.1
