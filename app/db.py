@@ -1,11 +1,10 @@
 import os
-from sqlmodel import SQLModel, create_engine, Session
+from sqlmodel import create_engine
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///app.db")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "sqlite:///app.db"  # fallback local
+)
+
+# echo=False pour des logs propres
 engine = create_engine(DATABASE_URL, echo=False)
-
-def init_db():
-    SQLModel.metadata.create_all(engine)
-
-def get_session():
-    return Session(engine)
