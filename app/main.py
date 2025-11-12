@@ -1,32 +1,22 @@
+# app/main.py
 from fastapi import FastAPI
-from sqlmodel import SQLModel
-from app.db import engine  # importe ton moteur SQLAlchemy configuré dans app/db.py
-from app import models  # importe tes modèles SQLModel (ex: Salon, Product, etc.)
+from app.db import init_db
+from sqlmodel import Session, select
+from app import models  # assure-toi que tes modèles sont importés pour être enregistrés
 
-app = FastAPI(
-    title="Luxura Inventory API",
-    description="API de gestion d’inventaire pour Luxura Distribution",
-    version="1.0.0"
-)
+app = FastAPI(title="Luxura Inventory API")
 
-# --- Événement au démarrage ---
 @app.on_event("startup")
 def on_startup():
-    print("[BOOT] Initialisation de la base de données...", flush=True)
-    SQLModel.metadata.create_all(engine)
-    print("[BOOT] Tables créées (si absentes).", flush=True)
+    init_db()
 
-# --- Route simple pour tester ---
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "status": "Luxura API running"}
+    return {"ok": True}
 
-# --- Exemple de routes ---
-@app.get("/salons")
-def list_salons():
-    """
-    Exemple de route temporaire
-    (remplace ou étends avec tes vraies routes de ton app)
-    """
-    return {"message": "Endpoint /salons fonctionnel"}
-
+# Exemple simple si tu as un modèle Salon
+# from app.models import Salon
+# @app.get("/salons")
+# def list_salons():
+#     with Session(models.engine) as s:  # ou importe engine depuis app.db si tu l’exportes
+#         return s.exec(select(Salon)).all()
