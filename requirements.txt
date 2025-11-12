@@ -2,7 +2,6 @@ fastapi==0.115.5
 starlette==0.41.2
 anyio==4.4.0
 typing-extensions==4.12.2
-
 uvicorn[standard]==0.30.6
 
 sqlmodel==0.0.22
@@ -11,5 +10,5 @@ SQLAlchemy==2.0.35
 pydantic==2.8.2
 pydantic-core==2.20.1
 
-pg8000==1.31.2
+psycopg2-binary==2.9.9
 python-dotenv==1.0.1
