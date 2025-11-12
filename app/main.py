@@ -1,41 +1,32 @@
 from fastapi import FastAPI
-from sqlmodel import SQLModel, Session, select
-from .db import engine
-from .models import Salon, SalonCreate, Product, ProductCreate
+from sqlmodel import SQLModel
+from app.db import engine  # importe ton moteur SQLAlchemy configuré dans app/db.py
+from app import models  # importe tes modèles SQLModel (ex: Salon, Product, etc.)
 
-app = FastAPI(title="Luxura Inventory API")
+app = FastAPI(
+    title="Luxura Inventory API",
+    description="API de gestion d’inventaire pour Luxura Distribution",
+    version="1.0.0"
+)
 
+# --- Événement au démarrage ---
 @app.on_event("startup")
 def on_startup():
+    print("[BOOT] Initialisation de la base de données...", flush=True)
     SQLModel.metadata.create_all(engine)
+    print("[BOOT] Tables créées (si absentes).", flush=True)
 
-# -------- Salons
-@app.get("/salons", response_model=list[Salon])
+# --- Route simple pour tester ---
+@app.get("/healthz")
+def healthz():
+    return {"ok": True, "status": "Luxura API running"}
+
+# --- Exemple de routes ---
+@app.get("/salons")
 def list_salons():
-    with Session(engine) as session:
-        return session.exec(select(Salon)).all()
+    """
+    Exemple de route temporaire
+    (remplace ou étends avec tes vraies routes de ton app)
+    """
+    return {"message": "Endpoint /salons fonctionnel"}
 
-@app.post("/salons", response_model=Salon)
-def create_salon(payload: SalonCreate):
-    # Pydantic v2 → model_dump()
-    salon = Salon(**payload.model_dump())
-    with Session(engine) as session:
-        session.add(salon)
-        session.commit()
-        session.refresh(salon)
-        return salon
-
-# -------- Products
-@app.get("/products", response_model=list[Product])
-def list_products():
-    with Session(engine) as session:
-        return session.exec(select(Product)).all()
-
-@app.post("/products", response_model=Product)
-def create_product(payload: ProductCreate):
-    prod = Product(**payload.model_dump())
-    with Session(engine) as session:
-        session.add(prod)
-        session.commit()
-        session.refresh(prod)
-        return prod
