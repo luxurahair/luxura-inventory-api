@@ -67,6 +67,10 @@ try_include("app.routes.inventory:router", prefix="/inventory", tags=["inventory
 # ──────────────────────────────────────────────────────────────────────────────
 # Endpoints de base
 # ──────────────────────────────────────────────────────────────────────────────
+@app.head("/")
+def root_head():
+    return {"status": "ok"}
+
 @app.get("/", summary="Ping API")
 def root():
     return {"status": "ok", "app": "Luxura API"}
