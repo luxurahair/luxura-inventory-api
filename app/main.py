@@ -60,9 +60,8 @@ def try_include(router_path: str, prefix: str, tags: Optional[list[str]] = None)
         pass
 
 # Exemple: si tu as app/routes/salons.py avec `router = APIRouter()`
-try_include("app.routes.salons:router", prefix="/salons", tags=["salons"])
 try_include("app.routes.products:router", prefix="/products", tags=["products"])
-try_include("app.routes.inventory:router", prefix="/inventory", tags=["inventory"])
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Endpoints de base
