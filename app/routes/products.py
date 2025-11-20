@@ -1,64 +1,28 @@
 # app/routes/products.py
 
-from typing import Optional, List
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import SQLModel, Field, Session, select
+from sqlmodel import Session, select
 
 from app.db import engine
+from app.models import Product, ProductCreate, ProductRead, ProductUpdate
 
 router = APIRouter()
 
 
-# ─────────────────────────────────────────────────────────
-# Modèles SQLModel
-# ─────────────────────────────────────────────────────────
-
-class ProductBase(SQLModel):
-    """Champs communs d'un produit."""
-    name: str
-    category: Optional[str] = None
-    description: Optional[str] = None
-    price: float
-    active: bool = True
-
-
-class Product(ProductBase, table=True):
-    """Table products dans la DB."""
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-
-class ProductCreate(ProductBase):
-    """Payload pour créer un produit."""
-    pass
-
-
-class ProductRead(ProductBase):
-    """Réponse retournée à l'API."""
-    id: int
-
-
-class ProductUpdate(SQLModel):
-    """Payload partiel pour mise à jour."""
-    name: Optional[str] = None
-    category: Optional[str] = None
-    description: Optional[str] = None
-    price: Optional[float] = None
-    active: Optional[bool] = None
-
-
-# ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────
 # Session DB
-# ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────
 
 def get_session():
     with Session(engine) as session:
         yield session
 
 
-# ─────────────────────────────────────────────────────────
-# Routes CRUD
-# ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────
+# Routes CRUD Produits
+# ─────────────────────────────────────────
 
 @router.post("/", response_model=ProductRead, summary="Créer un produit")
 def create_product(
