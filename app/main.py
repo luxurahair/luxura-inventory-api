@@ -6,6 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import init_db
+from app.routes.products import router as products_router
+
 from app.routes.products import router as products_router  # 👈 import direct
 
 
