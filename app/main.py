@@ -8,21 +8,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db import init_db
 from app.routes.products import router as products_router
 
-from app.routes.products import router as products_router  # 👈 import direct
 
-
-# ─────────────────────────────────────────────────────────
-# Lifespan: création des tables au démarrage
-# ─────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Création des tables au démarrage
     init_db()
     yield
+    # teardown éventuel plus tard si besoin
 
 
-# ─────────────────────────────────────────────────────────
-# App
-# ─────────────────────────────────────────────────────────
 app = FastAPI(
     title="Luxura API",
     version="1.0.0",
@@ -41,13 +35,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 👉 On enregistre explicitement le router des produits
+# Inclusion du router produits
 app.include_router(products_router, prefix="/products", tags=["products"])
 
 
-# ─────────────────────────────────────────────────────────
-# Endpoints de base
-# ─────────────────────────────────────────────────────────
 @app.head("/")
 def root_head():
     return {"status": "ok"}
@@ -66,3 +57,4 @@ def healthz():
 @app.get("/version", summary="Version de l'API")
 def version():
     return {"version": app.version}
+
