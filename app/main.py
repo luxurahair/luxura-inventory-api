@@ -5,6 +5,7 @@ from typing import Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.routes.products import router as products_router
 
 # Import DB init (création des tables) et, optionnellement, le moteur
 from app.db import init_db
@@ -40,6 +41,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Inclure explicitement le router products
+app.include_router(products_router, prefix="/products", tags=["products"])
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Inclusions conditionnelles de routeurs si présents
@@ -60,7 +63,7 @@ def try_include(router_path: str, prefix: str, tags: Optional[list[str]] = None)
         pass
 
 # Exemple: si tu as app/routes/salons.py avec `router = APIRouter()`
-try_include("app.routes.products:router", prefix="/products", tags=["products"])
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────
