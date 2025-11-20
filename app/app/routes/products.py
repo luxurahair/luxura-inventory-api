@@ -1,5 +1,5 @@
 
-# app/routes/products.py
+# routes/products.py
 
 from typing import Optional, List
 
