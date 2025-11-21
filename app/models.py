@@ -4,12 +4,15 @@ from typing import Optional
 from sqlmodel import SQLModel, Field
 
 # ─────────────────────────────────────────
-# Modèles Produits
+# PRODUITS
 # ─────────────────────────────────────────
 
 class ProductBase(SQLModel):
-    """Champs communs d'un produit."""
-    name: str
+    """Champs communs d'un produit Luxura."""
+    sku: str                      # ex: "TAPE-18-60A"
+    name: str                     # Nom du produit
+    length: Optional[str] = None  # ex: "18", "20", "18-20"
+    color: Optional[str] = None   # ex: "60A", "N8"
     category: Optional[str] = None
     description: Optional[str] = None
     price: float
@@ -33,11 +36,16 @@ class ProductRead(ProductBase):
 
 class ProductUpdate(SQLModel):
     """Payload partiel pour mise à jour."""
+    sku: Optional[str] = None
     name: Optional[str] = None
+    length: Optional[str] = None
+    color: Optional[str] = None
     category: Optional[str] = None
     description: Optional[str] = None
     price: Optional[float] = None
     active: Optional[bool] = None
+
+
 # ─────────────────────────────────────────
 # SALONS
 # ─────────────────────────────────────────
@@ -62,45 +70,6 @@ class SalonRead(SalonBase):
 class SalonUpdate(SQLModel):
     name: Optional[str] = None
     address: Optional[str] = None
-
-
-# ─────────────────────────────────────────
-# PRODUITS
-# ─────────────────────────────────────────
-# On ajoute ce que ton interface affiche: SKU, longueur, couleur, prix…
-
-class ProductBase(SQLModel):
-    sku: str                      # ex: "TAPE-18-60A"
-    name: str                     # Nom du produit
-    length: Optional[str] = None  # ex: "18", "20", "18-20"
-    color: Optional[str] = None   # ex: "60A", "N8"
-    category: Optional[str] = None
-    description: Optional[str] = None
-    price: float
-    active: bool = True
-
-
-class Product(ProductBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-
-class ProductCreate(ProductBase):
-    pass
-
-
-class ProductRead(ProductBase):
-    id: int
-
-
-class ProductUpdate(SQLModel):
-    sku: Optional[str] = None
-    name: Optional[str] = None
-    length: Optional[str] = None
-    color: Optional[str] = None
-    category: Optional[str] = None
-    description: Optional[str] = None
-    price: Optional[float] = None
-    active: Optional[bool] = None
 
 
 # ─────────────────────────────────────────
