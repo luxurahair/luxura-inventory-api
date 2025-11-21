@@ -11,9 +11,8 @@ from app.models import Salon, SalonCreate, SalonRead, SalonUpdate
 router = APIRouter()
 
 
-def get_session():
-    with Session(engine) as session:
-        yield session
+from app.db import get_session
+
 
 
 # ─────────────────────────────────────────
