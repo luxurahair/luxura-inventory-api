@@ -1,12 +1,12 @@
 # app/main.py
 from contextlib import asynccontextmanager
 import os
+from typing import Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import init_db
-from app.routes.products import router as products_router
 
 
 @asynccontextmanager
@@ -24,10 +24,10 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
-app.include_router(products_router, prefix="/products", tags=["products"])
-app.include_router(salons_router, prefix="/salons", tags=["salons"])
-app.include_router(inventory_router, prefix="/inventory", tags=["inventory"])
+
+# ─────────────────────────────────────────────
 # CORS
+# ─────────────────────────────────────────────
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*")
 app.add_middleware(
     CORSMiddleware,
@@ -37,10 +37,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inclusion du router produits
+# ─────────────────────────────────────────────
+# Import et inclusion du router products
+# ─────────────────────────────────────────────
+from app.routes.products import router as products_router
+
 app.include_router(products_router, prefix="/products", tags=["products"])
 
 
+# ─────────────────────────────────────────────
+# Endpoints de base
+# ─────────────────────────────────────────────
 @app.head("/")
 def root_head():
     return {"status": "ok"}
@@ -59,4 +66,3 @@ def healthz():
 @app.get("/version", summary="Version de l'API")
 def version():
     return {"version": app.version}
-
