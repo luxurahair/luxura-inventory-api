@@ -3,7 +3,41 @@ from typing import Optional
 
 from sqlmodel import SQLModel, Field
 
+# ─────────────────────────────────────────
+# Modèles Produits
+# ─────────────────────────────────────────
 
+class ProductBase(SQLModel):
+    """Champs communs d'un produit."""
+    name: str
+    category: Optional[str] = None
+    description: Optional[str] = None
+    price: float
+    active: bool = True
+
+
+class Product(ProductBase, table=True):
+    """Table products dans la DB."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+
+class ProductCreate(ProductBase):
+    """Payload pour créer un produit."""
+    pass
+
+
+class ProductRead(ProductBase):
+    """Réponse retournée à l'API."""
+    id: int
+
+
+class ProductUpdate(SQLModel):
+    """Payload partiel pour mise à jour."""
+    name: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    active: Optional[bool] = None
 # ─────────────────────────────────────────
 # SALONS
 # ─────────────────────────────────────────
