@@ -30,9 +30,7 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
-app.include_router(products_router, prefix="/products", tags=["products"])
-app.include_router(salons_router, prefix="/salons", tags=["salons"])
-app.include_router(inventory_router, prefix="/inventory", tags=["inventory"])
+
 # ─────────────────────────────────────────────
 # CORS
 # ─────────────────────────────────────────────
@@ -46,11 +44,7 @@ app.add_middleware(
 )
 
 # ─────────────────────────────────────────────
-# Import et inclusion du router products
-# ─────────────────────────────────────────────
-from app.routes.products import router as products_router
 
-app.include_router(products_router, prefix="/products", tags=["products"])
 
 
 # ─────────────────────────────────────────────
