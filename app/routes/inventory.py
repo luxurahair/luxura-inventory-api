@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
-from app.db import engine
+from app.db import get_session
 from app.models import (
     InventoryItem,
     InventoryCreate,
@@ -15,22 +15,23 @@ from app.models import (
 
 router = APIRouter()
 
-
-from app.db import get_session
-
-
-
 # ─────────────────────────────────────────
 # Routes Inventaire par salon
 # ─────────────────────────────────────────
 
-@router.post("/", response_model=InventoryRead, summary="Créer / définir un stock")
+@router.post(
+    "/",
+    response_model=InventoryRead,
+    summary="Créer / définir un stock",
+)
 def create_inventory_item(
     item_in: InventoryCreate,
     session: Session = Depends(get_session),
-):
-    # Option simple : on crée une nouvelle ligne,
-    # même si salon_id + product_id existent déjà.
+) -> InventoryRead:
+    """
+    Crée une nouvelle ligne d'inventaire pour un salon et un produit.
+    (Pas de logique de "upsert" ici : on crée une nouvelle ligne à chaque appel.)
+    """
     item = InventoryItem(**item_in.model_dump())
     session.add(item)
     session.commit()
@@ -38,12 +39,20 @@ def create_inventory_item(
     return item
 
 
-@router.get("/", response_model=List[InventoryRead], summary="Lister l'inventaire")
+@router.get(
+    "/",
+    response_model=List[InventoryRead],
+    summary="Lister l'inventaire",
+)
 def list_inventory(
     session: Session = Depends(get_session),
     salon_id: Optional[int] = Query(default=None),
     product_id: Optional[int] = Query(default=None),
-):
+) -> List[InventoryRead]:
+    """
+    Liste les lignes d'inventaire, avec possibilité de filtrer
+    par salon_id et/ou product_id.
+    """
     statement = select(InventoryItem)
 
     if salon_id is not None:
@@ -56,23 +65,37 @@ def list_inventory(
     return items
 
 
-@router.get("/{item_id}", response_model=InventoryRead, summary="Récupérer une ligne d'inventaire")
+@router.get(
+    "/{item_id}",
+    response_model=InventoryRead,
+    summary="Récupérer une ligne d'inventaire",
+)
 def get_inventory_item(
     item_id: int,
     session: Session = Depends(get_session),
-):
+) -> InventoryRead:
+    """
+    Récupère une ligne d'inventaire par son ID.
+    """
     item = session.get(InventoryItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Ligne d'inventaire introuvable")
     return item
 
 
-@router.put("/{item_id}", response_model=InventoryRead, summary="Mettre à jour une ligne d'inventaire")
+@router.put(
+    "/{item_id}",
+    response_model=InventoryRead,
+    summary="Mettre à jour une ligne d'inventaire",
+)
 def update_inventory_item(
     item_id: int,
     item_in: InventoryUpdate,
     session: Session = Depends(get_session),
-):
+) -> InventoryRead:
+    """
+    Met à jour une ligne d'inventaire existante.
+    """
     item = session.get(InventoryItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Ligne d'inventaire introuvable")
@@ -87,11 +110,17 @@ def update_inventory_item(
     return item
 
 
-@router.delete("/{item_id}", summary="Supprimer une ligne d'inventaire")
+@router.delete(
+    "/{item_id}",
+    summary="Supprimer une ligne d'inventaire",
+)
 def delete_inventory_item(
     item_id: int,
     session: Session = Depends(get_session),
-):
+) -> dict:
+    """
+    Supprime une ligne d'inventaire par son ID.
+    """
     item = session.get(InventoryItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Ligne d'inventaire introuvable")
