@@ -1,22 +1,14 @@
 # app/routes/products.py
 
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.db import engine
+from app.db import get_session
 from app.models import Product, ProductCreate, ProductRead, ProductUpdate
 
 router = APIRouter()
-
-
-# ─────────────────────────────────────────
-# Session DB
-# ─────────────────────────────────────────
-
-from app.db import get_session
-
 
 
 # ─────────────────────────────────────────
