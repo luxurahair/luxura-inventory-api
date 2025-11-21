@@ -1,10 +1,12 @@
 # app/db.py
 import os
 from typing import Generator
+
 from sqlmodel import SQLModel, Session, create_engine
 
 
 def _normalize_database_url(url: str) -> str:
+    """Normalise l’URL de connexion pour supporter sqlite / postgres / render."""
     if not url:
         return "sqlite:///./data.db"
 
@@ -26,6 +28,7 @@ def _normalize_database_url(url: str) -> str:
 
 
 def _build_engine(url: str):
+    """Construit l'engine SQLAlchemy / SQLModel."""
     if url.startswith("sqlite:"):
         return create_engine(
             url,
@@ -55,9 +58,18 @@ except Exception:
 
 
 def init_db() -> None:
+    """
+    Initialise la base de données :
+    - importe les modèles (Product, Salon, InventoryItem, etc.)
+    - crée les tables si elles n'existent pas
+    """
+    # import obligatoire pour que les modèles soient enregistrés dans SQLModel.metadata
+    from app import models  # noqa: F401
+
     SQLModel.metadata.create_all(engine)
 
 
 def get_session() -> Generator[Session, None, None]:
+    """Dépendance FastAPI qui fournit une session DB."""
     with Session(engine) as session:
         yield session
