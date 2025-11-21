@@ -1,9 +1,10 @@
 # app/routes/inventory.py
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
+from sqlalchemy import func
 
 from app.db import get_session
 from app.models import (
@@ -11,6 +12,8 @@ from app.models import (
     InventoryCreate,
     InventoryRead,
     InventoryUpdate,
+    Product,
+    Salon,
 )
 
 router = APIRouter()
@@ -128,3 +131,64 @@ def delete_inventory_item(
     session.delete(item)
     session.commit()
     return {"ok": True}
+
+
+# ─────────────────────────────────────────
+# Résumé global de l'inventaire
+# ─────────────────────────────────────────
+
+@router.get(
+    "/summary",
+    summary="Résumé d'inventaire par produit et par salon",
+)
+def inventory_summary(
+    session: Session = Depends(get_session),
+) -> List[Dict[str, Any]]:
+    """
+    Pour chaque produit (SKU), retourne :
+    - la quantité totale (tous salons confondus)
+    - la répartition de cette quantité par salon
+    """
+
+    # 1) Agrégation DB : Product + Salon + SUM(InventoryItem.quantity)
+    stmt = (
+        select(
+            Product.id,
+            Product.sku,
+            Product.name,
+            Salon.id,
+            Salon.name,
+            func.sum(InventoryItem.quantity),
+        )
+        .join(Product, Product.id == InventoryItem.product_id)
+        .join(Salon, Salon.id == InventoryItem.salon_id)
+        .group_by(Product.id, Product.sku, Product.name, Salon.id, Salon.name)
+    )
+
+    rows = session.exec(stmt).all()
+
+    # 2) Regroupement par produit côté Python
+    summary: Dict[int, Dict[str, Any]] = {}
+
+    for product_id, sku, product_name, salon_id, salon_name, qty in rows:
+        qty = qty or 0
+
+        if product_id not in summary:
+            summary[product_id] = {
+                "product_id": product_id,
+                "sku": sku,
+                "name": product_name,
+                "total_quantity": 0,
+                "by_salon": [],
+            }
+
+        summary[product_id]["total_quantity"] += qty
+        summary[product_id]["by_salon"].append(
+            {
+                "salon_id": salon_id,
+                "salon_name": salon_name,
+                "quantity": qty,
+            }
+        )
+
+    return list(summary.values())
