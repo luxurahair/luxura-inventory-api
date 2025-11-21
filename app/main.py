@@ -9,6 +9,7 @@ from app.db import init_db
 from app.routes.products import router as products_router
 from app.routes.salons import router as salons_router
 from app.routes.inventory import router as inventory_router
+from app.routes.wix import router as wix_router
 
 
 @asynccontextmanager
@@ -45,7 +46,7 @@ app.add_middleware(
 app.include_router(products_router, prefix="/products", tags=["products"])
 app.include_router(salons_router, prefix="/salons", tags=["salons"])
 app.include_router(inventory_router, prefix="/inventory", tags=["inventory"])
-
+app.include_router(wix_router, prefix="/webhooks", tags=["wix"])
 
 # ─────────────────────────────────────────
 # Endpoints de base
