@@ -192,3 +192,4 @@ def inventory_summary(
         )
 
     return list(summary.values())
+
