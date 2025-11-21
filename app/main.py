@@ -8,6 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import init_db
 
+# 👉 IMPORT DES ROUTERS
+from app.routes.products import router as products_router
+from app.routes.salons import router as salons_router
+from app.routes.inventory import router as inventory_router
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,7 +30,9 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
-
+app.include_router(products_router, prefix="/products", tags=["products"])
+app.include_router(salons_router, prefix="/salons", tags=["salons"])
+app.include_router(inventory_router, prefix="/inventory", tags=["inventory"])
 # ─────────────────────────────────────────────
 # CORS
 # ─────────────────────────────────────────────
