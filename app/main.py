@@ -67,12 +67,19 @@ def version():
     return app.version
 
 
+from app.routes import products, salons, inventory, wix
+# ...
+
 # --------- Routers métier --------- #
 
+# 1) D'ABORD le router Wix (routes fixes comme /wix-sites)
+app.include_router(wix.router)
+
+# 2) Ensuite les autres
 app.include_router(products.router)
 app.include_router(salons.router)
 app.include_router(inventory.router)
-app.include_router(wix.router)
+
 
 
 # --------- DEBUG : lister les sites Wix --------- #
