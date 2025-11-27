@@ -8,7 +8,7 @@ from typing import List, Dict, Any
 import requests
 from sqlmodel import Session, select
 
-from app.database import engine
+from app.db import engine
 from app.models import Product, Salon, InventoryItem  # adapte les imports au besoin
 
 
