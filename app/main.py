@@ -17,7 +17,8 @@ origins_env = os.getenv("CORS_ORIGINS", "")
 if origins_env:
     allowed_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
 else:
-    allowed_origins = ["*"]  # dev seulement
+    # en dev seulement ; en prod, mets des domaines précis
+    allowed_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,6 +53,19 @@ def healthz():
 @app.get("/version", tags=["default"])
 def version():
     return app.version
+
+
+# ------------------------------------------------
+#  Route produits (liste simple pour l’instant)
+# ------------------------------------------------
+@app.get("/products/", tags=["products"])
+def list_products_stub():
+    """
+    Stub temporaire : renvoie une liste vide de produits.
+    On met ça pour que /products/ réponde proprement,
+    sans se faire intercepter par une route dynamique /{product_id}.
+    """
+    return []
 
 
 # ------------------------------------------------
