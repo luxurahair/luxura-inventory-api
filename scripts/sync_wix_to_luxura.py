@@ -5,19 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes import products, salons, inventory, wix
 
-# ------------------------------------------------
-#  Import optionnel de la synchro Wix -> Luxura
-# ------------------------------------------------
-try:
-    from scripts.sync_wix_to_luxura import sync_wix_products
-    HAS_WIX_SYNC = True
-    print("[BOOT] sync_wix_to_luxura importée avec succès.")
-except Exception as e:
-    sync_wix_products = None
-    HAS_WIX_SYNC = False
-    print("[BOOT] Pas de sync_wix_to_luxura importée (ok pour l’instant) :", repr(e))
-
-
 app = FastAPI(
     title="Luxura Inventory API",
     version="1.0.0",
@@ -43,24 +30,12 @@ app.add_middleware(
 
 
 # ------------------------------------------------
-#  STARTUP : synchro Wix -> DB (si dispo)
+#  STARTUP : (rien pour l’instant, pas de synchro Wix)
 # ------------------------------------------------
 @app.on_event("startup")
 def startup_event() -> None:
-    """
-    Au démarrage de l'API :
-      - on lance une synchro Wix -> base Luxura (si la fonction existe)
-    """
-    if not HAS_WIX_SYNC or sync_wix_products is None:
-        print("[STARTUP] sync_wix_products désactivée (aucune fonction importée).")
-        return
-
-    print("[STARTUP] Lancement de la synchro Wix -> Luxura…")
-    try:
-        sync_wix_products()
-        print("[STARTUP] Synchro Wix -> Luxura TERMINÉE ✅")
-    except Exception as e:
-        print("[STARTUP] Erreur pendant la synchro Wix :", repr(e))
+    print("[STARTUP] Aucune synchro Wix au démarrage (désactivée).")
+    return
 
 
 # ------------------------------------------------
@@ -88,4 +63,3 @@ app.include_router(products.router)
 app.include_router(salons.router)
 app.include_router(inventory.router)
 app.include_router(wix.router)
-
