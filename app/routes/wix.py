@@ -1,147 +1,143 @@
-# app/routes/wix.py
+import os
+from typing import Any, Dict, List, Optional
 
-from typing import Dict, Any, List
+import requests
+from fastapi import APIRouter, HTTPException
+from sqlmodel import select
 
-from fastapi import APIRouter, Depends, Request
-from sqlmodel import Session, select
+from app.db import SessionLocal
+from app.models import Product
 
-from app.db import get_session
-from app.models import Product, Salon, InventoryItem
-
-router = APIRouter()
-
-# On sait que Luxura Online a l'id 3 dans ta base
-LUXURA_ONLINE_SALON_ID = 3
-LUXURA_ONLINE_SALON_NAME = "Luxura Online"
+# Toutes les routes Wix auront le prefix /wix
+router = APIRouter(prefix="/wix", tags=["wix"])
 
 
-def get_luxura_online_salon(session: Session) -> Salon:
+# ------------------------------------------------
+#  Webhook commande Wix
+# ------------------------------------------------
+@router.post("/order-webhook")
+async def wix_order_webhook(payload: Dict[str, Any]):
     """
-    Récupère le salon 'Luxura Online' (id=3).
-    Si pour une raison quelconque l'id ne matche plus,
-    on le retrouve par le nom.
+    Webhook de commande Wix.
+    Pour l'instant : on logge simplement et on renvoie {}.
+    Tu pourras plus tard décrémenter l'inventaire ici.
     """
-    salon = session.get(Salon, LUXURA_ONLINE_SALON_ID)
-    if salon:
-        return salon
-
-    salon = session.exec(
-        select(Salon).where(Salon.name == LUXURA_ONLINE_SALON_NAME)
-    ).first()
-
-    if not salon:
-        salon = Salon(name=LUXURA_ONLINE_SALON_NAME, address="Entrepôt central")
-        session.add(salon)
-        session.commit()
-        session.refresh(salon)
-
-    return salon
+    print("[WIX WEBHOOK] Payload reçu :", payload)
+    # TODO plus tard: décrémenter l'inventaire en fonction des lineItems
+    return {}
 
 
-@router.post("/wix/order-webhook", summary="Webhook commande Wix")
-async def wix_order_webhook(
-    request: Request,
-    session: Session = Depends(get_session),
-) -> Dict[str, Any]:
+# ------------------------------------------------
+#  Synchro manuelle Wix -> Luxura
+# ------------------------------------------------
+@router.post("/sync")
+def sync_wix_products_manual():
     """
-    Reçoit une commande Wix et met à jour l'inventaire du salon 'Luxura Online'
-    en décrémentant les quantités pour chaque SKU commandé.
+    Endpoint manuel pour synchroniser les produits Wix vers la base Luxura.
 
-    ⚠️ Le format exact du payload Wix reste à confirmer.
-    Ici on suppose quelque chose comme :
-
-    {
-      "id": "12345",
-      "status": "PAID",
-      "lineItems": [
-        { "sku": "TAPE-18-60A", "quantity": 2 },
-        { "sku": "ITIP-20-MIX60A", "quantity": 1 }
-      ]
-    }
+    À appeler via /docs (POST /wix/sync) ou directement en HTTP.
     """
-    payload = await request.json()
 
-    order_id = payload.get("id") or payload.get("_id") or "UNKNOWN"
-    status = (payload.get("status") or payload.get("paymentStatus") or "").upper()
+    api_key = os.getenv("WIX_API_KEY")
+    account_id = os.getenv("WIX_ACCOUNT_ID")
+    site_id = os.getenv("WIX_SITE_ID")
 
-    # On ne traite que les commandes payées
-    if status not in ["PAID", "PAID_IN_FULL", "FULFILLED", "COMPLETED"]:
-        return {
-            "ok": True,
-            "ignored": True,
-            "reason": f"status={status}",
-            "order_id": order_id,
-        }
-
-    line_items: List[Dict[str, Any]] = (
-        payload.get("lineItems") or payload.get("items") or []
-    )
-
-    if not line_items:
-        return {
-            "ok": False,
-            "error": "No line items in payload",
-            "order_id": order_id,
-        }
-
-    salon = get_luxura_online_salon(session)
-    updated: List[Dict[str, Any]] = []
-
-    for item in line_items:
-        sku = item.get("sku")
-        qty_raw = item.get("quantity") or item.get("qty") or 0
-
-        try:
-            quantity = int(qty_raw)
-        except (TypeError, ValueError):
-            quantity = 0
-
-        if not sku or quantity <= 0:
-            continue
-
-        # Trouver le produit par son SKU
-        product = session.exec(
-            select(Product).where(Product.sku == sku)
-        ).first()
-
-        if not product:
-            # TODO : logger ça plus tard, pour voir les SKU inconnus
-            continue
-
-        # Chercher la ligne d'inventaire Luxura Online pour ce produit
-        inv = session.exec(
-            select(InventoryItem)
-            .where(InventoryItem.salon_id == salon.id)
-            .where(InventoryItem.product_id == product.id)
-        ).first()
-
-        if not inv:
-            # Si on n'a pas de ligne, on part de 0
-            inv = InventoryItem(
-                salon_id=salon.id,
-                product_id=product.id,
-                quantity=0,
-            )
-            session.add(inv)
-            session.flush()
-
-        old_qty = inv.quantity or 0
-        new_qty = max(0, old_qty - quantity)  # jamais en dessous de 0
-        inv.quantity = new_qty
-
-        updated.append(
-            {
-                "sku": sku,
-                "old_quantity": old_qty,
-                "ordered_quantity": quantity,
-                "new_quantity": new_qty,
-            }
+    if not api_key or not account_id or not site_id:
+        raise HTTPException(
+            status_code=500,
+            detail="Variables WIX_API_KEY, WIX_ACCOUNT_ID ou WIX_SITE_ID manquantes dans l'environnement.",
         )
 
-    session.commit()
+    # URL API produits Wix – à ajuster si besoin
+    url = "https://www.wixapis.com/stores/v1/products/query"
+
+    headers = {
+        "Authorization": api_key,
+        "wix-account-id": account_id,
+        "wix-site-id": site_id,
+        "Content-Type": "application/json",
+    }
+
+    try:
+        resp = requests.post(url, headers=headers, json={"query": {}})
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Erreur réseau en appelant l'API Wix: {repr(e)}",
+        )
+
+    if resp.status_code != 200:
+        try:
+            body = resp.json()
+        except Exception:
+            body = resp.text
+        raise HTTPException(
+            status_code=resp.status_code,
+            detail={"message": "Erreur renvoyée par Wix", "body": body},
+        )
+
+    data = resp.json()
+    wix_products: List[Dict[str, Any]] = data.get("products") or data.get("items") or []
+
+    created = 0
+    updated = 0
+
+    with SessionLocal() as session:
+        for wp in wix_products:
+            sku: Optional[str] = wp.get("sku")
+            if not sku:
+                # On ignore les produits sans SKU
+                continue
+
+            name = wp.get("name") or wp.get("productName") or ""
+            description = wp.get("description") or ""
+
+            price_value = 0
+            price_obj = wp.get("price") or wp.get("priceData") or {}
+            if isinstance(price_obj, dict):
+                price_value = (
+                    price_obj.get("price")
+                    or price_obj.get("basePrice")
+                    or price_obj.get("amount")
+                    or 0
+                )
+
+            length = ""
+            color = ""
+            category = ""
+
+            existing: Optional[Product] = session.exec(
+                select(Product).where(Product.sku == sku)
+            ).first()
+
+            if existing:
+                existing.name = name
+                existing.description = description
+                existing.price = price_value
+                existing.length = length
+                existing.color = color
+                existing.category = category
+                existing.active = True
+                updated += 1
+            else:
+                prod = Product(
+                    sku=sku,
+                    name=name,
+                    description=description,
+                    price=price_value,
+                    length=length,
+                    color=color,
+                    category=category,
+                    active=True,
+                )
+                session.add(prod)
+                created += 1
+
+        session.commit()
 
     return {
-        "ok": True,
-        "order_id": order_id,
-        "updated_items": updated,
+        "status": "ok",
+        "wix_products_received": len(wix_products),
+        "created": created,
+        "updated": updated,
     }
