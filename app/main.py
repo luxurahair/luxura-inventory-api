@@ -1,17 +1,12 @@
 import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Routes
 from app.routes import products, salons, inventory, wix
-
-# Service de synchro Wix → Luxura
 from app.services.wix_sync import sync_wix_to_luxura
 
 
-# ------------------------------------------------
-#  INITIALISATION DE L'API
-# ------------------------------------------------
 app = FastAPI(
     title="Luxura Inventory API",
     version="1.0.0",
@@ -19,15 +14,14 @@ app = FastAPI(
 
 
 # ------------------------------------------------
-#  CONFIGURATION CORS
+#  CORS
 # ------------------------------------------------
 origins_env = os.getenv("CORS_ORIGINS", "")
 if origins_env:
     allowed_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
 else:
-    # ⭐ En développement : on permet tout
-    # 💡 En production, mets tes vrais domaines :
-    # ["https://luxurahair.github.io", "https://www.luxuradistribution.com"]
+    # 💡 En dev seulement ; en prod mets tes vrais domaines
+    # ex: ["https://luxurahair.github.io", "https://www.luxuradistribution.com"]
     allowed_origins = ["*"]
 
 app.add_middleware(
@@ -40,7 +34,7 @@ app.add_middleware(
 
 
 # ------------------------------------------------
-#  SYNCHRO AUTOMATIQUE AU DÉMARRAGE
+#  STARTUP : synchro automatique Wix → Luxura
 # ------------------------------------------------
 @app.on_event("startup")
 def startup_event() -> None:
@@ -53,22 +47,32 @@ def startup_event() -> None:
         print("[STARTUP] Synchro Wix → Luxura : OK")
         print("[STARTUP] Résumé :", summary)
     except Exception as e:
-        # ⚠️ On NE bloque PAS le démarrage si Wix plante.
+        # On log mais on ne fait pas crasher l'API si Wix foire
         print("[STARTUP] ERREUR de synchro Wix → Luxura :", repr(e))
 
 
 # ------------------------------------------------
-#  INCLUSION DES ROUTES
+#  Routes système
+# ------------------------------------------------
+@app.get("/", tags=["default"])
+def root():
+    return "Luxura Inventory API"
+
+
+@app.get("/healthz", tags=["default"])
+def healthz():
+    return "ok"
+
+
+@app.get("/version", tags=["default"])
+def version():
+    return app.version
+
+
+# ------------------------------------------------
+#  Routers métier
 # ------------------------------------------------
 app.include_router(products.router)
 app.include_router(salons.router)
 app.include_router(inventory.router)
 app.include_router(wix.router)
-
-
-# ------------------------------------------------
-#  ENDPOINT DE TEST RACINE
-# ------------------------------------------------
-@app.get("/", tags=["root"])
-def root():
-    return {"message": "Luxura Inventory API"}
