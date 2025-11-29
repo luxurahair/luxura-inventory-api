@@ -51,7 +51,7 @@ def root():
 
 @app.get("/healthz", tags=["default"])
 def healthz():
-    return "ok"
+    return {"status": "ok"}
 
 
 @app.get("/version", tags=["default"])
