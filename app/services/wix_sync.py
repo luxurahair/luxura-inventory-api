@@ -1,63 +1,210 @@
 # app/services/wix_sync.py
 
-from typing import Any, Dict
+import os
+from typing import Any, Dict, List
 
-from sqlmodel import Session
+import requests
+from sqlmodel import Session, select
+
 from app.db import engine
-# from app import models
-# from app.wix_client import fetch_wix_products, fetch_wix_salons, fetch_wix_inventory
+from app.models import (
+    Product,
+    ProductCreate,
+    ProductUpdate,
+    Salon,
+    SalonCreate,
+    SalonUpdate,
+    InventoryItem,
+    InventoryCreate,
+    InventoryUpdate,
+)
 
+# ----------------------------------------------------------
+# CONFIG WIX
+# ----------------------------------------------------------
+
+WIX_API_KEY = os.getenv("WIX_API_KEY")
+WIX_SITE_ID = os.getenv("WIX_SITE_ID")
+
+WIX_PRODUCTS_URL = "https://www.wixapis.com/stores/v1/products/query"
+WIX_ORDERS_URL = "https://www.wixapis.com/stores/v1/inventoryItems/query"
+
+
+HEADERS = {
+    "Content-Type": "application/json",
+    "Authorization": WIX_API_KEY,
+    "wix-site-id": WIX_SITE_ID,
+}
+
+
+# ----------------------------------------------------------
+# FONCTIONS WIX
+# ----------------------------------------------------------
+
+def wix_fetch_products() -> List[dict]:
+    """Télécharge tous les produits Wix Stores."""
+    body = { "query": {} }
+
+    r = requests.post(WIX_PRODUCTS_URL, json=body, headers=HEADERS)
+    data = r.json()
+
+    if "products" not in data:
+        print("[WIX] ERREUR produits:", data)
+        return []
+
+    return data["products"]
+
+
+def wix_fetch_inventory() -> List[dict]:
+    """Télécharge le stock Wix (stock global)."""
+    body = { "query": {} }
+
+    r = requests.post(WIX_ORDERS_URL, json=body, headers=HEADERS)
+    data = r.json()
+
+    if "inventoryItems" not in data:
+        print("[WIX] ERREUR inventaire:", data)
+        return []
+
+    return data["inventoryItems"]
+
+
+# ----------------------------------------------------------
+# FONCTION PRINCIPALE
+# ----------------------------------------------------------
 
 def sync_wix_to_luxura() -> Dict[str, Any]:
-    """
-    Synchro complète Wix → Luxura (salons, produits, inventaire).
-
-    Utilisée :
-      - au démarrage de l'API (main.py)
-      - par l'endpoint manuel /wix/sync
-    """
-
     print("[WIX SYNC] Début synchro Wix → Luxura")
 
     created_products = 0
     updated_products = 0
-    created_salons = 0
-    updated_salons = 0
 
-    # ⚠️ IMPORTANT :
-    # On utilise directement Session(engine)
-    # et PAS get_session(), car get_session() est un générateur (yield)
+    # Le salon “Luxura Online” recevra l’inventaire global venant de Wix
+    ONLINE_SALON_NAME = "Luxura Online"
+
     with Session(engine) as session:
-        # TODO : ici tu colles ta vraie logique de synchro :
-        #   - appeler Wix pour récupérer les produits / salons / inventaire
-        #   - upsert dans la DB
-        #
-        # Exemple de structure (à adapter à ton code réel) :
-        #
-        # products = fetch_wix_products()
-        # salons = fetch_wix_salons()
-        # inventory = fetch_wix_inventory()
-        #
-        # for s in salons:
-        #     ... upsert salon ...
-        #     created_salons += 1 / updated_salons += 1
-        #
-        # for p in products:
-        #     ... upsert produit ...
-        #     created_products += 1 / updated_products += 1
-        #
-        # for item in inventory:
-        #     ... maj inventaire ...
-        #
-        # session.commit()
-        pass  # à supprimer une fois ta logique mise
 
-    summary: Dict[str, Any] = {
+        # ------------------------------------------------------
+        # 1. S’assurer que le salon “Luxura Online” existe
+        # ------------------------------------------------------
+        salon = session.exec(
+            select(Salon).where(Salon.name == ONLINE_SALON_NAME)
+        ).first()
+
+        if not salon:
+            salon = Salon(name=ONLINE_SALON_NAME, address="Entrepôt")
+            session.add(salon)
+            session.commit()
+            session.refresh(salon)
+
+        online_salon_id = salon.id
+
+        # ------------------------------------------------------
+        # 2. Télécharger produits Wix
+        # ------------------------------------------------------
+        wix_products = wix_fetch_products()
+
+        for wp in wix_products:
+
+            sku = wp.get("sku", "NO-SKU")
+            name = wp.get("name", "Sans nom")
+            desc = wp.get("description", "")
+            price = float(wp.get("priceData", {}).get("price", 0))
+
+            # On découpe les options Wix pour trouver longueur/couleur
+            length = None
+            color = None
+
+            if "productOptions" in wp:
+                for opt in wp["productOptions"]:
+                    if opt["name"].lower() == "longueur":
+                        length = opt["choices"][0].get("description")
+                    if opt["name"].lower() == "couleur":
+                        color = opt["choices"][0].get("description")
+
+            # Vérifier si le produit existe
+            db_product = session.exec(
+                select(Product).where(Product.sku == sku)
+            ).first()
+
+            if not db_product:
+                # CREATE
+                new = ProductCreate(
+                    sku=sku,
+                    name=name,
+                    description=desc,
+                    length=length,
+                    color=color,
+                    price=price,
+                    category="Wix",
+                    active=True
+                )
+
+                obj = Product(**new.dict())
+                session.add(obj)
+                created_products += 1
+
+            else:
+                # UPDATE
+                upd = ProductUpdate(
+                    name=name,
+                    description=desc,
+                    length=length,
+                    color=color,
+                    price=price,
+                )
+                for k, v in upd.dict(exclude_none=True).items():
+                    setattr(db_product, k, v)
+                updated_products += 1
+
+        session.commit()
+
+        # ------------------------------------------------------
+        # 3. Télécharger inventaire Wix et le mettre sur “Luxura Online”
+        # ------------------------------------------------------
+        wix_stock = wix_fetch_inventory()
+
+        for item in wix_stock:
+            sku = item.get("sku")
+            quantity = item.get("quantity", 0)
+
+            # trouver le produit DB
+            product = session.exec(
+                select(Product).where(Product.sku == sku)
+            ).first()
+
+            if not product:
+                continue
+
+            # Vérifier si inventaire existe
+            inv = session.exec(
+                select(InventoryItem).where(
+                    InventoryItem.salon_id == online_salon_id,
+                    InventoryItem.product_id == product.id,
+                )
+            ).first()
+
+            if not inv:
+                new_inv = InventoryItem(
+                    salon_id=online_salon_id,
+                    product_id=product.id,
+                    quantity=quantity
+                )
+                session.add(new_inv)
+
+            else:
+                inv.quantity = quantity
+
+        session.commit()
+
+    summary = {
+        "ok": True,
+        "source": "manual",
         "created_products": created_products,
         "updated_products": updated_products,
-        "created_salons": created_salons,
-        "updated_salons": updated_salons,
+        "created_salons": 0,
+        "updated_salons": 0,
     }
 
-    print(f"[WIX SYNC] Terminé : {summary}")
+    print("[WIX SYNC] Terminé :", summary)
     return summary
