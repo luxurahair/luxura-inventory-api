@@ -8,7 +8,9 @@ from sqlmodel import Session, select
 from app.db import get_session
 from app.models import InventoryItem
 
+# IMPORTANT : prefix = "" pour que la route soit exactement /movement
 router = APIRouter(
+    prefix="",
     tags=["movement"],
 )
 
@@ -33,12 +35,12 @@ def record_movement(
     - IN      : quantité += qty
     - OUT     : quantité -= qty (jamais < 0)
     - SALE    : quantité -= qty (jamais < 0)
-    - ADJUST  : quantité = qty (ajustement absolu)
+    - ADJUST  : quantité = qty
 
     Si aucune ligne d’inventaire n’existe pour (salon_id, product_id),
     elle est créée automatiquement avec quantity = 0 avant d’appliquer le mouvement.
     """
-    # On cherche la ligne d'inventaire existante
+    # Chercher la ligne d'inventaire existante
     stmt = select(InventoryItem).where(
         InventoryItem.salon_id == salon_id,
         InventoryItem.product_id == product_id,
@@ -48,7 +50,7 @@ def record_movement(
     if inv is None:
         inv = InventoryItem(salon_id=salon_id, product_id=product_id, quantity=0)
         session.add(inv)
-        session.flush()  # pour obtenir inv.id
+        session.flush()  # pour avoir inv.id
 
     if type == "IN":
         inv.quantity += qty
