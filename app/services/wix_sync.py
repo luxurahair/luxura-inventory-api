@@ -1,7 +1,7 @@
 # app/services/wix_sync.py
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from sqlmodel import Session, select
@@ -19,93 +19,173 @@ from app.models import (
 # CONFIG WIX
 # ----------------------------------------------------------
 
-WIX_API_KEY = os.getenv("WIX_API_KEY")
+WIX_API_KEY = os.getenv("WIX_API_KEY") or os.getenv("WIX_ACCESS_TOKEN")
 WIX_SITE_ID = os.getenv("WIX_SITE_ID")
 
+# Produits = v1, Inventaire = v2 (ton 404 venait de l’ancien v1)
 WIX_PRODUCTS_URL = "https://www.wixapis.com/stores/v1/products/query"
 WIX_INVENTORY_URL = "https://www.wixapis.com/stores/v2/inventoryItems/query"
 
 
 # ----------------------------------------------------------
-# OUTILS WIX SÉCURISÉS
+# OUTILS WIX ROBUSTES
 # ----------------------------------------------------------
 
 def _wix_headers() -> Optional[Dict[str, str]]:
-    """Construit les headers Wix. Si variables manquantes → synchro off."""
+    """
+    Construit les en-têtes HTTP pour appeler l'API Wix.
+
+    Si les variables d'environnement ne sont pas définies,
+    la synchro est simplement ignorée (on ne plante pas l'API Luxura).
+    """
     if not WIX_API_KEY or not WIX_SITE_ID:
         print("[WIX SYNC] WIX_API_KEY ou WIX_SITE_ID manquants → synchro désactivée.")
         return None
+
     return {
         "Content-Type": "application/json",
-        "Authorization": WIX_API_KEY,   # adapté à ton token Wix
+        "Accept": "application/json",
+        "Authorization": WIX_API_KEY,
         "wix-site-id": WIX_SITE_ID,
     }
 
 
-def _safe_post(url: str, body: dict) -> Optional[dict]:
-    """POST vers Wix, NE JAMAIS faire planter l’API Luxura."""
+def _safe_post(url: str, body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Appel POST vers Wix.
+
+    - Ne lève jamais d'exception (catch complet)
+    - Log les erreurs HTTP et JSON
+    - Retourne None en cas de problème
+    """
     headers = _wix_headers()
     if headers is None:
         return None
 
     try:
-        r = requests.post(url, json=body, headers=headers, timeout=20)
+        resp = requests.post(url, json=body, headers=headers, timeout=20)
     except Exception as e:
-        print(f"[WIX SYNC] ERREUR réseau vers {url}: {e}")
+        print(f"[WIX SYNC] ERREUR réseau vers {url}: {e!r}")
         return None
 
-    if r.status_code != 200:
-        print(f"[WIX SYNC] Statut HTTP {r.status_code} pour {url}")
-        print("[WIX SYNC] Réponse brute (début):", r.text[:300])
+    if resp.status_code != 200:
+        print(f"[WIX SYNC] Statut HTTP {resp.status_code} pour {url}")
+        txt = resp.text[:400].replace("\n", " ")
+        print(f"[WIX SYNC] Réponse brute (début): {txt}")
         return None
 
     try:
-        return r.json()
+        return resp.json()
     except Exception as e:
-        print(f"[WIX SYNC] Réponse non-JSON depuis {url}: {e}")
-        print("[WIX SYNC] Contenu brut (début):", r.text[:300])
+        print(f"[WIX SYNC] Réponse non-JSON depuis {url}: {e!r}")
+        txt = resp.text[:400].replace("\n", " ")
+        print(f"[WIX SYNC] Contenu brut (début): {txt}")
         return None
 
 
-def wix_fetch_products() -> List[dict]:
-    """Télécharge tous les produits Wix Stores (ou [] en cas d'erreur)."""
-    body = {"query": {}}
-    data = _safe_post(WIX_PRODUCTS_URL, body)
-    if not data or "products" not in data:
-        print("[WIX SYNC] Aucun produit récupéré depuis Wix.")
-        return []
-    return data["products"]
+# ----------------------------------------------------------
+# FETCH PRODUITS & INVENTAIRE AVEC PAGINATION
+# ----------------------------------------------------------
+
+def wix_fetch_products() -> List[Dict[str, Any]]:
+    """
+    Télécharge TOUS les produits Wix Stores, page par page.
+
+    Par défaut l'API Wix renvoie 100 produits max par appel.
+    On boucle donc avec offset tant qu'on reçoit des produits.
+    """
+    all_products: List[Dict[str, Any]] = []
+    limit = 100
+    offset = 0
+
+    while True:
+        body: Dict[str, Any] = {
+            "query": {
+                "paging": {
+                    "limit": limit,
+                    "offset": offset,
+                }
+            }
+        }
+
+        data = _safe_post(WIX_PRODUCTS_URL, body)
+        if not data:
+            break
+
+        products = data.get("products") or []
+        print(f"[WIX SYNC] Page produits Wix: offset={offset}, reçus={len(products)}")
+        all_products.extend(products)
+
+        # Si on reçoit moins que limit, c'est la dernière page
+        if len(products) < limit:
+            break
+
+        offset += limit
+
+    print(f"[WIX SYNC] Produits totaux reçus depuis Wix: {len(all_products)}")
+    return all_products
 
 
-def wix_fetch_inventory() -> List[dict]:
-    """Télécharge l'inventaire Wix (ou [] en cas d'erreur)."""
-    body = {"query": {}}
+def wix_fetch_inventory() -> List[Dict[str, Any]]:
+    """
+    Télécharge l'inventaire Wix.
+
+    Si l'API retourne une erreur (404, 401, etc.), on log juste
+    et on retourne une liste vide.
+    """
+    body: Dict[str, Any] = {"query": {}}
     data = _safe_post(WIX_INVENTORY_URL, body)
-    if not data or "inventoryItems" not in data:
+    if not data:
         print("[WIX SYNC] Aucun inventaire récupéré depuis Wix.")
         return []
-    return data["inventoryItems"]
+
+    items = data.get("inventoryItems") or data.get("items") or []
+    print(f"[WIX SYNC] Lignes d'inventaire Wix reçues: {len(items)}")
+    return items
 
 
 # ----------------------------------------------------------
-# HELPERS
+# HELPERS PRODUITS / VARIANTES
 # ----------------------------------------------------------
 
 def _clean_text(value: Optional[str]) -> Optional[str]:
     if not value:
         return value
-    return value.replace("”", '"').replace("“", '"').strip()
+    return (
+        value.replace("”", '"')
+        .replace("“", '"')
+        .replace("\u00a0", " ")
+        .strip()
+    )
 
 
 def _guess_category_from_name(name: str) -> str:
     n = name.lower()
-    if any(k in n for k in ["halo", "everly", "tape", "bande", "i-tip", "itip", "i tips", "extensions"]):
+    if any(
+        k in n
+        for k in [
+            "halo",
+            "everly",
+            "tape",
+            "bande",
+            "i-tip",
+            "itip",
+            "i tips",
+            "extensions",
+        ]
+    ):
         return "Extensions"
     return "Wix"
 
 
-def _build_variant_sku(base_sku: str, name: str, length: Optional[str], color: Optional[str]) -> str:
-    """Construit un SKU lisible si la variante n'a pas de SKU propre."""
+def _build_variant_sku(
+    base_sku: str, name: str, length: Optional[str], color: Optional[str]
+) -> str:
+    """
+    Construit un SKU lisible si la variante n'a pas de SKU propre.
+    Ex: base "NO-SKU", name "Halo Everly", length "18\"", color "60A"
+         → "HaloEverly-18-60A"
+    """
     base = base_sku if base_sku and base_sku != "NO-SKU" else name
     parts = [base]
     if length:
@@ -113,8 +193,23 @@ def _build_variant_sku(base_sku: str, name: str, length: Optional[str], color: O
     if color:
         parts.append(str(color))
     sku = "-".join(parts)
-    # On nettoie un peu
     return sku.replace(" ", "").replace('"', "").replace("′", "").replace("’", "")
+
+
+def _extract_length_color_from_choices(choices: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Essaie de repérer la longueur et la couleur dans les choices Wix.
+    Les clés sont souvent du genre "Longueur" / "Couleur" ou "Length" / "Color".
+    """
+    length: Optional[str] = None
+    color: Optional[str] = None
+    for opt_name, val in choices.items():
+        on = (opt_name or "").lower()
+        if "long" in on or "length" in on:
+            length = _clean_text(str(val))
+        if "coul" in on or "color" in on:
+            color = _clean_text(str(val))
+    return length, color
 
 
 # ----------------------------------------------------------
@@ -124,9 +219,12 @@ def _build_variant_sku(base_sku: str, name: str, length: Optional[str], color: O
 def sync_wix_to_luxura() -> Dict[str, Any]:
     """
     Synchro complète Wix → Luxura.
-    - 1 produit Wix "simple" → 1 Product
-    - Produits avec variantes → 1 Product par variante (utile pour les extensions)
-    En cas de problème Wix, on loggue mais on NE PLANTE PAS l'API.
+
+    - Produits :
+        * produits "simples" → 1 Product
+        * produits avec variantes → 1 Product par variante (utile pour les extensions)
+    - Inventaire :
+        * on synchronise l'inventaire Wix sur le salon "Luxura Online"
     """
     print("[WIX SYNC] Début synchro Wix → Luxura")
 
@@ -134,7 +232,7 @@ def sync_wix_to_luxura() -> Dict[str, Any]:
     updated_products = 0
 
     with Session(engine) as session:
-        # ---------- 1) Salon central "Luxura Online" ----------
+        # ---------- 1) Créer / récupérer le salon central "Luxura Online" ----------
         ONLINE_SALON_NAME = "Luxura Online"
         salon = session.exec(
             select(Salon).where(Salon.name == ONLINE_SALON_NAME)
@@ -147,65 +245,57 @@ def sync_wix_to_luxura() -> Dict[str, Any]:
 
         online_salon_id = salon.id
 
-        # ---------- 2) Produits Wix ----------
+        # ---------- 2) Synchroniser les PRODUITS ----------
         wix_products = wix_fetch_products()
 
         for wp in wix_products:
             base_sku = wp.get("sku") or "NO-SKU"
-            name = _clean_text(wp.get("name") or "Sans nom")
+            name = _clean_text(wp.get("name") or "Sans nom") or "Sans nom"
             desc = wp.get("description") or ""
-            price_raw = wp.get("priceData", {}).get("price", 0) or 0
+            price_raw = (
+                wp.get("priceData", {}).get("price")
+                or wp.get("price", 0)
+                or 0
+            )
+
             try:
                 base_price = float(price_raw)
             except Exception:
                 base_price = 0.0
 
-            # Catégorie : on essaie de repérer les extensions
             category = _guess_category_from_name(name)
 
-            # Options globales (Longueur / Couleur)
-            product_options = wp.get("productOptions", []) or []
-
-            # Map des noms d’options → plus simple pour variants
-            # ex: {"longueur": "18\"", "couleur": "60A"}
-            def extract_length_color_from_choices(choices: Dict[str, Any]) -> (Optional[str], Optional[str]):
-                length = None
-                color = None
-                for opt_name, val in choices.items():
-                    on = (opt_name or "").lower()
-                    if "long" in on or "length" in on:
-                        length = _clean_text(str(val))
-                    if "coul" in on or "color" in on:
-                        color = _clean_text(str(val))
-                return length, color
-
-            # ---------- 2A) Cas AVEC variantes (extensions & co) ----------
-            variants = wp.get("variants") or wp.get("productVariants") or []
+            # Variantes (extensions, etc.)
+            variants = (
+                wp.get("variants")
+                or wp.get("productVariants")
+                or []
+            )
 
             if variants:
+                # ----- Produit AVEC variantes : on crée un Product par variante -----
                 for v in variants:
-                    v_sku = v.get("sku")
+                    v_sku = v.get("sku") or None
                     choices = v.get("choices") or {}
-                    length, color = extract_length_color_from_choices(choices)
+                    length, color = _extract_length_color_from_choices(choices)
 
-                    # si pas de SKU pour la variante → on en construit un
                     if not v_sku:
                         v_sku = _build_variant_sku(base_sku, name, length, color)
 
-                    # prix de la variante, sinon prix de base
-                    v_price_raw = v.get("priceData", {}).get("price", base_price)
+                    v_price_raw = (
+                        v.get("priceData", {}).get("price", base_price)
+                        or base_price
+                    )
                     try:
                         v_price = float(v_price_raw)
                     except Exception:
                         v_price = base_price
 
-                    # Chercher si ce SKU existe déjà
                     db_product = session.exec(
                         select(Product).where(Product.sku == v_sku)
                     ).first()
 
                     if not db_product:
-                        # CREATE
                         new = ProductCreate(
                             sku=v_sku,
                             name=name,
@@ -219,7 +309,6 @@ def sync_wix_to_luxura() -> Dict[str, Any]:
                         session.add(Product(**new.dict()))
                         created_products += 1
                     else:
-                        # UPDATE
                         upd = ProductUpdate(
                             name=name,
                             description=desc,
@@ -231,9 +320,8 @@ def sync_wix_to_luxura() -> Dict[str, Any]:
                         for k, vval in upd.dict(exclude_none=True).items():
                             setattr(db_product, k, vval)
                         updated_products += 1
-
             else:
-                # ---------- 2B) Cas SANS variantes (shampoings, brosses…) ----------
+                # ----- Produit SANS variantes : shampoings, brosses, etc. -----
                 db_product = session.exec(
                     select(Product).where(Product.sku == base_sku)
                 ).first()
@@ -264,19 +352,24 @@ def sync_wix_to_luxura() -> Dict[str, Any]:
 
         session.commit()
 
-        # ---------- 3) Inventaire Wix → Luxura Online ----------
+        # ---------- 3) Synchroniser l'INVENTAIRE sur "Luxura Online" ----------
         wix_stock = wix_fetch_inventory()
         for item in wix_stock:
             sku = item.get("sku")
-            quantity = item.get("quantity", 0) or 0
-
             if not sku:
                 continue
+
+            quantity = item.get("quantity", 0) or 0
+            try:
+                quantity = int(quantity)
+            except Exception:
+                quantity = 0
 
             product = session.exec(
                 select(Product).where(Product.sku == sku)
             ).first()
             if not product:
+                # Il peut s'agir d'un SKU qu'on n'a pas créé (ou d'une variante spéciale)
                 continue
 
             inv = session.exec(
