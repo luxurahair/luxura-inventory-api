@@ -1,29 +1,43 @@
 # app/routes/inventory.py
 
-from typing import List, Dict, Any
+from typing import List, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlmodel import Session, select
 
-# 🔹 C'EST ÇA que FastAPI cherche : "router"
+from app.db import get_session
+from app.models import InventoryItem, InventoryRead
+
 router = APIRouter(
     prefix="/inventory",
     tags=["inventory"],
 )
 
+SessionDep = Depends(get_session)
+
 
 @router.get(
     "",
-    summary="Lister l’inventaire (placeholder simple)",
+    response_model=List[InventoryRead],
+    summary="Lister l’inventaire par salon & produit",
 )
-def list_inventory() -> List[Dict[str, Any]]:
+def list_inventory(
+    session: Session = SessionDep,
+    salon_id: Optional[int] = None,
+    product_id: Optional[int] = None,
+) -> List[InventoryRead]:
     """
-    Endpoint d’inventaire simplifié.
+    Retourne l’inventaire.
 
-    Pour l’instant :
-    - pas de dépendance à app.models (pas d’ImportError)
-    - aucun paramètre requis (pas de 422 sur GET /inventory)
-    - renvoie simplement une liste vide.
-
-    On branchera la vraie logique plus tard.
+    - Sans paramètre : tous les enregistrements
+    - Avec salon_id : filtre par salon
+    - Avec product_id : filtre par produit
     """
-    return []
+    stmt = select(InventoryItem)
+    if salon_id is not None:
+        stmt = stmt.where(InventoryItem.salon_id == salon_id)
+    if product_id is not None:
+        stmt = stmt.where(InventoryItem.product_id == product_id)
+
+    rows = session.exec(stmt).all()
+    return rows
