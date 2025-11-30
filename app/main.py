@@ -16,29 +16,25 @@ app = FastAPI(
 # ------------------------------------------------
 #  CORS
 # ------------------------------------------------
-from fastapi.middleware.cors import CORSMiddleware
-import os
-
-origins_env = os.getenv("CORS_ORIGINS", "").strip()
-
-if origins_env:
-    # Exemple de valeur dans Render :
-    #   https://luxurahair.github.io,https://www.luxuradistribution.com,https://luxuradistribution.com
-    allowed_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
-else:
-    # ⚠️ Ici on met tes vrais domaines front
-    allowed_origins = [
-        "https://luxurahair.github.io",
-        "https://luxurahair.github.io/luxura-inventory-frontend",
-        "https://luxurahair.github.io/luxura-inventory-frontend/",
-        "https://www.luxuradistribution.com",
-        "https://luxuradistribution.com",
-    ]
+allowed_origins = [
+    # Frontend GitHub Pages
+    "https://luxurahair.github.io",
+    "https://luxurahair.github.io/luxura-inventory-frontend",
+    "https://luxurahair.github.io/luxura-inventory-frontend/",
+    # Ton site Wix (live)
+    "https://www.luxuradistribution.com",
+    "https://luxuradistribution.com",
+    # Editeur Wix
+    "https://editor.wix.com",
+    "https://manage.wix.com",
+    # certains assets Wix
+    "https://static.parastorage.com",
+]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=False,  # tu n'utilises pas de cookies → on met False
+    allow_credentials=False,  # pas besoin de cookies/session
     allow_methods=["*"],
     allow_headers=["*"],
 )
