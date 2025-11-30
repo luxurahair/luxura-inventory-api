@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import products, salons, inventory, wix
+from app.routes import products, salons, inventory, wix, movement
 from app.services.wix_sync import sync_wix_to_luxura
 
 app = FastAPI(
@@ -54,5 +54,6 @@ def startup_event() -> None:
 # ------------------------------------------------
 app.include_router(salons.router)
 app.include_router(products.router)
+app.include_router(inventory.router)
 app.include_router(inventory.router)
 app.include_router(wix.router)
