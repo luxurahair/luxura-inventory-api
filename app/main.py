@@ -55,5 +55,5 @@ def startup_event() -> None:
 app.include_router(salons.router)
 app.include_router(products.router)
 app.include_router(inventory.router)
-app.include_router(inventory.router)
+app.include_router(movement.router)
 app.include_router(wix.router)
