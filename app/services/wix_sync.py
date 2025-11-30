@@ -56,50 +56,71 @@ def _wix_headers() -> Dict[str, str]:
 
 def _fetch_all_wix_products() -> List[Dict[str, Any]]:
     """
-    Récupère tous les produits Wix (avec variantes) via /stores/v2/products/query
-    en paginant si nécessaire.
+    Récupère tous les produits Wix (avec variantes).
+
+    On tente d'abord l'API v2 :
+        /stores/v2/products/query
+    Si Wix répond 404 (endpoint pas dispo sur ton compte),
+    on retombe automatiquement sur l'ancienne v1 :
+        /stores/v1/products/query
     """
-    url = f"{WIX_BASE_URL}/stores/v2/products/query"
     headers = _wix_headers()
 
-    products: List[Dict[str, Any]] = []
+    def _query_products(url: str) -> List[Dict[str, Any]]:
+        products: List[Dict[str, Any]] = []
+        payload: Dict[str, Any] = {"query": {}}
+        cursor: str | None = None
 
-    payload: Dict[str, Any] = {
-        "query": {},  # pas de filtre : on veut tout
-    }
+        while True:
+            body = dict(payload)
+            if cursor:
+                body["cursorPaging"] = {"cursor": cursor}
 
-    cursor: str | None = None
+            resp = requests.post(url, headers=headers, json=body, timeout=30)
 
-    while True:
-        body = dict(payload)
-        if cursor:
-            body["cursorPaging"] = {"cursor": cursor}
+            # Si 404 ici, on laisse le caller gérer (pour tester v1 après v2)
+            if resp.status_code == 404:
+                raise requests.HTTPError(f"404 on {url}", response=resp)
 
-        resp = requests.post(url, headers=headers, json=body, timeout=30)
-        try:
-            resp.raise_for_status()
-        except Exception as e:
-            print("[WIX SYNC] ERREUR HTTP sur /stores/v2/products/query :", e)
-            print("[WIX SYNC] Réponse brute (début) :")
-            print(resp.text[:500])
+            try:
+                resp.raise_for_status()
+            except Exception as e:
+                print(f"[WIX SYNC] ERREUR HTTP sur {url} :", e)
+                print("[WIX SYNC] Réponse brute (début) :")
+                print(resp.text[:500])
+                raise
+
+            data = resp.json()
+            batch = data.get("products") or data.get("items") or []
+            products.extend(batch)
+
+            cursor = (
+                data.get("nextCursor")
+                or data.get("paging", {}).get("nextPageToken")
+                or None
+            )
+            if not cursor:
+                break
+
+        return products
+
+    # 1) On essaie v2
+    v2_url = f"{WIX_BASE_URL}/stores/v2/products/query"
+    try:
+        products = _query_products(v2_url)
+        print(f"[WIX SYNC] Produits reçus depuis Wix (v2) : {len(products)}")
+        return products
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.status_code == 404:
+            print("[WIX SYNC] /stores/v2/products/query renvoie 404, fallback vers v1…")
+        else:
+            # Autre erreur HTTP : on ne tente même pas v1, on remonte l’erreur
             raise
 
-        data = resp.json()
-
-        # Selon la version de l’API, ça peut être "products" ou "items"
-        batch = data.get("products") or data.get("items") or []
-        products.extend(batch)
-
-        # Pagination : on essaie plusieurs conventions
-        cursor = (
-            data.get("nextCursor")
-            or data.get("paging", {}).get("nextPageToken")
-            or None
-        )
-        if not cursor:
-            break
-
-    print(f"[WIX SYNC] Produits reçus depuis Wix : {len(products)}")
+    # 2) Fallback v1
+    v1_url = f"{WIX_BASE_URL}/stores/v1/products/query"
+    products = _query_products(v1_url)
+    print(f"[WIX SYNC] Produits reçus depuis Wix (v1) : {len(products)}")
     return products
 
 
