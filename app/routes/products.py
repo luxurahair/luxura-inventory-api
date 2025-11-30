@@ -1,5 +1,3 @@
-# app/routes/products.py
-
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,45 +6,27 @@ from sqlmodel import Session, select
 from app.db import get_session
 from app.models import Product, ProductCreate, ProductRead, ProductUpdate
 
-router = APIRouter()
-
-
-# ─────────────────────────────────────────
-# Routes CRUD Produits
-# ─────────────────────────────────────────
-
-@router.post(
-    "/",
-    response_model=ProductRead,
-    summary="Créer un produit",
+router = APIRouter(
+    prefix="/products",
+    tags=["products"],
 )
-def create_product(
-    product_in: ProductCreate,
-    session: Session = Depends(get_session),
-) -> ProductRead:
-    """Créer un nouveau produit."""
-    db_product = Product(**product_in.model_dump())
-    session.add(db_product)
-    session.commit()
-    session.refresh(db_product)
-    return db_product
+
+SessionDep = Depends(get_session)
 
 
 @router.get(
-    "/",
+    "",
     response_model=List[ProductRead],
     summary="Lister tous les produits",
 )
 def list_products(
-    session: Session = Depends(get_session),
-    only_active: bool = False,
+    session: Session = SessionDep,
 ) -> List[ProductRead]:
-    """Lister tous les produits, avec option pour filtrer uniquement les actifs."""
-    statement = select(Product)
-    if only_active:
-        statement = statement.where(Product.active == True)  # noqa: E712
-
-    products = session.exec(statement).all()
+    """
+    Retourne la liste complète des produits.
+    Aucun paramètre requis -> ne peut PAS renvoyer 422.
+    """
+    products = session.exec(select(Product)).all()
     return products
 
 
@@ -57,12 +37,30 @@ def list_products(
 )
 def get_product(
     product_id: int,
-    session: Session = Depends(get_session),
+    session: Session = SessionDep,
 ) -> ProductRead:
     """Récupérer un produit par son ID."""
     product = session.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
+    return product
+
+
+@router.post(
+    "",
+    response_model=ProductRead,
+    status_code=201,
+    summary="Créer un produit",
+)
+def create_product(
+    payload: ProductCreate,
+    session: Session = SessionDep,
+) -> ProductRead:
+    """Créer un nouveau produit."""
+    product = Product.from_orm(payload)
+    session.add(product)
+    session.commit()
+    session.refresh(product)
     return product
 
 
@@ -73,16 +71,16 @@ def get_product(
 )
 def update_product(
     product_id: int,
-    product_in: ProductUpdate,
-    session: Session = Depends(get_session),
+    payload: ProductUpdate,
+    session: Session = SessionDep,
 ) -> ProductRead:
     """Mettre à jour un produit existant."""
     product = session.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
 
-    product_data = product_in.model_dump(exclude_unset=True)
-    for key, value in product_data.items():
+    data = payload.dict(exclude_unset=True)
+    for key, value in data.items():
         setattr(product, key, value)
 
     session.add(product)
@@ -93,17 +91,16 @@ def update_product(
 
 @router.delete(
     "/{product_id}",
+    status_code=204,
     summary="Supprimer un produit",
 )
 def delete_product(
     product_id: int,
-    session: Session = Depends(get_session),
-) -> dict:
-    """Supprimer un produit par son ID."""
+    session: Session = SessionDep,
+) -> None:
+    """Supprimer un produit."""
     product = session.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
-
     session.delete(product)
     session.commit()
-    return {"ok": True}
