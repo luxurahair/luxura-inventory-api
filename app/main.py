@@ -1,9 +1,10 @@
+# app/main.py
 import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import products, salons, inventory, wix, movement
+from app.routes import products, salons, inventory, wix
 from app.services.wix_sync import sync_wix_to_luxura
 
 app = FastAPI(
@@ -30,30 +31,44 @@ app.add_middleware(
 )
 
 # ------------------------------------------------
-#  STARTUP : synchro Wix → Luxura (une fois au boot)
+#  STARTUP : synchro Wix MAIS protégée
 # ------------------------------------------------
 @app.on_event("startup")
 def startup_event() -> None:
     print("--------------------------------------------------")
     print("[STARTUP] Démarrage de l'API Luxura Inventory")
     print("--------------------------------------------------")
-
     try:
-        print("[WIX SYNC] Début synchro Wix → Luxura")
         summary = sync_wix_to_luxura()
-        print(f"[WIX SYNC] Terminé : {summary}")
+        print(f"[STARTUP] Synchro Wix → Luxura : OK")
         print(f"[STARTUP] Résumé : {summary}")
     except Exception as e:
-        # On ne casse pas l'API si Wix plante
-        print("[WIX SYNC] ERREUR pendant la synchro :", repr(e))
+        # Très important : on LOG l’erreur, mais on ne plante PAS l’API
         print("[STARTUP] Synchro Wix → Luxura : ÉCHEC (API quand même opérationnelle)")
-
+        print(f"[STARTUP] Erreur : {e!r}")
+    return
 
 # ------------------------------------------------
-#  ROUTES
+#  Routes système
 # ------------------------------------------------
-app.include_router(salons.router)
+@app.get("/", tags=["default"])
+def root():
+    return "Luxura Inventory API"
+
+
+@app.get("/healthz", tags=["default"])
+def healthz():
+    return "ok"
+
+
+@app.get("/version", tags=["default"])
+def version():
+    return app.version
+
+# ------------------------------------------------
+#  Routers métier
+# ------------------------------------------------
 app.include_router(products.router)
+app.include_router(salons.router)
 app.include_router(inventory.router)
-app.include_router(movement.router)
 app.include_router(wix.router)
