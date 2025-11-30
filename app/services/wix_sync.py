@@ -23,7 +23,7 @@ WIX_API_KEY = os.getenv("WIX_API_KEY")
 WIX_SITE_ID = os.getenv("WIX_SITE_ID")
 
 WIX_PRODUCTS_URL = "https://www.wixapis.com/stores/v1/products/query"
-WIX_INVENTORY_URL = "https://www.wixapis.com/stores/v1/inventoryItems/query"
+WIX_INVENTORY_URL = "https://www.wixapis.com/stores/v2/inventoryItems/query"
 
 
 # ----------------------------------------------------------
