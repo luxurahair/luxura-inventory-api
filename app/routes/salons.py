@@ -11,7 +11,6 @@ router = APIRouter(
     tags=["salons"],
 )
 
-# Dépendance session
 SessionDep = Depends(get_session)
 
 
@@ -25,7 +24,7 @@ def list_salons(
 ) -> List[SalonRead]:
     """
     Retourne la liste complète des salons.
-    AUCUN paramètre requis -> ne peut pas retourner 422.
+    Aucun paramètre requis -> ne peut PAS renvoyer 422.
     """
     salons = session.exec(select(Salon)).all()
     return salons
