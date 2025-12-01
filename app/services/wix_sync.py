@@ -193,18 +193,18 @@ def _sync_products_from_wix(session: Session, wix_products: List[Dict[str, Any]]
     Synchronise les produits Wix vers la table Product.
 
     Règles :
-      - Si le produit n’a PAS de SKU ET PAS de variantes → ignoré (logué).
-      - Si le produit a des variantes :
-          → on crée 1 entrée Product par variante (SKU de la variante ou fallback).
-      - Si le produit a un SKU mais pas de variantes :
-          → 1 entrée Product pour ce produit.
+      - S’il y a des variantes → 1 ligne Product par variante (SKU de la variante ou fallback).
+      - S’il n’y a PAS de variantes :
+          → 1 ligne Product pour le produit lui-même.
+      - Si aucun SKU n’est fourni (produit ou variante) :
+          → on génère un SKU stable de type 'NO-SKU::<idWix>'.
     """
     created = 0
     updated = 0
 
     for p in wix_products:
         name = p.get("name") or "Sans nom"
-        product_sku = (p.get("sku") or "").strip() or None
+        product_sku_raw = (p.get("sku") or "").strip() or None
         description = p.get("description") or None
         visible = p.get("visible")
         active = True if visible is None else bool(visible)
@@ -213,38 +213,27 @@ def _sync_products_from_wix(session: Session, wix_products: List[Dict[str, Any]]
         price_data = p.get("priceData") or {}
         base_price = _normalize_price(price_data.get("price") or p.get("price"))
 
-        # options produit (peut servir pour longueur / couleur si pas de variantes)
+        # options produit (utiles pour longueur / couleur)
         product_options = p.get("productOptions") or []
+
+        # id Wix du produit (pour fabriquer un SKU stable si besoin)
+        wix_id = p.get("id") or p.get("_id") or p.get("legacyId") or name.replace(" ", "-")
+        wix_id_str = str(wix_id)
 
         variants = p.get("variants") or p.get("productVariants") or []
 
-        # Cas 1 : pas de SKU + pas de variantes → ignoré
-        if not product_sku and not variants:
-            print(
-                f"[WIX SYNC] Produit sans SKU et sans variantes : '{name}' → ignoré."
-            )
-            continue
-
-        # Cas 2 : il y a des variantes
+        # ─────────────────────────────────────────
+        # CAS 1 : le produit a des variantes
+        # ─────────────────────────────────────────
         if variants:
             for idx, v in enumerate(variants):
                 # SKU de la variante ou fallback
-                raw_sku = (v.get("sku") or product_sku or "").strip()
+                raw_sku = (v.get("sku") or product_sku_raw or "").strip()
 
                 if not raw_sku:
-                    parts: List[str] = []
-                    if product_sku:
-                        parts.append(product_sku)
-
-                    var_id = v.get("id") or v.get("_id")
-                    if var_id:
-                        parts.append(str(var_id))
-                    else:
-                        prod_id = p.get("id") or p.get("_id") or "PROD"
-                        parts.append(f"var-{idx+1}")
-                        parts.insert(0, str(prod_id))
-
-                    raw_sku = "::".join(parts)
+                    # SKU synthétique mais stable
+                    var_id = v.get("id") or v.get("_id") or f"var-{idx+1}"
+                    raw_sku = f"NO-SKU::{wix_id_str}::{var_id}"
 
                 sku = raw_sku
 
@@ -280,9 +269,21 @@ def _sync_products_from_wix(session: Session, wix_products: List[Dict[str, Any]]
                 else:
                     updated += 1
 
-        # Cas 3 : aucun variant mais un SKU produit → 1 ligne
+        # ─────────────────────────────────────────
+        # CAS 2 : AUCUNE variante → 1 ligne produit
+        # ─────────────────────────────────────────
         else:
-            sku = product_sku or ""  # ici product_sku ne peut pas être None sinon on serait tombé dans le "continue" plus haut
+            raw_sku = (product_sku_raw or "").strip()
+            if not raw_sku:
+                # Avant : on ignorait ces produits.
+                # Maintenant : on leur donne un SKU synthétique.
+                raw_sku = f"NO-SKU::{wix_id_str}"
+                print(
+                    f"[WIX SYNC] Produit sans SKU ni variantes : '{name}' → "
+                    f"créé avec SKU synthétique '{raw_sku}'."
+                )
+
+            sku = raw_sku
             length, color = _extract_length_color_from_options(product_options)
             category = str(p.get("productType") or "Wix")
 
