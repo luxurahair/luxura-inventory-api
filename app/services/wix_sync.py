@@ -1,198 +1,240 @@
 # app/services/wix_sync.py
 
+import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from sqlmodel import Session, select
 
 from app.db import engine
-from app import models
+from app.models import Product
 
 
-# -------------------------------------------------------------------
+# ------------------------------------------------
 #  Config Wix
-# -------------------------------------------------------------------
+# ------------------------------------------------
 
 WIX_BASE_URL = "https://www.wixapis.com"
+WIX_API_KEY = os.getenv("WIX_API_KEY")  # doit être défini dans Render
 
 
 def _wix_headers() -> Dict[str, str]:
-    """
-    Construit les en-têtes pour appeler l’API Wix Catalog.
-    On utilise :
-      - WIX_API_KEY  (token backend)
-      - WIX_SITE_ID  (id du site)
-    """
-    api_key = os.getenv("WIX_API_KEY")
-    site_id = os.getenv("WIX_SITE_ID")
-
-    if not api_key:
-        raise RuntimeError("WIX_API_KEY manquant dans les variables d’environnement.")
-    if not site_id:
-        raise RuntimeError("WIX_SITE_ID manquant dans les variables d’environnement.")
-
-    if not api_key.startswith("Bearer "):
-        api_key = f"Bearer {api_key}"
-
+    if not WIX_API_KEY:
+        raise RuntimeError("WIX_API_KEY manquant dans les variables d'environnement.")
     return {
-        "Authorization": api_key,
-        "wix-site-id": site_id,
+        "Authorization": WIX_API_KEY,
         "Content-Type": "application/json",
     }
 
 
-# -------------------------------------------------------------------
-#  Récupération des items Catalog (avec variantes)
-# -------------------------------------------------------------------
+# ------------------------------------------------
+#  Fetch produits depuis Wix Stores v1
+# ------------------------------------------------
 
-def _fetch_all_catalog_items() -> List[Dict[str, Any]]:
+def _fetch_all_wix_products_v1() -> List[Dict[str, Any]]:
     """
-    Récupère tous les items Catalog (avec variantes) via
-    POST https://www.wixapis.com/catalog/v1/items/query
-    avec pagination si nécessaire.
+    Récupère tous les produits depuis Wix Stores v1 :
+      POST https://www.wixapis.com/stores/v1/products/query
+
+    On pagine tant qu'il y a des résultats.
     """
-    url = f"{WIX_BASE_URL}/catalog/v1/items/query"
+    url = f"{WIX_BASE_URL}/stores/v1/products/query"
     headers = _wix_headers()
 
-    items: List[Dict[str, Any]] = []
+    products: List[Dict[str, Any]] = []
+
+    payload: Dict[str, Any] = {
+        "query": {},  # pas de filtre : tout
+        "paging": {
+            "limit": 100
+        },
+    }
+
     cursor: Optional[str] = None
 
     while True:
-        body: Dict[str, Any] = {"query": {}}
+        body = dict(payload)
         if cursor:
-            body["cursorPaging"] = {"cursor": cursor}
+            body["paging"]["cursor"] = cursor
 
         resp = requests.post(url, headers=headers, json=body, timeout=30)
 
         try:
             resp.raise_for_status()
         except Exception as e:
-            print("[WIX SYNC] ERREUR HTTP sur /catalog/v1/items/query :", repr(e))
+            print("[WIX SYNC] ERREUR HTTP sur /stores/v1/products/query :", e)
             print("[WIX SYNC] Réponse brute (début) :")
             print(resp.text[:500])
             raise
 
         data = resp.json()
 
-        # Normalement c’est "items"
-        batch = data.get("items") or data.get("products") or []
-        items.extend(batch)
+        items = data.get("products") or data.get("items") or []
+        products.extend(items)
 
-        # Pagination : plusieurs conventions possibles, on les teste.
-        cursor = (
-            data.get("nextCursor")
-            or data.get("paging", {}).get("nextCursor")
-            or data.get("cursorPaging", {}).get("nextCursor")
-        )
-
+        cursor = data.get("paging", {}).get("nextCursor")
         if not cursor:
             break
 
-    print(f"[WIX SYNC] Items reçus depuis Wix Catalog : {len(items)}")
-    return items
+    print(f"[WIX SYNC] Produits reçus depuis Wix (v1) : {len(products)}")
+    return products
 
 
-# -------------------------------------------------------------------
-#  Upsert Product (dans ta DB Luxura)
-# -------------------------------------------------------------------
+# ------------------------------------------------
+#  Normalisation produit / variante
+# ------------------------------------------------
 
-def _upsert_product(
-    session: Session,
-    *,
-    sku: str,
-    name: str,
-    length: Optional[str],
-    color: Optional[str],
-    price: float,
-    category: Optional[str],
-    active: bool = True,
-) -> bool:
+def _extract_variants_from_product(item: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
-    Crée ou met à jour un Product.
-    Retourne True si créé, False si mis à jour.
+    On essaie d'extraire les variantes d'un produit Stores v1.
+    Suivant la structure, elles peuvent se trouver sous différentes clés.
     """
-    existing = session.exec(
-        select(models.Product).where(models.Product.sku == sku)
-    ).first()
 
-    if existing:
-        # Mise à jour minimale
-        existing.name = name
-        existing.length = length
-        existing.color = color
-        existing.category = category
-        existing.price = price
-        existing.active = active
-        return False
+    # Candidats possibles (Wix peut changer les noms, on est défensif)
+    candidates = [
+        "productVariants",
+        "variants",
+        "choices",
+    ]
 
-    product = models.Product(
-        sku=sku,
-        name=name,
-        length=length,
-        color=color,
-        category=category or "Wix Catalog",
-        description=None,
-        price=price,
-        active=active,
-    )
-    session.add(product)
-    return True
+    for key in candidates:
+        if key in item and isinstance(item[key], list):
+            return item[key]
+
+    # Certains schémas plus récents utilisent "managedVariants"
+    if "managedVariants" in item and isinstance(item["managedVariants"], list):
+        return item["managedVariants"]
+
+    return []
 
 
-def _extract_length_color_from_choices(choices: Dict[str, Any]) -> (Optional[str], Optional[str]):
+def _normalize_product_and_variants(item: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
-    Essaie de deviner length / color à partir des "choices" de variante.
-    Ex. {"Longueur": "18\" 60 grammes"} -> length = "18\" 60 grammes"
+    À partir d'un produit Wix, retourne une liste de "lignes produit"
+    prêtes à être upsert dans notre table Product.
+
+    - Si le produit a un SKU (item["sku"]) → on crée une ligne.
+    - Si le produit a des variantes avec des SKU → une ligne par variante.
+    - Si aucun SKU nulle part → on ignore ce produit.
     """
-    length: Optional[str] = None
-    color: Optional[str] = None
 
-    if not isinstance(choices, dict):
-        return None, None
+    result: List[Dict[str, Any]] = []
 
-    # Si l’API nous donne des clés du style "Length", "Longueur", "Couleur", "Color"
-    for key, value in choices.items():
-        key_l = str(key).lower()
-        val_s = str(value)
+    name = item.get("name") or item.get("productName") or "Produit sans nom"
+    description = item.get("description", None)
+    active = not bool(item.get("archived", False))
 
-        if "longueur" in key_l or "length" in key_l:
-            length = val_s
-        elif "couleur" in key_l or "color" in key_l:
-            color = val_s
+    # 1) Variantes d'abord (ce que tu utilises pour extensions)
+    variants = _extract_variants_from_product(item)
 
-    # Si on n’a qu’un seul choix et rien mis, on met tout en "length"
-    if length is None and color is None and len(choices) == 1:
-        only_val = list(choices.values())[0]
-        length = str(only_val)
+    for v in variants:
+        sku = v.get("sku") or v.get("variantSku") or ""
+        if not sku:
+            # Variante sans SKU → on la saute
+            continue
 
-    return length, color
+        # Longueur, couleur, etc. peuvent être stockés dans diverses structures.
+        # On va essayer de récupérer quelque chose de lisible.
+        length: Optional[str] = None
+        color: Optional[str] = None
+
+        # Exemple : options de type "Length", "Color"
+        option_data = v.get("choices") or v.get("options") or {}
+        if isinstance(option_data, dict):
+            # ex: {"Length": "18\"", "Weight": "60g"}
+            for opt_name, opt_value in option_data.items():
+                label = (opt_name or "").lower()
+                if "longueur" in label or "length" in label:
+                    length = str(opt_value)
+                if "couleur" in label or "color" in label:
+                    color = str(opt_value)
+
+        # Prix de la variante
+        price = None
+
+        # vieux schémas : "priceData": {"price": 123.45}
+        price_data = v.get("priceData") or {}
+        if isinstance(price_data, dict) and price_data.get("price") is not None:
+            price = float(price_data["price"])
+
+        # fallback : peut être au niveau du produit
+        if price is None:
+            prod_price_data = item.get("priceData") or {}
+            if isinstance(prod_price_data, dict) and prod_price_data.get("price") is not None:
+                price = float(prod_price_data["price"])
+
+        if price is None:
+            # dernière chance : 0.0
+            price = 0.0
+
+        result.append(
+            {
+                "sku": sku,
+                "name": name,
+                "length": length,
+                "color": color,
+                "category": "Wix",
+                "description": description,
+                "price": price,
+                "active": active,
+            }
+        )
+
+    # 2) Si aucune variante n’avait de SKU, on regarde le produit lui-même
+    if not result:
+        sku = item.get("sku") or ""
+        if sku:
+            price = 0.0
+            price_data = item.get("priceData") or {}
+            if isinstance(price_data, dict) and price_data.get("price") is not None:
+                price = float(price_data["price"])
+
+            result.append(
+                {
+                    "sku": sku,
+                    "name": name,
+                    "length": None,
+                    "color": None,
+                    "category": "Wix",
+                    "description": description,
+                    "price": price,
+                    "active": active,
+                }
+            )
+        else:
+            # On log seulement pour debug
+            print(
+                f"[WIX SYNC] Produit sans SKU et sans variantes : '{name}' → ignoré."
+            )
+
+    return result
 
 
-# -------------------------------------------------------------------
-#  Synchro principale Wix → Luxura
-# -------------------------------------------------------------------
+# ------------------------------------------------
+#  Sync principale
+# ------------------------------------------------
 
 def sync_wix_to_luxura(source: str = "manual") -> Dict[str, Any]:
     """
-    Synchro complète Wix Catalog → DB Luxura.
-    - Import des produits + variantes dans la table products.
-    - Salons / inventaire : à brancher plus tard au besoin.
+    Synchro complète Wix → Luxura (produits uniquement pour l'instant).
 
-    `source` est juste un label ("startup" ou "manual") pour les logs.
+    - Récupère tous les produits via Stores v1
+    - Normalise produits + variantes
+    - Upsert dans la table Product (clé = SKU)
     """
+
     print("[WIX SYNC] Début synchro Wix → Luxura")
 
     created_products = 0
     updated_products = 0
-    created_salons = 0  # pour l’instant : 0
-    updated_salons = 0  # pour l’instant : 0
+    created_salons = 0  # pas encore géré dans cette version
+    updated_salons = 0
 
     try:
-        items = _fetch_all_catalog_items()
+        wix_items = _fetch_all_wix_products_v1()
     except Exception as e:
-        # On log, mais on n’empêche pas l’API de fonctionner.
-        print("[WIX SYNC] ERREUR pendant la récupération Catalog :", repr(e))
+        print("[WIX SYNC] ERREUR pendant la récupération des produits Wix :", e)
         summary_err = {
             "ok": False,
             "source": source,
@@ -204,89 +246,38 @@ def sync_wix_to_luxura(source: str = "manual") -> Dict[str, Any]:
         print(f"[WIX SYNC] Terminé (erreur) : {summary_err}")
         return summary_err
 
+    normalized_rows: List[Dict[str, Any]] = []
+    for item in wix_items:
+        normalized_rows.extend(_normalize_product_and_variants(item))
+
     with Session(engine) as session:
-        for item in items:
-            item_name = item.get("name") or item.get("productName") or "Sans nom"
-            category = "Wix Catalog"
+        for row in normalized_rows:
+            sku = row["sku"]
 
-            price_data = item.get("priceData") or {}
-            base_price_raw = price_data.get("price") or 0
-            try:
-                base_price = float(base_price_raw)
-            except (TypeError, ValueError):
-                base_price = 0.0
+            # On cherche un produit existant avec ce SKU
+            existing = session.exec(
+                select(Product).where(Product.sku == sku)
+            ).first()
 
-            variants = item.get("variants") or []
-
-            # Cas 1 : pas de variante → on utilise le SKU de l’item (si présent)
-            if not variants:
-                sku_item = item.get("sku") or ""
-                if not sku_item:
-                    # On ignore les items sans aucun SKU exploitable.
-                    print(
-                        f"[WIX SYNC] Item Catalog sans SKU ni variantes : "
-                        f"'{item_name}' → ignoré."
-                    )
-                    continue
-
-                created = _upsert_product(
-                    session,
-                    sku=sku_item,
-                    name=item_name,
-                    length=None,
-                    color=None,
-                    price=base_price,
-                    category=category,
-                )
-                if created:
-                    created_products += 1
-                else:
-                    updated_products += 1
-                continue
-
-            # Cas 2 : item avec variantes (cas de tes extensions / longueurs)
-            for variant in variants:
-                sku_variant = (
-                    variant.get("sku")
-                    or variant.get("variantSku")
-                    or ""
-                )
-                if not sku_variant:
-                    print(
-                        f"[WIX SYNC] Variante sans SKU pour '{item_name}' → ignorée."
-                    )
-                    continue
-
-                v_price_data = variant.get("priceData") or {}
-                v_price_raw = v_price_data.get("price", base_price)
-                try:
-                    v_price = float(v_price_raw)
-                except (TypeError, ValueError):
-                    v_price = base_price
-
-                choices = variant.get("choices") or {}
-                length, color = _extract_length_color_from_choices(choices)
-
-                active = bool(variant.get("visible", True))
-
-                created = _upsert_product(
-                    session,
-                    sku=sku_variant,
-                    name=item_name,
-                    length=length,
-                    color=color,
-                    price=v_price,
-                    category=category,
-                    active=active,
-                )
-                if created:
-                    created_products += 1
-                else:
-                    updated_products += 1
+            if existing:
+                # Mise à jour
+                existing.name = row["name"]
+                existing.length = row["length"]
+                existing.color = row["color"]
+                existing.category = row["category"]
+                existing.description = row["description"]
+                existing.price = row["price"]
+                existing.active = row["active"]
+                updated_products += 1
+            else:
+                # Création
+                prod = Product(**row)
+                session.add(prod)
+                created_products += 1
 
         session.commit()
 
-    summary_ok = {
+    summary: Dict[str, Any] = {
         "ok": True,
         "source": source,
         "created_products": created_products,
@@ -294,5 +285,6 @@ def sync_wix_to_luxura(source: str = "manual") -> Dict[str, Any]:
         "created_salons": created_salons,
         "updated_salons": updated_salons,
     }
-    print(f"[WIX SYNC] Terminé : {summary_ok}")
-    return summary_ok
+
+    print(f"[WIX SYNC] Terminé : {summary}")
+    return summary
