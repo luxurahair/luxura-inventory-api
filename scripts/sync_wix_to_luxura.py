@@ -1,31 +1,44 @@
-"""
-Script manuel pour lancer une synchro Wix → Luxura
-depuis la ligne de commande.
-
-Usage :
-    python scripts/sync_wix_to_luxura.py
-"""
-
 import os
 import sys
 
-# Assure que le dossier racine du projet est dans PYTHONPATH
+# Permet d'importer "app.*" quand on lance ce script directement
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from app.services.wix_sync import sync_wix_to_luxura
+from sqlmodel import Session, select  # type: ignore
+
+from app.db.session import engine
+from app.models.product import Product
+from app.services.wix_client import WixClient
+from app.services.catalog_normalizer import normalize_product
 
 
-def main() -> None:
-    print("==> Running 'python scripts/sync_wix_to_luxura.py'")
+def main():
+    client = WixClient()
+    version, raw_products = client.query_products(limit=500)
 
-    try:
-        result = sync_wix_to_luxura(source="script")
-    except Exception as e:
-        print("❌ ERREUR pendant la synchro :", str(e))
-        return
+    with Session(engine) as db:
+        synced = 0
 
-    print("==> Synchro terminée.")
-    print(result)
+        for wp in raw_products:
+            data = normalize_product(wp, version)
+            wix_id = data.get("wix_id")
+            if not wix_id:
+                continue
+
+            stmt = select(Product).where(Product.wix_id == wix_id)
+            existing = db.exec(stmt).first()
+
+            if existing:
+                for field, value in data.items():
+                    setattr(existing, field, value)
+            else:
+                db.add(Product(**data))
+
+            synced += 1
+
+        db.commit()
+
+    print(f"[SYNC] Version catalogue: {version} – Produits synchronisés: {synced}")
 
 
 if __name__ == "__main__":
