@@ -1,40 +1,60 @@
-from typing import Any, Dict
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
 
-from fastapi import APIRouter, HTTPException
+from app.db.session import get_session
+from app.models.product import Product
+from app.services.wix_client import WixClient
+from app.services.catalog_normalizer import normalize_product
 
-from app.services.wix_sync import sync_wix_to_luxura
-
-# Toutes les routes Wix auront le prefix /wix
 router = APIRouter(prefix="/wix", tags=["wix"])
 
 
-@router.post("/order-webhook")
-async def wix_order_webhook(payload: Dict[str, Any]):
+@router.get("/debug-products")
+def debug_wix_products():
     """
-    Webhook de commande Wix.
-    Pour l'instant : on logge simplement et on renvoie {}.
-    Plus tard, tu pourras décrémenter l'inventaire ici.
+    Test : voir ce que Wix retourne et comment c’est normalisé.
     """
-    print("[WIX WEBHOOK] Payload reçu :", payload)
-    return {}
+    client = WixClient()
+    version, raw_products = client.query_products(limit=20)
+    normalized = [normalize_product(p, version) for p in raw_products]
+
+    return {
+        "catalog_version": version,
+        "count": len(normalized),
+        "products": normalized,
+    }
 
 
-@router.post("/sync", summary="Forcer une synchro Wix → Luxura")
-def wix_sync_endpoint():
+@router.post("/sync")
+def sync_wix_to_luxura(db: Session = Depends(get_session)):
     """
-    Synchro MANUELLE Wix → Luxura.
-    (En plus de la synchro automatique au démarrage.)
+    Sync complète des produits Wix vers la DB Luxura.
     """
     try:
-        summary = sync_wix_to_luxura()
-        return {
-            "ok": True,
-            "source": "manual",
-            **summary,
-        }
+        client = WixClient()
+        version, raw_products = client.query_products(limit=500)
     except Exception as e:
-        # On renvoie une erreur claire à Swagger
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erreur lors de la synchro Wix → Luxura : {repr(e)}",
-        )
+        raise HTTPException(status_code=500, detail=str(e))
+
+    synced = 0
+
+    for wp in raw_products:
+        data = normalize_product(wp, version)
+        wix_id = data.get("wix_id")
+        if not wix_id:
+            continue
+
+        stmt = select(Product).where(Product.wix_id == wix_id)
+        existing = db.exec(stmt).first()
+
+        if existing:
+            # mise à jour
+            for field, value in data.items():
+                setattr(existing, field, value)
+        else:
+            # création
+            db.add(Product(**data))
+        synced += 1
+
+    db.commit()
+    return {"catalog_version": version, "synced": synced}
