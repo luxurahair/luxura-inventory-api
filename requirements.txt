@@ -2,6 +2,7 @@ fastapi==0.115.5
 uvicorn[standard]==0.30.6
 sqlalchemy==2.0.36
 sqlmodel==0.0.21
+pg8000>=1.30.0
 pydantic==2.9.2
 psycopg[binary]==3.2.12
 python-dotenv==1.0.1
