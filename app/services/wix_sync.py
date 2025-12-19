@@ -92,35 +92,35 @@ def _upsert_product(
     active: bool,
 ) -> None:
     """
-    Crée ou met à jour un produit Luxura à partir d’un SKU.
-    Le SKU est notre clé unique.
+    Crée ou met à jour un produit Luxura à partir de son wix_id (clé stable).
     """
-    
-stmt = select(Product).where(Product.wix_id == wix_id)
-existing = session.exec(stmt).first()
 
-if existing:
-    existing.sku = sku
-    existing.name = name
-    existing.length = length
-    existing.color = color
-    existing.category = category
-    existing.description = description
-    existing.price = price
-    existing.active = active
-else:
-    obj = Product(
-        wix_id=wix_id,
-        sku=sku,
-        name=name,
-        length=length,
-        color=color,
-        category=category,
-        description=description,
-        price=price,
-        active=active,
-    )
-    session.add(obj)
+    existing = session.exec(
+        select(Product).where(Product.wix_id == wix_id)
+    ).first()
+
+    if existing:
+        existing.sku = sku
+        existing.name = name
+        existing.length = length
+        existing.color = color
+        existing.category = category
+        existing.description = description
+        existing.price = price
+        existing.active = active
+    else:
+        obj = Product(
+            wix_id=wix_id,
+            sku=sku,
+            name=name,
+            length=length,
+            color=color,
+            category=category,
+            description=description,
+            price=price,
+            active=active,
+        )
+        session.add(obj)
 
 
 def _extract_price_from_product(p: Dict[str, Any]) -> float:
