@@ -96,11 +96,10 @@ def _upsert_product(
     Le SKU est notre clé unique.
     """
     
-    stmt = select(Product).where(Product.wix_id == wix_id)
-    existing = session.exec(stmt).first()
+stmt = select(Product).where(Product.wix_id == wix_id)
+existing = session.exec(stmt).first()
 
-
-   if existing:
+if existing:
     existing.sku = sku
     existing.name = name
     existing.length = length
@@ -109,10 +108,9 @@ def _upsert_product(
     existing.description = description
     existing.price = price
     existing.active = active
-
-    else:
+else:
     obj = Product(
-        wix_id=wix_id,     # 👈 AJOUT ICI
+        wix_id=wix_id,
         sku=sku,
         name=name,
         length=length,
