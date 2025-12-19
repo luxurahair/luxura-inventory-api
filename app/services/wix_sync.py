@@ -81,6 +81,7 @@ def _fetch_all_wix_products_v1() -> List[Dict[str, Any]]:
 
 def _upsert_product(
     session: Session,
+    wix_id: str,
     sku: str,
     name: str,
     length: Optional[str],
@@ -94,31 +95,34 @@ def _upsert_product(
     Crée ou met à jour un produit Luxura à partir d’un SKU.
     Le SKU est notre clé unique.
     """
-    stmt = select(Product).where(Product.sku == sku)
+    
+    stmt = select(Product).where(Product.wix_id == wix_id)
     existing = session.exec(stmt).first()
 
-    if existing:
-        # UPDATE
-        existing.name = name
-        existing.length = length
-        existing.color = color
-        existing.category = category
-        existing.description = description
-        existing.price = price
-        existing.active = active
+
+   if existing:
+    existing.sku = sku
+    existing.name = name
+    existing.length = length
+    existing.color = color
+    existing.category = category
+    existing.description = description
+    existing.price = price
+    existing.active = active
+
     else:
-        # CREATE
-        obj = Product(
-            sku=sku,
-            name=name,
-            length=length,
-            color=color,
-            category=category,
-            description=description,
-            price=price,
-            active=active,
-        )
-        session.add(obj)
+    obj = Product(
+        wix_id=wix_id,     # 👈 AJOUT ICI
+        sku=sku,
+        name=name,
+        length=length,
+        color=color,
+        category=category,
+        description=description,
+        price=price,
+        active=active,
+    )
+    session.add(obj)
 
 
 def _extract_price_from_product(p: Dict[str, Any]) -> float:
@@ -213,17 +217,19 @@ def _import_wix_products(session: Session) -> Dict[str, int]:
                     select(Product).where(Product.sku == raw_sku)
                 ).first()
 
-                _upsert_product(
-                    session=session,
-                    sku=raw_sku,
-                    name=variant_name,
-                    length=length,
-                    color=color,
-                    category=category,
-                    description=base_desc,
-                    price=price,
-                    active=active,
-                )
+               _upsert_product(
+                   session=session,
+                   wix_id=wix_id,
+                   sku=raw_sku,
+                   name=variant_name,
+                   length=length,
+                   color=color,
+                   category=category,
+                   description=base_desc,
+                   price=price,
+                   active=active,
+               )
+
 
                 if before:
                     updated_products += 1
