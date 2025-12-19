@@ -47,11 +47,33 @@ def get_product(
 
 
 @router.post(
-    "",
+    "/wix-sync",
     response_model=ProductRead,
-    status_code=201,
-    summary="Créer un produit",
+    summary="Créer ou mettre à jour un produit depuis Wix",
 )
+def upsert_product_from_wix(
+    payload: ProductCreate,
+    session: Session = SessionDep,
+) -> ProductRead:
+
+    product = session.exec(
+        select(Product).where(Product.wix_id == payload.wix_id)
+    ).first()
+
+    if product:
+        # UPDATE
+        data = payload.dict(exclude_unset=True)
+        for key, value in data.items():
+            setattr(product, key, value)
+    else:
+        # CREATE
+        product = Product.from_orm(payload)
+        session.add(product)
+
+    session.commit()
+    session.refresh(product)
+    return product
+
 def create_product(
     payload: ProductCreate,
     session: Session = SessionDep,
