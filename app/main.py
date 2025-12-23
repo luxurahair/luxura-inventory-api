@@ -2,8 +2,12 @@
 #  ROUTES
 # ----------------------------
 app.include_router(wix_routes.router)
+# ----------------------------
+#  ROUTES
+# ----------------------------
+app.include_router(wix_routes.router)
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def root():
     return {
         "ok": True,
@@ -12,14 +16,6 @@ def root():
         "health": "/health",
     }
 
-@app.head("/")
-def root_head():
-    return
-
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     return {"status": "ok"}
-
-@app.head("/health")
-def health_head():
-    return
