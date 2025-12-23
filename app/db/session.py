@@ -1,5 +1,8 @@
 import os
+from typing import Generator
+
 from sqlalchemy import create_engine
+from sqlmodel import Session
 
 def mask_db_url(url: str) -> str:
     if not url or "://" not in url or "@" not in url:
@@ -21,3 +24,7 @@ engine = create_engine(
     pool_size=3,
     max_overflow=2,
 )
+
+def get_session() -> Generator[Session, None, None]:
+    with Session(engine) as session:
+        yield session
