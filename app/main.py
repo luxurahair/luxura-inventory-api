@@ -7,7 +7,6 @@ from sqlmodel import SQLModel
 from app.db.session import engine
 from app.routes import wix as wix_routes
 
-
 app = FastAPI(
     title="Luxura Inventory API",
     version="2.0.0",
@@ -36,12 +35,24 @@ app.add_middleware(
 # ----------------------------
 app.include_router(wix_routes.router)
 
+@app.get("/")
+def root():
+    return {
+        "ok": True,
+        "service": "Luxura Inventory API",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 # ----------------------------
 #  STARTUP
 # ----------------------------
 @app.on_event("startup")
 def on_startup() -> None:
-    # crée les tables si pas encore créées
+    # Option: éviter de recréer les tables en prod si tu veux
+    # if os.getenv("AUTO_CREATE_TABLES", "1") == "1":
     SQLModel.metadata.create_all(engine)
-
