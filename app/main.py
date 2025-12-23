@@ -7,11 +7,11 @@ from sqlmodel import SQLModel
 from app.db.session import engine
 from app.routes import wix as wix_routes
 
-
 app = FastAPI(
     title="Luxura Inventory API",
     version="2.0.0",
 )
+
 
 # ----------------------------
 #  CORS
