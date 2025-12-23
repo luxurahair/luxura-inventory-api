@@ -37,6 +37,14 @@ app.include_router(wix_routes.router)
 
 @app.get("/")
 def root():
+    return {"ok": True, "docs": "/docs", "health": "/health"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+@app.get("/")
+def root():
     return {
         "ok": True,
         "service": "Luxura Inventory API",
