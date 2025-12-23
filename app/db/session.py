@@ -1,27 +1,23 @@
 import os
-from sqlmodel import create_engine, Session
-from sqlalchemy.engine import make_url
+from sqlalchemy import create_engine
 
-# On récupère l'URL brute (Render ou local)
-RAW_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./luxura.db")
+def mask_db_url(url: str) -> str:
+    if not url or "://" not in url or "@" not in url:
+        return url
+    scheme, rest = url.split("://", 1)
+    creds, tail = rest.split("@", 1)
+    user = creds.split(":", 1)[0]
+    return f"{scheme}://{user}:***@{tail}"
 
-# Corrige "postgres://" -> "postgresql://"
-if RAW_DATABASE_URL.startswith("postgres://"):
-    RAW_DATABASE_URL = RAW_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is missing in environment variables")
 
-# Parse pour inspecter / modifier le driver
-url = make_url(RAW_DATABASE_URL)
+print("[DB] Using DATABASE_URL =", mask_db_url(DATABASE_URL))
 
-# Force l'utilisation de psycopg3 si le driver est juste "postgresql"
-if url.drivername == "postgresql":
-    url = url.set(drivername="postgresql+psycopg")
-
-DATABASE_URL = str(url)
-
-print(f"[DB] Using DATABASE_URL = {DATABASE_URL}")  # tu le vois dans les logs Render
-
-engine = create_engine(DATABASE_URL, echo=False)
-
-def get_session():
-    with Session(engine) as session:
-        yield session
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_size=3,
+    max_overflow=2,
+)
