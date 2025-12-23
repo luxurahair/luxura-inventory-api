@@ -11,6 +11,7 @@ app = FastAPI(
     title="Luxura Inventory API",
     version="2.0.0",
 )
+print("### LOADED app/main.py - Luxura Inventory API ###")
 
 
 # ----------------------------
