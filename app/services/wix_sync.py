@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import requests
 from sqlmodel import Session, select
 
-from app.db import engine
+from app.db.session import engine
 from app.models import Product
 
 # ---------------------------------------------------------
