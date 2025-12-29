@@ -1,7 +1,6 @@
 # app/routes/wix.py
-print("### LOADED app/routes/wix.py (v1 sync + db error details) ###")
 
-from __future__ import annotations
+print("### LOADED app/routes/wix.py (v1 sync + db error details) ###")
 
 import logging
 import os
@@ -49,9 +48,6 @@ def _fetch_products_v1(limit: int) -> List[Dict[str, Any]]:
 
 @router.get("/debug-products")
 def debug_wix_products() -> Dict[str, Any]:
-    """
-    Debug: récupère 20 produits Wix (Stores v1) et retourne la normalisation (sans écrire en DB).
-    """
     try:
         raw_products = _fetch_products_v1(limit=20)
         normalized = [normalize_product(p, "CATALOG_V1") for p in raw_products]
@@ -63,9 +59,6 @@ def debug_wix_products() -> Dict[str, Any]:
 
 @router.post("/sync")
 def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 500) -> Dict[str, Any]:
-    """
-    Sync: récupère les produits Wix (Stores v1), puis upsert dans Product (wix_id unique).
-    """
     try:
         raw_products = _fetch_products_v1(limit=limit)
     except Exception as e:
@@ -81,7 +74,6 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 500) -> 
             wix_id = data.get("wix_id")
             name = data.get("name")
 
-            # garde-fous (évite NOT NULL / unique weird)
             if not wix_id or not name:
                 skipped += 1
                 continue
