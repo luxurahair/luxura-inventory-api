@@ -40,6 +40,9 @@ app.include_router(products.router)
 # app.include_router(salons.router)
 # app.include_router(movement.router)
 
+from fastapi import FastAPI
+from fastapi.responses import Response
+
 @app.get("/")
 def root():
     return {
@@ -49,9 +52,10 @@ def root():
         "health": "/health",
     }
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+@app.head("/")
+def root_head():
+    return Response(status_code=200)
+
 
 
 # ----------------------------
