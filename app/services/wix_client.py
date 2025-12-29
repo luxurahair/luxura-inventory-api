@@ -1,62 +1,42 @@
+# app/services/wix_client.py
 import os
-from typing import List, Dict, Any, Tuple
+from typing import Any, Dict, List, Tuple
 import requests
 
 WIX_API_BASE = "https://www.wixapis.com"
 
 class WixClient:
+    """
+    Client minimal. (On peut ne plus l'utiliser, mais il doit compiler.)
+    """
     def __init__(self) -> None:
-        # 1) Mode API KEY (recommandé)
+        # Tolérant: supporte les deux noms
         self.api_key = os.getenv("WIX_API_KEY") or os.getenv("WIX_API_TOKEN")
         self.site_id = os.getenv("WIX_SITE_ID")
-        self.account_id = os.getenv("WIX_ACCOUNT_ID")
 
         if not self.api_key:
-            raise RuntimeError("WIX_API_KEY (ou WIX_API_TOKEN) manquant.")
-
-        # Choisir UN SEUL header d'identité (site OU account)
-        # Pour Wix Stores, site-level est généralement le bon choix.
-        self.identity_header: Dict[str, str] = {}
-        if self.site_id:
-            self.identity_header = {"wix-site-id": self.site_id}
-        elif self.account_id:
-            self.identity_header = {"wix-account-id": self.account_id}
-        else:
-            raise RuntimeError("WIX_SITE_ID ou WIX_ACCOUNT_ID manquant (API key auth).")
+            raise RuntimeError("WIX_API_KEY / WIX_API_TOKEN manquant.")
+        if not self.site_id:
+            raise RuntimeError("WIX_SITE_ID manquant.")
 
     def _headers(self) -> Dict[str, str]:
-    # API KEY auth (pas Bearer)
-    h = {
-        "Authorization": self.api_key,   # <-- pas "Bearer"
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
-    # IMPORTANT: un seul des deux
-    h["wix-site-id"] = self.site_id
-    return h
+        return {
+            "Authorization": self.api_key,  # pas Bearer
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "wix-site-id": self.site_id,
+        }
 
-    def get_catalog_version(self) -> str:
-        url = f"{WIX_API_BASE}/stores/v3/provision/version"
-        resp = requests.get(url, headers=self._headers(), timeout=20)
-        if resp.status_code != 200:
-            raise RuntimeError(f"Erreur Wix get_catalog_version: {resp.status_code} {resp.text}")
-        data = resp.json()
-        return data.get("catalogVersion", "CATALOG_V1")
-
-    def query_products(self, limit: int = 100) -> Tuple[str, List[Dict[str, Any]]]:
-        version = self.get_catalog_version()
-
-        if version == "CATALOG_V1":
-            url = f"{WIX_API_BASE}/stores/v1/products/query"
-            payload = {"query": {"paging": {"limit": limit}}}
-        else:
-            url = f"{WIX_API_BASE}/stores/v3/products/query"
-            payload = {"query": {"paging": {"limit": limit}}}
-
+    def query_products_v1(self, limit: int = 100) -> List[Dict[str, Any]]:
+        url = f"{WIX_API_BASE}/stores/v1/products/query"
+        payload = {"query": {"paging": {"limit": limit}}}
         resp = requests.post(url, headers=self._headers(), json=payload, timeout=30)
         if resp.status_code != 200:
-            raise RuntimeError(f"Erreur Wix query_products ({version}): {resp.status_code} {resp.text}")
+            raise RuntimeError(f"Wix v1 products/query: {resp.status_code} {resp.text}")
+        data = resp.json() or {}
+        return data.get("products") or data.get("items") or []
 
-        data = resp.json()
-        products = data.get("products") or data.get("items") or []
-        return version, products
+    # Ancienne signature si du code l'appelle encore
+    def query_products(self, limit: int = 100) -> Tuple[str, List[Dict[str, Any]]]:
+        products = self.query_products_v1(limit=limit)
+        return "CATALOG_V1", products
