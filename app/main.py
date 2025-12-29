@@ -2,17 +2,20 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from sqlmodel import SQLModel
 
 from app.db.session import engine
 from app.routes import wix as wix_routes
 from app.routes import products
 
+
 app = FastAPI(
     title="Luxura Inventory API",
     version="2.0.0",
 )
 print("### LOADED app/main.py - Luxura Inventory API ###")
+
 
 # ----------------------------
 #  CORS
@@ -28,6 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # ----------------------------
 #  ROUTES
 # ----------------------------
@@ -40,8 +44,6 @@ app.include_router(products.router)
 # app.include_router(salons.router)
 # app.include_router(movement.router)
 
-from fastapi import FastAPI
-from fastapi.responses import Response
 
 @app.get("/")
 def root():
@@ -52,10 +54,20 @@ def root():
         "health": "/health",
     }
 
+
 @app.head("/")
 def root_head():
     return Response(status_code=200)
 
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.head("/health")
+def health_head():
+    return Response(status_code=200)
 
 
 # ----------------------------
