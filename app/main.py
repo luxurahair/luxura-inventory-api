@@ -40,13 +40,19 @@ app.include_router(products.router)
 # app.include_router(salons.router)
 # app.include_router(movement.router)
 
-@app.api_route("/", methods=["GET", "HEAD"])
+@app.get("/")
 def root():
-    return {"ok": True, "service": "Luxura Inventory API", "docs": "/docs", "health": "/health"}
+    return {
+        "ok": True,
+        "service": "Luxura Inventory API",
+        "docs": "/docs",
+        "health": "/health",
+    }
 
-@app.api_route("/health", methods=["GET", "HEAD"])
+@app.get("/health")
 def health():
     return {"status": "ok"}
+
 
 # ----------------------------
 #  STARTUP
