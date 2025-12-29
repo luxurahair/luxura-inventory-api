@@ -1,8 +1,10 @@
-from typing import Optional, Dict, Any
-from datetime import datetime, timezone
+from __future__ import annotations
 
-from sqlmodel import SQLModel, Field, Column
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlmodel import Column, Field, SQLModel
 
 
 def now_utc() -> datetime:
@@ -49,27 +51,4 @@ class ProductCreate(SQLModel):
     options: Dict[str, Any] = Field(default_factory=dict)
 
 
-class ProductRead(SQLModel):
-    id: int
-    wix_id: str
-    sku: Optional[str] = None
-    name: str
-    price: float = 0.0
-    description: Optional[str] = None
-    handle: Optional[str] = None
-    is_in_stock: bool
-    quantity: int
-    options: Dict[str, Any]
-    created_at: datetime
-    updated_at: datetime
-
-
-class ProductUpdate(SQLModel):
-    sku: Optional[str] = None
-    name: Optional[str] = None
-    price: Optional[float] = None
-    description: Optional[str] = None
-    handle: Optional[str] = None
-    is_in_stock: Optional[bool] = None
-    quantity: Optional[int] = None
-    options: Optional[Dict[str, Any]] = None
+c
