@@ -1,41 +1,67 @@
-# app/routes/wix.py
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
+import requests
+import os
 
-from fastapi import APIRouter, HTTPException
-from app.services.wix_sync import sync_wix_to_luxura
+from app.db.session import get_session
+from app.models.product import Product
+from app.services.catalog_normalizer import normalize_product
 
 router = APIRouter(prefix="/wix", tags=["wix"])
+WIX_BASE_URL = "https://www.wixapis.com"
 
+def _wix_headers():
+    api_key = os.getenv("WIX_API_KEY") or os.getenv("WIX_API_TOKEN")
+    site_id = os.getenv("WIX_SITE_ID")
+    if not api_key or not site_id:
+        raise RuntimeError("WIX_API_KEY (ou WIX_API_TOKEN) et WIX_SITE_ID manquants dans Render.")
+    return {
+        "Authorization": api_key,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "wix-site-id": site_id,
+    }
 
 @router.get("/debug-products")
 def debug_wix_products():
-    """
-    Debug: exécute une mini-sync "dry run" et retourne un échantillon normalisé.
-    IMPORTANT: ne touche pas à la DB.
-    """
     try:
-        # On appelle la sync en mode "limit petit", mais sans commit DB
-        # => Pour garder ça simple, on fait plutôt une vraie sync limit=20 ?
-        # Non: debug doit éviter d'écrire. Donc on lève si tu veux du dry-run.
-        # Ici: on te donne juste un message clair.
-        raise HTTPException(
-            status_code=501,
-            detail="debug-products a été désactivé. Utilise POST /wix/sync?limit=20 puis GET /products."
-        )
-    except HTTPException:
-        raise
+        url = f"{WIX_BASE_URL}/stores/v1/products/query"
+        payload = {"query": {"paging": {"limit": 20}}}
+        resp = requests.post(url, headers=_wix_headers(), json=payload, timeout=30)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Wix v1 products/query: {resp.status_code} {resp.text}")
+        raw_products = (resp.json() or {}).get("products") or []
+        normalized = [normalize_product(p, "CATALOG_V1") for p in raw_products]
+        return {"catalog_version": "CATALOG_V1", "count": len(normalized), "products": normalized}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.post("/sync")
-def wix_sync(limit: int = 500):
-    """
-    Sync complète des produits Wix (Stores v1) vers la DB Luxura.
-    1 produit Wix = 1 ligne Product (wix_id unique).
-    Variantes stockées dans Product.options (JSONB).
-    """
+def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 500):
     try:
-        return sync_wix_to_luxura(limit=limit)
+        url = f"{WIX_BASE_URL}/stores/v1/products/query"
+        payload = {"query": {"paging": {"limit": limit}}}
+        resp = requests.post(url, headers=_wix_headers(), json=payload, timeout=30)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Wix v1 products/query: {resp.status_code} {resp.text}")
+        raw_products = (resp.json() or {}).get("products") or []
     except Exception as e:
-        # On renvoie un 500 JSON lisible (pas "Internal Server Error" opaque)
         raise HTTPException(status_code=500, detail=str(e))
+
+    synced = 0
+    for wp in raw_products:
+        data = normalize_product(wp, "CATALOG_V1")
+        wix_id = data.get("wix_id")
+        if not wix_id:
+            continue
+
+        existing = db.exec(select(Product).where(Product.wix_id == wix_id)).first()
+        if existing:
+            for field, value in data.items():
+                setattr(existing, field, value)
+        else:
+            db.add(Product(**data))
+        synced += 1
+
+    db.commit()
+    return {"catalog_version": "CATALOG_V1", "synced": synced}
