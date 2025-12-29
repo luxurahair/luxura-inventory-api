@@ -1,11 +1,11 @@
+from datetime import datetime, timezone
 from typing import List
-from datetime import datetime, timezone  # ✅ pour updated_at
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from app.db.session import get_session
-from app.models.product import Product, ProductCreate, ProductRead, ProductUpdate  # ✅ import direct (solide)
+from app.models.product import Product, ProductCreate, ProductRead, ProductUpdate
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -35,7 +35,6 @@ def create_product(payload: ProductCreate, session: Session = Depends(get_sessio
 @router.post("/wix-sync", response_model=ProductRead, summary="Créer ou mettre à jour un produit depuis Wix")
 def upsert_product_from_wix(payload: ProductCreate, session: Session = Depends(get_session)) -> ProductRead:
     product = session.exec(select(Product).where(Product.wix_id == payload.wix_id)).first()
-
     data = payload.dict(exclude_unset=True)
 
     if product:
@@ -45,20 +44,14 @@ def upsert_product_from_wix(payload: ProductCreate, session: Session = Depends(g
         product = Product.from_orm(payload)
         session.add(product)
 
-    # ✅ updated_at ici (juste avant commit)
-    product.updated_at = datetime.now(timezone.utc)
-
+    product.updated_at = datetime.now(timezone.utc)  # ✅ ICI
     session.commit()
     session.refresh(product)
     return product
 
 
 @router.put("/{product_id}", response_model=ProductRead, summary="Mettre à jour un produit")
-def update_product(
-    product_id: int,
-    payload: ProductUpdate,
-    session: Session = Depends(get_session),
-) -> ProductRead:
+def update_product(product_id: int, payload: ProductUpdate, session: Session = Depends(get_session)) -> ProductRead:
     product = session.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
@@ -67,9 +60,7 @@ def update_product(
     for key, value in data.items():
         setattr(product, key, value)
 
-    # ✅ updated_at ici (juste avant commit)
-    product.updated_at = datetime.now(timezone.utc)
-
+    product.updated_at = datetime.now(timezone.utc)  # ✅ ICI
     session.add(product)
     session.commit()
     session.refresh(product)
