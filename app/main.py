@@ -6,7 +6,7 @@ from sqlmodel import SQLModel
 
 from app.db.session import engine
 from app.routes import wix as wix_routes
-from app.routes import products, inventory, salons, movement  # ✅ AJOUTE ÇA
+from app.routes import products
 
 app = FastAPI(
     title="Luxura Inventory API",
@@ -14,15 +14,11 @@ app = FastAPI(
 )
 print("### LOADED app/main.py - Luxura Inventory API ###")
 
-
 # ----------------------------
 #  CORS
 # ----------------------------
 origins_env = os.getenv("CORS_ORIGINS", "")
-if origins_env:
-    allowed_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
-else:
-    allowed_origins = ["*"]
+allowed_origins = [o.strip() for o in origins_env.split(",") if o.strip()] if origins_env else ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,20 +32,17 @@ app.add_middleware(
 #  ROUTES
 # ----------------------------
 app.include_router(wix_routes.router)
+app.include_router(products.router)
 
-app.include_router(products.router)   # ✅ AJOUTE ÇA
-app.include_router(inventory.router)  # ✅ AJOUTE ÇA
-app.include_router(salons.router)     # ✅ AJOUTE ÇA
-app.include_router(movement.router)   # ✅ AJOUTE ÇA
+# (On réactive après)
+# from app.routes import inventory, salons, movement
+# app.include_router(inventory.router)
+# app.include_router(salons.router)
+# app.include_router(movement.router)
 
 @app.api_route("/", methods=["GET", "HEAD"])
 def root():
-    return {
-        "ok": True,
-        "service": "Luxura Inventory API",
-        "docs": "/docs",
-        "health": "/health",
-    }
+    return {"ok": True, "service": "Luxura Inventory API", "docs": "/docs", "health": "/health"}
 
 @app.api_route("/health", methods=["GET", "HEAD"])
 def health():
