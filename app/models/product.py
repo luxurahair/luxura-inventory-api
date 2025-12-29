@@ -1,5 +1,6 @@
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone
+product.updated_at = datetime.now(timezone.utc)
 
 from sqlmodel import SQLModel, Field, Column
 from sqlalchemy.dialects.postgresql import JSONB
