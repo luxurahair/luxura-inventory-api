@@ -6,6 +6,7 @@ from sqlmodel import SQLModel
 
 from app.db.session import engine
 from app.routes import wix as wix_routes
+from app.routes import products, inventory, salons, movement  # ✅ AJOUTE ÇA
 
 app = FastAPI(
     title="Luxura Inventory API",
@@ -35,6 +36,11 @@ app.add_middleware(
 #  ROUTES
 # ----------------------------
 app.include_router(wix_routes.router)
+
+app.include_router(products.router)   # ✅ AJOUTE ÇA
+app.include_router(inventory.router)  # ✅ AJOUTE ÇA
+app.include_router(salons.router)     # ✅ AJOUTE ÇA
+app.include_router(movement.router)   # ✅ AJOUTE ÇA
 
 @app.api_route("/", methods=["GET", "HEAD"])
 def root():
