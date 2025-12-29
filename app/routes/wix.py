@@ -1,4 +1,5 @@
 # app/routes/wix.py
+print("### LOADED app/routes/wix.py (v1 sync + db error details) ###")
 
 from __future__ import annotations
 
