@@ -1,5 +1,3 @@
-# app/db/__init__.py
-from .session import get_session, engine
+from .session import engine, get_session
 
-__all__ = ["get_session", "engine"]
-
+__all__ = ["engine", "get_session"]
