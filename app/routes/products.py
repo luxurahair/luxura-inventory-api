@@ -11,21 +11,13 @@ router = APIRouter(
     tags=["products"],
 )
 
-SessionDep = Depends(get_session)
-
 
 @router.get(
     "",
     response_model=List[ProductRead],
     summary="Lister tous les produits",
 )
-def list_products(
-    session: Session = SessionDep,
-) -> List[ProductRead]:
-    """
-    Retourne la liste complète des produits.
-    Aucun paramètre requis -> ne peut PAS renvoyer 422.
-    """
+def list_products(session: Session = Depends(get_session)) -> List[ProductRead]:
     products = session.exec(select(Product)).all()
     return products
 
@@ -35,14 +27,23 @@ def list_products(
     response_model=ProductRead,
     summary="Récupérer un produit",
 )
-def get_product(
-    product_id: int,
-    session: Session = SessionDep,
-) -> ProductRead:
-    """Récupérer un produit par son ID."""
+def get_product(product_id: int, session: Session = Depends(get_session)) -> ProductRead:
     product = session.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
+    return product
+
+
+@router.post(
+    "",
+    response_model=ProductRead,
+    summary="Créer un produit",
+)
+def create_product(payload: ProductCreate, session: Session = Depends(get_session)) -> ProductRead:
+    product = Product.from_orm(payload)
+    session.add(product)
+    session.commit()
+    session.refresh(product)
     return product
 
 
@@ -51,36 +52,20 @@ def get_product(
     response_model=ProductRead,
     summary="Créer ou mettre à jour un produit depuis Wix",
 )
-def upsert_product_from_wix(
-    payload: ProductCreate,
-    session: Session = SessionDep,
-) -> ProductRead:
-
+def upsert_product_from_wix(payload: ProductCreate, session: Session = Depends(get_session)) -> ProductRead:
     product = session.exec(
         select(Product).where(Product.wix_id == payload.wix_id)
     ).first()
 
+    data = payload.dict(exclude_unset=True)
+
     if product:
-        # UPDATE
-        data = payload.dict(exclude_unset=True)
         for key, value in data.items():
             setattr(product, key, value)
     else:
-        # CREATE
         product = Product.from_orm(payload)
         session.add(product)
 
-    session.commit()
-    session.refresh(product)
-    return product
-
-def create_product(
-    payload: ProductCreate,
-    session: Session = SessionDep,
-) -> ProductRead:
-    """Créer un nouveau produit."""
-    product = Product.from_orm(payload)
-    session.add(product)
     session.commit()
     session.refresh(product)
     return product
@@ -94,9 +79,8 @@ def create_product(
 def update_product(
     product_id: int,
     payload: ProductUpdate,
-    session: Session = SessionDep,
+    session: Session = Depends(get_session),
 ) -> ProductRead:
-    """Mettre à jour un produit existant."""
     product = session.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
@@ -116,11 +100,7 @@ def update_product(
     status_code=204,
     summary="Supprimer un produit",
 )
-def delete_product(
-    product_id: int,
-    session: Session = SessionDep,
-) -> None:
-    """Supprimer un produit."""
+def delete_product(product_id: int, session: Session = Depends(get_session)) -> None:
     product = session.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
