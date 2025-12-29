@@ -75,3 +75,39 @@ class ProductUpdate(SQLModel):
     quantity: Optional[int] = None
     options: Optional[Dict[str, Any]] = None
 
+class ProductCreate(SQLModel):
+    wix_id: str
+    sku: Optional[str] = None
+    name: str
+    price: float = 0.0
+    description: Optional[str] = None
+    handle: Optional[str] = None
+    is_in_stock: bool = True
+    quantity: int = 0
+    options: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ProductRead(SQLModel):
+    id: int
+    wix_id: str
+    sku: Optional[str] = None
+    name: str
+    price: float = 0.0
+    description: Optional[str] = None
+    handle: Optional[str] = None
+    is_in_stock: bool
+    quantity: int
+    options: Dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProductUpdate(SQLModel):
+    sku: Optional[str] = None
+    name: Optional[str] = None
+    price: Optional[float] = None
+    description: Optional[str] = None
+    handle: Optional[str] = None
+    is_in_stock: Optional[bool] = None
+    quantity: Optional[int] = None
+    options: Optional[Dict[str, Any]] = None
