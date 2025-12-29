@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from sqlmodel import Session, select
+from sqlalchemy.exc import IntegrityError, DataError
 
 from app.db.session import engine
 from app.models.product import Product
