@@ -25,14 +25,15 @@ class WixClient:
             raise RuntimeError("WIX_SITE_ID ou WIX_ACCOUNT_ID manquant (API key auth).")
 
     def _headers(self) -> Dict[str, str]:
-        # IMPORTANT: pas de "Bearer" pour API Key auth
-        h = {
-            "Authorization": self.api_key,
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        }
-        h.update(self.identity_header)
-        return h
+    # API KEY auth (pas Bearer)
+    h = {
+        "Authorization": self.api_key,   # <-- pas "Bearer"
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    # IMPORTANT: un seul des deux
+    h["wix-site-id"] = self.site_id
+    return h
 
     def get_catalog_version(self) -> str:
         url = f"{WIX_API_BASE}/stores/v3/provision/version"
