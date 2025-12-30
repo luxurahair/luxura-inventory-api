@@ -14,7 +14,7 @@ from app.services.catalog_normalizer import normalize_product
 
 def main():
     client = WixClient()
-    version, raw_products = client.query_products(limit=500)
+    version, raw_products = client.query_products(limit=100)
 
     with Session(engine) as db:
         synced = 0
