@@ -1,14 +1,18 @@
 # app/services/wix_client.py
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
 import requests
 
 WIX_API_BASE = "https://www.wixapis.com"
 
+
 class WixClient:
     """
-    Client minimal. (On peut ne plus l'utiliser, mais il doit compiler.)
+    Client Wix Stores v1 (API KEY + wix-site-id).
+    Pagination via cursorPaging (limit max 100).
     """
+
     def __init__(self) -> None:
         # Tolérant: supporte les deux noms
         self.api_key = os.getenv("WIX_API_KEY") or os.getenv("WIX_API_TOKEN")
@@ -27,14 +31,41 @@ class WixClient:
             "wix-site-id": self.site_id,
         }
 
-    def query_products_v1(self, limit: int = 100) -> List[Dict[str, Any]]:
+    def query_products_v1(self, limit: int = 100, max_pages: Optional[int] = None) -> List[Dict[str, Any]]:
+        """
+        Récupère les produits via /stores/v1/products/query.
+        Wix impose limit <= 100. On paginate avec cursorPaging.cursor.
+        """
         url = f"{WIX_API_BASE}/stores/v1/products/query"
-        payload = {"query": {"paging": {"limit": limit}}}
-        resp = requests.post(url, headers=self._headers(), json=payload, timeout=30)
-        if resp.status_code != 200:
-            raise RuntimeError(f"Wix v1 products/query: {resp.status_code} {resp.text}")
-        data = resp.json() or {}
-        return data.get("products") or data.get("items") or []
+
+        per_page = min(max(int(limit), 1), 100)
+        cursor: Optional[str] = None
+        all_items: List[Dict[str, Any]] = []
+        pages = 0
+
+        while True:
+            body: Dict[str, Any] = {"query": {"paging": {"limit": per_page}}}
+            if cursor:
+                body["cursorPaging"] = {"cursor": cursor}
+
+            resp = requests.post(url, headers=self._headers(), json=body, timeout=30)
+            if resp.status_code != 200:
+                raise RuntimeError(f"Wix v1 products/query: {resp.status_code} {resp.text}")
+
+            data = resp.json() or {}
+            items = data.get("products") or data.get("items") or []
+            all_items.extend(items)
+
+            # Wix peut renvoyer le curseur à différents endroits selon versions/retours
+            cursor = data.get("nextCursor") or (data.get("cursorPaging") or {}).get("nextCursor")
+
+            pages += 1
+            if not cursor:
+                break
+            if max_pages is not None and pages >= max_pages:
+                break
+
+        return all_items
 
     # Ancienne signature si du code l'appelle encore
     def query_products(self, limit: int = 100) -> Tuple[str, List[Dict[str, Any]]]:
