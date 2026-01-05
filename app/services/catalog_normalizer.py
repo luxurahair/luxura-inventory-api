@@ -10,8 +10,9 @@ def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Option
     if not wix_product_id or not wix_variant_id:
         return None
 
-if not sku:
-    sku = f"{wix_product_id}:{wix_variant_id}"
+    sku = (variant.get("sku") or "").strip()
+    if not sku:
+        sku = f"{wix_product_id}:{wix_variant_id}"
 
 
     choices = variant.get("choices") or variant.get("options") or {}
