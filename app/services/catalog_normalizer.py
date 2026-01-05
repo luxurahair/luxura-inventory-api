@@ -1,5 +1,48 @@
 from typing import Any, Dict, Optional
 
+def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    sku = (variant.get("sku") or "").strip()
+    if not sku:
+        return None
+
+    wix_product_id = parent.get("id") or parent.get("_id")
+    if not wix_product_id:
+        return None
+
+    choices = variant.get("choices") or variant.get("options") or {}
+    if not isinstance(choices, dict):
+        choices = {}
+
+    base_name = (parent.get("name") or "Sans nom").strip()
+    suffix = " ".join(str(v) for v in choices.values() if v)
+    name = f"{base_name} — {suffix}".strip(" —") if suffix else base_name
+
+    inv = variant.get("inventory") or {}
+    track = bool(inv.get("trackQuantity", False))
+    qty_raw = inv.get("quantity", 0)
+    try:
+        qty = int(qty_raw or 0)
+    except Exception:
+        qty = 0
+
+    price_parent = (parent.get("priceData") or {}).get("price") or 0
+    price_variant = (variant.get("priceData") or {}).get("price", price_parent) or 0
+
+    return {
+        "wix_id": str(wix_product_id),
+        "sku": sku,
+        "name": name,
+        "description": parent.get("description") or None,
+        "price": float(price_variant),
+        "handle": parent.get("slug") or parent.get("handle") or parent.get("urlPart"),
+        "options": {
+            "wix_variant_id": variant.get("id") or variant.get("_id") or variant.get("variantId"),
+            "choices": choices,
+        },
+        "_track_quantity": track,
+        "_quantity": qty,
+    }
+
 
 def _clean_sku(value: Any) -> Optional[str]:
     if value is None:
