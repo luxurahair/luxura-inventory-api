@@ -67,6 +67,26 @@ class WixClient:
 
         return all_items
 
+    def query_variants_v1(self, product_id: str, limit: int = 100) -> List[Dict[str, Any]]:
+        """
+        Récupère les variants d’un produit via:
+        POST /stores/v1/products/{product_id}/variants/query
+
+        Objectif: obtenir sku + choices (Longueur/Couleur) + inventory (si fourni).
+        """
+        url = f"{WIX_API_BASE}/stores/v1/products/{product_id}/variants/query"
+
+        per_page = min(max(int(limit), 1), 100)
+        body: Dict[str, Any] = {"query": {"paging": {"limit": per_page}}}
+
+        resp = requests.post(url, headers=self._headers(), json=body, timeout=30)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Wix v1 variants/query ({product_id}): {resp.status_code} {resp.text}")
+
+        data = resp.json() or {}
+        # Wix peut renvoyer "variants" ou "items"
+        return data.get("variants") or data.get("items") or []
+    
     # Ancienne signature si du code l'appelle encore
     def query_products(self, limit: int = 100) -> Tuple[str, List[Dict[str, Any]]]:
         products = self.query_products_v1(limit=limit)
