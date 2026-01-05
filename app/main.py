@@ -38,11 +38,13 @@ app.add_middleware(
 app.include_router(wix_routes.router)
 app.include_router(products.router)
 
-# (On réactive après)
-# from app.routes import inventory, salons, movement
-# app.include_router(inventory.router)
-# app.include_router(salons.router)
-# app.include_router(movement.router)
+from app.routes import inventory, salons, movement
+
+app.include_router(wix_routes.router)
+app.include_router(products.router)
+app.include_router(inventory.router)
+app.include_router(salons.router)
+app.include_router(movement.router)
 
 
 @app.get("/")
