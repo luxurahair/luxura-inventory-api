@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 
 from app.db.session import get_session
 from app.models.product import Product
+from app.services.catalog_normalizer import normalize_product
 
 
 router = APIRouter(prefix="/wix", tags=["wix"])
