@@ -5,10 +5,6 @@ print("### LOADED app/routes/wix.py (v1 sync + db error details) ###")
 import logging
 import os
 from typing import Any, Dict, List
-from app.services.wix_client import WixClient
-from app.services.catalog_normalizer import normalize_variant
-from app.models.inventory import InventoryItem
-from app.models.salon import Salon
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,13 +13,19 @@ from sqlmodel import Session, select
 
 from app.db.session import get_session
 from app.models.product import Product
-from app.services.catalog_normalizer import normalize_product
+from app.models.inventory import InventoryItem
+from app.models.salon import Salon
+from app.services.wix_client import WixClient
+from app.services.catalog_normalizer import normalize_product, normalize_variant
 
 
 router = APIRouter(prefix="/wix", tags=["wix"])
 log = logging.getLogger("uvicorn.error")
 
 WIX_BASE_URL = "https://www.wixapis.com"
+
+ENTREPOT_CODE = "ENTREPOT"
+ENTREPOT_NAME = "Luxura Entrepôt"
 
 
 def _wix_headers() -> Dict[str, str]:
