@@ -1,8 +1,10 @@
 from typing import Any, Dict, Optional
 
+
 def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     sku = (variant.get("sku") or "").strip()
     if not sku:
+        # Wix a parfois des variants sans SKU -> on les ignore (sinon DB unique casse)
         return None
 
     wix_product_id = parent.get("id") or parent.get("_id")
@@ -19,26 +21,46 @@ def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Option
 
     inv = variant.get("inventory") or {}
     track = bool(inv.get("trackQuantity", False))
+
     qty_raw = inv.get("quantity", 0)
     try:
         qty = int(qty_raw or 0)
     except Exception:
         qty = 0
 
+    in_stock = inv.get("inStock")
+    if isinstance(in_stock, bool):
+        is_in_stock = in_stock
+    else:
+        is_in_stock = qty > 0
+
     price_parent = (parent.get("priceData") or {}).get("price") or 0
     price_variant = (variant.get("priceData") or {}).get("price", price_parent) or 0
 
     return {
+        # parent wix id (pas unique)
         "wix_id": str(wix_product_id),
+
+        # unique logique
         "sku": sku,
+
+        # data produit
         "name": name,
         "description": parent.get("description") or None,
         "price": float(price_variant),
         "handle": parent.get("slug") or parent.get("handle") or parent.get("urlPart"),
+
+        # stock (optionnel, mais pratique)
+        "is_in_stock": bool(is_in_stock),
+        "quantity": int(qty),
+
+        # options utiles
         "options": {
             "wix_variant_id": variant.get("id") or variant.get("_id") or variant.get("variantId"),
             "choices": choices,
         },
+
+        # internes pour inventory_entrepot
         "_track_quantity": track,
         "_quantity": qty,
     }
