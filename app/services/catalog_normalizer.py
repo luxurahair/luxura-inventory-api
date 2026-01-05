@@ -3,13 +3,16 @@ from typing import Any, Dict, Optional
 
 def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     sku = (variant.get("sku") or "").strip()
-    if not sku:
-        # Wix a parfois des variants sans SKU -> on les ignore (sinon DB unique casse)
-        return None
 
     wix_product_id = parent.get("id") or parent.get("_id")
-    if not wix_product_id:
+    wix_variant_id = variant.get("id") or variant.get("_id") or variant.get("variantId")
+
+    if not wix_product_id or not wix_variant_id:
         return None
+
+if not sku:
+    sku = f"{wix_product_id}:{wix_variant_id}"
+
 
     choices = variant.get("choices") or variant.get("options") or {}
     if not isinstance(choices, dict):
