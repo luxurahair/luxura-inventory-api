@@ -1,10 +1,10 @@
 # app/routes/wix.py
 
-print("### LOADED app/routes/wix.py (v1 sync + db error details) ###")
+print("### LOADED app/routes/wix.py (v2 variants + entrepot inventory) ###")
 
 import logging
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException
@@ -28,6 +28,9 @@ ENTREPOT_CODE = "ENTREPOT"
 ENTREPOT_NAME = "Luxura Entrepôt"
 
 
+# ---------------------------------------------------------
+# Wix helpers (fallback requests)
+# ---------------------------------------------------------
 def _wix_headers() -> Dict[str, str]:
     api_key = os.getenv("WIX_API_KEY") or os.getenv("WIX_API_TOKEN")
     site_id = os.getenv("WIX_SITE_ID")
@@ -42,6 +45,9 @@ def _wix_headers() -> Dict[str, str]:
 
 
 def _fetch_products_v1(limit: int) -> List[Dict[str, Any]]:
+    """
+    Fetch rapide côté route (debug). Pour la sync V2, on utilise WixClient (même endpoint).
+    """
     url = f"{WIX_BASE_URL}/stores/v1/products/query"
     payload: Dict[str, Any] = {"query": {"paging": {"limit": limit}}}
 
@@ -50,11 +56,45 @@ def _fetch_products_v1(limit: int) -> List[Dict[str, Any]]:
         raise RuntimeError(f"Wix v1 products/query: {resp.status_code} {resp.text}")
 
     data = resp.json() or {}
-    return data.get("products") or []
+    return data.get("products") or data.get("items") or []
 
 
+# ---------------------------------------------------------
+# ENTREPOT helpers (MUST be after _fetch_products_v1)
+# ---------------------------------------------------------
+def get_or_create_entrepot(db: Session) -> Salon:
+    salon = db.exec(select(Salon).where(Salon.code == ENTREPOT_CODE)).first()
+    if not salon:
+        salon = Salon(name=ENTREPOT_NAME, code=ENTREPOT_CODE, is_active=True)
+        db.add(salon)
+        db.commit()
+        db.refresh(salon)
+    return salon
+
+
+def upsert_inventory_entrepot(db: Session, salon_id: int, product_id: int, qty: int) -> None:
+    inv = db.exec(
+        select(InventoryItem).where(
+            InventoryItem.salon_id == salon_id,
+            InventoryItem.product_id == product_id,
+        )
+    ).first()
+
+    if not inv:
+        inv = InventoryItem(salon_id=salon_id, product_id=product_id, quantity=max(int(qty), 0))
+        db.add(inv)
+    else:
+        inv.quantity = max(int(qty), 0)
+
+
+# ---------------------------------------------------------
+# Debug endpoints
+# ---------------------------------------------------------
 @router.get("/debug-products")
 def debug_wix_products() -> Dict[str, Any]:
+    """
+    Debug: produits parents + options (pas forcément SKU/qty variants).
+    """
     try:
         raw_products = _fetch_products_v1(limit=20)
         normalized = [normalize_product(p, "CATALOG_V1") for p in raw_products]
@@ -64,60 +104,130 @@ def debug_wix_products() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/sync")
-def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 500) -> Dict[str, Any]:
+@router.get("/debug-variants/{product_id}")
+def debug_wix_variants(product_id: str) -> Dict[str, Any]:
+    """
+    Debug: variants réels (SKU + choices + inventory si fourni).
+    """
     try:
-        raw_products = _fetch_products_v1(limit=limit)
+        client = WixClient()
+        variants = client.query_variants_v1(product_id, limit=100)
+        return {"product_id": product_id, "count": len(variants), "sample": variants[:5]}
     except Exception as e:
-        log.exception("❌ Wix fetch failed")
+        log.exception("❌ /wix/debug-variants failed")
         raise HTTPException(status_code=500, detail=str(e))
 
-    synced = 0
-    skipped = 0
+
+# ---------------------------------------------------------
+# Sync V2: 1 variant = 1 SKU, stock Wix -> ENTREPOT
+# ---------------------------------------------------------
+@router.post("/sync")
+def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> Dict[str, Any]:
+    """
+    Sync Wix -> Luxura (V2):
+    - Fetch products parents
+    - Pour chaque parent: fetch variants
+    - 1 variant = 1 Product (clé = SKU)
+    - Inventory Wix écrit UNIQUEMENT dans ENTREPOT (InventoryItem)
+    """
+    try:
+        client = WixClient()
+        entrepot = get_or_create_entrepot(db)
+
+        # Sécurité: Wix limite 100 par page; on coupe ici pour pas DDOS Wix
+        limit = int(limit or 200)
+        per_page = min(max(limit, 1), 100)
+        max_pages: Optional[int] = None
+        if limit > 100:
+            # on évite de tourner trop longtemps: 10 pages max (1000 produits)
+            max_pages = 10
+
+        parents = client.query_products_v1(limit=per_page, max_pages=max_pages)
+
+    except Exception as e:
+        log.exception("❌ Wix fetch parents failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    created = 0
+    updated = 0
+    skipped_no_sku = 0
+    inv_written = 0
+    parents_processed = 0
+    variants_seen = 0
 
     try:
-        for wp in raw_products:
-            data = normalize_product(wp, "CATALOG_V1")
-            wix_id = data.get("wix_id")
-            name = data.get("name")
-
-            if not wix_id or not name:
-                skipped += 1
+        for p in parents:
+            pid = p.get("id") or p.get("_id")
+            if not pid:
                 continue
 
-            wix_id = str(wix_id).strip()
-            data["wix_id"] = wix_id
-            data["name"] = str(name)
+            parents_processed += 1
 
-            if data.get("options") is None:
-                data["options"] = {}
+            variants = client.query_variants_v1(str(pid), limit=100)  # variants d’un produit
+            for v in variants:
+                variants_seen += 1
 
-            existing = db.exec(select(Product).where(Product.wix_id == wix_id)).first()
-            if existing:
-                for field, value in data.items():
-                    setattr(existing, field, value)
-            else:
-                db.add(Product(**data))
+                data = normalize_variant(p, v)
+                if not data:
+                    skipped_no_sku += 1
+                    continue
 
-            synced += 1
+                track_qty = bool(data.pop("_track_quantity", False))
+                qty = int(data.pop("_quantity", 0) or 0)
+
+                sku = (data.get("sku") or "").strip()
+                if not sku:
+                    skipped_no_sku += 1
+                    continue
+
+                existing = db.exec(select(Product).where(Product.sku == sku)).first()
+
+                if existing:
+                    for field, value in data.items():
+                        setattr(existing, field, value)
+                    prod = existing
+                    updated += 1
+                else:
+                    prod = Product(**data)
+                    db.add(prod)
+                    db.commit()
+                    db.refresh(prod)
+                    created += 1
+
+                # Stock Wix -> ENTREPOT uniquement
+                if track_qty:
+                    upsert_inventory_entrepot(db, entrepot.id, prod.id, qty)
+                    db.commit()
+                    inv_written += 1
 
         db.commit()
-        return {"catalog_version": "CATALOG_V1", "synced": synced, "skipped": skipped}
+
+        return {
+            "ok": True,
+            "catalog_version": "CATALOG_V1",
+            "parents_processed": parents_processed,
+            "variants_seen": variants_seen,
+            "created": created,
+            "updated": updated,
+            "skipped_no_sku": skipped_no_sku,
+            "inventory_written_entrepot": inv_written,
+            "entrepot_code": ENTREPOT_CODE,
+        }
 
     except IntegrityError as e:
         db.rollback()
         msg = str(getattr(e, "orig", e))[:1500]
-        log.exception("❌ DB IntegrityError on /wix/sync")
+        log.exception("❌ DB IntegrityError on /wix/sync V2")
         raise HTTPException(status_code=500, detail=f"DB IntegrityError: {msg}")
 
     except DataError as e:
         db.rollback()
         msg = str(getattr(e, "orig", e))[:1500]
-        log.exception("❌ DB DataError on /wix/sync")
+        log.exception("❌ DB DataError on /wix/sync V2")
         raise HTTPException(status_code=500, detail=f"DB DataError: {msg}")
 
     except Exception as e:
         db.rollback()
         msg = str(e)[:1500]
-        log.exception("❌ DB Error on /wix/sync")
+        log.exception("❌ DB Error on /wix/sync V2")
         raise HTTPException(status_code=500, detail=f"DB Error: {msg}")
