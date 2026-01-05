@@ -5,6 +5,10 @@ print("### LOADED app/routes/wix.py (v1 sync + db error details) ###")
 import logging
 import os
 from typing import Any, Dict, List
+from app.services.wix_client import WixClient
+from app.services.catalog_normalizer import normalize_variant
+from app.models.inventory import InventoryItem
+from app.models.salon import Salon
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException
