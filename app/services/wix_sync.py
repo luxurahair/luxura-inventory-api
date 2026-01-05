@@ -9,6 +9,8 @@ from sqlalchemy.exc import IntegrityError, DataError
 
 from app.db.session import engine
 from app.models.product import Product
+from app.models.inventory import InventoryItem
+from app.models.salon import Salon
 
 WIX_BASE_URL = "https://www.wixapis.com"
 WIX_API_KEY = os.getenv("WIX_API_KEY") or os.getenv("WIX_API_TOKEN")
