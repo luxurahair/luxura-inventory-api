@@ -255,7 +255,6 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
         log.exception("❌ /wix/debug-variants failed")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ---------------------------------------------------------
 # Sync V2: 1 variant = 1 Product, stock -> ENTREPOT (V1 inventory)
 # ---------------------------------------------------------
@@ -274,10 +273,8 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
     # 1) Charger inventaire V1 et construire map
     try:
         inv_map, inv_meta = _build_inventory_map_v1(client, page_limit=100, max_pages=50)
-        # debug léger (pas 2000 lignes)
         print("[INV META]", inv_meta)
     except Exception as e:
-        # On ne bloque pas la sync produits/variants si l'inventaire plante.
         inv_map = {}
         inv_meta = {"error": str(e)[:500]}
 
@@ -288,7 +285,7 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
 
         max_pages: Optional[int] = None
         if limit > 100:
-            max_pages = 10  # max 1000 parents en une sync
+            max_pages = 10
 
         parents = client.query_products_v1(limit=per_page, max_pages=max_pages)
     except Exception as e:
@@ -334,7 +331,7 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                 else:
                     prod = Product(**data)
                     db.add(prod)
-                    db.flush()        # ✅ évite commit à chaque insert
+                    db.flush()
                     db.refresh(prod)
                     created += 1
 
@@ -348,10 +345,14 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                         # --- vendor_sku (SKU humain) ---
                         vendor_sku = it.get("vendor_sku")
                         if vendor_sku:
-                            if isinstance(prod.options, dict):
-                                prod.options["vendor_sku"] = vendor_sku
-                            else:
-                                prod.options = {"vendor_sku": vendor_sku}
+                            opts = data.get("options") or {}
+                            if not isinstance(opts, dict):
+                                opts = {}
+                            opts["vendor_sku"] = vendor_sku
+                            data["options"] = opts
+
+                            # persister immédiatement sur l'objet DB (sinon SQLAlchemy peut ignorer un dict muté)
+                            prod.options = data["options"]
 
                         # --- inventaire ---
                         track_qty = bool(it.get("track", False))
@@ -393,3 +394,4 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
         msg = str(e)[:1500]
         log.exception("❌ DB Error on /wix/sync V2")
         raise HTTPException(status_code=500, detail=f"DB Error: {msg}")
+
