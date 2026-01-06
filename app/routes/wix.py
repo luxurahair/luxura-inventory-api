@@ -86,10 +86,28 @@ def upsert_inventory_entrepot(db: Session, salon_id: int, product_id: int, qty: 
 # ---------------------------------------------------------
 # Inventory mapping (CATALOG_V1)
 # ---------------------------------------------------------
-def _build_inventory_map_v1(client: WixClient, page_limit: int = 100, max_pages: int = 50) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
+from typing import Any, Dict, Tuple
+
+def _clean_str(x: Any) -> str:
+    if x is None:
+        return ""
+    if isinstance(x, str):
+        return x.strip()
+    return str(x).strip()
+
+def _build_inventory_map_v1(
+    client: WixClient,
+    page_limit: int = 100,
+    max_pages: int = 50,
+) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
     """
     Retourne:
-      inv_map: key "<productId>:<variantId>" -> {"track": bool, "qty": int, "inStock": bool}
+      inv_map: key "<productId>:<variantId>" -> {
+        "track": bool,
+        "qty": int,
+        "inStock": bool,
+        "vendor_sku": Optional[str]
+      }
       meta: infos debug (pages/items)
     """
     inv_map: Dict[str, Dict[str, Any]] = {}
@@ -102,7 +120,7 @@ def _build_inventory_map_v1(client: WixClient, page_limit: int = 100, max_pages:
     while pages < max_pages:
         resp = client.query_inventory_items_v1(limit=page_limit, offset=offset)
 
-        # Wix peut renvoyer "inventoryItems" ou "items" selon versions / wrappers
+        # Wix peut renvoyer "inventoryItems" ou "items"
         items = resp.get("inventoryItems") or resp.get("items") or []
         if not isinstance(items, list):
             items = []
@@ -111,7 +129,10 @@ def _build_inventory_map_v1(client: WixClient, page_limit: int = 100, max_pages:
         total_items += len(items)
 
         for inv in items:
-            pid = str(inv.get("productId") or inv.get("product_id") or "").strip()
+            pid = _clean_str(inv.get("productId") or inv.get("product_id"))
+            if not pid:
+                continue
+
             track = bool(inv.get("trackQuantity", False))
 
             variants = inv.get("variants") or []
@@ -119,20 +140,47 @@ def _build_inventory_map_v1(client: WixClient, page_limit: int = 100, max_pages:
                 variants = []
 
             for v in variants:
-                vid = str(v.get("variantId") or v.get("variant_id") or v.get("id") or "").strip()
-                if not pid or not vid:
+                vid = _clean_str(v.get("variantId") or v.get("variant_id") or v.get("id"))
+                if not vid:
                     continue
 
-                qty = int(v.get("quantity") or 0)
-                instock = bool(v.get("inStock", qty > 0))
-                inv_map[f"{pid}:{vid}"] = {"track": track, "qty": qty, "inStock": instock}
+                # quantité (safe)
+                try:
+                    qty = int(v.get("quantity") or 0)
+                except Exception:
+                    qty = 0
+
+                # inStock (safe)
+                in_stock_val = v.get("inStock")
+                instock = bool(in_stock_val) if isinstance(in_stock_val, bool) else (qty > 0)
+
+                # SKU humain (vendor_sku) — Wix varie selon payload
+                # On tente plusieurs champs possibles. Si rien -> None.
+                vendor_sku = (
+                    _clean_str(v.get("sku"))  # parfois existe
+                    or _clean_str(v.get("stockKeepingUnit"))
+                    or _clean_str(v.get("vendorSku"))
+                    or _clean_str((v.get("skuData") or {}).get("sku") if isinstance(v.get("skuData"), dict) else None)
+                )
+                vendor_sku = vendor_sku or None
+
+                inv_map[f"{pid}:{vid}"] = {
+                    "track": track,
+                    "qty": qty,
+                    "inStock": instock,
+                    "vendor_sku": vendor_sku,
+                }
 
         # stop si dernière page
         if len(items) < page_limit:
             break
         offset += page_limit
 
-    meta = {"pages": pages, "total_inventory_items": total_items, "mapped_variants": len(inv_map)}
+    meta = {
+        "pages": pages,
+        "total_inventory_items": total_items,
+        "mapped_variants": len(inv_map),
+    }
     return inv_map, meta
 
 
