@@ -5,11 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from sqlmodel import SQLModel
 
-from app.db.session import engine
+from app.db import engine
 from app.routes import products
 from app.routes import wix as wix_routes
-
-# ✅ Réactiver (si ces fichiers existent)
 from app.routes import inventory, salons
 # from app.routes import movement  # décommente seulement si movement.py existe et compile
 
@@ -43,7 +41,7 @@ app.include_router(wix_routes.router)
 app.include_router(products.router)
 app.include_router(inventory.router)
 app.include_router(salons.router)
-# app.include_router(movement.router)  # décommente seulement si movement.py existe et compile
+# app.include_router(movement.router)
 
 
 @app.get("/")
