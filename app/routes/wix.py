@@ -133,6 +133,17 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
     try:
         client = WixClient()
         entrepot = get_or_create_entrepot(db)
+      
+        inv_items = client.query_inventory_items_v3(limit=1000)
+
+        # Map: "<productId>:<variantId>" -> inventoryItem
+        inv_map: Dict[str, Dict[str, Any]] = {}
+        for it in inv_items:
+            product_id = str(it.get("productId") or "").strip()
+            variant_id = str(it.get("variantId") or "").strip()
+            if not product_id or not variant_id:
+                continue
+            inv_map[f"{product_id}:{variant_id}"] = it
 
         # Sécurité: Wix limite 100 par page; on coupe ici pour pas DDOS Wix
         limit = int(limit or 200)
