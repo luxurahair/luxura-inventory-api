@@ -1,10 +1,10 @@
 # app/routes/wix.py
 
-print("### LOADED app/routes/wix.py (v2 variants + entrepot inventory) ###")
+print("### LOADED app/routes/wix.py (v2 variants + entrepot inventory, CATALOG_V1) ###")
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,7 +17,6 @@ from app.models.inventory import InventoryItem
 from app.models.salon import Salon
 from app.services.wix_client import WixClient
 from app.services.catalog_normalizer import normalize_product, normalize_variant
-
 
 router = APIRouter(prefix="/wix", tags=["wix"])
 log = logging.getLogger("uvicorn.error")
@@ -45,9 +44,6 @@ def _wix_headers() -> Dict[str, str]:
 
 
 def _fetch_products_v1(limit: int) -> List[Dict[str, Any]]:
-    """
-    Fetch rapide côté route (debug). Pour la sync V2, on utilise WixClient (même endpoint).
-    """
     url = f"{WIX_BASE_URL}/stores/v1/products/query"
     payload: Dict[str, Any] = {"query": {"paging": {"limit": limit}}}
 
@@ -60,7 +56,7 @@ def _fetch_products_v1(limit: int) -> List[Dict[str, Any]]:
 
 
 # ---------------------------------------------------------
-# ENTREPOT helpers (MUST be after _fetch_products_v1)
+# ENTREPOT helpers
 # ---------------------------------------------------------
 def get_or_create_entrepot(db: Session) -> Salon:
     salon = db.exec(select(Salon).where(Salon.code == ENTREPOT_CODE)).first()
@@ -88,13 +84,63 @@ def upsert_inventory_entrepot(db: Session, salon_id: int, product_id: int, qty: 
 
 
 # ---------------------------------------------------------
+# Inventory mapping (CATALOG_V1)
+# ---------------------------------------------------------
+def _build_inventory_map_v1(client: WixClient, page_limit: int = 100, max_pages: int = 50) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
+    """
+    Retourne:
+      inv_map: key "<productId>:<variantId>" -> {"track": bool, "qty": int, "inStock": bool}
+      meta: infos debug (pages/items)
+    """
+    inv_map: Dict[str, Dict[str, Any]] = {}
+    pages = 0
+    total_items = 0
+
+    offset = 0
+    page_limit = min(max(int(page_limit), 1), 100)
+
+    while pages < max_pages:
+        resp = client.query_inventory_items_v1(limit=page_limit, offset=offset)
+
+        # Wix peut renvoyer "inventoryItems" ou "items" selon versions / wrappers
+        items = resp.get("inventoryItems") or resp.get("items") or []
+        if not isinstance(items, list):
+            items = []
+
+        pages += 1
+        total_items += len(items)
+
+        for inv in items:
+            pid = str(inv.get("productId") or inv.get("product_id") or "").strip()
+            track = bool(inv.get("trackQuantity", False))
+
+            variants = inv.get("variants") or []
+            if not isinstance(variants, list):
+                variants = []
+
+            for v in variants:
+                vid = str(v.get("variantId") or v.get("variant_id") or v.get("id") or "").strip()
+                if not pid or not vid:
+                    continue
+
+                qty = int(v.get("quantity") or 0)
+                instock = bool(v.get("inStock", qty > 0))
+                inv_map[f"{pid}:{vid}"] = {"track": track, "qty": qty, "inStock": instock}
+
+        # stop si dernière page
+        if len(items) < page_limit:
+            break
+        offset += page_limit
+
+    meta = {"pages": pages, "total_inventory_items": total_items, "mapped_variants": len(inv_map)}
+    return inv_map, meta
+
+
+# ---------------------------------------------------------
 # Debug endpoints
 # ---------------------------------------------------------
 @router.get("/debug-products")
 def debug_wix_products() -> Dict[str, Any]:
-    """
-    Debug: produits parents + options (pas forcément SKU/qty variants).
-    """
     try:
         raw_products = _fetch_products_v1(limit=20)
         normalized = [normalize_product(p, "CATALOG_V1") for p in raw_products]
@@ -106,9 +152,6 @@ def debug_wix_products() -> Dict[str, Any]:
 
 @router.get("/debug-variants/{product_id}")
 def debug_wix_variants(product_id: str) -> Dict[str, Any]:
-    """
-    Debug: variants réels (SKU + choices + inventory si fourni).
-    """
     try:
         client = WixClient()
         variants = client.query_variants_v1(product_id, limit=100)
@@ -119,43 +162,40 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------
-# Sync V2: 1 variant = 1 SKU, stock Wix -> ENTREPOT
+# Sync V2: 1 variant = 1 Product, stock -> ENTREPOT (V1 inventory)
 # ---------------------------------------------------------
 @router.post("/sync")
 def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> Dict[str, Any]:
     """
     Sync Wix -> Luxura (V2):
-    - Fetch products parents
+    - Fetch products parents (CATALOG_V1)
     - Pour chaque parent: fetch variants
     - 1 variant = 1 Product (clé = SKU)
-    - Inventory Wix écrit UNIQUEMENT dans ENTREPOT (InventoryItem)
+    - Inventory Wix écrit UNIQUEMENT dans ENTREPOT (InventoryItem) via stores-reader/v2 (CATALOG_V1 compatible)
     """
+    client = WixClient()
+    entrepot = get_or_create_entrepot(db)
+
+    # 1) Charger inventaire V1 et construire map
     try:
-        client = WixClient()
-        entrepot = get_or_create_entrepot(db)
-      
-        inv_items = client.query_inventory_items_v3(limit=1000)
-        print("[INV SAMPLE]", inv_items[:1])
+        inv_map, inv_meta = _build_inventory_map_v1(client, page_limit=100, max_pages=50)
+        # debug léger (pas 2000 lignes)
+        print("[INV META]", inv_meta)
+    except Exception as e:
+        # On ne bloque pas la sync produits/variants si l'inventaire plante.
+        inv_map = {}
+        inv_meta = {"error": str(e)[:500]}
 
-        # Map: "<productId>:<variantId>" -> inventoryItem
-        inv_map: Dict[str, Dict[str, Any]] = {}
-        for it in inv_items:
-            product_id = str(it.get("productId") or "").strip()
-            variant_id = str(it.get("variantId") or "").strip()
-            if not product_id or not variant_id:
-                continue
-            inv_map[f"{product_id}:{variant_id}"] = it
-
-        # Sécurité: Wix limite 100 par page; on coupe ici pour pas DDOS Wix
+    # 2) Fetch parents (avec garde-fous)
+    try:
         limit = int(limit or 200)
         per_page = min(max(limit, 1), 100)
+
         max_pages: Optional[int] = None
         if limit > 100:
-            # on évite de tourner trop longtemps: 10 pages max (1000 produits)
-            max_pages = 10
+            max_pages = 10  # max 1000 parents en une sync
 
         parents = client.query_products_v1(limit=per_page, max_pages=max_pages)
-
     except Exception as e:
         log.exception("❌ Wix fetch parents failed")
         raise HTTPException(status_code=500, detail=str(e))
@@ -174,8 +214,9 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                 continue
 
             parents_processed += 1
+            wix_product_id = str(pid).strip()
 
-            variants = client.query_variants_v1(str(pid), limit=100)  # variants d’un produit
+            variants = client.query_variants_v1(wix_product_id, limit=100)
             for v in variants:
                 variants_seen += 1
 
@@ -184,14 +225,12 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     skipped_no_sku += 1
                     continue
 
-
                 sku = (data.get("sku") or "").strip()
                 if not sku:
                     skipped_no_sku += 1
                     continue
 
                 existing = db.exec(select(Product).where(Product.sku == sku)).first()
-
                 if existing:
                     for field, value in data.items():
                         setattr(existing, field, value)
@@ -200,24 +239,22 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                 else:
                     prod = Product(**data)
                     db.add(prod)
-                    db.commit()
+                    db.flush()        # ✅ évite commit à chaque insert
                     db.refresh(prod)
                     created += 1
 
-                # Stock Wix -> ENTREPOT via Inventory Items (v3)
-                wix_product_id = str(pid).strip()
+                # 3) Écrire inventaire ENTREPOT via inv_map V1
                 wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
-
                 if wix_variant_id:
                     key = f"{wix_product_id}:{str(wix_variant_id).strip()}"
                     it = inv_map.get(key)
 
                     if it:
-                        # selon la réponse v3, ces champs doivent exister
+                        track_qty = bool(it.get("track", False))
+                        qty = int(it.get("qty", 0) or 0)
 
                         if track_qty:
                             upsert_inventory_entrepot(db, entrepot.id, prod.id, qty)
-                            db.commit()
                             inv_written += 1
 
         db.commit()
@@ -231,6 +268,7 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
             "updated": updated,
             "skipped_no_sku": skipped_no_sku,
             "inventory_written_entrepot": inv_written,
+            "inventory_meta": inv_meta,
             "entrepot_code": ENTREPOT_CODE,
         }
 
