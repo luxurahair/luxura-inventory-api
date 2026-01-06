@@ -2,8 +2,6 @@ from typing import Any, Dict, Optional
 
 
 def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    sku = (variant.get("sku") or "").strip()
-
     wix_product_id = parent.get("id") or parent.get("_id")
     wix_variant_id = variant.get("id") or variant.get("_id") or variant.get("variantId")
 
@@ -14,10 +12,10 @@ def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Option
     if not sku:
         sku = f"{wix_product_id}:{wix_variant_id}"
 
-
     choices = variant.get("choices") or variant.get("options") or {}
     if not isinstance(choices, dict):
         choices = {}
+
 
     base_name = (parent.get("name") or "Sans nom").strip()
     suffix = " ".join(str(v) for v in choices.values() if v)
