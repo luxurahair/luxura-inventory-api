@@ -135,6 +135,7 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
         entrepot = get_or_create_entrepot(db)
       
         inv_items = client.query_inventory_items_v3(limit=1000)
+        print("[INV SAMPLE]", inv_items[:1])
 
         # Map: "<productId>:<variantId>" -> inventoryItem
         inv_map: Dict[str, Dict[str, Any]] = {}
@@ -183,8 +184,6 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     skipped_no_sku += 1
                     continue
 
-                track_qty = bool(data.pop("_track_quantity", False))
-                qty = int(data.pop("_quantity", 0) or 0)
 
                 sku = (data.get("sku") or "").strip()
                 if not sku:
@@ -205,11 +204,23 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     db.refresh(prod)
                     created += 1
 
-                # Stock Wix -> ENTREPOT uniquement
-                if track_qty:
-                    upsert_inventory_entrepot(db, entrepot.id, prod.id, qty)
-                    db.commit()
-                    inv_written += 1
+                # Stock Wix -> ENTREPOT via Inventory Items (v3)
+                wix_product_id = str(pid).strip()
+                wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
+
+                if wix_variant_id:
+                    key = f"{wix_product_id}:{str(wix_variant_id).strip()}"
+                    it = inv_map.get(key)
+
+                    if it:
+                        # selon la réponse v3, ces champs doivent exister
+                        track_qty = bool(it.get("trackQuantity", False))
+                        qty = int(it.get("quantity") or 0)
+
+                        if track_qty:
+                            upsert_inventory_entrepot(db, entrepot.id, prod.id, qty)
+                            db.commit()
+                            inv_written += 1
 
         db.commit()
 
