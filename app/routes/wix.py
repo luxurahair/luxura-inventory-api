@@ -214,8 +214,6 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
 
                     if it:
                         # selon la réponse v3, ces champs doivent exister
-                        track_qty = bool(it.get("trackQuantity", False))
-                        qty = int(it.get("quantity") or 0)
 
                         if track_qty:
                             upsert_inventory_entrepot(db, entrepot.id, prod.id, qty)
