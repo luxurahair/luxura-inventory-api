@@ -339,19 +339,29 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     db.refresh(prod)
                     created += 1
 
-                # 3) Écrire inventaire ENTREPOT via inv_map V1
-                wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
-                if wix_variant_id:
-                    key = f"{wix_product_id}:{str(wix_variant_id).strip()}"
-                    it = inv_map.get(key)
+               # 3) Écrire inventaire ENTREPOT via inv_map V1 + injecter vendor_sku
+               wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
+               if wix_variant_id:
+                   key = f"{wix_product_id}:{str(wix_variant_id).strip()}"
+                   it = inv_map.get(key)
 
-                    if it:
-                        track_qty = bool(it.get("track", False))
-                        qty = int(it.get("qty", 0) or 0)
+                   if it:
+                       # --- vendor_sku (SKU humain) ---
+                       vendor_sku = it.get("vendor_sku")
+                       if vendor_sku:
+                           # persiste dans le Product (DB)
+                           if isinstance(prod.options, dict):
+                               prod.options["vendor_sku"] = vendor_sku
+                           else:
+                               prod.options = {"vendor_sku": vendor_sku}
 
-                        if track_qty:
-                            upsert_inventory_entrepot(db, entrepot.id, prod.id, qty)
-                            inv_written += 1
+                       # --- inventaire ---
+                       track_qty = bool(it.get("track", False))
+                       qty = int(it.get("qty", 0) or 0)
+
+                       if track_qty:
+                           upsert_inventory_entrepot(db, entrepot.id, prod.id, qty)
+                           inv_written += 1
 
         db.commit()
 
