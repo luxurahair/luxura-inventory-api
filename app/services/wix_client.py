@@ -1,6 +1,6 @@
 # app/services/wix_client.py
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
@@ -11,7 +11,6 @@ class WixClient:
     """
     Client Wix Stores (CATALOG_V1).
     Auth: API KEY (ou API TOKEN) + wix-site-id.
-    Pagination: cursorPaging (limit max 100) sur certains endpoints.
     """
 
     def __init__(self) -> None:
@@ -40,8 +39,7 @@ class WixClient:
     def query_products_v1(self, limit: int = 100, max_pages: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Récupère les produits via /stores/v1/products/query.
-        Wix impose limit <= 100.
-        Pagination via cursorPaging.cursor (nextCursor).
+        Pagination via cursorPaging.cursor (limit <= 100).
         """
         url = f"{WIX_API_BASE}/stores/v1/products/query"
 
@@ -81,9 +79,8 @@ class WixClient:
     # ---------------------------------------------------------
     def query_variants_v1(self, product_id: str, limit: int = 100) -> List[Dict[str, Any]]:
         """
-        Récupère les variants d’un produit.
-        Endpoint Wix: /stores/v1/products/{productId}/variants/query
-        limit <= 100
+        Variants d’un produit:
+        /stores/v1/products/{productId}/variants/query
         """
         pid = str(product_id).strip()
         if not pid:
@@ -104,14 +101,13 @@ class WixClient:
         return items
 
     # ---------------------------------------------------------
-    # INVENTORY (CATALOG_V1) ✅ IMPORTANT
+    # INVENTORY (CATALOG_V1) ✅
     # ---------------------------------------------------------
     def query_inventory_items_v1(self, limit: int = 100, offset: int = 0) -> Dict[str, Any]:
         """
-        CATALOG_V1 compatible inventory.
-        Endpoint: /stores-reader/v2/inventoryItems/query
-        Pagination via paging.limit + paging.offset (limit max 100).
-        Retourne le JSON brut (pour que wix.py puisse lire inventoryItems/items selon structure réelle).
+        Inventory CATALOG_V1:
+        /stores-reader/v2/inventoryItems/query
+        Pagination via paging.limit + paging.offset (limit <= 100).
         """
         url = f"{WIX_API_BASE}/stores-reader/v2/inventoryItems/query"
         per_page = min(max(int(limit), 1), 100)
@@ -125,14 +121,9 @@ class WixClient:
         return resp.json() or {}
 
     # ---------------------------------------------------------
-    # INVENTORY (CATALOG_V3) ❌ NE PAS UTILISER SUR TON SITE (CATALOG_V1)
+    # INVENTORY (CATALOG_V3) ❌ (garde si migration future)
     # ---------------------------------------------------------
     def query_inventory_items_v3(self, limit: int = 1000) -> List[Dict[str, Any]]:
-        """
-        Wix Stores Catalog v3 - Query inventory items.
-        ⚠️ Ton site est CATALOG_V1 → ça retourne 428.
-        Garde-la seulement si tu migres un jour vers CATALOG_V3.
-        """
         url = f"{WIX_API_BASE}/stores/v3/inventory-items/query"
         body: Dict[str, Any] = {"query": {"paging": {"limit": min(max(int(limit), 1), 1000)}}}
 
@@ -143,12 +134,13 @@ class WixClient:
         data = resp.json() or {}
         return data.get("inventoryItems") or data.get("items") or []
 
-    
-   # --- Compat / legacy alias ---
-   def query_products(self, limit: int = 100):
-       """
-       Alias legacy pour compat avec l'ancien code.
-       Retourne (catalog_version, products).
-       """
-       products = self.query_products_v1(limit=limit)
-       return "CATALOG_V1", products
+    # ---------------------------------------------------------
+    # LEGACY ALIAS (compat)
+    # ---------------------------------------------------------
+    def query_products(self, limit: int = 100) -> Tuple[str, List[Dict[str, Any]]]:
+        """
+        Ancienne signature si du code l'appelle encore.
+        Retourne (catalog_version, products).
+        """
+        products = self.query_products_v1(limit=limit)
+        return "CATALOG_V1", products
