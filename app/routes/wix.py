@@ -152,10 +152,58 @@ def debug_wix_products() -> Dict[str, Any]:
 
 @router.get("/debug-variants/{product_id}")
 def debug_wix_variants(product_id: str) -> Dict[str, Any]:
+    """
+    Debug: affiche, pour chaque variante, où Wix met le SKU (selon structure réelle).
+    """
     try:
         client = WixClient()
         variants = client.query_variants_v1(product_id, limit=100)
-        return {"product_id": product_id, "count": len(variants), "sample": variants[:5]}
+
+        def pick(*vals: Any) -> Optional[str]:
+            for x in vals:
+                if isinstance(x, str) and x.strip():
+                    return x.strip()
+            return None
+
+        debug: List[Dict[str, Any]] = []
+        for v in variants:
+            # chemins fréquents (Wix varie selon payload)
+            sku_a = v.get("sku")  # parfois string, parfois dict, parfois vide
+            sku_b = (v.get("variant") or {}).get("sku")
+            sku_c = (sku_a or {}).get("value") if isinstance(sku_a, dict) else None
+            sku_d = v.get("stockKeepingUnit")
+            sku_e = (v.get("skuData") or {}).get("sku")
+
+            chosen = pick(
+                sku_a if isinstance(sku_a, str) else None,
+                sku_b,
+                sku_c,
+                sku_d,
+                sku_e,
+            )
+
+            debug.append(
+                {
+                    "variant_id": v.get("id") or v.get("_id") or v.get("variantId"),
+                    "choices": v.get("choices") or v.get("options") or {},
+                    "raw_sku_paths": {
+                        "v.sku": sku_a,
+                        "v.variant.sku": sku_b,
+                        "v.sku.value": sku_c,
+                        "v.stockKeepingUnit": sku_d,
+                        "v.skuData.sku": sku_e,
+                    },
+                    "raw_sku_chosen": chosen,
+                }
+            )
+
+        return {
+            "product_id": product_id,
+            "count": len(variants),
+            "debug": debug[:20],  # on coupe pour pas spammer swagger
+            "note": "Si raw_sku_chosen est vide alors Wix n'a pas de SKU pour cette variante → fallback requis.",
+        }
+
     except Exception as e:
         log.exception("❌ /wix/debug-variants failed")
         raise HTTPException(status_code=500, detail=str(e))
