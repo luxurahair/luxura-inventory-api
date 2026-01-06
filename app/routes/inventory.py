@@ -1,19 +1,15 @@
 # app/routes/inventory.py
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 
-from app.db import get_session
-from app.models import InventoryItem, InventoryRead
+from app.db.session import get_session
+from app.models.inventory import InventoryItem, InventoryRead
+from app.models.product import Product
 
-router = APIRouter(
-    prefix="/inventory",
-    tags=["inventory"],
-)
-
-SessionDep = Depends(get_session)
+router = APIRouter(prefix="/inventory", tags=["inventory"])
 
 
 @router.get(
@@ -22,9 +18,9 @@ SessionDep = Depends(get_session)
     summary="Lister l’inventaire par salon & produit",
 )
 def list_inventory(
-    session: Session = SessionDep,
     salon_id: Optional[int] = None,
     product_id: Optional[int] = None,
+    db: Session = Depends(get_session),
 ) -> List[InventoryRead]:
     """
     Retourne l’inventaire.
@@ -39,5 +35,52 @@ def list_inventory(
     if product_id is not None:
         stmt = stmt.where(InventoryItem.product_id == product_id)
 
-    rows = session.exec(stmt).all()
-    return rows
+    return db.exec(stmt).all()
+
+
+@router.get(
+    "/view",
+    summary="Vue lisible de l’inventaire (JOIN Product)",
+)
+def inventory_view(
+    salon_id: Optional[int] = None,
+    product_id: Optional[int] = None,
+    db: Session = Depends(get_session),
+) -> List[Dict[str, Any]]:
+    """
+    Vue lisible de l’inventaire (JOIN InventoryItem -> Product).
+
+    - Sans params : tout
+    - Avec salon_id : filtre par salon
+    - Avec product_id : filtre par produit
+
+    Retourne: quantity + sku + name + options + price (si dispo)
+    """
+    stmt = select(InventoryItem, Product).join(Product, Product.id == InventoryItem.product_id)
+
+    if salon_id is not None:
+        stmt = stmt.where(InventoryItem.salon_id == salon_id)
+    if product_id is not None:
+        stmt = stmt.where(InventoryItem.product_id == product_id)
+
+    rows = db.exec(stmt).all()
+
+    out: List[Dict[str, Any]] = []
+    for inv, prod in rows:
+        out.append(
+            {
+                "inventory_id": inv.id,
+                "salon_id": inv.salon_id,
+                "product_id": inv.product_id,
+                "quantity": inv.quantity,
+                "sku": prod.sku,
+                "name": prod.name,
+                "price": getattr(prod, "price", None),
+                "description": getattr(prod, "description", None),
+                "options": getattr(prod, "options", None),
+                "is_active": getattr(prod, "active", None),
+                "wix_id": getattr(prod, "wix_id", None),
+            }
+        )
+
+    return out
