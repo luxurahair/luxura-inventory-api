@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 
-from app.db.session import get_session
+from app.db import get_session
 from app.models.inventory import InventoryItem, InventoryRead
 from app.models.product import Product
 
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/inventory", tags=["inventory"])
 def list_inventory(
     salon_id: Optional[int] = None,
     product_id: Optional[int] = None,
-    db: Session = Depends(get_session),
+    session: Session = Depends(get_session),
 ) -> List[InventoryRead]:
     """
     Retourne l’inventaire.
@@ -35,7 +35,7 @@ def list_inventory(
     if product_id is not None:
         stmt = stmt.where(InventoryItem.product_id == product_id)
 
-    return db.exec(stmt).all()
+    return session.exec(stmt).all()
 
 
 @router.get(
@@ -45,16 +45,11 @@ def list_inventory(
 def inventory_view(
     salon_id: Optional[int] = None,
     product_id: Optional[int] = None,
-    db: Session = Depends(get_session),
+    session: Session = Depends(get_session),
 ) -> List[Dict[str, Any]]:
     """
-    Vue lisible de l’inventaire (JOIN InventoryItem -> Product).
-
-    - Sans params : tout
-    - Avec salon_id : filtre par salon
-    - Avec product_id : filtre par produit
-
-    Retourne: quantity + sku + name + options + price (si dispo)
+    Vue lisible de l’inventaire (JOIN InventoryItem -> Product)
+    Retourne: sku + name + quantity + options + price (si dispo).
     """
     stmt = select(InventoryItem, Product).join(Product, Product.id == InventoryItem.product_id)
 
@@ -63,7 +58,7 @@ def inventory_view(
     if product_id is not None:
         stmt = stmt.where(InventoryItem.product_id == product_id)
 
-    rows = db.exec(stmt).all()
+    rows = session.exec(stmt).all()
 
     out: List[Dict[str, Any]] = []
     for inv, prod in rows:
@@ -76,10 +71,9 @@ def inventory_view(
                 "sku": prod.sku,
                 "name": prod.name,
                 "price": getattr(prod, "price", None),
-                "description": getattr(prod, "description", None),
                 "options": getattr(prod, "options", None),
-                "is_active": getattr(prod, "active", None),
                 "wix_id": getattr(prod, "wix_id", None),
+                "is_active": getattr(prod, "active", None),
             }
         )
 
