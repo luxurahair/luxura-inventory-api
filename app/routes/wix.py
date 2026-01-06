@@ -341,6 +341,12 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     key = f"{wix_product_id}:{str(wix_variant_id).strip()}"
                     it = inv_map.get(key)
 
+                    # DEBUG TEMPORAIRE (à enlever après)
+                    if it:
+                        print("[INV MAP HIT]", key, "vendor_sku=", it.get("vendor_sku"), "qty=", it.get("qty"))
+                    else:
+                        print("[INV MAP MISS]", key)
+
                     if it:
                         # --- vendor_sku (SKU humain) ---
                         vendor_sku = it.get("vendor_sku")
@@ -351,7 +357,7 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                             opts["vendor_sku"] = vendor_sku
                             data["options"] = opts
 
-                            # persister immédiatement sur l'objet DB (sinon SQLAlchemy peut ignorer un dict muté)
+                            # persister immédiatement sur l'objet DB
                             prod.options = data["options"]
 
                         # --- inventaire ---
