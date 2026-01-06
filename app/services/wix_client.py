@@ -30,6 +30,21 @@ class WixClient:
             "Accept": "application/json",
             "wix-site-id": self.site_id,
         }
+  
+    def query_inventory_items_v3(self, limit: int = 1000) -> List[Dict[str, Any]]:
+        """
+        Wix Stores Catalog v3 - Query inventory items (up to 1000).
+        """
+        url = f"{WIX_API_BASE}/stores/v3/inventory-items/query"
+        body: Dict[str, Any] = {"query": {"paging": {"limit": min(max(int(limit), 1), 1000)}}}
+
+        resp = requests.post(url, headers=self._headers(), json=body, timeout=30)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Wix v3 inventory-items/query: {resp.status_code} {resp.text}")
+
+        data = resp.json() or {}
+        # Wix retourne souvent "inventoryItems" ou "items"
+        return data.get("inventoryItems") or data.get("items") or []
 
     def query_products_v1(self, limit: int = 100, max_pages: Optional[int] = None) -> List[Dict[str, Any]]:
         """
