@@ -108,4 +108,44 @@ def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Option
     }
 
 
+def normalize_product(wix_product: Dict[str, Any], version: str) -> Dict[str, Any]:
+    """
+    Transforme un produit Wix (parent) en dict compatible avec Product.
+    NOTE: sku vide -> None pour éviter de casser un UNIQUE sur sku.
+    """
+    if version == "CATALOG_V1":
+        inventory = (wix_product.get("inventory") or {}) or {}
+        if not isinstance(inventory, dict):
+            inventory = {}
+
+        price_data = (wix_product.get("priceData") or {}) or {}
+        if not isinstance(price_data, dict):
+            price_data = {}
+
+        sku = _clean_str(wix_product.get("sku"))
+
+        try:
+            price = float(price_data.get("price") or 0)
+        except Exception:
+            price = 0.0
+
+        qty_raw = inventory.get("quantity") or 0
+        try:
+            qty = int(qty_raw or 0)
+        except Exception:
+            qty = 0
+
+        return {
+            "wix_id": wix_product.get("id") or wix_product.get("_id"),
+            "sku": sku,
+            "name": wix_product.get("name"),
+            "price": price,
+            "description": wix_product.get("description"),
+            "handle": wix_product.get("slug"),
+            "is_in_stock": bool(inventory.get("inStock", True)),
+            "quantity": qty,
+            "options": wix_product.get("productOptions") or {},
+        }
+
     raise ValueError(f"Version de catalogue inconnue: {version}")
+   
