@@ -36,17 +36,15 @@ def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Option
     wix_variant_id_s = str(wix_variant_id).strip()
 
     # --- SKU variante (Wix peut le mettre à plusieurs endroits) ---
-    sku_field = variant.get("sku")  # peut être str OU dict OU vide
-
     sku = _first_non_empty_str(
-        sku_field if isinstance(sku_field, str) else None,
-        (variant.get("variant") or {}).get("sku"),
-        (sku_field or {}).get("value") if isinstance(sku_field, dict) else None,
+        variant.get("sku"),
+        (variant.get("variant") or {}).get("sku"),   # <<< AJOUT CRITIQUE
+        (variant.get("sku") or {}).get("value") if isinstance(variant.get("sku"), dict) else None,
         variant.get("stockKeepingUnit"),
         (variant.get("skuData") or {}).get("sku"),
     )
 
-    if not sku:
+        if not sku:
         sku = f"{wix_product_id_s}:{wix_variant_id_s}"
 
     # --- choices/options ---
