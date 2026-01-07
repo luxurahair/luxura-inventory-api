@@ -289,17 +289,10 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
 # ---------------------------------------------------------
 @router.post("/sync")
 def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> Dict[str, Any]:
-    """
-    Sync Wix -> Luxura (V2):
-    - Fetch products parents (CATALOG_V1)
-    - Pour chaque parent: fetch variants
-    - 1 variant = 1 Product (clé = SKU)
-    - Inventory Wix écrit UNIQUEMENT dans ENTREPOT (InventoryItem) via stores-reader/v2 (CATALOG_V1 compatible)
-    """
     client = WixClient()
     entrepot = get_or_create_entrepot(db)
 
-    # 1) Charger inventaire V1 et construire map
+    # 1) inventaire V1 -> map
     try:
         inv_map, inv_meta = _build_inventory_map_v1(client, page_limit=100, max_pages=50)
         print("[INV META]", inv_meta)
@@ -307,26 +300,17 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
         inv_map = {}
         inv_meta = {"error": str(e)[:500]}
 
-    # 2) Fetch parents (avec garde-fous)
+    # 2) parents
     try:
         limit = int(limit or 200)
         per_page = min(max(limit, 1), 100)
-
-        max_pages: Optional[int] = None
-        if limit > 100:
-            max_pages = 10
-
+        max_pages: Optional[int] = 10 if limit > 100 else None
         parents = client.query_products_v1(limit=per_page, max_pages=max_pages)
     except Exception as e:
         log.exception("❌ Wix fetch parents failed")
         raise HTTPException(status_code=500, detail=str(e))
 
-    created = 0
-    updated = 0
-    skipped_no_sku = 0
-    inv_written = 0
-    parents_processed = 0
-    variants_seen = 0
+    created = updated = skipped_no_sku = inv_written = parents_processed = variants_seen = 0
 
     try:
         for p in parents:
@@ -364,20 +348,13 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     db.refresh(prod)
                     created += 1
 
-                # 3) Écrire inventaire ENTREPOT via inv_map V1 + injecter vendor_sku
+                # 3) ENTREPOT + vendor_sku depuis inv_map
                 wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
                 if wix_variant_id:
                     key = f"{wix_product_id}:{str(wix_variant_id).strip()}"
                     it = inv_map.get(key)
 
-                    # DEBUG TEMPORAIRE (à enlever après)
                     if it:
-                        print("[INV MAP HIT]", key, "vendor_sku=", it.get("vendor_sku"), "qty=", it.get("qty"))
-                    else:
-                        print("[INV MAP MISS]", key)
-
-                    if it:
-                        # --- vendor_sku (SKU humain) ---
                         vendor_sku = it.get("vendor_sku")
                         if vendor_sku:
                             opts = data.get("options") or {}
@@ -385,42 +362,15 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                                 opts = {}
                             opts["vendor_sku"] = vendor_sku
                             data["options"] = opts
-
-                            # persister immédiatement sur l'objet DB
                             prod.options = data["options"]
 
-                        # --- inventaire ---
                         track_qty = bool(it.get("track", False))
                         qty = int(it.get("qty", 0) or 0)
-
                         if track_qty:
                             upsert_inventory_entrepot(db, entrepot.id, prod.id, qty)
                             inv_written += 1
 
         db.commit()
-
-if wix_variant_id:
-    key = f"{wix_product_id}:{str(wix_variant_id).strip()}"
-    it = inv_map.get(key)
-
-    # DEBUG TEMPORAIRE (à enlever après)
-    if it:
-        print("[INV MAP HIT]", key, "vendor_sku=", it.get("vendor_sku"), "qty=", it.get("qty"))
-    else:
-        print("[INV MAP MISS]", key)
-
-    if it:
-        # --- vendor_sku (SKU humain) ---
-        vendor_sku = it.get("vendor_sku")
-        if vendor_sku:
-            opts = data.get("options") or {}
-            if not isinstance(opts, dict):
-                opts = {}
-            opts["vendor_sku"] = vendor_sku
-            data["options"] = opts
-
-            # persister immédiatement sur l'objet DB
-            prod.options = data["options"]
 
         return {
             "ok": True,
@@ -452,4 +402,3 @@ if wix_variant_id:
         msg = str(e)[:1500]
         log.exception("❌ DB Error on /wix/sync V2")
         raise HTTPException(status_code=500, detail=f"DB Error: {msg}")
-
