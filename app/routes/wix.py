@@ -214,8 +214,11 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
                     return x.strip()
             return None
 
-        def find_gw_paths(obj: Any, prefix: str = "", out: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
-            # Cherche des valeurs contenant "GW" (case-insensitive) dans un dict/list
+        def find_gw_paths(
+            obj: Any,
+            prefix: str = "",
+            out: Optional[List[Dict[str, Any]]] = None,
+        ) -> List[Dict[str, Any]]:
             if out is None:
                 out = []
 
@@ -230,17 +233,18 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
             else:
                 if isinstance(obj, str) and "gw" in obj.lower():
                     out.append({"path": prefix, "value": obj})
+
             return out
 
         debug: List[Dict[str, Any]] = []
         for v in variants[:20]:
-            sku_a = v.get("sku")  # parfois string/dict/vide
+            sku_a = v.get("sku")
             sku_b = (v.get("variant") or {}).get("sku")
             sku_c = (sku_a or {}).get("value") if isinstance(sku_a, dict) else None
             sku_d = v.get("stockKeepingUnit")
             sku_e = (v.get("skuData") or {}).get("sku")
-            sku_f = v.get("vendorSku")  # ajouté
-            sku_g = v.get("itemNumber")  # ajouté (parfois utilisé)
+            sku_f = v.get("vendorSku")
+            sku_g = v.get("itemNumber")
 
             chosen = pick(
                 sku_a if isinstance(sku_a, str) else None,
@@ -251,8 +255,6 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
                 sku_f,
                 sku_g,
             )
-
-            gw_hits = find_gw_paths(v)
 
             debug.append(
                 {
@@ -268,7 +270,7 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
                         "v.itemNumber": sku_g,
                     },
                     "raw_sku_chosen": chosen,
-                    "gw_hits": gw_hits[:10],  # on limite
+                    "gw_hits": find_gw_paths(v)[:10],
                     "keys": sorted(list(v.keys()))[:50],
                 }
             )
@@ -279,15 +281,16 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
             "debug": debug,
             "note": "Si gw_hits est vide et raw_sku_chosen est vide, alors l'endpoint variants/query ne fournit pas ton SKU humain.",
         }
+
     except Exception as e:
-    msg = str(e)
-    log.exception("❌ /wix/debug-variants failed")
+        msg = str(e)
+        log.exception("❌ /wix/debug-variants failed")
 
-    # Wix renvoie souvent un 404 "PRODUCT_NOT_FOUND" si tu passes un mauvais id
-    if "PRODUCT_NOT_FOUND" in msg or "was not found" in msg:
-        raise HTTPException(status_code=404, detail=msg)
+        if "PRODUCT_NOT_FOUND" in msg or "was not found" in msg:
+            raise HTTPException(status_code=404, detail=msg)
 
-    raise HTTPException(status_code=500, detail=msg)
+        raise HTTPException(status_code=500, detail=msg)
+
 
   
 # ---------------------------------------------------------
@@ -341,7 +344,31 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     skipped_no_sku += 1
                     continue
 
-                existing = db.exec(select(Product).where(Product.sku == sku)).first()
+                wix_id = (data.get("wix_id") or "").strip()
+                wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
+
+                # -------------------------------------------------
+                # UPSERT: match stable par (wix_id + wix_variant_id)
+                # -------------------------------------------------
+                existing = None
+
+                if wix_id and wix_variant_id:
+                    # approche safe sans JSON query complexe
+                    candidates = db.exec(select(Product).where(Product.wix_id == wix_id)).all()
+                    for cand in candidates:
+                        try:
+                            opts = cand.options or {}
+                            if isinstance(opts, dict) and str(opts.get("wix_variant_id")) == str(wix_variant_id):
+                                existing = cand
+                                break
+                        except Exception:
+                            continue
+
+                # fallback: match sku
+                if existing is None:
+                    existing = db.exec(select(Product).where(Product.sku == sku)).first()
+
+                # apply update/create
                 if existing:
                     for field, value in data.items():
                         setattr(existing, field, value)
@@ -354,14 +381,15 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     db.refresh(prod)
                     created += 1
 
+                # -------------------------------------------------
                 # 3) ENTREPOT + vendor_sku depuis inv_map (V1)
-                wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
+                # -------------------------------------------------
                 if wix_variant_id:
                     key = f"{wix_product_id}:{str(wix_variant_id).strip()}"
                     it = inv_map.get(key)
 
                     if it:
-                        # vendor_sku (SKU humain)
+                        # vendor_sku (optionnel)
                         vendor_sku = it.get("vendor_sku")
                         if vendor_sku:
                             opts = data.get("options") or {}
