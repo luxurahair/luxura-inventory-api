@@ -200,7 +200,9 @@ def debug_wix_products() -> Dict[str, Any]:
 @router.get("/debug-variants/{product_id}")
 def debug_wix_variants(product_id: str) -> Dict[str, Any]:
     """
-    Debug: affiche, pour chaque variante, où Wix met le SKU (selon structure réelle).
+    Debug: variants réels + où Wix met le SKU.
+    - montre les chemins "classiques"
+    - et cherche un SKU humain type "GW..." n'importe où dans l'objet variant
     """
     try:
         client = WixClient()
@@ -212,14 +214,33 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
                     return x.strip()
             return None
 
+        def find_gw_paths(obj: Any, prefix: str = "", out: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+            # Cherche des valeurs contenant "GW" (case-insensitive) dans un dict/list
+            if out is None:
+                out = []
+
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    p = f"{prefix}.{k}" if prefix else str(k)
+                    find_gw_paths(v, p, out)
+            elif isinstance(obj, list):
+                for i, v in enumerate(obj):
+                    p = f"{prefix}[{i}]"
+                    find_gw_paths(v, p, out)
+            else:
+                if isinstance(obj, str) and "gw" in obj.lower():
+                    out.append({"path": prefix, "value": obj})
+            return out
+
         debug: List[Dict[str, Any]] = []
-        for v in variants:
-            # chemins fréquents (Wix varie selon payload)
-            sku_a = v.get("sku")  # parfois string, parfois dict, parfois vide
+        for v in variants[:20]:
+            sku_a = v.get("sku")  # parfois string/dict/vide
             sku_b = (v.get("variant") or {}).get("sku")
             sku_c = (sku_a or {}).get("value") if isinstance(sku_a, dict) else None
             sku_d = v.get("stockKeepingUnit")
             sku_e = (v.get("skuData") or {}).get("sku")
+            sku_f = v.get("vendorSku")  # ajouté
+            sku_g = v.get("itemNumber")  # ajouté (parfois utilisé)
 
             chosen = pick(
                 sku_a if isinstance(sku_a, str) else None,
@@ -227,7 +248,11 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
                 sku_c,
                 sku_d,
                 sku_e,
+                sku_f,
+                sku_g,
             )
+
+            gw_hits = find_gw_paths(v)
 
             debug.append(
                 {
@@ -239,16 +264,20 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
                         "v.sku.value": sku_c,
                         "v.stockKeepingUnit": sku_d,
                         "v.skuData.sku": sku_e,
+                        "v.vendorSku": sku_f,
+                        "v.itemNumber": sku_g,
                     },
                     "raw_sku_chosen": chosen,
+                    "gw_hits": gw_hits[:10],  # on limite
+                    "keys": sorted(list(v.keys()))[:50],
                 }
             )
 
         return {
             "product_id": product_id,
             "count": len(variants),
-            "debug": debug[:20],  # on coupe pour pas spammer swagger
-            "note": "Si raw_sku_chosen est vide alors Wix n'a pas de SKU pour cette variante → fallback requis.",
+            "debug": debug,
+            "note": "Si gw_hits est vide et raw_sku_chosen est vide, alors l'endpoint variants/query ne fournit pas ton SKU humain.",
         }
 
     except Exception as e:
@@ -369,6 +398,29 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                             inv_written += 1
 
         db.commit()
+
+if wix_variant_id:
+    key = f"{wix_product_id}:{str(wix_variant_id).strip()}"
+    it = inv_map.get(key)
+
+    # DEBUG TEMPORAIRE (à enlever après)
+    if it:
+        print("[INV MAP HIT]", key, "vendor_sku=", it.get("vendor_sku"), "qty=", it.get("qty"))
+    else:
+        print("[INV MAP MISS]", key)
+
+    if it:
+        # --- vendor_sku (SKU humain) ---
+        vendor_sku = it.get("vendor_sku")
+        if vendor_sku:
+            opts = data.get("options") or {}
+            if not isinstance(opts, dict):
+                opts = {}
+            opts["vendor_sku"] = vendor_sku
+            data["options"] = opts
+
+            # persister immédiatement sur l'objet DB
+            prod.options = data["options"]
 
         return {
             "ok": True,
