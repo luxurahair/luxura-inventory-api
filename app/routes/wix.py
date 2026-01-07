@@ -321,7 +321,7 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
             parents_processed += 1
             wix_product_id = str(pid).strip()
 
-            variants = client.query_variants_v1(wix_product_id, limit=100)
+            variants = client.query_variants_v1(wix_product_id, limit=100) or []
             for v in variants:
                 variants_seen += 1
 
@@ -348,13 +348,14 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     db.refresh(prod)
                     created += 1
 
-                # 3) ENTREPOT + vendor_sku depuis inv_map
+                # 3) ENTREPOT + vendor_sku depuis inv_map (V1)
                 wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
                 if wix_variant_id:
                     key = f"{wix_product_id}:{str(wix_variant_id).strip()}"
                     it = inv_map.get(key)
 
                     if it:
+                        # vendor_sku (SKU humain)
                         vendor_sku = it.get("vendor_sku")
                         if vendor_sku:
                             opts = data.get("options") or {}
@@ -364,8 +365,13 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                             data["options"] = opts
                             prod.options = data["options"]
 
+                        # inventaire
                         track_qty = bool(it.get("track", False))
-                        qty = int(it.get("qty", 0) or 0)
+                        try:
+                            qty = int(it.get("qty") or 0)
+                        except Exception:
+                            qty = 0
+
                         if track_qty:
                             upsert_inventory_entrepot(db, entrepot.id, prod.id, qty)
                             inv_written += 1
