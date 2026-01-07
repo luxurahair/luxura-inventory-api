@@ -279,11 +279,17 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
             "debug": debug,
             "note": "Si gw_hits est vide et raw_sku_chosen est vide, alors l'endpoint variants/query ne fournit pas ton SKU humain.",
         }
-
     except Exception as e:
-        log.exception("❌ /wix/debug-variants failed")
-        raise HTTPException(status_code=500, detail=str(e))
+    msg = str(e)
+    log.exception("❌ /wix/debug-variants failed")
 
+    # Wix renvoie souvent un 404 "PRODUCT_NOT_FOUND" si tu passes un mauvais id
+    if "PRODUCT_NOT_FOUND" in msg or "was not found" in msg:
+        raise HTTPException(status_code=404, detail=msg)
+
+    raise HTTPException(status_code=500, detail=msg)
+
+  
 # ---------------------------------------------------------
 # Sync V2: 1 variant = 1 Product, stock -> ENTREPOT (V1 inventory)
 # ---------------------------------------------------------
