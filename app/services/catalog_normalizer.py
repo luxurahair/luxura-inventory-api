@@ -44,7 +44,7 @@ def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Option
         (variant.get("skuData") or {}).get("sku"),
     )
 
-        if not sku:
+    if not sku:
         sku = f"{wix_product_id_s}:{wix_variant_id_s}"
 
     # --- choices/options ---
