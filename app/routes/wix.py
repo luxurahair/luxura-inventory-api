@@ -276,9 +276,9 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
             raise HTTPException(status_code=404, detail=msg)
         raise HTTPException(status_code=500, detail=msg)
 
-
 # ---------------------------------------------------------
 # Sync V2: 1 variant = 1 Product, stock -> ENTREPOT (V1 inventory)
+# + Collections (catégories) depuis Wix
 # ---------------------------------------------------------
 @router.post("/sync")
 def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> Dict[str, Any]:
@@ -293,12 +293,27 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
         inv_map = {}
         inv_meta = {"error": str(e)[:500]}
 
-    # 2) parents
+    # 1b) collections map (catégories)
+    collections_map: Dict[str, str] = {}
+    try:
+        cols = client.query_collections_reader_v1(limit=100, max_pages=10)
+        for c in cols:
+            cid = str(c.get("id") or c.get("_id") or "").strip()
+            name = (c.get("name") or "").strip()
+            if cid and name:
+                collections_map[cid] = name
+        print("[COLLECTIONS]", len(collections_map))
+    except Exception as e:
+        # on ne bloque pas le sync si collections indispo
+        print("[COLLECTIONS] skipped:", str(e)[:200])
+        collections_map = {}
+
+    # 2) parents (stores-reader pour avoir collectionIds)
     try:
         limit = int(limit or 200)
         per_page = min(max(limit, 1), 100)
         max_pages: Optional[int] = 10 if limit > 100 else None
-        parents = client.query_products_v1(limit=per_page, max_pages=max_pages)
+        parents = client.query_products_reader_v1(limit=per_page, max_pages=max_pages)
     except Exception as e:
         log.exception("❌ Wix fetch parents failed")
         raise HTTPException(status_code=500, detail=str(e))
@@ -314,6 +329,17 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
             parents_processed += 1
             wix_product_id = str(pid).strip()
 
+            # catégories (collections) depuis le parent
+            cat_ids = p.get("collectionIds") or p.get("collections") or []
+            cat_names: List[str] = []
+            if isinstance(cat_ids, list):
+                for cid in cat_ids:
+                    cname = collections_map.get(str(cid))
+                    if cname:
+                        cat_names.append(cname)
+            if cat_names:
+                cat_names = sorted(set(cat_names))
+
             variants = client.query_variants_v1(wix_product_id, limit=100) or []
             for v in variants:
                 variants_seen += 1
@@ -328,6 +354,14 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     skipped_no_sku += 1
                     continue
 
+                # injecter categories dans data.options (si on en a)
+                if cat_names:
+                    opts = data.get("options") or {}
+                    if not isinstance(opts, dict):
+                        opts = {}
+                    opts["categories"] = cat_names
+                    data["options"] = opts
+
                 wix_id = (data.get("wix_id") or "").strip()
                 wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
 
@@ -338,8 +372,8 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                 if wix_id and wix_variant_id:
                     candidates = db.exec(select(Product).where(Product.wix_id == wix_id)).all()
                     for cand in candidates:
-                        opts = cand.options or {}
-                        if isinstance(opts, dict) and str(opts.get("wix_variant_id")) == str(wix_variant_id):
+                        opts_c = cand.options or {}
+                        if isinstance(opts_c, dict) and str(opts_c.get("wix_variant_id")) == str(wix_variant_id):
                             existing = cand
                             break
 
@@ -352,16 +386,12 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                 # -------------------------------------------------
                 sku_owner = db.exec(select(Product).where(Product.sku == sku)).first()
                 if existing and sku_owner and sku_owner.id != existing.id:
-                    # repointer l'inventaire vers sku_owner
                     inv_rows = db.exec(select(InventoryItem).where(InventoryItem.product_id == existing.id)).all()
                     for inv in inv_rows:
                         inv.product_id = sku_owner.id
 
-                    # supprimer le produit fallback
                     db.delete(existing)
                     db.flush()
-
-                    # continuer avec le produit "canonique"
                     existing = sku_owner
 
                 # -------------------------------------------------
@@ -389,11 +419,11 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     if it:
                         vendor_sku = it.get("vendor_sku")
                         if vendor_sku:
-                            opts = data.get("options") or {}
-                            if not isinstance(opts, dict):
-                                opts = {}
-                            opts["vendor_sku"] = vendor_sku
-                            data["options"] = opts
+                            opts2 = data.get("options") or {}
+                            if not isinstance(opts2, dict):
+                                opts2 = {}
+                            opts2["vendor_sku"] = vendor_sku
+                            data["options"] = opts2
                             prod.options = data["options"]
 
                         track_qty = bool(it.get("track", False))
@@ -418,6 +448,7 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
             "skipped_no_sku": skipped_no_sku,
             "inventory_written_entrepot": inv_written,
             "inventory_meta": inv_meta,
+            "collections_loaded": len(collections_map),
             "entrepot_code": ENTREPOT_CODE,
         }
 
@@ -438,3 +469,4 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
         msg = str(e)[:1500]
         log.exception("❌ DB Error on /wix/sync V2")
         raise HTTPException(status_code=500, detail=f"DB Error: {msg}")
+
