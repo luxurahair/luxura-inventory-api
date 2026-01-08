@@ -8,15 +8,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.exc import IntegrityError, DataError
+from sqlalchemy.exc import DataError, IntegrityError
 from sqlmodel import Session, select
 
 from app.db import get_session
-from app.models.product import Product
 from app.models.inventory import InventoryItem
+from app.models.product import Product
 from app.models.salon import Salon
-from app.services.wix_client import WixClient
 from app.services.catalog_normalizer import normalize_product, normalize_variant
+from app.services.wix_client import WixClient
 
 router = APIRouter(prefix="/wix", tags=["wix"])
 log = logging.getLogger("uvicorn.error")
@@ -86,7 +86,6 @@ def upsert_inventory_entrepot(db: Session, salon_id: int, product_id: int, qty: 
 # ---------------------------------------------------------
 # Inventory mapping (CATALOG_V1)
 # ---------------------------------------------------------
-
 def _clean_str(x: Any) -> str:
     if x is None:
         return ""
@@ -94,20 +93,16 @@ def _clean_str(x: Any) -> str:
         return x.strip()
     return str(x).strip()
 
+
 def _build_inventory_map_v1(
     client: WixClient,
     page_limit: int = 100,
     max_pages: int = 50,
 ) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
     """
-    Retourne:
-      inv_map: key "<productId>:<variantId>" -> {
-        "track": bool,
-        "qty": int,
-        "inStock": bool,
-        "vendor_sku": Optional[str]
-      }
-      meta: infos debug (pages/items)
+    inv_map key "<productId>:<variantId>" -> {
+      "track": bool, "qty": int, "inStock": bool, "vendor_sku": Optional[str]
+    }
     """
     inv_map: Dict[str, Dict[str, Any]] = {}
     pages = 0
@@ -119,7 +114,6 @@ def _build_inventory_map_v1(
     while pages < max_pages:
         resp = client.query_inventory_items_v1(limit=page_limit, offset=offset)
 
-        # Wix peut renvoyer "inventoryItems" ou "items"
         items = resp.get("inventoryItems") or resp.get("items") or []
         if not isinstance(items, list):
             items = []
@@ -143,20 +137,16 @@ def _build_inventory_map_v1(
                 if not vid:
                     continue
 
-                # quantité (safe)
                 try:
                     qty = int(v.get("quantity") or 0)
                 except Exception:
                     qty = 0
 
-                # inStock (safe)
                 in_stock_val = v.get("inStock")
                 instock = bool(in_stock_val) if isinstance(in_stock_val, bool) else (qty > 0)
 
-                # SKU humain (vendor_sku) — Wix varie selon payload
-                # On tente plusieurs champs possibles. Si rien -> None.
                 vendor_sku = (
-                    _clean_str(v.get("sku"))  # parfois existe
+                    _clean_str(v.get("sku"))
                     or _clean_str(v.get("stockKeepingUnit"))
                     or _clean_str(v.get("vendorSku"))
                     or _clean_str((v.get("skuData") or {}).get("sku") if isinstance(v.get("skuData"), dict) else None)
@@ -170,7 +160,6 @@ def _build_inventory_map_v1(
                     "vendor_sku": vendor_sku,
                 }
 
-        # stop si dernière page
         if len(items) < page_limit:
             break
         offset += page_limit
@@ -201,8 +190,6 @@ def debug_wix_products() -> Dict[str, Any]:
 def debug_wix_variants(product_id: str) -> Dict[str, Any]:
     """
     Debug: variants réels + où Wix met le SKU.
-    - montre les chemins "classiques"
-    - et cherche un SKU humain type "GW..." n'importe où dans l'objet variant
     """
     try:
         client = WixClient()
@@ -285,14 +272,11 @@ def debug_wix_variants(product_id: str) -> Dict[str, Any]:
     except Exception as e:
         msg = str(e)
         log.exception("❌ /wix/debug-variants failed")
-
         if "PRODUCT_NOT_FOUND" in msg or "was not found" in msg:
             raise HTTPException(status_code=404, detail=msg)
-
         raise HTTPException(status_code=500, detail=msg)
 
 
-  
 # ---------------------------------------------------------
 # Sync V2: 1 variant = 1 Product, stock -> ENTREPOT (V1 inventory)
 # ---------------------------------------------------------
@@ -301,7 +285,7 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
     client = WixClient()
     entrepot = get_or_create_entrepot(db)
 
-    # 1) inventaire V1 -> map
+    # 1) inventory map
     try:
         inv_map, inv_meta = _build_inventory_map_v1(client, page_limit=100, max_pages=50)
         print("[INV META]", inv_meta)
@@ -348,27 +332,41 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                 wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
 
                 # -------------------------------------------------
-                # UPSERT: match stable par (wix_id + wix_variant_id)
+                # 1) Trouver l'existant par (wix_id + wix_variant_id)
                 # -------------------------------------------------
-                existing = None
-
+                existing: Optional[Product] = None
                 if wix_id and wix_variant_id:
-                    # approche safe sans JSON query complexe
                     candidates = db.exec(select(Product).where(Product.wix_id == wix_id)).all()
                     for cand in candidates:
-                        try:
-                            opts = cand.options or {}
-                            if isinstance(opts, dict) and str(opts.get("wix_variant_id")) == str(wix_variant_id):
-                                existing = cand
-                                break
-                        except Exception:
-                            continue
+                        opts = cand.options or {}
+                        if isinstance(opts, dict) and str(opts.get("wix_variant_id")) == str(wix_variant_id):
+                            existing = cand
+                            break
 
-                # fallback: match sku
+                # 2) fallback par sku
                 if existing is None:
                     existing = db.exec(select(Product).where(Product.sku == sku)).first()
 
-                # apply update/create
+                # -------------------------------------------------
+                # MERGE anti-doublon: si sku déjà pris, on fusionne
+                # -------------------------------------------------
+                sku_owner = db.exec(select(Product).where(Product.sku == sku)).first()
+                if existing and sku_owner and sku_owner.id != existing.id:
+                    # repointer l'inventaire vers sku_owner
+                    inv_rows = db.exec(select(InventoryItem).where(InventoryItem.product_id == existing.id)).all()
+                    for inv in inv_rows:
+                        inv.product_id = sku_owner.id
+
+                    # supprimer le produit fallback
+                    db.delete(existing)
+                    db.flush()
+
+                    # continuer avec le produit "canonique"
+                    existing = sku_owner
+
+                # -------------------------------------------------
+                # apply update / create
+                # -------------------------------------------------
                 if existing:
                     for field, value in data.items():
                         setattr(existing, field, value)
@@ -382,14 +380,13 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     created += 1
 
                 # -------------------------------------------------
-                # 3) ENTREPOT + vendor_sku depuis inv_map (V1)
+                # 3) ENTREPOT inventory + vendor_sku (optionnel)
                 # -------------------------------------------------
                 if wix_variant_id:
                     key = f"{wix_product_id}:{str(wix_variant_id).strip()}"
                     it = inv_map.get(key)
 
                     if it:
-                        # vendor_sku (optionnel)
                         vendor_sku = it.get("vendor_sku")
                         if vendor_sku:
                             opts = data.get("options") or {}
@@ -399,7 +396,6 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                             data["options"] = opts
                             prod.options = data["options"]
 
-                        # inventaire
                         track_qty = bool(it.get("track", False))
                         try:
                             qty = int(it.get("qty") or 0)
