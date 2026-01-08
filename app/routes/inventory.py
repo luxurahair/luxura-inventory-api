@@ -1,5 +1,6 @@
 # app/routes/inventory.py
 
+import json
 from typing import Any, Dict, List, Optional
 from io import BytesIO
 from datetime import datetime
@@ -114,7 +115,6 @@ def export_inventory_xlsx(
     - Avec salon_id: seulement ce salon
     Colonnes: salon / sku / name / qty / price / value / wix_id / wix_variant_id / choices / vendor_sku
     """
-    # salons à exporter
     salons_stmt = select(Salon).where(Salon.is_active == True)  # noqa: E712
     if salon_id is not None:
         salons_stmt = select(Salon).where(Salon.id == salon_id)
@@ -137,8 +137,7 @@ def export_inventory_xlsx(
         "vendor_sku",
     ]
 
-    # feuille résumé
-    summary = {}
+    summary: Dict[str, Dict[str, Any]] = {}
 
     for s in salons:
         title = (s.name or f"Salon {s.id}")[:31]
@@ -169,6 +168,19 @@ def export_inventory_xlsx(
                 choices = opts.get("choices")
                 vendor_sku = opts.get("vendor_sku")
 
+            # ✅ Excel n'accepte pas dict/list -> stringify
+            if choices is None:
+                choices_str = ""
+            else:
+                try:
+                    choices_str = json.dumps(choices, ensure_ascii=False)
+                except Exception:
+                    choices_str = str(choices)
+
+            vendor_sku_str = "" if vendor_sku is None else str(vendor_sku)
+            wix_variant_id_str = "" if wix_variant_id_val is None else str(wix_variant_id_val)
+            wix_id_str = "" if getattr(prod, "wix_id", None) is None else str(getattr(prod, "wix_id", None))
+
             ws.append(
                 [
                     s.id,
@@ -178,17 +190,22 @@ def export_inventory_xlsx(
                     qty,
                     price,
                     value,
-                    getattr(prod, "wix_id", None),
-                    wix_variant_id_val,
-                    choices,
-                    vendor_sku,
+                    wix_id_str,
+                    wix_variant_id_str,
+                    choices_str,
+                    vendor_sku_str,
                 ]
             )
 
-            # summary par SKU
             sku_key = prod.sku or ""
             if sku_key:
-                agg = summary.get(sku_key) or {"sku": sku_key, "name": prod.name, "qty": 0, "price": price, "value": 0.0}
+                agg = summary.get(sku_key) or {
+                    "sku": sku_key,
+                    "name": prod.name,
+                    "qty": 0,
+                    "price": price,
+                    "value": 0.0,
+                }
                 agg["qty"] += qty
                 agg["value"] += value
                 if prod.name:
