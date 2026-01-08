@@ -32,6 +32,81 @@ class WixClient:
             "Accept": "application/json",
             "wix-site-id": self.site_id,
         }
+    def query_products_reader_v1(self, limit: int = 100, max_pages: Optional[int] = None) -> List[Dict[str, Any]]:
+    """
+    Version stores-reader (Product Object plus complet, incluant souvent collectionIds).
+    POST https://www.wixapis.com/stores-reader/v1/products/query
+    """
+    url = f"{WIX_API_BASE}/stores-reader/v1/products/query"
+
+    per_page = min(max(int(limit), 1), 100)
+    cursor: Optional[str] = None
+    all_items: List[Dict[str, Any]] = []
+    pages = 0
+
+    while True:
+        body: Dict[str, Any] = {"query": {"paging": {"limit": per_page}}}
+        if cursor:
+            body["cursorPaging"] = {"cursor": cursor}
+
+        resp = self.session.post(url, headers=self._headers(), json=body, timeout=self.timeout)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Wix reader v1 products/query: {resp.status_code} {resp.text}")
+
+        data = resp.json() or {}
+        items = data.get("products") or data.get("items") or []
+        if not isinstance(items, list):
+            items = []
+
+        all_items.extend(items)
+
+        cursor = data.get("nextCursor") or (data.get("cursorPaging") or {}).get("nextCursor")
+
+        pages += 1
+        if not cursor:
+            break
+        if max_pages is not None and pages >= max_pages:
+            break
+
+    return all_items
+
+
+def query_collections_reader_v1(self, limit: int = 100, max_pages: Optional[int] = None) -> List[Dict[str, Any]]:
+    """
+    POST https://www.wixapis.com/stores-reader/v1/collections/query
+    """
+    url = f"{WIX_API_BASE}/stores-reader/v1/collections/query"
+
+    per_page = min(max(int(limit), 1), 100)
+    cursor: Optional[str] = None
+    all_items: List[Dict[str, Any]] = []
+    pages = 0
+
+    while True:
+        body: Dict[str, Any] = {"query": {"paging": {"limit": per_page}}}
+        if cursor:
+            body["cursorPaging"] = {"cursor": cursor}
+
+        resp = self.session.post(url, headers=self._headers(), json=body, timeout=self.timeout)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Wix reader v1 collections/query: {resp.status_code} {resp.text}")
+
+        data = resp.json() or {}
+        items = data.get("collections") or data.get("items") or []
+        if not isinstance(items, list):
+            items = []
+
+        all_items.extend(items)
+
+        cursor = data.get("nextCursor") or (data.get("cursorPaging") or {}).get("nextCursor")
+
+        pages += 1
+        if not cursor:
+            break
+        if max_pages is not None and pages >= max_pages:
+            break
+
+    return all_items
 
     # ---------------------------------------------------------
     # PRODUCTS (CATALOG_V1)
