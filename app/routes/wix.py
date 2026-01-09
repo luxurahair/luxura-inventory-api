@@ -208,27 +208,47 @@ def sync_wix_to_luxura(
     limit: int = 200,
     dry_run: bool = False,
 ) -> Dict[str, Any]:
-
     client = WixClient()
     entrepot = get_or_create_entrepot(db)
 
     inv_map, inv_meta = _build_inventory_map_v1(client)
-    csv_categories = load_categories_from_csv()
 
-    # parents v1 (tu peux augmenter paging plus tard)
-    parents = client.query_products_v1(limit=min(int(limit or 200), 100))
+    # 1) collections map: id -> name
+    collections_map: Dict[str, str] = {}
+    try:
+        cols = client.query_collections_reader_v1(limit=100, max_pages=10)
+        for c in cols:
+            cid = str(c.get("id") or "").strip()
+            name = (c.get("name") or "").strip()
+            if cid and name:
+                collections_map[cid] = name
+    except Exception as e:
+        collections_map = {}
+        print("[COLLECTIONS] skipped:", str(e)[:200])
 
-    created = 0
-    updated = 0
-    merged = 0
-    skipped_no_sku = 0
-    inv_written = 0
+    # 2) products via stores-reader (pour avoir collectionIds)
+    limit = int(limit or 200)
+    per_page = min(max(limit, 1), 100)
+    max_pages: Optional[int] = 10 if limit > 100 else None
+    parents = client.query_products_reader_v1(limit=per_page, max_pages=max_pages)
+
+    created = updated = merged = skipped_no_sku = inv_written = 0
 
     try:
         for p in parents:
-            wix_product_id = _clean_str(p.get("id"))
+            wix_product_id = _clean_str(p.get("id") or p.get("_id"))
             if not wix_product_id:
                 continue
+
+            # catégories depuis collectionIds (Product Object)
+            cat_ids = p.get("collectionIds") or []
+            cat_names: List[str] = []
+            if isinstance(cat_ids, list):
+                for cid in cat_ids:
+                    name = collections_map.get(str(cid))
+                    if name:
+                        cat_names.append(name)
+            cat_names = sorted(set(cat_names)) if cat_names else []
 
             variants = client.query_variants_v1(wix_product_id) or []
             for v in variants:
@@ -237,37 +257,31 @@ def sync_wix_to_luxura(
                     skipped_no_sku += 1
                     continue
 
-                # Injecter catégories CSV dans options
-                cats = csv_categories.get(wix_product_id)
-                if cats:
+                # inject categories
+                if cat_names:
                     opts = data.get("options") or {}
                     if not isinstance(opts, dict):
                         opts = {}
-                    opts["categories"] = cats
+                    opts["categories"] = cat_names
                     data["options"] = opts
 
                 sku = (data.get("sku") or "").strip()
                 wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
 
-                # -------------------------------------------------
-                # 1) lookup stable par (wix_id + wix_variant_id)
-                # -------------------------------------------------
-                existing: Optional[Product] = None
+                # lookup stable par variante
+                existing = None
                 if wix_product_id and wix_variant_id:
                     candidates = db.exec(select(Product).where(Product.wix_id == wix_product_id)).all()
                     for cand in candidates:
-                        opts_c = cand.options or {}
-                        if isinstance(opts_c, dict) and str(opts_c.get("wix_variant_id")) == str(wix_variant_id):
+                        o = cand.options or {}
+                        if isinstance(o, dict) and str(o.get("wix_variant_id")) == str(wix_variant_id):
                             existing = cand
                             break
 
-                # 2) fallback par sku
                 if existing is None:
                     existing = db.exec(select(Product).where(Product.sku == sku)).first()
 
-                # -------------------------------------------------
-                # MERGE anti-doublon SKU (si sku déjà pris par un autre produit)
-                # -------------------------------------------------
+                # merge anti-doublon sku
                 sku_owner = db.exec(select(Product).where(Product.sku == sku)).first()
                 if existing and sku_owner and sku_owner.id != existing.id:
                     merged += 1
@@ -279,9 +293,7 @@ def sync_wix_to_luxura(
                         db.flush()
                     existing = sku_owner
 
-                # -------------------------------------------------
-                # update / create
-                # -------------------------------------------------
+                # update/create
                 if existing:
                     updated += 1
                     if not dry_run:
@@ -296,18 +308,15 @@ def sync_wix_to_luxura(
                         db.flush()
                         db.refresh(prod)
                     else:
-                        prod = None  # pas de row DB en dry_run
+                        prod = None
 
-                # -------------------------------------------------
-                # Inventory ENTREPOT (via inv_map)
-                # -------------------------------------------------
+                # inventaire entrepot
                 it = inv_map.get(f"{wix_product_id}:{wix_variant_id}")
                 if it and it.get("track"):
                     inv_written += 1
                     if not dry_run and prod is not None:
                         upsert_inventory_entrepot(db, entrepot.id, prod.id, int(it.get("qty") or 0))
 
-        # commit / rollback
         if not dry_run:
             db.commit()
         else:
@@ -322,7 +331,7 @@ def sync_wix_to_luxura(
             "skipped_no_sku": skipped_no_sku,
             "inventory_written_entrepot": inv_written,
             "inventory_meta": inv_meta,
-            "categories_from_csv": len(csv_categories),
+            "collections_loaded": len(collections_map),
         }
 
     except (IntegrityError, DataError) as e:
