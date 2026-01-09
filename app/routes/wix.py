@@ -157,7 +157,11 @@ def _build_inventory_map_v1(
                 if not vid:
                     continue
 
-                qty = int(v.get("quantity") or 0)
+                try:
+                    qty = int(v.get("quantity") or 0)
+                except Exception:
+                    qty = 0
+
                 vendor_sku = (
                     _clean_str(v.get("sku"))
                     or _clean_str(v.get("stockKeepingUnit"))
@@ -181,7 +185,7 @@ def _build_inventory_map_v1(
 
 
 # ---------------------------------------------------------
-# Sync Wix → Luxura (V2)
+# Sync Wix → Luxura (V2) + dry_run + catégories CSV + merge SKU
 # ---------------------------------------------------------
 @router.post("/sync")
 def sync_wix_to_luxura(
@@ -196,9 +200,14 @@ def sync_wix_to_luxura(
     inv_map, inv_meta = _build_inventory_map_v1(client)
     csv_categories = load_categories_from_csv()
 
-    parents = client.query_products_v1(limit=min(limit, 100))
+    # parents v1 (tu peux augmenter paging plus tard)
+    parents = client.query_products_v1(limit=min(int(limit or 200), 100))
 
-    created = updated = skipped_no_sku = inv_written = 0
+    created = 0
+    updated = 0
+    merged = 0
+    skipped_no_sku = 0
+    inv_written = 0
 
     try:
         for p in parents:
@@ -206,49 +215,95 @@ def sync_wix_to_luxura(
             if not wix_product_id:
                 continue
 
-            variants = client.query_variants_v1(wix_product_id)
-
+            variants = client.query_variants_v1(wix_product_id) or []
             for v in variants:
                 data = normalize_variant(p, v)
                 if not data or not data.get("sku"):
                     skipped_no_sku += 1
                     continue
 
-                # Injecter catégories CSV
+                # Injecter catégories CSV dans options
                 cats = csv_categories.get(wix_product_id)
                 if cats:
                     opts = data.get("options") or {}
+                    if not isinstance(opts, dict):
+                        opts = {}
                     opts["categories"] = cats
                     data["options"] = opts
 
-                sku = data["sku"]
-                existing = db.exec(select(Product).where(Product.sku == sku)).first()
+                sku = (data.get("sku") or "").strip()
+                wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
 
+                # -------------------------------------------------
+                # 1) lookup stable par (wix_id + wix_variant_id)
+                # -------------------------------------------------
+                existing: Optional[Product] = None
+                if wix_product_id and wix_variant_id:
+                    candidates = db.exec(select(Product).where(Product.wix_id == wix_product_id)).all()
+                    for cand in candidates:
+                        opts_c = cand.options or {}
+                        if isinstance(opts_c, dict) and str(opts_c.get("wix_variant_id")) == str(wix_variant_id):
+                            existing = cand
+                            break
+
+                # 2) fallback par sku
+                if existing is None:
+                    existing = db.exec(select(Product).where(Product.sku == sku)).first()
+
+                # -------------------------------------------------
+                # MERGE anti-doublon SKU (si sku déjà pris par un autre produit)
+                # -------------------------------------------------
+                sku_owner = db.exec(select(Product).where(Product.sku == sku)).first()
+                if existing and sku_owner and sku_owner.id != existing.id:
+                    merged += 1
+                    if not dry_run:
+                        inv_rows = db.exec(select(InventoryItem).where(InventoryItem.product_id == existing.id)).all()
+                        for inv in inv_rows:
+                            inv.product_id = sku_owner.id
+                        db.delete(existing)
+                        db.flush()
+                    existing = sku_owner
+
+                # -------------------------------------------------
+                # update / create
+                # -------------------------------------------------
                 if existing:
-                    for k, val in data.items():
-                        setattr(existing, k, val)
-                    prod = existing
                     updated += 1
+                    if not dry_run:
+                        for k, val in data.items():
+                            setattr(existing, k, val)
+                    prod = existing
                 else:
-                    prod = Product(**data)
-                    db.add(prod)
-                    db.flush()
-                    db.refresh(prod)
                     created += 1
+                    if not dry_run:
+                        prod = Product(**data)
+                        db.add(prod)
+                        db.flush()
+                        db.refresh(prod)
+                    else:
+                        prod = None  # pas de row DB en dry_run
 
-                # Inventory ENTREPOT
-                vid = data["options"].get("wix_variant_id")
-                it = inv_map.get(f"{wix_product_id}:{vid}")
-                if it and it["track"]:
-                    upsert_inventory_entrepot(db, entrepot.id, prod.id, it["qty"])
+                # -------------------------------------------------
+                # Inventory ENTREPOT (via inv_map)
+                # -------------------------------------------------
+                it = inv_map.get(f"{wix_product_id}:{wix_variant_id}")
+                if it and it.get("track"):
                     inv_written += 1
+                    if not dry_run and prod is not None:
+                        upsert_inventory_entrepot(db, entrepot.id, prod.id, int(it.get("qty") or 0))
 
-        db.commit()
+        # commit / rollback
+        if not dry_run:
+            db.commit()
+        else:
+            db.rollback()
 
         return {
             "ok": True,
+            "dry_run": dry_run,
             "created": created,
             "updated": updated,
+            "merged": merged,
             "skipped_no_sku": skipped_no_sku,
             "inventory_written_entrepot": inv_written,
             "inventory_meta": inv_meta,
