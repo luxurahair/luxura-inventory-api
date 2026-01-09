@@ -184,7 +184,12 @@ def _build_inventory_map_v1(
 # Sync Wix → Luxura (V2)
 # ---------------------------------------------------------
 @router.post("/sync")
-def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> Dict[str, Any]:
+def sync_wix_to_luxura(
+    db: Session = Depends(get_session),
+    limit: int = 200,
+    dry_run: bool = False,
+) -> Dict[str, Any]:
+
     client = WixClient()
     entrepot = get_or_create_entrepot(db)
 
