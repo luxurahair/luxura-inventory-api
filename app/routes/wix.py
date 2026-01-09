@@ -4,6 +4,8 @@ print("### LOADED app/routes/wix.py (v2 variants + entrepot inventory, CATALOG_V
 
 import logging
 import os
+import csv
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
@@ -28,15 +30,49 @@ ENTREPOT_NAME = "Luxura Entrepôt"
 
 
 # ---------------------------------------------------------
+# CSV CATEGORIES (SOURCE DE VÉRITÉ)
+# ---------------------------------------------------------
+def load_categories_from_csv() -> Dict[str, List[str]]:
+    """
+    data/catalog_products.csv
+    Colonnes attendues:
+      - product_id
+      - collection (séparée par ;)
+    Retour:
+      { wix_product_id: [cat1, cat2, ...] }
+    """
+    path = Path("data/catalog_products.csv")
+    if not path.exists():
+        print("[CSV] catalog_products.csv introuvable")
+        return {}
+
+    out: Dict[str, List[str]] = {}
+    with path.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            pid = (row.get("product_id") or "").strip()
+            raw = (row.get("collection") or "").strip()
+            if not pid or not raw:
+                continue
+
+            cats = [c.strip() for c in raw.split(";") if c.strip()]
+            if cats:
+                out[pid] = sorted(set(cats))
+
+    print(f"[CSV] catégories chargées: {len(out)} produits")
+    return out
+
+
+# ---------------------------------------------------------
 # Wix helpers (fallback requests)
 # ---------------------------------------------------------
 def _wix_headers() -> Dict[str, str]:
     api_key = os.getenv("WIX_API_KEY") or os.getenv("WIX_API_TOKEN")
     site_id = os.getenv("WIX_SITE_ID")
     if not api_key or not site_id:
-        raise RuntimeError("WIX_API_KEY (ou WIX_API_TOKEN) et WIX_SITE_ID manquants dans Render.")
+        raise RuntimeError("WIX_API_KEY / WIX_SITE_ID manquants")
     return {
-        "Authorization": api_key,  # pas Bearer
+        "Authorization": api_key,
         "Content-Type": "application/json",
         "Accept": "application/json",
         "wix-site-id": site_id,
@@ -45,11 +81,11 @@ def _wix_headers() -> Dict[str, str]:
 
 def _fetch_products_v1(limit: int) -> List[Dict[str, Any]]:
     url = f"{WIX_BASE_URL}/stores/v1/products/query"
-    payload: Dict[str, Any] = {"query": {"paging": {"limit": limit}}}
+    payload = {"query": {"paging": {"limit": limit}}}
 
     resp = requests.post(url, headers=_wix_headers(), json=payload, timeout=30)
     if resp.status_code != 200:
-        raise RuntimeError(f"Wix v1 products/query: {resp.status_code} {resp.text}")
+        raise RuntimeError(resp.text)
 
     data = resp.json() or {}
     return data.get("products") or data.get("items") or []
@@ -77,8 +113,7 @@ def upsert_inventory_entrepot(db: Session, salon_id: int, product_id: int, qty: 
     ).first()
 
     if not inv:
-        inv = InventoryItem(salon_id=salon_id, product_id=product_id, quantity=max(int(qty), 0))
-        db.add(inv)
+        db.add(InventoryItem(salon_id=salon_id, product_id=product_id, quantity=max(int(qty), 0)))
     else:
         inv.quantity = max(int(qty), 0)
 
@@ -89,8 +124,6 @@ def upsert_inventory_entrepot(db: Session, salon_id: int, product_id: int, qty: 
 def _clean_str(x: Any) -> str:
     if x is None:
         return ""
-    if isinstance(x, str):
-        return x.strip()
     return str(x).strip()
 
 
@@ -99,64 +132,43 @@ def _build_inventory_map_v1(
     page_limit: int = 100,
     max_pages: int = 50,
 ) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
-    """
-    inv_map key "<productId>:<variantId>" -> {
-      "track": bool, "qty": int, "inStock": bool, "vendor_sku": Optional[str]
-    }
-    """
     inv_map: Dict[str, Dict[str, Any]] = {}
     pages = 0
     total_items = 0
-
     offset = 0
-    page_limit = min(max(int(page_limit), 1), 100)
 
     while pages < max_pages:
         resp = client.query_inventory_items_v1(limit=page_limit, offset=offset)
-
         items = resp.get("inventoryItems") or resp.get("items") or []
-        if not isinstance(items, list):
-            items = []
 
         pages += 1
         total_items += len(items)
 
         for inv in items:
-            pid = _clean_str(inv.get("productId") or inv.get("product_id"))
+            pid = _clean_str(inv.get("productId"))
             if not pid:
                 continue
 
             track = bool(inv.get("trackQuantity", False))
-
             variants = inv.get("variants") or []
-            if not isinstance(variants, list):
-                variants = []
 
             for v in variants:
-                vid = _clean_str(v.get("variantId") or v.get("variant_id") or v.get("id"))
+                vid = _clean_str(v.get("variantId") or v.get("id"))
                 if not vid:
                     continue
 
-                try:
-                    qty = int(v.get("quantity") or 0)
-                except Exception:
-                    qty = 0
-
-                in_stock_val = v.get("inStock")
-                instock = bool(in_stock_val) if isinstance(in_stock_val, bool) else (qty > 0)
-
+                qty = int(v.get("quantity") or 0)
                 vendor_sku = (
                     _clean_str(v.get("sku"))
                     or _clean_str(v.get("stockKeepingUnit"))
                     or _clean_str(v.get("vendorSku"))
-                    or _clean_str((v.get("skuData") or {}).get("sku") if isinstance(v.get("skuData"), dict) else None)
+                    or _clean_str((v.get("skuData") or {}).get("sku"))
+                    or None
                 )
-                vendor_sku = vendor_sku or None
 
                 inv_map[f"{pid}:{vid}"] = {
                     "track": track,
                     "qty": qty,
-                    "inStock": instock,
                     "vendor_sku": vendor_sku,
                 }
 
@@ -164,242 +176,52 @@ def _build_inventory_map_v1(
             break
         offset += page_limit
 
-    meta = {
-        "pages": pages,
-        "total_inventory_items": total_items,
-        "mapped_variants": len(inv_map),
-    }
+    meta = {"pages": pages, "total_inventory_items": total_items, "mapped_variants": len(inv_map)}
     return inv_map, meta
 
 
 # ---------------------------------------------------------
-# Debug endpoints
-# ---------------------------------------------------------
-@router.get("/debug-products")
-def debug_wix_products() -> Dict[str, Any]:
-    try:
-        raw_products = _fetch_products_v1(limit=20)
-        normalized = [normalize_product(p, "CATALOG_V1") for p in raw_products]
-        return {"catalog_version": "CATALOG_V1", "count": len(normalized), "products": normalized}
-    except Exception as e:
-        log.exception("❌ /wix/debug-products failed")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/debug-variants/{product_id}")
-def debug_wix_variants(product_id: str) -> Dict[str, Any]:
-    """
-    Debug: variants réels + où Wix met le SKU.
-    """
-    try:
-        client = WixClient()
-        variants = client.query_variants_v1(product_id, limit=100)
-
-        def pick(*vals: Any) -> Optional[str]:
-            for x in vals:
-                if isinstance(x, str) and x.strip():
-                    return x.strip()
-            return None
-
-        def find_gw_paths(
-            obj: Any,
-            prefix: str = "",
-            out: Optional[List[Dict[str, Any]]] = None,
-        ) -> List[Dict[str, Any]]:
-            if out is None:
-                out = []
-
-            if isinstance(obj, dict):
-                for k, v in obj.items():
-                    p = f"{prefix}.{k}" if prefix else str(k)
-                    find_gw_paths(v, p, out)
-            elif isinstance(obj, list):
-                for i, v in enumerate(obj):
-                    p = f"{prefix}[{i}]"
-                    find_gw_paths(v, p, out)
-            else:
-                if isinstance(obj, str) and "gw" in obj.lower():
-                    out.append({"path": prefix, "value": obj})
-
-            return out
-
-        debug: List[Dict[str, Any]] = []
-        for v in variants[:20]:
-            sku_a = v.get("sku")
-            sku_b = (v.get("variant") or {}).get("sku")
-            sku_c = (sku_a or {}).get("value") if isinstance(sku_a, dict) else None
-            sku_d = v.get("stockKeepingUnit")
-            sku_e = (v.get("skuData") or {}).get("sku")
-            sku_f = v.get("vendorSku")
-            sku_g = v.get("itemNumber")
-
-            chosen = pick(
-                sku_a if isinstance(sku_a, str) else None,
-                sku_b,
-                sku_c,
-                sku_d,
-                sku_e,
-                sku_f,
-                sku_g,
-            )
-
-            debug.append(
-                {
-                    "variant_id": v.get("id") or v.get("_id") or v.get("variantId"),
-                    "choices": v.get("choices") or v.get("options") or {},
-                    "raw_sku_paths": {
-                        "v.sku": sku_a,
-                        "v.variant.sku": sku_b,
-                        "v.sku.value": sku_c,
-                        "v.stockKeepingUnit": sku_d,
-                        "v.skuData.sku": sku_e,
-                        "v.vendorSku": sku_f,
-                        "v.itemNumber": sku_g,
-                    },
-                    "raw_sku_chosen": chosen,
-                    "gw_hits": find_gw_paths(v)[:10],
-                    "keys": sorted(list(v.keys()))[:50],
-                }
-            )
-
-        return {
-            "product_id": product_id,
-            "count": len(variants),
-            "debug": debug,
-            "note": "Si gw_hits est vide et raw_sku_chosen est vide, alors l'endpoint variants/query ne fournit pas ton SKU humain.",
-        }
-
-    except Exception as e:
-        msg = str(e)
-        log.exception("❌ /wix/debug-variants failed")
-        if "PRODUCT_NOT_FOUND" in msg or "was not found" in msg:
-            raise HTTPException(status_code=404, detail=msg)
-        raise HTTPException(status_code=500, detail=msg)
-
-# ---------------------------------------------------------
-# Sync V2: 1 variant = 1 Product, stock -> ENTREPOT (V1 inventory)
-# + Collections (catégories) depuis Wix
+# Sync Wix → Luxura (V2)
 # ---------------------------------------------------------
 @router.post("/sync")
 def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> Dict[str, Any]:
     client = WixClient()
     entrepot = get_or_create_entrepot(db)
 
-    # 1) inventory map
-    try:
-        inv_map, inv_meta = _build_inventory_map_v1(client, page_limit=100, max_pages=50)
-        print("[INV META]", inv_meta)
-    except Exception as e:
-        inv_map = {}
-        inv_meta = {"error": str(e)[:500]}
+    inv_map, inv_meta = _build_inventory_map_v1(client)
+    csv_categories = load_categories_from_csv()
 
-    # 1b) collections map (catégories)
-    collections_map: Dict[str, str] = {}
-    try:
-        cols = client.query_collections_reader_v1(limit=100, max_pages=10)
-        for c in cols:
-            cid = str(c.get("id") or c.get("_id") or "").strip()
-            name = (c.get("name") or "").strip()
-            if cid and name:
-                collections_map[cid] = name
-        print("[COLLECTIONS]", len(collections_map))
-    except Exception as e:
-        # on ne bloque pas le sync si collections indispo
-        print("[COLLECTIONS] skipped:", str(e)[:200])
-        collections_map = {}
+    parents = client.query_products_v1(limit=min(limit, 100))
 
-    # 2) parents (stores-reader pour avoir collectionIds)
-    try:
-        limit = int(limit or 200)
-        per_page = min(max(limit, 1), 100)
-        max_pages: Optional[int] = 10 if limit > 100 else None
-        parents = client.query_products_reader_v1(limit=per_page, max_pages=max_pages)
-    except Exception as e:
-        log.exception("❌ Wix fetch parents failed")
-        raise HTTPException(status_code=500, detail=str(e))
-
-    created = updated = skipped_no_sku = inv_written = parents_processed = variants_seen = 0
+    created = updated = skipped_no_sku = inv_written = 0
 
     try:
         for p in parents:
-            pid = p.get("id") or p.get("_id")
-            if not pid:
+            wix_product_id = _clean_str(p.get("id"))
+            if not wix_product_id:
                 continue
 
-            parents_processed += 1
-            wix_product_id = str(pid).strip()
+            variants = client.query_variants_v1(wix_product_id)
 
-            # catégories (collections) depuis le parent
-            cat_ids = p.get("collectionIds") or p.get("collections") or []
-            cat_names: List[str] = []
-            if isinstance(cat_ids, list):
-                for cid in cat_ids:
-                    cname = collections_map.get(str(cid))
-                    if cname:
-                        cat_names.append(cname)
-            if cat_names:
-                cat_names = sorted(set(cat_names))
-
-            variants = client.query_variants_v1(wix_product_id, limit=100) or []
             for v in variants:
-                variants_seen += 1
-
                 data = normalize_variant(p, v)
-                if not data:
+                if not data or not data.get("sku"):
                     skipped_no_sku += 1
                     continue
 
-                sku = (data.get("sku") or "").strip()
-                if not sku:
-                    skipped_no_sku += 1
-                    continue
-
-                # injecter categories dans data.options (si on en a)
-                if cat_names:
+                # Injecter catégories CSV
+                cats = csv_categories.get(wix_product_id)
+                if cats:
                     opts = data.get("options") or {}
-                    if not isinstance(opts, dict):
-                        opts = {}
-                    opts["categories"] = cat_names
+                    opts["categories"] = cats
                     data["options"] = opts
 
-                wix_id = (data.get("wix_id") or "").strip()
-                wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
+                sku = data["sku"]
+                existing = db.exec(select(Product).where(Product.sku == sku)).first()
 
-                # -------------------------------------------------
-                # 1) Trouver l'existant par (wix_id + wix_variant_id)
-                # -------------------------------------------------
-                existing: Optional[Product] = None
-                if wix_id and wix_variant_id:
-                    candidates = db.exec(select(Product).where(Product.wix_id == wix_id)).all()
-                    for cand in candidates:
-                        opts_c = cand.options or {}
-                        if isinstance(opts_c, dict) and str(opts_c.get("wix_variant_id")) == str(wix_variant_id):
-                            existing = cand
-                            break
-
-                # 2) fallback par sku
-                if existing is None:
-                    existing = db.exec(select(Product).where(Product.sku == sku)).first()
-
-                # -------------------------------------------------
-                # MERGE anti-doublon: si sku déjà pris, on fusionne
-                # -------------------------------------------------
-                sku_owner = db.exec(select(Product).where(Product.sku == sku)).first()
-                if existing and sku_owner and sku_owner.id != existing.id:
-                    inv_rows = db.exec(select(InventoryItem).where(InventoryItem.product_id == existing.id)).all()
-                    for inv in inv_rows:
-                        inv.product_id = sku_owner.id
-
-                    db.delete(existing)
-                    db.flush()
-                    existing = sku_owner
-
-                # -------------------------------------------------
-                # apply update / create
-                # -------------------------------------------------
                 if existing:
-                    for field, value in data.items():
-                        setattr(existing, field, value)
+                    for k, val in data.items():
+                        setattr(existing, k, val)
                     prod = existing
                     updated += 1
                 else:
@@ -409,64 +231,25 @@ def sync_wix_to_luxura(db: Session = Depends(get_session), limit: int = 200) -> 
                     db.refresh(prod)
                     created += 1
 
-                # -------------------------------------------------
-                # 3) ENTREPOT inventory + vendor_sku (optionnel)
-                # -------------------------------------------------
-                if wix_variant_id:
-                    key = f"{wix_product_id}:{str(wix_variant_id).strip()}"
-                    it = inv_map.get(key)
-
-                    if it:
-                        vendor_sku = it.get("vendor_sku")
-                        if vendor_sku:
-                            opts2 = data.get("options") or {}
-                            if not isinstance(opts2, dict):
-                                opts2 = {}
-                            opts2["vendor_sku"] = vendor_sku
-                            data["options"] = opts2
-                            prod.options = data["options"]
-
-                        track_qty = bool(it.get("track", False))
-                        try:
-                            qty = int(it.get("qty") or 0)
-                        except Exception:
-                            qty = 0
-
-                        if track_qty:
-                            upsert_inventory_entrepot(db, entrepot.id, prod.id, qty)
-                            inv_written += 1
+                # Inventory ENTREPOT
+                vid = data["options"].get("wix_variant_id")
+                it = inv_map.get(f"{wix_product_id}:{vid}")
+                if it and it["track"]:
+                    upsert_inventory_entrepot(db, entrepot.id, prod.id, it["qty"])
+                    inv_written += 1
 
         db.commit()
 
         return {
             "ok": True,
-            "catalog_version": "CATALOG_V1",
-            "parents_processed": parents_processed,
-            "variants_seen": variants_seen,
             "created": created,
             "updated": updated,
             "skipped_no_sku": skipped_no_sku,
             "inventory_written_entrepot": inv_written,
             "inventory_meta": inv_meta,
-            "collections_loaded": len(collections_map),
-            "entrepot_code": ENTREPOT_CODE,
+            "categories_from_csv": len(csv_categories),
         }
 
-    except IntegrityError as e:
+    except (IntegrityError, DataError) as e:
         db.rollback()
-        msg = str(getattr(e, "orig", e))[:1500]
-        log.exception("❌ DB IntegrityError on /wix/sync V2")
-        raise HTTPException(status_code=500, detail=f"DB IntegrityError: {msg}")
-
-    except DataError as e:
-        db.rollback()
-        msg = str(getattr(e, "orig", e))[:1500]
-        log.exception("❌ DB DataError on /wix/sync V2")
-        raise HTTPException(status_code=500, detail=f"DB DataError: {msg}")
-
-    except Exception as e:
-        db.rollback()
-        msg = str(e)[:1500]
-        log.exception("❌ DB Error on /wix/sync V2")
-        raise HTTPException(status_code=500, detail=f"DB Error: {msg}")
-
+        raise HTTPException(status_code=500, detail=str(e))
