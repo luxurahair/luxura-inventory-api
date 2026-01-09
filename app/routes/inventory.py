@@ -102,19 +102,20 @@ def _autosize(ws) -> None:
 
 @router.get(
     "/export.xlsx",
-    summary="Exporter l’inventaire Excel (1 feuille par salon)",
+    summary="Exporter l’inventaire Excel (salons + catégories + filtres)",
 )
 def export_inventory_xlsx(
     salon_id: Optional[int] = None,
     include_zero: bool = False,
+    category: Optional[str] = None,   # ✅ filtre catégorie unique
     session: Session = Depends(get_session),
 ):
     """
-    Exporte un fichier Excel:
-    - Sans salon_id: 1 feuille par salon actif
-    - Avec salon_id: seulement ce salon
-    Colonnes: salon / sku / name / qty / price / value / wix_id / wix_variant_id / choices / vendor_sku
+    Excel:
+    - Sans category: 1 feuille par salon + 1 feuille par catégorie + Summary
+    - Avec category: export filtré sur cette catégorie (dans options.categories)
     """
+    # salons à exporter
     salons_stmt = select(Salon).where(Salon.is_active == True)  # noqa: E712
     if salon_id is not None:
         salons_stmt = select(Salon).where(Salon.id == salon_id)
@@ -133,12 +134,39 @@ def export_inventory_xlsx(
         "value",
         "wix_id",
         "wix_variant_id",
+        "categories",
         "choices",
         "vendor_sku",
     ]
 
+    def extract_opts(prod: Product):
+        opts = getattr(prod, "options", None) or {}
+        wix_variant_id_val = None
+        choices = None
+        vendor_sku = None
+        cats = []
+        if isinstance(opts, dict):
+            wix_variant_id_val = opts.get("wix_variant_id")
+            choices = opts.get("choices")
+            vendor_sku = opts.get("vendor_sku")
+            cats = opts.get("categories") or []
+        if not isinstance(cats, list):
+            cats = []
+        return wix_variant_id_val, choices, vendor_sku, cats
+
+    def match_category(cats: List[str]) -> bool:
+        if not category:
+            return True
+        want = category.strip().lower()
+        return any(str(c).strip().lower() == want for c in cats)
+
+    # Summary par SKU (global)
     summary: Dict[str, Dict[str, Any]] = {}
 
+    # Accumulateur par catégorie (pour créer des feuilles "CAT - ...")
+    by_category: Dict[str, List[List[Any]]] = {}
+
+    # --- Feuilles par salon ---
     for s in salons:
         title = (s.name or f"Salon {s.id}")[:31]
         ws = wb.create_sheet(title=title)
@@ -159,53 +187,44 @@ def export_inventory_xlsx(
             price = float(getattr(prod, "price", 0) or 0)
             value = qty * price
 
-            opts = getattr(prod, "options", None) or {}
-            wix_variant_id_val = None
-            choices = None
-            vendor_sku = None
-            if isinstance(opts, dict):
-                wix_variant_id_val = opts.get("wix_variant_id")
-                choices = opts.get("choices")
-                vendor_sku = opts.get("vendor_sku")
+            wix_variant_id_val, choices, vendor_sku, cats = extract_opts(prod)
 
-            # ✅ Excel n'accepte pas dict/list -> stringify
-            if choices is None:
-                choices_str = ""
-            else:
-                try:
-                    choices_str = json.dumps(choices, ensure_ascii=False)
-                except Exception:
-                    choices_str = str(choices)
+            # filtre catégorie
+            if not match_category(cats):
+                continue
 
+            # stringify pour Excel
+            try:
+                choices_str = json.dumps(choices, ensure_ascii=False) if choices is not None else ""
+            except Exception:
+                choices_str = str(choices) if choices is not None else ""
+
+            cats_str = "; ".join([str(c) for c in cats]) if cats else ""
             vendor_sku_str = "" if vendor_sku is None else str(vendor_sku)
             wix_variant_id_str = "" if wix_variant_id_val is None else str(wix_variant_id_val)
             wix_id_str = "" if getattr(prod, "wix_id", None) is None else str(getattr(prod, "wix_id", None))
 
-            ws.append(
-                [
-                    s.id,
-                    s.name,
-                    prod.sku,
-                    prod.name,
-                    qty,
-                    price,
-                    value,
-                    wix_id_str,
-                    wix_variant_id_str,
-                    choices_str,
-                    vendor_sku_str,
-                ]
-            )
+            row_out = [
+                s.id,
+                s.name,
+                prod.sku,
+                prod.name,
+                qty,
+                price,
+                value,
+                wix_id_str,
+                wix_variant_id_str,
+                cats_str,
+                choices_str,
+                vendor_sku_str,
+            ]
 
+            ws.append(row_out)
+
+            # --- Summary SKU ---
             sku_key = prod.sku or ""
             if sku_key:
-                agg = summary.get(sku_key) or {
-                    "sku": sku_key,
-                    "name": prod.name,
-                    "qty": 0,
-                    "price": price,
-                    "value": 0.0,
-                }
+                agg = summary.get(sku_key) or {"sku": sku_key, "name": prod.name, "qty": 0, "price": price, "value": 0.0}
                 agg["qty"] += qty
                 agg["value"] += value
                 if prod.name:
@@ -213,8 +232,25 @@ def export_inventory_xlsx(
                 agg["price"] = price
                 summary[sku_key] = agg
 
+            # --- Feuilles catégories (uniquement si pas de filtre category) ---
+            if not category:
+                for c in cats or ["(Sans catégorie)"]:
+                    cname = str(c).strip() or "(Sans catégorie)"
+                    by_category.setdefault(cname, []).append(row_out)
+
         _autosize(ws)
 
+    # --- Feuilles par catégorie (quand on exporte tout) ---
+    if not category:
+        for cname in sorted(by_category.keys()):
+            sheet_name = f"CAT - {cname}"[:31]
+            ws_cat = wb.create_sheet(title=sheet_name)
+            ws_cat.append(headers)
+            for r in by_category[cname]:
+                ws_cat.append(r)
+            _autosize(ws_cat)
+
+    # --- Summary ---
     ws_sum = wb.create_sheet(title="Summary")
     ws_sum.append(["sku", "name", "total_qty", "price", "total_value"])
     for sku_key in sorted(summary.keys()):
@@ -227,7 +263,10 @@ def export_inventory_xlsx(
     bio.seek(0)
 
     stamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    filename = f"luxura_inventory_{stamp}.xlsx"
+    if category:
+        filename = f"luxura_inventory_{category}_{stamp}.xlsx"
+    else:
+        filename = f"luxura_inventory_{stamp}.xlsx"
 
     return StreamingResponse(
         bio,
