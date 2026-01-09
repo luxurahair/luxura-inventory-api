@@ -34,23 +34,37 @@ ENTREPOT_NAME = "Luxura Entrepôt"
 # ---------------------------------------------------------
 def load_categories_from_csv() -> Dict[str, List[str]]:
     """
-    data/catalog_products.csv
-    Colonnes attendues:
-      - product_id
-      - collection (séparée par ;)
-    Retour:
-      { wix_product_id: [cat1, cat2, ...] }
+    Wix export CSV -> Map wix_product_id -> categories[]
+    Supporte:
+      - product_id OU handleId ("product_<uuid>")
+      - collection séparée par ;
+      - fieldType=Product (recommandé)
     """
     path = Path("data/catalog_products.csv")
     if not path.exists():
-        print("[CSV] catalog_products.csv introuvable")
+        print("[CSV] introuvable:", str(path))
         return {}
 
     out: Dict[str, List[str]] = {}
-    with path.open(newline="", encoding="utf-8") as f:
+
+    with path.open(newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
+        headers = reader.fieldnames or []
+        print("[CSV] headers:", headers[:30])
+
         for row in reader:
+            field_type = (row.get("fieldType") or "").strip().lower()
+            if field_type and field_type != "product":
+                continue
+
             pid = (row.get("product_id") or "").strip()
+
+            if not pid:
+                # handleId = product_<uuid>
+                handle_id = (row.get("handleId") or "").strip()
+                if handle_id.startswith("product_"):
+                    pid = handle_id.split("product_", 1)[1].strip()
+
             raw = (row.get("collection") or "").strip()
             if not pid or not raw:
                 continue
@@ -61,6 +75,7 @@ def load_categories_from_csv() -> Dict[str, List[str]]:
 
     print(f"[CSV] catégories chargées: {len(out)} produits")
     return out
+
 
 
 # ---------------------------------------------------------
