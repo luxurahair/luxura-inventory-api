@@ -116,8 +116,8 @@ def _choice_text(opts: Any) -> str:
 # ---------------------------
 # Génération SEO (FR/EN)
 # ---------------------------
+
 def _build_seo_parent_fr(parent_name: str, category: str) -> Dict[str, str]:
-    # Parent = page Wix produit (Google)
     cat = f"{category} – " if category else ""
     title = _truncate(f"{cat}{parent_name} | Luxura Distribution", 60)
     meta = _truncate(
