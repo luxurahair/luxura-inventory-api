@@ -185,7 +185,7 @@ def _build_seo_variant_en(parent_name: str, choice_txt: str, category: str) -> D
 
 # ALT images (FR/EN) — utile pour ton étape 2
 def _build_alt_fr(category: str, parent_name: str, choice_txt: str) -> str:
-    cat = category if category else "Extensions"
+    cat = category if category in ("Genius", "Halo", "Tape-in", "I-Tip", "Ponytail") else "Extensions"
     extra = f" {choice_txt}" if choice_txt else ""
     return _truncate(f"{cat} professionnelles – {parent_name}{extra} – Luxura Distribution (Québec)", 120)
 
@@ -229,10 +229,13 @@ def seo_preview(
 
         best_cat = _seo_category_label(_best_category(opts))
         parent_name, name_variant_part = _split_parent_and_variant(p.name or "")
-      
+
         # éviter "Genius – Genius ..."
         if best_cat and parent_name.lower().startswith(best_cat.lower()):
             parent_name = parent_name[len(best_cat):].lstrip(" -–")
+
+        # enlever le # (ex: "# Foochow" -> "Foochow")
+        parent_name = parent_name.replace("#", "").strip()
 
         choice_txt = _choice_text(opts) or name_variant_part
 
