@@ -97,6 +97,25 @@ def _best_category(opts: Any) -> str:
     return sorted(clean, key=lambda x: len(x), reverse=True)[0]
 
 
+def _seo_category_label(cat: str) -> str:
+    c = (cat or "").strip()
+
+    # raccourcis utiles (adaptés à ton Wix)
+    if "genius" in c.lower():
+        return "Genius"
+    if "halo" in c.lower():
+        return "Halo"
+    if "tape" in c.lower():
+        return "Tape-in"
+    if "i-tip" in c.lower() or "itip" in c.lower():
+        return "I-Tip"
+    if "pony" in c.lower():
+        return "Ponytail"
+
+    # sinon, on coupe si trop long
+    return c[:30].strip()
+
+
 def _choice_text(opts: Any) -> str:
     """
     Valeur variante (ex: Longeur = 20" 50 grammes)
@@ -167,13 +186,13 @@ def _build_seo_variant_en(parent_name: str, choice_txt: str, category: str) -> D
 def _build_alt_fr(category: str, parent_name: str, choice_txt: str) -> str:
     cat = category if category else "Extensions"
     extra = f" {choice_txt}" if choice_txt else ""
-    return _truncate(f"{cat} professionnelles – {parent_name}{extra} – Luxura Distribution Québec", 120)
+    return _truncate(f"{cat} professionnelles – {parent_name}{extra} – Luxura Distribution (Québec)", 120)
 
 
 def _build_alt_en(category: str, parent_name: str, choice_txt: str) -> str:
     cat = category if category else "Hair extensions"
     extra = f" {choice_txt}" if choice_txt else ""
-    return _truncate(f"Professional {cat} – {parent_name}{extra} – Luxura Distribution Canada", 120)
+    return _truncate(f"Professional {cat} – {parent_name}{extra} – Luxura Distribution (Canada)", 120)
 
 
 # ---------------------------
@@ -207,7 +226,7 @@ def seo_preview(
     for p in products:
         opts = p.options if isinstance(p.options, dict) else {}
 
-        best_cat = _best_category(opts)
+        best_cat = _seo_category_label(_best_category(opts))
         parent_name, name_variant_part = _split_parent_and_variant(p.name or "")
         choice_txt = _choice_text(opts) or name_variant_part
 
@@ -274,7 +293,7 @@ def seo_apply(
 
         opts = prod.options if isinstance(prod.options, dict) else {}
 
-        best_cat = _best_category(opts)
+        best_cat = _seo_category_label(_best_category(opts))
         parent_name, name_variant_part = _split_parent_and_variant(prod.name or "")
         choice_txt = _choice_text(opts) or name_variant_part
 
