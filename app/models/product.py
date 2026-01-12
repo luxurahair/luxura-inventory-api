@@ -15,7 +15,7 @@ class Product(SQLModel, table=True):
     # ✅ Parent Wix (NON unique, car plusieurs variants partagent le même product_id Wix)
     wix_id: Optional[str] = Field(default=None, index=True)
 
-    # ✅ SKU = clé logique d’un variant (doit être unique si tu veux 1 variant = 1 produit)
+    # ✅ SKU = clé logique d’un variant
     sku: Optional[str] = Field(default=None, index=True, unique=True)
 
     name: str
@@ -30,14 +30,13 @@ class Product(SQLModel, table=True):
     options: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
 
     created_at: datetime = Field(default_factory=now_utc)
-    updated_at: datetime = Field(default_factory=now_utc)
+
+    # ✅ se met à jour automatiquement à chaque UPDATE
+    updated_at: datetime = Field(default_factory=now_utc, sa_column_kwargs={"onupdate": now_utc})
 
 
 class ProductCreate(SQLModel):
-    # ✅ optionnel: produits créés localement/CSV peuvent ne pas venir de Wix
     wix_id: Optional[str] = None
-
-    # ✅ SKU peut être requis côté business, mais on le laisse optionnel pour éviter 422 sur vieux flux
     sku: Optional[str] = None
 
     name: str
