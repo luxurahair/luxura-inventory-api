@@ -42,6 +42,7 @@ def _strip_accents(s: str) -> str:
 
 def _slugify(s: str) -> str:
     s = _strip_accents(_clean(s).lower())
+    s = s.replace("/", "-")  # ✅ garde la séparation 3/3T24 -> 3-3t24
     s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
     s = re.sub(r"[\s_-]+", "-", s)
     s = s.strip("-")
@@ -228,6 +229,11 @@ def seo_preview(
 
         best_cat = _seo_category_label(_best_category(opts))
         parent_name, name_variant_part = _split_parent_and_variant(p.name or "")
+      
+        # éviter "Genius – Genius ..."
+        if best_cat and parent_name.lower().startswith(best_cat.lower()):
+            parent_name = parent_name[len(best_cat):].lstrip(" -–")
+
         choice_txt = _choice_text(opts) or name_variant_part
 
         proposed_parent_fr = _build_seo_parent_fr(parent_name, best_cat)
@@ -295,7 +301,13 @@ def seo_apply(
 
         best_cat = _seo_category_label(_best_category(opts))
         parent_name, name_variant_part = _split_parent_and_variant(prod.name or "")
+
+        # éviter "Genius – Genius ..."
+        if best_cat and parent_name.lower().startswith(best_cat.lower()):
+            parent_name = parent_name[len(best_cat):].lstrip(" -–")
+
         choice_txt = _choice_text(opts) or name_variant_part
+
 
         seo_parent_fr = _build_seo_parent_fr(parent_name, best_cat)
         seo_parent_en = _build_seo_parent_en(parent_name, best_cat)
