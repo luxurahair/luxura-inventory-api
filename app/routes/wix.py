@@ -392,12 +392,16 @@ def sync_wix_to_luxura(
 
 @router.get("/sync/last")
 def wix_sync_last(db: Session = Depends(get_session)) -> Dict[str, Any]:
-    run = db.exec(
-        select(SyncRun)
-        .where(SyncRun.job == "wix_sync")
-        .order_by(SyncRun.started_at.desc())
-        .limit(1)
-    ).first()
+    try:
+        run = db.exec(
+            select(SyncRun)
+            .where(SyncRun.job == "wix_sync")
+            .order_by(SyncRun.started_at.desc())
+            .limit(1)
+        ).first()
+    except Exception as e:
+        # IMPORTANT: retourne vite au lieu de bloquer
+        return {"ok": False, "exists": False, "error": str(e)[:300]}
 
     if not run:
         return {"ok": True, "exists": False}
