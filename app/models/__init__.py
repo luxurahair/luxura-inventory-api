@@ -7,4 +7,5 @@ __all__ = [
     "Product", "ProductCreate", "ProductRead", "ProductUpdate",
     "Salon", "SalonCreate", "SalonRead", "SalonUpdate",
     "InventoryItem", "InventoryRead",
+    "SyncRun",
 ]
