@@ -14,12 +14,13 @@ class SyncRun(SQLModel, table=True):
     started_at: datetime = Field(default_factory=datetime.utcnow)
     finished_at: Optional[datetime] = None
 
-    limit: Optional[int] = None
+    batch_limit: Optional[int] = None
     dry_run: bool = False
 
     created: int = 0
     updated: int = 0
     inventory_written: int = 0
+
     parents_processed: Optional[int] = None
     variants_seen: Optional[int] = None
 
