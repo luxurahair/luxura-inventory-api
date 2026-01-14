@@ -5,6 +5,7 @@ print("### LOADED app/routes/wix.py (v2 variants + entrepot inventory, CATALOG_V
 import logging
 import os
 import csv
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -17,6 +18,7 @@ from app.db import get_session
 from app.models.inventory import InventoryItem
 from app.models.product import Product
 from app.models.salon import Salon
+from app.models.sync_run import SyncRun
 from app.services.catalog_normalizer import normalize_product, normalize_variant
 from app.services.wix_client import WixClient
 
@@ -75,7 +77,6 @@ def load_categories_from_csv() -> Dict[str, List[str]]:
 
     print(f"[CSV] catégories chargées: {len(out)} produits")
     return out
-
 
 
 # ---------------------------------------------------------
@@ -201,6 +202,7 @@ def _build_inventory_map_v1(
 
 # ---------------------------------------------------------
 # Sync Wix → Luxura (V2) + dry_run + catégories CSV + merge SKU
+# + SyncRuns audit (running/success/error)
 # ---------------------------------------------------------
 @router.post("/sync")
 def sync_wix_to_luxura(
@@ -210,6 +212,18 @@ def sync_wix_to_luxura(
 ) -> Dict[str, Any]:
     client = WixClient()
     entrepot = get_or_create_entrepot(db)
+
+    # --- SyncRun: start (running) ---
+    run = SyncRun(
+        job="wix_sync",
+        status="running",
+        started_at=datetime.utcnow(),
+        batch_limit=int(limit or 0),
+        dry_run=bool(dry_run),
+    )
+    db.add(run)
+    db.commit()
+    db.refresh(run)
 
     inv_map, inv_meta = _build_inventory_map_v1(client)
 
@@ -233,9 +247,13 @@ def sync_wix_to_luxura(
     parents = client.query_products_reader_v1(limit=per_page, max_pages=max_pages)
 
     created = updated = merged = skipped_no_sku = inv_written = 0
+    parents_processed = 0
+    variants_seen = 0
 
     try:
         for p in parents:
+            parents_processed += 1
+
             wix_product_id = _clean_str(p.get("id") or p.get("_id"))
             if not wix_product_id:
                 continue
@@ -252,6 +270,8 @@ def sync_wix_to_luxura(
 
             variants = client.query_variants_v1(wix_product_id) or []
             for v in variants:
+                variants_seen += 1
+
                 data = normalize_variant(p, v)
                 if not data or not data.get("sku"):
                     skipped_no_sku += 1
@@ -322,6 +342,18 @@ def sync_wix_to_luxura(
         else:
             db.rollback()
 
+        # --- SyncRun: success ---
+        run.status = "success"
+        run.finished_at = datetime.utcnow()
+        run.created = int(created or 0)
+        run.updated = int(updated or 0)
+        run.inventory_written = int(inv_written or 0)
+        run.parents_processed = int(parents_processed or 0)
+        run.variants_seen = int(variants_seen or 0)
+        run.error = None
+        db.add(run)
+        db.commit()
+
         return {
             "ok": True,
             "dry_run": dry_run,
@@ -330,10 +362,59 @@ def sync_wix_to_luxura(
             "merged": merged,
             "skipped_no_sku": skipped_no_sku,
             "inventory_written_entrepot": inv_written,
+            "parents_processed": parents_processed,
+            "variants_seen": variants_seen,
             "inventory_meta": inv_meta,
             "collections_loaded": len(collections_map),
+            "sync_run_id": run.id,
         }
 
-    except (IntegrityError, DataError) as e:
+    except Exception as e:
         db.rollback()
+
+        # --- SyncRun: error ---
+        try:
+            run.status = "error"
+            run.finished_at = datetime.utcnow()
+            run.created = int(created or 0)
+            run.updated = int(updated or 0)
+            run.inventory_written = int(inv_written or 0)
+            run.parents_processed = int(parents_processed or 0)
+            run.variants_seen = int(variants_seen or 0)
+            run.error = str(e)[:2000]
+            db.add(run)
+            db.commit()
+        except Exception:
+            pass
+
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sync/last")
+def wix_sync_last(db: Session = Depends(get_session)) -> Dict[str, Any]:
+    run = db.exec(
+        select(SyncRun)
+        .where(SyncRun.job == "wix_sync")
+        .order_by(SyncRun.started_at.desc())
+        .limit(1)
+    ).first()
+
+    if not run:
+        return {"ok": True, "exists": False}
+
+    return {
+        "ok": True,
+        "exists": True,
+        "id": run.id,
+        "status": run.status,
+        "started_at": run.started_at.isoformat() if run.started_at else None,
+        "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+        "batch_limit": run.batch_limit,
+        "dry_run": run.dry_run,
+        "created": run.created,
+        "updated": run.updated,
+        "inventory_written": run.inventory_written,
+        "parents_processed": run.parents_processed,
+        "variants_seen": run.variants_seen,
+        "error": run.error,
+    }
