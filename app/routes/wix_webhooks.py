@@ -1,4 +1,3 @@
-# app/routes/wix_webhooks.py
 from fastapi import APIRouter, Request
 
 router = APIRouter(prefix="/wix/webhooks", tags=["wix-webhooks"])
@@ -6,6 +5,8 @@ router = APIRouter(prefix="/wix/webhooks", tags=["wix-webhooks"])
 @router.post("/app-instance-installed")
 async def app_instance_installed(request: Request):
     body = await request.body()
-    # Pour debug: on renvoie juste ok
-    # (Plus tard: on validera la signature et on extraira instanceId)
+    preview = body[:2000].decode("utf-8", errors="replace")
+    print("=== WIX APP INSTALLED WEBHOOK (preview) ===")
+    print(preview)
+    print("=== END ===")
     return {"ok": True, "len": len(body)}
