@@ -41,6 +41,10 @@ async def app_instance_installed(request: Request):
     payload_keys = list(payload.keys())
     data_keys = list(data.keys()) if isinstance(data, dict) else ["not_a_dict"]
 
+    inner_raw = data.get("data") if isinstance(data, dict) else None
+    print("WIX INNER RAW TYPE:", type(inner_raw).__name__)
+    print("WIX INNER RAW PREVIEW:", str(inner_raw)[:300])
+
     # 🔥 NEW: parse inner "data" field
     inner = {}
     try:
