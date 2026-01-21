@@ -80,15 +80,6 @@ async def app_instance_installed(request: Request):
         "data_keys": data_keys,
     }
 
-    return {
-        "ok": True,
-        "appId": app_id,
-        "instanceId": instance_id,
-        "originInstanceId": origin_instance_id,
-        "eventType": event_type,
-    }
-
-
 @router.post("/app-instance-removed")
 async def app_instance_removed(request: Request):
     # On laisse simple: juste confirmer la réception.
