@@ -41,25 +41,36 @@ async def app_instance_installed(request: Request):
     payload_keys = list(payload.keys())
     data_keys = list(data.keys()) if isinstance(data, dict) else ["not_a_dict"]
 
+    # 🔥 NEW: parse inner "data" field
+    inner = {}
+    try:
+        inner_raw = data.get("data") if isinstance(data, dict) else None
+        if isinstance(inner_raw, str):
+            inner = json.loads(inner_raw)
+        elif isinstance(inner_raw, dict):
+            inner = inner_raw
+    except Exception:
+        inner = {"raw_inner": str(inner_raw)[:200] if inner_raw is not None else None}
+
+    inner_keys = list(inner.keys()) if isinstance(inner, dict) else ["not_a_dict"]
+
     possible_app = (
         (data.get("appId") if isinstance(data, dict) else None)
         or (data.get("appDefId") if isinstance(data, dict) else None)
-        or payload.get("appId")
-        or payload.get("appDefId")
-        or payload.get("aud")
-        or payload.get("iss")
+        or (inner.get("appId") if isinstance(inner, dict) else None)
+        or (inner.get("appDefId") if isinstance(inner, dict) else None)
+        or (inner.get("id") if isinstance(inner, dict) else None)
     )
 
-    instance_id = (data.get("instanceId") if isinstance(data, dict) else None) or payload.get("instanceId")
-    origin_instance_id = (data.get("originInstanceId") if isinstance(data, dict) else None) or payload.get("originInstanceId")
-    event_type = (data.get("eventType") if isinstance(data, dict) else None) or payload.get("eventType")
+    instance_id = (data.get("instanceId") if isinstance(data, dict) else None)
+    event_type = (data.get("eventType") if isinstance(data, dict) else None)
 
     print("WIX INSTALLED DEBUG:", {
         "payload_keys": payload_keys,
         "data_keys": data_keys,
+        "inner_keys": inner_keys,
         "possible_app": possible_app,
         "instanceId": instance_id,
-        "originInstanceId": origin_instance_id,
         "eventType": event_type,
     })
 
@@ -67,10 +78,10 @@ async def app_instance_installed(request: Request):
         "ok": True,
         "possible_app": possible_app,
         "instanceId": instance_id,
-        "originInstanceId": origin_instance_id,
         "eventType": event_type,
         "payload_keys": payload_keys,
         "data_keys": data_keys,
+        "inner_keys": inner_keys,
     }
 
 
