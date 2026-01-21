@@ -40,15 +40,45 @@ async def app_instance_installed(request: Request):
         print("WIX INSTALLED WEBHOOK: invalid payload")
         return {"ok": False, "error": decoded["error"]}
 
+       payload = decoded["payload"]
     data = decoded["data"]
 
-    # 👇 Les 2 champs qui nous intéressent pour débloquer /wix/token
-    app_id = data.get("appId")
-    instance_id = data.get("instanceId")
-    origin_instance_id = data.get("originInstanceId")
-    event_type = data.get("eventType")
+    # debug safe: on log juste les clés disponibles
+    payload_keys = list(payload.keys())
+    data_keys = list(data.keys()) if isinstance(data, dict) else ["not_a_dict"]
 
-    print("WIX INSTALLED:", {"appId": app_id, "instanceId": instance_id, "originInstanceId": origin_instance_id})
+    # on essaie quelques emplacements possibles pour l'app id
+    possible_app = (
+        (data.get("appId") if isinstance(data, dict) else None)
+        or (data.get("appDefId") if isinstance(data, dict) else None)
+        or payload.get("appId")
+        or payload.get("appDefId")
+        or payload.get("aud")   # parfois l'app est dans aud
+        or payload.get("iss")   # ou dans iss
+    )
+
+    instance_id = (data.get("instanceId") if isinstance(data, dict) else None) or payload.get("instanceId")
+    origin_instance_id = (data.get("originInstanceId") if isinstance(data, dict) else None) or payload.get("originInstanceId")
+    event_type = (data.get("eventType") if isinstance(data, dict) else None) or payload.get("eventType")
+
+    print("WIX INSTALLED DEBUG:", {
+        "payload_keys": payload_keys,
+        "data_keys": data_keys,
+        "possible_app": possible_app,
+        "instanceId": instance_id,
+        "originInstanceId": origin_instance_id,
+        "eventType": event_type,
+    })
+
+    return {
+        "ok": True,
+        "possible_app": possible_app,
+        "instanceId": instance_id,
+        "originInstanceId": origin_instance_id,
+        "eventType": event_type,
+        "payload_keys": payload_keys,
+        "data_keys": data_keys,
+    }
 
     return {
         "ok": True,
