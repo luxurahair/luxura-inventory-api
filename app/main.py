@@ -11,6 +11,7 @@ from app.routes import wix as wix_routes
 from app.routes import inventory, salons
 from app.routes import seo
 from app.routes.wix_oauth import router as wix_oauth_router
+from app.routes.wix_webhooks import router as wix_webhooks_router
 # from app.routes import movement  # décommente seulement si movement.py existe et compile
 
 
@@ -45,6 +46,7 @@ app.include_router(inventory.router)
 app.include_router(salons.router)
 app.include_router(seo.router)
 app.include_router(wix_oauth_router)
+app.include_router(wix_webhooks_router)
 # app.include_router(movement.router)
 
 
