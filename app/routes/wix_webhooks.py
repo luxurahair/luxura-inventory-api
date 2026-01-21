@@ -6,17 +6,12 @@ router = APIRouter(prefix="/wix/webhooks", tags=["wix-webhooks"])
 
 
 def _decode_installed_jwt(token: str) -> dict:
-    """
-    Wix envoie un JWT (header.payload.signature).
-    Le champ 'data' dans le payload est un JSON string contenant instanceId/appId/etc.
-    Ici: on décode SANS vérifier la signature (debug). On sécurisera après.
-    """
     parts = token.split(".")
     if len(parts) < 2:
         return {"error": "not_a_jwt"}
 
     payload_b64 = parts[1]
-    payload_b64 += "=" * (-len(payload_b64) % 4)  # padding base64url
+    payload_b64 += "=" * (-len(payload_b64) % 4)
     payload = json.loads(base64.urlsafe_b64decode(payload_b64).decode("utf-8"))
 
     data_raw = payload.get("data")
@@ -40,21 +35,19 @@ async def app_instance_installed(request: Request):
         print("WIX INSTALLED WEBHOOK: invalid payload")
         return {"ok": False, "error": decoded["error"]}
 
-       payload = decoded["payload"]
+    payload = decoded["payload"]
     data = decoded["data"]
 
-    # debug safe: on log juste les clés disponibles
     payload_keys = list(payload.keys())
     data_keys = list(data.keys()) if isinstance(data, dict) else ["not_a_dict"]
 
-    # on essaie quelques emplacements possibles pour l'app id
     possible_app = (
         (data.get("appId") if isinstance(data, dict) else None)
         or (data.get("appDefId") if isinstance(data, dict) else None)
         or payload.get("appId")
         or payload.get("appDefId")
-        or payload.get("aud")   # parfois l'app est dans aud
-        or payload.get("iss")   # ou dans iss
+        or payload.get("aud")
+        or payload.get("iss")
     )
 
     instance_id = (data.get("instanceId") if isinstance(data, dict) else None) or payload.get("instanceId")
@@ -80,9 +73,9 @@ async def app_instance_installed(request: Request):
         "data_keys": data_keys,
     }
 
+
 @router.post("/app-instance-removed")
 async def app_instance_removed(request: Request):
-    # On laisse simple: juste confirmer la réception.
     body = await request.body()
     preview = body[:500].decode("utf-8", errors="replace")
     print("=== WIX APP REMOVED WEBHOOK (preview) ===")
