@@ -1,3 +1,4 @@
+# app/main.py
 import os
 
 from fastapi import FastAPI
@@ -6,14 +7,15 @@ from fastapi.responses import Response
 from sqlmodel import SQLModel
 
 from app.db import engine
-from app.routes import products
+
+# Routes (routers)
+from app.routes import inventory, products, salons, seo
 from app.routes import wix as wix_routes
-from app.routes import inventory, salons
-from app.routes import seo
 from app.routes.wix_oauth import router as wix_oauth_router
 from app.routes.wix_webhooks import router as wix_webhooks_router
 from app.routes.wix_token import router as wix_token_router
 from app.routes.wix_seo_push import router as wix_seo_push_router
+
 # from app.routes import movement  # décommente seulement si movement.py existe et compile
 
 
@@ -21,13 +23,14 @@ app = FastAPI(
     title="Luxura Inventory API",
     version="2.0.0",
 )
+
 print("### LOADED app/main.py - Luxura Inventory API ###")
 
 
 # ----------------------------
-#  CORS
+# CORS
 # ----------------------------
-origins_env = os.getenv("CORS_ORIGINS", "")
+origins_env = os.getenv("CORS_ORIGINS", "").strip()
 allowed_origins = [o.strip() for o in origins_env.split(",") if o.strip()] if origins_env else ["*"]
 
 app.add_middleware(
@@ -40,17 +43,21 @@ app.add_middleware(
 
 
 # ----------------------------
-#  ROUTES
+# ROUTES
 # ----------------------------
-app.include_router(wix_routes.router)
+# Core API
 app.include_router(products.router)
 app.include_router(inventory.router)
 app.include_router(salons.router)
 app.include_router(seo.router)
+
+# Wix
+app.include_router(wix_routes.router)
 app.include_router(wix_oauth_router)
 app.include_router(wix_webhooks_router)
 app.include_router(wix_token_router)
 app.include_router(wix_seo_push_router)
+
 # app.include_router(movement.router)
 
 
@@ -80,7 +87,7 @@ def health_head():
 
 
 # ----------------------------
-#  STARTUP
+# STARTUP
 # ----------------------------
 @app.on_event("startup")
 def on_startup() -> None:
