@@ -345,3 +345,96 @@ def seo_apply(
         "updated": updated,
         "note": "SEO stocké dans Luxura (options.seo_parent/seo_variant). Push Wix nécessitera OAuth/Velo.",
     }
+
+@router.post("/apply_all")
+def seo_apply_all(
+    confirm: bool = False,
+    secret: Optional[str] = None,
+    limit: int = 5000,
+    category: Optional[str] = None,   # même filtre que preview
+    only_missing: bool = True,        # recommandé: n’écrit que si vide
+    session: Session = Depends(get_session),
+) -> Dict[str, Any]:
+    """
+    Écrit SEO pour tous les produits (ou filtrés) dans Luxura,
+    sans fournir la liste des product_ids.
+    """
+    if not confirm:
+        raise HTTPException(status_code=400, detail="confirm=true requis")
+
+    expected = os.getenv("SEO_SECRET") or ""
+    if expected and secret != expected:
+        raise HTTPException(status_code=403, detail="SEO_SECRET invalide")
+
+    # base query: produits qui ont un wix_id
+    q = select(Product).where(Product.wix_id.is_not(None))
+    products = session.exec(q).all()
+
+    # filtre par catégorie (si demandé) — même logique que /preview
+    if category:
+        want = category.strip().lower()
+        products = [
+            p for p in products
+            if isinstance(p.options, dict)
+            and any(str(c).strip().lower() == want for c in (_categories(p.options)))
+        ]
+
+    products = products[: max(1, int(limit))]
+
+    updated = 0
+    skipped_missing_only = 0
+    now_iso = _now_utc().isoformat().replace("+00:00", "Z")
+
+    for prod in products:
+        opts = prod.options if isinstance(prod.options, dict) else {}
+
+        current_parent = (opts.get("seo_parent") or {}) if isinstance(opts, dict) else {}
+        current_variant = (opts.get("seo_variant") or {}) if isinstance(opts, dict) else {}
+
+        # si only_missing=True, on saute ceux qui ont déjà les 2
+        if only_missing and current_parent and current_variant:
+            skipped_missing_only += 1
+            continue
+
+        best_cat = _seo_category_label(_best_category(opts))
+        parent_name, name_variant_part = _split_parent_and_variant(prod.name or "")
+
+        if best_cat and parent_name.lower().startswith(best_cat.lower()):
+            parent_name = parent_name[len(best_cat):].lstrip(" -–")
+
+        choice_txt = _choice_text(opts) or name_variant_part
+
+        seo_parent_fr = _build_seo_parent_fr(parent_name, best_cat)
+        seo_parent_en = _build_seo_parent_en(parent_name, best_cat)
+
+        seo_variant_fr = _build_seo_variant_fr(parent_name, choice_txt, best_cat)
+        seo_variant_en = _build_seo_variant_en(parent_name, choice_txt, best_cat)
+
+        seo_variant_fr["alt"] = _build_alt_fr(best_cat, parent_name, choice_txt)
+        seo_variant_en["alt"] = _build_alt_en(best_cat, parent_name, choice_txt)
+
+        opts["seo_parent"] = {
+            "fr": seo_parent_fr,
+            "en": seo_parent_en,
+            "category_used": best_cat,
+            "updated_at": now_iso,
+        }
+        opts["seo_variant"] = {
+            "fr": seo_variant_fr,
+            "en": seo_variant_en,
+            "category_used": best_cat,
+            "updated_at": now_iso,
+        }
+
+        prod.options = opts
+        updated += 1
+
+    session.commit()
+
+    return {
+        "ok": True,
+        "limit": len(products),
+        "updated": updated,
+        "skipped_already_had_seo": skipped_missing_only,
+        "note": "SEO stocké dans Luxura (options.seo_parent/seo_variant). Push Wix: étape suivante.",
+    }
