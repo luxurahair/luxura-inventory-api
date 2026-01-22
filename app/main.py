@@ -13,6 +13,7 @@ from app.routes import seo
 from app.routes.wix_oauth import router as wix_oauth_router
 from app.routes.wix_webhooks import router as wix_webhooks_router
 from app.routes.wix_token import router as wix_token_router
+from app.routes.wix_seo_push import router as wix_seo_push_router
 # from app.routes import movement  # décommente seulement si movement.py existe et compile
 
 
@@ -49,6 +50,7 @@ app.include_router(seo.router)
 app.include_router(wix_oauth_router)
 app.include_router(wix_webhooks_router)
 app.include_router(wix_token_router)
+app.include_router(wix_seo_push_router)
 # app.include_router(movement.router)
 
 
