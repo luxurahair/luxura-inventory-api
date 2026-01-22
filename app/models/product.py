@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from sqlmodel import SQLModel, Field, Column
 from sqlalchemy.dialects.postgresql import JSONB
-
+from sqlalchemy.ext.mutable import MutableDict   # ✅ AJOUT
 
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
@@ -12,10 +12,7 @@ def now_utc() -> datetime:
 class Product(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
-    # ✅ Parent Wix (NON unique, car plusieurs variants partagent le même product_id Wix)
     wix_id: Optional[str] = Field(default=None, index=True)
-
-    # ✅ SKU = clé logique d’un variant
     sku: Optional[str] = Field(default=None, index=True, unique=True)
 
     name: str
@@ -26,13 +23,18 @@ class Product(SQLModel, table=True):
     is_in_stock: bool = True
     quantity: int = 0
 
-    # Options/choices (Longueur, Couleur, wix_variant_id, etc.)
-    options: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
+    # ✅ JSONB MUTABLE (sinon SEO/inventaire options ne persiste pas)
+    options: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(MutableDict.as_mutable(JSONB), default=dict)  # ✅ CHANGÉ
+    )
 
     created_at: datetime = Field(default_factory=now_utc)
 
-    # ✅ se met à jour automatiquement à chaque UPDATE
-    updated_at: datetime = Field(default_factory=now_utc, sa_column_kwargs={"onupdate": now_utc})
+    updated_at: datetime = Field(
+        default_factory=now_utc,
+        sa_column_kwargs={"onupdate": now_utc}
+    )
 
 
 class ProductCreate(SQLModel):
