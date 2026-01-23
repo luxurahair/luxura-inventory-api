@@ -77,7 +77,6 @@ def push_one(product_id: int, db: Session = Depends(get_session)):
     return {"ok": True, "product_id": prod.id, "wix_id": wix_id, "title": title, "desc": desc}
 
 
-@router.get("/seo/check_one")
 @router.get("/seo/check_one_full")
 def check_one_full(product_id: int, db: Session = Depends(get_session)):
     prod = db.exec(select(Product).where(Product.id == product_id)).first()
