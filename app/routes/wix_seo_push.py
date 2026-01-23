@@ -39,13 +39,35 @@ def push_one(product_id: int, db: Session = Depends(get_session)):
     title = (seo_fr.get("title") or "").strip()
     desc = (seo_fr.get("meta") or "").strip()
 
+        # ... (tout ton code jusqu'à title/desc inchangé)
+
     if not title and not desc:
         raise HTTPException(400, "No SEO data on product (options.seo_parent.fr)")
 
+    # ✅ Wix SEO v2/v3 style: seoData.tags (pas seoData.title/description)
+    seo_payload = {
+        "seoData": {
+            "tags": [
+                # <title>...</title>
+                {"type": "title", "children": [{"text": title}]},
+                # <meta name="description" content="...">
+                {"type": "meta", "props": {"name": "description", "content": desc}},
+            ],
+            "settings": {
+                "preventAutoRedirect": False,
+                "keywords": [],
+            },
+        }
+    }
+
     r = requests.patch(
         f"https://www.wixapis.com/stores/v1/products/{wix_id}",
-        headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
-        json={"seoData": {"title": title, "description": desc}},
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        json=seo_payload,
         timeout=30,
     )
 
@@ -56,11 +78,8 @@ def push_one(product_id: int, db: Session = Depends(get_session)):
 
 
 @router.get("/seo/check_one")
-def check_one(product_id: int, db: Session = Depends(get_session)):
-    """
-    Vérifie ce que Wix a réellement stocké dans seoData (title/description)
-    pour un produit donné, via stores-reader.
-    """
+@router.get("/seo/check_one_full")
+def check_one_full(product_id: int, db: Session = Depends(get_session)):
     prod = db.exec(select(Product).where(Product.id == product_id)).first()
     if not prod:
         raise HTTPException(404, "Product not found")
@@ -83,17 +102,22 @@ def check_one(product_id: int, db: Session = Depends(get_session)):
         raise HTTPException(502, "No access_token returned")
 
     r = requests.get(
-        f"https://www.wixapis.com/stores-reader/v1/products/{wix_id}",
+        f"https://www.wixapis.com/stores/v1/products/{wix_id}",
         headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"},
         timeout=30,
     )
-
     if not r.ok:
-        raise HTTPException(502, f"Wix reader failed: {r.status_code} {r.text}")
+        raise HTTPException(502, f"Wix get failed: {r.status_code} {r.text}")
 
     data = r.json()
-    # stores-reader renvoie souvent {"product": {...}}
-    product = data.get("product") or data.get("products") or data
-    seo_data = (product.get("seoData") or {}) if isinstance(product, dict) else {}
+    # souvent la réponse est {"product": {...}}
+    product = data.get("product") if isinstance(data, dict) else None
+    if not isinstance(product, dict):
+        product = data if isinstance(data, dict) else {}
 
-    return {"ok": True, "product_id": prod.id, "wix_id": wix_id, "seoData": seo_data}
+    return {
+        "ok": True,
+        "product_id": prod.id,
+        "wix_id": wix_id,
+        "seoData": product.get("seoData"),
+    }
