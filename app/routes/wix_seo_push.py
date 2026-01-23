@@ -8,6 +8,7 @@ from app.models.product import Product
 
 router = APIRouter(prefix="/wix", tags=["wix-push"])
 
+
 @router.post("/seo/push_one")
 def push_one(product_id: int, db: Session = Depends(get_session)):
     prod = db.exec(select(Product).where(Product.id == product_id)).first()
@@ -51,4 +52,48 @@ def push_one(product_id: int, db: Session = Depends(get_session)):
     if not r.ok:
         raise HTTPException(502, f"Wix update failed: {r.status_code} {r.text}")
 
-    return {"ok": True, "product_id": prod.id, "wix_id": wix_id, "title": title}
+    return {"ok": True, "product_id": prod.id, "wix_id": wix_id, "title": title, "desc": desc}
+
+
+@router.get("/seo/check_one")
+def check_one(product_id: int, db: Session = Depends(get_session)):
+    """
+    Vérifie ce que Wix a réellement stocké dans seoData (title/description)
+    pour un produit donné, via stores-reader.
+    """
+    prod = db.exec(select(Product).where(Product.id == product_id)).first()
+    if not prod:
+        raise HTTPException(404, "Product not found")
+
+    wix_id = (prod.wix_id or "").strip()
+    if not wix_id:
+        raise HTTPException(400, "Missing wix_id on product")
+
+    instance_id = os.getenv("WIX_INSTANCE_ID")
+    if not instance_id:
+        raise HTTPException(500, "Missing env: WIX_INSTANCE_ID")
+
+    base = os.getenv("PUBLIC_BASE_URL", "https://luxura-inventory-api.onrender.com")
+    token_res = requests.post(f"{base}/wix/token", params={"instance_id": instance_id}, timeout=30)
+    if not token_res.ok:
+        raise HTTPException(502, f"Token fetch failed: {token_res.status_code} {token_res.text}")
+
+    access_token = token_res.json().get("access_token")
+    if not access_token:
+        raise HTTPException(502, "No access_token returned")
+
+    r = requests.get(
+        f"https://www.wixapis.com/stores-reader/v1/products/{wix_id}",
+        headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"},
+        timeout=30,
+    )
+
+    if not r.ok:
+        raise HTTPException(502, f"Wix reader failed: {r.status_code} {r.text}")
+
+    data = r.json()
+    # stores-reader renvoie souvent {"product": {...}}
+    product = data.get("product") or data.get("products") or data
+    seo_data = (product.get("seoData") or {}) if isinstance(product, dict) else {}
+
+    return {"ok": True, "product_id": prod.id, "wix_id": wix_id, "seoData": seo_data}
