@@ -109,8 +109,27 @@ def check_one_full(product_id: int, db: Session = Depends(get_session)):
         raise HTTPException(502, f"Wix get failed: {r.status_code} {r.text}")
 
     data = r.json()
-    product = data.get("product") if isinstance(data, dict) else None
-    if not isinstance(product, dict):
-        product = data if isinstance(data, dict) else {}
 
-    return {"ok": True, "product_id": prod.id, "wix_id": wix_id, "seoData": product.get("seoData")}
+    # ✅ on essaie plusieurs formes possibles
+    candidate = None
+    if isinstance(data, dict):
+        if isinstance(data.get("product"), dict):
+            candidate = data["product"]
+        elif isinstance(data.get("products"), list) and data["products"]:
+            if isinstance(data["products"][0], dict):
+                candidate = data["products"][0]
+        else:
+            candidate = data  # parfois l'objet produit est direct
+
+    seo_data = candidate.get("seoData") if isinstance(candidate, dict) else None
+
+    return {
+        "ok": True,
+        "product_id": prod.id,
+        "wix_id": wix_id,
+        "seoData": seo_data,
+        # ✅ debug: montre les clés principales pour comprendre la structure
+        "top_keys": list(data.keys()) if isinstance(data, dict) else None,
+        "product_keys": list(candidate.keys()) if isinstance(candidate, dict) else None,
+    }
+
