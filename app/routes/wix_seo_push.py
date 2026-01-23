@@ -109,14 +109,8 @@ def check_one_full(product_id: int, db: Session = Depends(get_session)):
         raise HTTPException(502, f"Wix get failed: {r.status_code} {r.text}")
 
     data = r.json()
-    # souvent la réponse est {"product": {...}}
     product = data.get("product") if isinstance(data, dict) else None
     if not isinstance(product, dict):
         product = data if isinstance(data, dict) else {}
 
-    return {
-        "ok": True,
-        "product_id": prod.id,
-        "wix_id": wix_id,
-        "seoData": product.get("seoData"),
-    }
+    return {"ok": True, "product_id": prod.id, "wix_id": wix_id, "seoData": product.get("seoData")}
