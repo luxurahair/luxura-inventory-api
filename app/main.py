@@ -17,9 +17,6 @@ from app.routes.wix_token import router as wix_token_router
 from app.routes.wix_seo_push import router as wix_seo_push_router
 
 # from app.routes import movement  # décommente seulement si movement.py existe et compile
-@app.get("/cors/ping")
-def cors_ping():
-    return {"ok": True}
 
 
 app = FastAPI(
