@@ -31,15 +31,28 @@ print("### LOADED app/main.py - Luxura Inventory API ###")
 # CORS
 # ----------------------------
 origins_env = os.getenv("CORS_ORIGINS", "").strip()
-allowed_origins = [o.strip() for o in origins_env.split(",") if o.strip()] if origins_env else ["*"]
+
+if origins_env:
+    allowed_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
+else:
+    # ✅ valeurs par défaut sûres pour Wix + ton domaine
+    allowed_origins = [
+        "https://www.luxuradistribution.com",
+        "https://luxuradistribution.com",
+        "https://editor.wix.com",
+        "https://manage.wix.com",
+        "https://www.wix.com",
+        "https://static.wixstatic.com",
+    ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
+    allow_credentials=False,   # ✅ IMPORTANT: évite le piège "*" + credentials
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 # ----------------------------
