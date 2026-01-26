@@ -24,6 +24,10 @@ app = FastAPI(
     version="2.0.0",
 )
 
+@app.get("/cors/ping")
+def cors_ping():
+    return {"ok": True}
+
 print("### LOADED app/main.py - Luxura Inventory API ###")
 
 
