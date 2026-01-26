@@ -51,12 +51,15 @@ else:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=False,   # ✅ IMPORTANT: évite le piège "*" + credentials
-    allow_methods=["*"],
+    allow_origins=[
+        "https://editor.wix.com",
+        "https://www.luxuradistribution.com",
+        "https://luxuradistribution.com",
+    ],
+    allow_credentials=False,   # ✅ OBLIGATOIRE
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["*"],
 )
-
 
 
 # ----------------------------
