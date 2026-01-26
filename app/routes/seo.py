@@ -438,3 +438,22 @@ def seo_apply_all(
         "skipped_already_had_seo": skipped_missing_only,
         "note": "SEO stocké dans Luxura (options.seo_parent/seo_variant). Push Wix: étape suivante.",
     }
+
+@router.get("/by_wix_id")
+def seo_by_wix_id(
+    wix_id: str,
+    lang: str = "fr",
+    session: Session = Depends(get_session),
+) -> Dict[str, Any]:
+    prod = session.exec(select(Product).where(Product.wix_id == wix_id)).first()
+    if not prod:
+        raise HTTPException(404, "Product not found")
+
+    opts = prod.options if isinstance(prod.options, dict) else {}
+    seo_parent = (opts.get("seo_parent") or {})
+    seo_lang = (seo_parent.get(lang) or {})
+
+    title = (seo_lang.get("title") or "").strip()
+    desc = (seo_lang.get("meta") or "").strip()
+
+    return {"ok": True, "title": title, "description": desc}
