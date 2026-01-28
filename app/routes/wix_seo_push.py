@@ -76,21 +76,57 @@ def _get_seo_fr_from_product(prod: Product) -> Dict[str, str]:
     return {"title": title, "description": desc}
 
 
-def _wix_patch_custom_text_fields(wix_id: str, access_token: str, title: str, desc: str) -> Dict[str, Any]:
+def _wix_patch_description_with_luxura_seo(wix_id: str, access_token: str, title: str, desc: str) -> Dict[str, Any]:
     """
-    Ecrit dans customTextFields (persisté dans l'objet produit Stores).
+    Persiste le SEO Luxura dans le champ description via un commentaire HTML.
+    - invisible sur la page (commentaire)
+    - persistant
+    - vérifiable via GET
     """
-    fields = []
-    if title:
-        fields.append({"title": "luxura_seo_title_fr", "value": title})
-    if desc:
-        fields.append({"title": "luxura_seo_desc_fr", "value": desc})
+    # 1) Get produit actuel pour ne pas écraser la description
+    try:
+        g = requests.get(
+            f"{WIX_API_BASE}/stores/v1/products/{wix_id}",
+            headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"},
+            timeout=30,
+        )
+    except requests.RequestException as e:
+        raise HTTPException(502, f"Wix GET network error: {e}")
 
-    if not fields:
-        raise HTTPException(400, "No SEO data to store (title/description empty)")
+    if not g.ok:
+        raise HTTPException(502, f"Wix get failed: {g.status_code} {g.text}")
 
-    payload = {"customTextFields": fields}
+    data = g.json()
+    prod = data.get("product") if isinstance(data, dict) else None
+    if not isinstance(prod, dict):
+        raise HTTPException(502, f"Wix get unexpected format: top_keys={list(data.keys()) if isinstance(data, dict) else None}")
 
+    current_desc = prod.get("description") or ""
+    if not isinstance(current_desc, str):
+        current_desc = str(current_desc)
+
+    # 2) Construire bloc commentaire (on remplace l'ancien si déjà présent)
+    marker_start = "<!-- LUXURA_SEO_START -->"
+    marker_end = "<!-- LUXURA_SEO_END -->"
+
+    seo_block = (
+        f"{marker_start}\n"
+        f'{{"title_fr": {title!r}, "desc_fr": {desc!r}}}\n'
+        f"{marker_end}"
+    )
+
+    # enlever ancien bloc
+    if marker_start in current_desc and marker_end in current_desc:
+        before = current_desc.split(marker_start)[0]
+        after = current_desc.split(marker_end, 1)[1]
+        new_desc = (before + seo_block + after).strip()
+    else:
+        # on l'ajoute à la fin proprement
+        new_desc = (current_desc.strip() + "\n\n" + seo_block).strip()
+
+    payload = {"description": new_desc}
+
+    # 3) PATCH
     try:
         r = requests.patch(
             f"{WIX_API_BASE}/stores/v1/products/{wix_id}",
