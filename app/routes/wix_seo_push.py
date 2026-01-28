@@ -76,80 +76,6 @@ def _get_seo_fr_from_product(prod: Product) -> Dict[str, str]:
     return {"title": title, "description": desc}
 
 
-def _wix_patch_description_with_luxura_seo(wix_id: str, access_token: str, title: str, desc: str) -> Dict[str, Any]:
-    """
-    Persiste le SEO Luxura dans le champ description via un commentaire HTML.
-    - invisible sur la page (commentaire)
-    - persistant
-    - vérifiable via GET
-    """
-    # 1) Get produit actuel pour ne pas écraser la description
-    try:
-        g = requests.get(
-            f"{WIX_API_BASE}/stores/v1/products/{wix_id}",
-            headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"},
-            timeout=30,
-        )
-    except requests.RequestException as e:
-        raise HTTPException(502, f"Wix GET network error: {e}")
-
-    if not g.ok:
-        raise HTTPException(502, f"Wix get failed: {g.status_code} {g.text}")
-
-    data = g.json()
-    prod = data.get("product") if isinstance(data, dict) else None
-    if not isinstance(prod, dict):
-        raise HTTPException(502, f"Wix get unexpected format: top_keys={list(data.keys()) if isinstance(data, dict) else None}")
-
-    current_desc = prod.get("description") or ""
-    if not isinstance(current_desc, str):
-        current_desc = str(current_desc)
-
-    # 2) Construire bloc commentaire (on remplace l'ancien si déjà présent)
-    marker_start = "<!-- LUXURA_SEO_START -->"
-    marker_end = "<!-- LUXURA_SEO_END -->"
-
-    seo_block = (
-        f"{marker_start}\n"
-        f'{{"title_fr": {title!r}, "desc_fr": {desc!r}}}\n'
-        f"{marker_end}"
-    )
-
-    # enlever ancien bloc
-    if marker_start in current_desc and marker_end in current_desc:
-        before = current_desc.split(marker_start)[0]
-        after = current_desc.split(marker_end, 1)[1]
-        new_desc = (before + seo_block + after).strip()
-    else:
-        # on l'ajoute à la fin proprement
-        new_desc = (current_desc.strip() + "\n\n" + seo_block).strip()
-
-    payload = {"description": new_desc}
-
-    # 3) PATCH
-    try:
-        r = requests.patch(
-            f"{WIX_API_BASE}/stores/v1/products/{wix_id}",
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
-            json=payload,
-            timeout=30,
-        )
-    except requests.RequestException as e:
-        raise HTTPException(502, f"Wix PATCH network error: {e}")
-
-    if not r.ok:
-        raise HTTPException(502, f"Wix update failed: {r.status_code} {r.text}")
-
-    try:
-        return r.json()
-    except ValueError:
-        return {"raw": r.text}
-
-
 def _wix_get_product(wix_id: str, access_token: str) -> Dict[str, Any]:
     try:
         r = requests.get(
@@ -180,6 +106,64 @@ def _extract_product_candidate(data: Any) -> Optional[Dict[str, Any]]:
     return data
 
 
+def _wix_patch_description_with_luxura_seo(wix_id: str, access_token: str, title: str, desc: str) -> Dict[str, Any]:
+    """
+    Persiste le SEO Luxura dans le champ description via un commentaire HTML.
+    - invisible sur la page (commentaire)
+    - persistant
+    - vérifiable via GET
+    """
+    data = _wix_get_product(wix_id, access_token)
+    prod = _extract_product_candidate(data)
+    if not isinstance(prod, dict):
+        raise HTTPException(502, "Wix get: unexpected response format (no product object)")
+
+    current_desc = prod.get("description") or ""
+    if not isinstance(current_desc, str):
+        current_desc = str(current_desc)
+
+    marker_start = "<!-- LUXURA_SEO_START -->"
+    marker_end = "<!-- LUXURA_SEO_END -->"
+
+    seo_block = (
+        f"{marker_start}\n"
+        f'{{"title_fr": {title!r}, "desc_fr": {desc!r}}}\n'
+        f"{marker_end}"
+    )
+
+    # remplace bloc existant sinon ajoute à la fin
+    if marker_start in current_desc and marker_end in current_desc:
+        before = current_desc.split(marker_start, 1)[0]
+        after = current_desc.split(marker_end, 1)[1]
+        new_desc = (before + seo_block + after).strip()
+    else:
+        new_desc = (current_desc.strip() + "\n\n" + seo_block).strip()
+
+    payload = {"description": new_desc}
+
+    try:
+        r = requests.patch(
+            f"{WIX_API_BASE}/stores/v1/products/{wix_id}",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            json=payload,
+            timeout=30,
+        )
+    except requests.RequestException as e:
+        raise HTTPException(502, f"Wix PATCH network error: {e}")
+
+    if not r.ok:
+        raise HTTPException(502, f"Wix update failed: {r.status_code} {r.text}")
+
+    try:
+        return r.json()
+    except ValueError:
+        return {"raw": r.text}
+
+
 @router.post("/seo/push_one")
 def push_one(product_id: int, db: Session = Depends(get_session)):
     prod = _load_product_or_404(product_id, db)
@@ -195,16 +179,14 @@ def push_one(product_id: int, db: Session = Depends(get_session)):
     if not title and not desc:
         raise HTTPException(400, "No SEO data on product (options.seo_parent.fr)")
 
-    wix_resp = _wix_patch_custom_text_fields(wix_id, access_token, title, desc)
+    wix_resp = _wix_patch_description_with_luxura_seo(wix_id, access_token, title, desc)
 
     return {
         "ok": True,
         "product_id": prod.id,
         "wix_id": wix_id,
-        "stored_in_wix": {
-            "luxura_seo_title_fr": title,
-            "luxura_seo_desc_fr": desc,
-        },
+        "stored_marker": True,
+        "pushed": {"title": title, "description": desc},
         "wix_response": wix_resp,
     }
 
@@ -220,17 +202,15 @@ def check_one_full(product_id: int, db: Session = Depends(get_session)):
     data = _wix_get_product(wix_id, access_token)
     candidate = _extract_product_candidate(data)
 
-    custom = None
-    product_keys = None
+    desc = None
     if isinstance(candidate, dict):
-        custom = candidate.get("customTextFields")
-        product_keys = list(candidate.keys())
+        desc = candidate.get("description")
 
     return {
         "ok": True,
         "product_id": prod.id,
         "wix_id": wix_id,
-        "customTextFields": custom,
+        "description": desc,
         "top_keys": list(data.keys()) if isinstance(data, dict) else None,
-        "product_keys": product_keys,
+        "product_keys": list(candidate.keys()) if isinstance(candidate, dict) else None,
     }
