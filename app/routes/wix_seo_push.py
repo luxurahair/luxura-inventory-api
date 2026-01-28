@@ -26,12 +26,7 @@ def _get_public_base_url() -> str:
 
 
 def _fetch_access_token(instance_id: str) -> str:
-    """
-    Récupère un access_token via ton endpoint /wix/token.
-    (Oui, c'est un call HTTP vers toi-même: ça marche. On le rend juste robuste.)
-    """
     base = _get_public_base_url()
-
     try:
         token_res = requests.post(
             f"{base}/wix/token",
@@ -71,9 +66,6 @@ def _get_wix_id_or_400(prod: Product) -> str:
 
 
 def _get_seo_fr_from_product(prod: Product) -> Dict[str, str]:
-    """
-    Lit options.seo_parent.fr -> {title, meta}
-    """
     opts = prod.options if isinstance(prod.options, dict) else {}
     seo_parent = opts.get("seo_parent") or {}
     seo_fr = seo_parent.get("fr") or {}
@@ -84,29 +76,20 @@ def _get_seo_fr_from_product(prod: Product) -> Dict[str, str]:
     return {"title": title, "description": desc}
 
 
-def _wix_patch_product_seo(wix_id: str, access_token: str, title: str, desc: str) -> Dict[str, Any]:
+def _wix_patch_custom_text_fields(wix_id: str, access_token: str, title: str, desc: str) -> Dict[str, Any]:
     """
-    PATCH Wix Stores product SEO using seoData.tags (title + meta description).
-    Ne pousse pas de slug (SAFE).
+    Ecrit dans customTextFields (persisté dans l'objet produit Stores).
     """
-    tags = []
+    fields = []
     if title:
-        tags.append({"type": "title", "children": [{"text": title}]})
+        fields.append({"title": "luxura_seo_title_fr", "value": title})
     if desc:
-        tags.append({"type": "meta", "props": {"name": "description", "content": desc}})
+        fields.append({"title": "luxura_seo_desc_fr", "value": desc})
 
-    if not tags:
-        raise HTTPException(400, "No SEO tags to push (title/description empty)")
+    if not fields:
+        raise HTTPException(400, "No SEO data to store (title/description empty)")
 
-    payload = {
-        "seoData": {
-            "tags": tags,
-            "settings": {
-                "preventAutoRedirect": False,
-                "keywords": [],
-            },
-        }
-    }
+    payload = {"customTextFields": fields}
 
     try:
         r = requests.patch(
@@ -123,10 +106,8 @@ def _wix_patch_product_seo(wix_id: str, access_token: str, title: str, desc: str
         raise HTTPException(502, f"Wix PATCH network error: {e}")
 
     if not r.ok:
-        # 401 = token pas bon / expiré; 403 = scopes; 404 = mauvais wix_id
         raise HTTPException(502, f"Wix update failed: {r.status_code} {r.text}")
 
-    # Certains endpoints renvoient vide / 204. On tente JSON sinon on renvoie le texte.
     try:
         return r.json()
     except ValueError:
@@ -153,12 +134,6 @@ def _wix_get_product(wix_id: str, access_token: str) -> Dict[str, Any]:
 
 
 def _extract_product_candidate(data: Any) -> Optional[Dict[str, Any]]:
-    """
-    Wix peut répondre sous différentes formes:
-    - {"product": {...}}
-    - {"products": [{...}]}
-    - ou directement l'objet produit
-    """
     if not isinstance(data, dict):
         return None
     if isinstance(data.get("product"), dict):
@@ -184,13 +159,16 @@ def push_one(product_id: int, db: Session = Depends(get_session)):
     if not title and not desc:
         raise HTTPException(400, "No SEO data on product (options.seo_parent.fr)")
 
-    wix_resp = _wix_patch_product_seo(wix_id, access_token, title, desc)
+    wix_resp = _wix_patch_custom_text_fields(wix_id, access_token, title, desc)
 
     return {
         "ok": True,
         "product_id": prod.id,
         "wix_id": wix_id,
-        "pushed": {"title": title, "description": desc},
+        "stored_in_wix": {
+            "luxura_seo_title_fr": title,
+            "luxura_seo_desc_fr": desc,
+        },
         "wix_response": wix_resp,
     }
 
@@ -206,17 +184,17 @@ def check_one_full(product_id: int, db: Session = Depends(get_session)):
     data = _wix_get_product(wix_id, access_token)
     candidate = _extract_product_candidate(data)
 
-    seo_data = None
+    custom = None
     product_keys = None
     if isinstance(candidate, dict):
-        seo_data = candidate.get("seoData")
+        custom = candidate.get("customTextFields")
         product_keys = list(candidate.keys())
 
     return {
         "ok": True,
         "product_id": prod.id,
         "wix_id": wix_id,
-        "seoData": seo_data,
+        "customTextFields": custom,
         "top_keys": list(data.keys()) if isinstance(data, dict) else None,
         "product_keys": product_keys,
     }
