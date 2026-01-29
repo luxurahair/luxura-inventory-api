@@ -39,7 +39,7 @@ origins_env = os.getenv("CORS_ORIGINS", "").strip()
 if origins_env:
     allowed_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
 else:
-    # ✅ valeurs par défaut sûres pour Wix + ton domaine
+    # ✅ valeurs par défaut sûres pour Wix + ton domaine + GitHub Pages
     allowed_origins = [
         "https://www.luxuradistribution.com",
         "https://luxuradistribution.com",
@@ -47,19 +47,17 @@ else:
         "https://manage.wix.com",
         "https://www.wix.com",
         "https://static.wixstatic.com",
+        "https://luxurahair.github.io",  # ✅ GitHub Pages (ton iFrame/app)
     ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://editor.wix.com",
-        "https://www.luxuradistribution.com",
-        "https://luxuradistribution.com",
-    ],
-    allow_credentials=False,   # ✅ OBLIGATOIRE
-    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_origins=allowed_origins,     # ✅ UTILISER LA LISTE
+    allow_credentials=False,           # ✅ OBLIGATOIRE
+    allow_methods=["*"],               # ✅ inclut OPTIONS (preflight)
     allow_headers=["*"],
 )
+
 
 
 # ----------------------------
