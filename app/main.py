@@ -47,17 +47,40 @@ else:
         "https://manage.wix.com",
         "https://www.wix.com",
         "https://static.wixstatic.com",
-        "https://luxurahair.github.io",  # ✅ GitHub Pages (ton iFrame/app)
+        "https://static.parastorage.com",
+        "https://luxurahair.github.io",  # ✅ GitHub Pages
     ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,     # ✅ UTILISER LA LISTE
-    allow_credentials=False,           # ✅ OBLIGATOIRE
-    allow_methods=["*"],               # ✅ inclut OPTIONS (preflight)
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# ----------------------------
+# OPTIONS "pare-chocs" (évite OPTIONS 400)
+# ----------------------------
+from fastapi import Request  # noqa: E402
+
+@app.options("/{path:path}")
+def options_handler(path: str, request: Request):
+    origin = request.headers.get("origin")
+    req_headers = request.headers.get("access-control-request-headers", "*")
+
+    # Si origin non autorisée -> on répond 204 sans l'autoriser
+    if origin and ("*" not in allowed_origins) and (origin not in allowed_origins):
+        return Response(status_code=204)
+
+    headers = {
+        "Access-Control-Allow-Origin": origin or "*",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": req_headers,
+        "Vary": "Origin",
+    }
+    return Response(status_code=204, headers=headers)
 
 
 # ----------------------------
