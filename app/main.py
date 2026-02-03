@@ -42,12 +42,11 @@ else:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"^https:\/\/(.*\.)?(wixsite\.com|wixstudio\.io|wix\.com|editor\.wix\.com|static\.parastorage\.com)$",
-    allow_credentials=False,   # ✅ reste False
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # ----------------------------
 # ROUTES
