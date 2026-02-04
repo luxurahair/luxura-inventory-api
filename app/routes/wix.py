@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.exc import DataError, IntegrityError
 from sqlmodel import Session, select
 
@@ -29,6 +29,20 @@ WIX_BASE_URL = "https://www.wixapis.com"
 
 ENTREPOT_CODE = "ENTREPOT"
 ENTREPOT_NAME = "Luxura Entrepôt"
+
+from fastapi import Header
+
+@router.post("/sync")
+def sync_wix_to_luxura(
+    db: Session = Depends(get_session),
+    limit: int = 200,
+    dry_run: bool = False,
+    x_seo_secret: str = Header(default=""),
+) -> Dict[str, Any]:
+    if x_seo_secret != (os.getenv("SEO_SECRET") or ""):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # ... le reste de ton code inchangé
 
 
 # ---------------------------------------------------------
