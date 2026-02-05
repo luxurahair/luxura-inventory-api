@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Header
-from sqlalchemy.exc import DataError, IntegrityError
 from sqlmodel import Session, select
 
 from app.db import get_session
@@ -19,7 +18,7 @@ from app.models.inventory import InventoryItem
 from app.models.product import Product
 from app.models.salon import Salon
 from app.models.sync_run import SyncRun
-from app.services.catalog_normalizer import normalize_product, normalize_variant
+from app.services.catalog_normalizer import normalize_variant
 from app.services.wix_client import WixClient
 
 router = APIRouter(prefix="/wix", tags=["wix"])
@@ -30,23 +29,24 @@ WIX_BASE_URL = "https://www.wixapis.com"
 ENTREPOT_CODE = "ENTREPOT"
 ENTREPOT_NAME = "Luxura Entrepôt"
 
-from fastapi import Header
 
-@router.post("/sync")
-def sync_wix_to_luxura(
-    db: Session = Depends(get_session),
-    limit: int = 200,
-    dry_run: bool = False,
-    x_seo_secret: str = Header(default=""),
-) -> Dict[str, Any]:
-    if x_seo_secret != (os.getenv("SEO_SECRET") or ""):
+# ---------------------------------------------------------
+# Security (Option A): protect WRITE endpoints only
+# ---------------------------------------------------------
+def _require_sync_secret(x_seo_secret: str) -> None:
+    expected = (os.getenv("SEO_SECRET") or "").strip()
+    got = (x_seo_secret or "").strip()
+
+    # Si tu veux "dev mode" quand SEO_SECRET vide, décommente :
+    # if not expected:
+    #     return
+
+    if not expected or got != expected:
         raise HTTPException(status_code=401, detail="Unauthorized")
-
-    # ... le reste de ton code inchangé
 
 
 # ---------------------------------------------------------
-# CSV CATEGORIES (SOURCE DE VÉRITÉ)
+# CSV CATEGORIES (SOURCE DE VÉRITÉ)  [si tu l'utilises encore]
 # ---------------------------------------------------------
 def load_categories_from_csv() -> Dict[str, List[str]]:
     """
@@ -58,7 +58,7 @@ def load_categories_from_csv() -> Dict[str, List[str]]:
     """
     path = Path("data/catalog_products.csv")
     if not path.exists():
-        print("[CSV] introuvable:", str(path))
+        log.warning("[CSV] introuvable: %s", str(path))
         return {}
 
     out: Dict[str, List[str]] = {}
@@ -66,7 +66,7 @@ def load_categories_from_csv() -> Dict[str, List[str]]:
     with path.open(newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         headers = reader.fieldnames or []
-        print("[CSV] headers:", headers[:30])
+        log.info("[CSV] headers: %s", headers[:30])
 
         for row in reader:
             field_type = (row.get("fieldType") or "").strip().lower()
@@ -76,7 +76,6 @@ def load_categories_from_csv() -> Dict[str, List[str]]:
             pid = (row.get("product_id") or "").strip()
 
             if not pid:
-                # handleId = product_<uuid>
                 handle_id = (row.get("handleId") or "").strip()
                 if handle_id.startswith("product_"):
                     pid = handle_id.split("product_", 1)[1].strip()
@@ -89,7 +88,7 @@ def load_categories_from_csv() -> Dict[str, List[str]]:
             if cats:
                 out[pid] = sorted(set(cats))
 
-    print(f"[CSV] catégories chargées: {len(out)} produits")
+    log.info("[CSV] catégories chargées: %s produits", len(out))
     return out
 
 
@@ -142,19 +141,19 @@ def upsert_inventory_entrepot(db: Session, salon_id: int, product_id: int, qty: 
         )
     ).first()
 
+    qty = max(int(qty or 0), 0)
+
     if not inv:
-        db.add(InventoryItem(salon_id=salon_id, product_id=product_id, quantity=max(int(qty), 0)))
+        db.add(InventoryItem(salon_id=salon_id, product_id=product_id, quantity=qty))
     else:
-        inv.quantity = max(int(qty), 0)
+        inv.quantity = qty
 
 
 # ---------------------------------------------------------
 # Inventory mapping (CATALOG_V1)
 # ---------------------------------------------------------
 def _clean_str(x: Any) -> str:
-    if x is None:
-        return ""
-    return str(x).strip()
+    return "" if x is None else str(x).strip()
 
 
 def _build_inventory_map_v1(
@@ -200,11 +199,7 @@ def _build_inventory_map_v1(
                     or None
                 )
 
-                inv_map[f"{pid}:{vid}"] = {
-                    "track": track,
-                    "qty": qty,
-                    "vendor_sku": vendor_sku,
-                }
+                inv_map[f"{pid}:{vid}"] = {"track": track, "qty": qty, "vendor_sku": vendor_sku}
 
         if len(items) < page_limit:
             break
@@ -215,7 +210,7 @@ def _build_inventory_map_v1(
 
 
 # ---------------------------------------------------------
-# Sync Wix → Luxura (V2) + dry_run + catégories CSV + merge SKU
+# Sync Wix → Luxura (ONE endpoint only) + dry_run + merge SKU
 # + SyncRuns audit (running/success/error)
 # ---------------------------------------------------------
 @router.post("/sync")
@@ -223,7 +218,11 @@ def sync_wix_to_luxura(
     db: Session = Depends(get_session),
     limit: int = 200,
     dry_run: bool = False,
+    x_seo_secret: str = Header(default=""),
 ) -> Dict[str, Any]:
+    # ✅ Option A: protect write endpoint
+    _require_sync_secret(x_seo_secret)
+
     client = WixClient()
     entrepot = get_or_create_entrepot(db)
 
@@ -239,32 +238,32 @@ def sync_wix_to_luxura(
     db.commit()
     db.refresh(run)
 
-    inv_map, inv_meta = _build_inventory_map_v1(client)
-
-    # 1) collections map: id -> name
-    collections_map: Dict[str, str] = {}
-    try:
-        cols = client.query_collections_reader_v1(limit=100, max_pages=10)
-        for c in cols:
-            cid = str(c.get("id") or "").strip()
-            name = (c.get("name") or "").strip()
-            if cid and name:
-                collections_map[cid] = name
-    except Exception as e:
-        collections_map = {}
-        print("[COLLECTIONS] skipped:", str(e)[:200])
-
-    # 2) products via stores-reader (pour avoir collectionIds)
-    limit = int(limit or 200)
-    per_page = min(max(limit, 1), 100)
-    max_pages: Optional[int] = 10 if limit > 100 else None
-    parents = client.query_products_reader_v1(limit=per_page, max_pages=max_pages)
-
     created = updated = merged = skipped_no_sku = inv_written = 0
     parents_processed = 0
     variants_seen = 0
 
     try:
+        inv_map, inv_meta = _build_inventory_map_v1(client)
+
+        # 1) collections map: id -> name
+        collections_map: Dict[str, str] = {}
+        try:
+            cols = client.query_collections_reader_v1(limit=100, max_pages=10)
+            for c in cols:
+                cid = str(c.get("id") or "").strip()
+                name = (c.get("name") or "").strip()
+                if cid and name:
+                    collections_map[cid] = name
+        except Exception as e:
+            collections_map = {}
+            log.warning("[COLLECTIONS] skipped: %s", str(e)[:200])
+
+        # 2) products via stores-reader (pour avoir collectionIds)
+        limit_int = int(limit or 200)
+        per_page = min(max(limit_int, 1), 100)
+        max_pages: Optional[int] = 10 if limit_int > 100 else None
+        parents = client.query_products_reader_v1(limit=per_page, max_pages=max_pages)
+
         for p in parents:
             parents_processed += 1
 
@@ -303,7 +302,7 @@ def sync_wix_to_luxura(
                 wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
 
                 # lookup stable par variante
-                existing = None
+                existing: Optional[Product] = None
                 if wix_product_id and wix_variant_id:
                     candidates = db.exec(select(Product).where(Product.wix_id == wix_product_id)).all()
                     for cand in candidates:
@@ -328,6 +327,7 @@ def sync_wix_to_luxura(
                     existing = sku_owner
 
                 # update/create
+                prod: Optional[Product] = None
                 if existing:
                     updated += 1
                     if not dry_run:
@@ -370,16 +370,16 @@ def sync_wix_to_luxura(
 
         return {
             "ok": True,
-            "dry_run": dry_run,
-            "created": created,
-            "updated": updated,
-            "merged": merged,
-            "skipped_no_sku": skipped_no_sku,
-            "inventory_written_entrepot": inv_written,
-            "parents_processed": parents_processed,
-            "variants_seen": variants_seen,
+            "dry_run": bool(dry_run),
+            "created": int(created),
+            "updated": int(updated),
+            "merged": int(merged),
+            "skipped_no_sku": int(skipped_no_sku),
+            "inventory_written_entrepot": int(inv_written),
+            "parents_processed": int(parents_processed),
+            "variants_seen": int(variants_seen),
             "inventory_meta": inv_meta,
-            "collections_loaded": len(collections_map),
+            "collections_loaded": int(len(collections_map)),
             "sync_run_id": run.id,
         }
 
@@ -407,14 +407,15 @@ def sync_wix_to_luxura(
 @router.get("/sync/last")
 def wix_sync_last(db: Session = Depends(get_session)) -> Dict[str, Any]:
     try:
-        run = db.exec(
-            select(SyncRun)
-            .where(SyncRun.job == "wix_sync")
-            .order_by(SyncRun.started_at.desc())
-            .limit(1)
-        ).first()
+        run = (
+            db.exec(
+                select(SyncRun)
+                .where(SyncRun.job == "wix_sync")
+                .order_by(SyncRun.started_at.desc())
+                .limit(1)
+            ).first()
+        )
     except Exception as e:
-        # IMPORTANT: retourne vite au lieu de bloquer
         return {"ok": False, "exists": False, "error": str(e)[:300]}
 
     if not run:
