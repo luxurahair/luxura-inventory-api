@@ -1,24 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, StyleSheet } from 'react-native';
-import { useCartStore } from '../../src/store/cartStore';
-import { useAuthStore } from '../../src/store/authStore';
+import { StyleSheet } from 'react-native';
 
 export default function TabLayout() {
-  const { count, fetchCart } = useCartStore();
-  const { checkAuth, sessionToken, isAuthenticated } = useAuthStore();
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated && sessionToken) {
-      fetchCart(sessionToken);
-    }
-  }, [isAuthenticated, sessionToken]);
-
   return (
     <Tabs
       screenOptions={{

@@ -15,12 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ProductCard } from '../../src/components/ProductCard';
-import { useAuthStore } from '../../src/store/authStore';
-import { useCartStore } from '../../src/store/cartStore';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 48) / 2;
 
 interface Product {
   id: string;
@@ -43,13 +41,12 @@ interface Category {
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isAuthenticated, sessionToken } = useAuthStore();
-  const { addToCart, count } = useCartStore();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   const fetchData = async () => {
     try {
@@ -57,8 +54,8 @@ export default function HomeScreen() {
         axios.get(`${API_URL}/api/products`),
         axios.get(`${API_URL}/api/categories`),
       ]);
-      setProducts(productsRes.data);
-      setCategories(categoriesRes.data);
+      setProducts(productsRes.data || []);
+      setCategories(categoriesRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -68,7 +65,6 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    // Seed data on first load
     const seedAndFetch = async () => {
       try {
         await axios.post(`${API_URL}/api/seed`);
@@ -83,14 +79,6 @@ export default function HomeScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchData();
-  };
-
-  const handleAddToCart = async (productId: string) => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-    await addToCart(productId, 1, sessionToken);
   };
 
   const featuredProducts = products.slice(0, 4);
@@ -110,9 +98,9 @@ export default function HomeScreen() {
         <Text style={styles.logo}>LUXURA</Text>
         <TouchableOpacity onPress={() => router.push('/cart')} style={styles.cartButton}>
           <Ionicons name="bag-outline" size={24} color="#fff" />
-          {count > 0 && (
+          {cartCount > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{count > 9 ? '9+' : count}</Text>
+              <Text style={styles.badgeText}>{cartCount > 9 ? '9+' : cartCount}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -130,7 +118,6 @@ export default function HomeScreen() {
           <Image
             source={{ uri: 'https://static.wixstatic.com/media/de6cdb_df3cf3adbce44d49b39546b5178c459d~mv2.jpg' }}
             style={styles.heroImage}
-            resizeMode="cover"
           />
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
@@ -162,9 +149,8 @@ export default function HomeScreen() {
                 onPress={() => router.push(`/catalogue?category=${category.id}`)}
               >
                 <Image
-                  source={{ uri: category.image }}
+                  source={{ uri: category.image || 'https://via.placeholder.com/160x100' }}
                   style={styles.categoryImage}
-                  resizeMode="cover"
                 />
                 <View style={styles.categoryOverlay} />
                 <Text style={styles.categoryName}>{category.name}</Text>
@@ -183,12 +169,30 @@ export default function HomeScreen() {
           </View>
           <View style={styles.productsGrid}>
             {featuredProducts.map((product) => (
-              <ProductCard
+              <TouchableOpacity
                 key={product.id}
-                product={product}
+                style={styles.productCard}
                 onPress={() => router.push(`/product/${product.id}`)}
-                onAddToCart={() => handleAddToCart(product.id)}
-              />
+              >
+                <View style={styles.productImageContainer}>
+                  <Image 
+                    source={{ uri: product.images[0] }} 
+                    style={styles.productImage}
+                  />
+                  {!product.in_stock && (
+                    <View style={styles.outOfStockBadge}>
+                      <Text style={styles.outOfStockText}>Rupture</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.productInfo}>
+                  <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
+                  {product.color_code && (
+                    <Text style={styles.productColorCode}>{product.color_code}</Text>
+                  )}
+                  <Text style={styles.productPrice}>{product.price.toFixed(2)} C$</Text>
+                </View>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -378,6 +382,56 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+  },
+  productCard: {
+    width: CARD_WIDTH,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  productImageContainer: {
+    width: '100%',
+    height: CARD_WIDTH * 1.2,
+    backgroundColor: '#2a2a2a',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+  },
+  outOfStockBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#ff4444',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  outOfStockText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  productInfo: {
+    padding: 12,
+  },
+  productName: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 4,
+    lineHeight: 18,
+  },
+  productColorCode: {
+    color: '#c9a050',
+    fontSize: 11,
+    marginBottom: 8,
+  },
+  productPrice: {
+    color: '#c9a050',
+    fontSize: 15,
+    fontWeight: '700',
   },
   aboutSection: {
     margin: 16,

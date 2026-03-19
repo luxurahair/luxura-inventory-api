@@ -8,17 +8,18 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ProductCard } from '../../src/components/ProductCard';
-import { useAuthStore } from '../../src/store/authStore';
-import { useCartStore } from '../../src/store/cartStore';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 48) / 2;
 
 interface Product {
   id: string;
@@ -41,8 +42,6 @@ export default function CatalogueScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const { isAuthenticated, sessionToken } = useAuthStore();
-  const { addToCart, count } = useCartStore();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -64,8 +63,8 @@ export default function CatalogueScreen() {
         }),
         axios.get(`${API_URL}/api/categories`),
       ]);
-      setProducts(productsRes.data);
-      setCategories(categoriesRes.data);
+      setProducts(productsRes.data || []);
+      setCategories(categoriesRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -83,20 +82,30 @@ export default function CatalogueScreen() {
     fetchData();
   };
 
-  const handleAddToCart = async (productId: string) => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-    await addToCart(productId, 1, sessionToken);
-  };
-
   const renderProduct = ({ item }: { item: Product }) => (
-    <ProductCard
-      product={item}
+    <TouchableOpacity
+      style={styles.productCard}
       onPress={() => router.push(`/product/${item.id}`)}
-      onAddToCart={() => handleAddToCart(item.id)}
-    />
+    >
+      <View style={styles.productImageContainer}>
+        <Image 
+          source={{ uri: item.images[0] }} 
+          style={styles.productImage}
+        />
+        {!item.in_stock && (
+          <View style={styles.outOfStockBadge}>
+            <Text style={styles.outOfStockText}>Rupture</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+        {item.color_code && (
+          <Text style={styles.productColorCode}>{item.color_code}</Text>
+        )}
+        <Text style={styles.productPrice}>{item.price.toFixed(2)} C$</Text>
+      </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -106,11 +115,6 @@ export default function CatalogueScreen() {
         <Text style={styles.title}>Catalogue</Text>
         <TouchableOpacity onPress={() => router.push('/cart')} style={styles.cartButton}>
           <Ionicons name="bag-outline" size={24} color="#fff" />
-          {count > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{count > 9 ? '9+' : count}</Text>
-            </View>
-          )}
         </TouchableOpacity>
       </View>
 
@@ -212,22 +216,6 @@ const styles = StyleSheet.create({
     padding: 4,
     position: 'relative',
   },
-  badge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: '#c9a050',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badgeText: {
-    color: '#000',
-    fontSize: 10,
-    fontWeight: '700',
-  },
   searchContainer: {
     paddingHorizontal: 16,
     marginBottom: 12,
@@ -282,6 +270,56 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'space-between',
+  },
+  productCard: {
+    width: CARD_WIDTH,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  productImageContainer: {
+    width: '100%',
+    height: CARD_WIDTH * 1.2,
+    backgroundColor: '#2a2a2a',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+  },
+  outOfStockBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#ff4444',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  outOfStockText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  productInfo: {
+    padding: 12,
+  },
+  productName: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 4,
+    lineHeight: 18,
+  },
+  productColorCode: {
+    color: '#c9a050',
+    fontSize: 11,
+    marginBottom: 8,
+  },
+  productPrice: {
+    color: '#c9a050',
+    fontSize: 15,
+    fontWeight: '700',
   },
   emptyContainer: {
     flex: 1,
