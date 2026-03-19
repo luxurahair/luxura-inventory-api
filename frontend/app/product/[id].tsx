@@ -26,12 +26,14 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  original_price?: number;
   description: string;
   category: string;
   images: string[];
   in_stock: boolean;
   color_code?: string;
   series?: string;
+  wix_url?: string;
 }
 
 export default function ProductScreen() {
@@ -90,8 +92,8 @@ export default function ProductScreen() {
   };
 
   const handleBuyNow = () => {
-    // Redirect to Wix payment page
-    const wixUrl = 'https://www.luxuradistribution.com/category/all-products';
+    // Redirect to Wix product page for length/weight selection
+    const wixUrl = product?.wix_url || 'https://www.luxuradistribution.com/category/all-products';
     Linking.openURL(wixUrl);
   };
 

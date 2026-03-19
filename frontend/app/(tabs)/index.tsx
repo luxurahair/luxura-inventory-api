@@ -95,7 +95,11 @@ export default function HomeScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.logo}>LUXURA</Text>
+        <Image 
+          source={{ uri: 'https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/i7uo40l8_Luxura%20Distribution%20-%20OR%20-%20PNG.png' }}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <TouchableOpacity onPress={() => router.push('/cart')} style={styles.cartButton}>
           <Ionicons name="bag-outline" size={24} color="#fff" />
           {cartCount > 0 && (
@@ -252,6 +256,10 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '800',
     letterSpacing: 4,
+  },
+  logoImage: {
+    width: 140,
+    height: 50,
   },
   cartButton: {
     padding: 4,

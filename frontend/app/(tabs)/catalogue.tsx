@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 48) / 2;
+const CARD_WIDTH = Math.floor((width - 48) / 2);
 
 interface Product {
   id: string;
@@ -82,15 +82,23 @@ export default function CatalogueScreen() {
     fetchData();
   };
 
-  const renderProduct = ({ item }: { item: Product }) => (
+  // Split products into pairs for 2-column layout
+  const productPairs: Product[][] = [];
+  for (let i = 0; i < products.length; i += 2) {
+    productPairs.push(products.slice(i, i + 2));
+  }
+
+  const ProductCard = ({ item }: { item: Product }) => (
     <TouchableOpacity
       style={styles.productCard}
       onPress={() => router.push(`/product/${item.id}`)}
+      activeOpacity={0.8}
     >
       <View style={styles.productImageContainer}>
         <Image 
           source={{ uri: item.images[0] }} 
           style={styles.productImage}
+          resizeMode="cover"
         />
         {!item.in_stock && (
           <View style={styles.outOfStockBadge}>
@@ -103,7 +111,7 @@ export default function CatalogueScreen() {
         {item.color_code && (
           <Text style={styles.productColorCode}>{item.color_code}</Text>
         )}
-        <Text style={styles.productPrice}>{item.price.toFixed(2)} C$</Text>
+        <Text style={styles.productPrice}>{item.price.toFixed(2)} $</Text>
       </View>
     </TouchableOpacity>
   );
@@ -138,58 +146,73 @@ export default function CatalogueScreen() {
       </View>
 
       {/* Category Filter */}
-      <View style={styles.categoriesContainer}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={[{ id: null, name: 'Tous' }, ...categories]}
-          keyExtractor={(item) => item.id || 'all'}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.categoryChip,
-                selectedCategory === item.id && styles.categoryChipActive,
-              ]}
-              onPress={() => setSelectedCategory(item.id)}
-            >
-              <Text
-                style={[
-                  styles.categoryChipText,
-                  selectedCategory === item.id && styles.categoryChipTextActive,
-                ]}
-              >
-                {item.name}
-              </Text>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.categoriesList}
-        />
-      </View>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.categoriesScroll}
+        contentContainerStyle={styles.categoriesList}
+      >
+        <TouchableOpacity
+          style={[
+            styles.categoryChip,
+            selectedCategory === null && styles.categoryChipActive,
+          ]}
+          onPress={() => setSelectedCategory(null)}
+        >
+          <Text style={[
+            styles.categoryChipText,
+            selectedCategory === null && styles.categoryChipTextActive,
+          ]}>
+            Tous
+          </Text>
+        </TouchableOpacity>
+        {categories.map((category) => (
+          <TouchableOpacity
+            key={category.id}
+            style={[
+              styles.categoryChip,
+              selectedCategory === category.id && styles.categoryChipActive,
+            ]}
+            onPress={() => setSelectedCategory(category.id)}
+          >
+            <Text style={[
+              styles.categoryChipText,
+              selectedCategory === category.id && styles.categoryChipTextActive,
+            ]}>
+              {category.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {/* Products Grid */}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#c9a050" />
         </View>
+      ) : products.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="search-outline" size={48} color="#666" />
+          <Text style={styles.emptyText}>Aucun produit trouvé</Text>
+        </View>
       ) : (
-        <FlatList
-          data={products}
-          renderItem={renderProduct}
-          keyExtractor={(item) => item.id}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.productsList}
+        <ScrollView
+          style={styles.productsScroll}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#c9a050" />
           }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="search-outline" size={48} color="#666" />
-              <Text style={styles.emptyText}>Aucun produit trouvé</Text>
+        >
+          {productPairs.map((pair, index) => (
+            <View key={index} style={styles.productRow}>
+              {pair.map((product) => (
+                <ProductCard key={product.id} item={product} />
+              ))}
+              {pair.length === 1 && <View style={styles.emptyCard} />}
             </View>
-          }
-        />
+          ))}
+          <View style={{ height: 100 }} />
+        </ScrollView>
       )}
     </View>
   );
@@ -214,7 +237,6 @@ const styles = StyleSheet.create({
   },
   cartButton: {
     padding: 4,
-    position: 'relative',
   },
   searchContainer: {
     paddingHorizontal: 16,
@@ -234,12 +256,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
-  categoriesContainer: {
+  categoriesScroll: {
+    maxHeight: 50,
     marginBottom: 12,
   },
   categoriesList: {
     paddingHorizontal: 16,
-    gap: 8,
   },
   categoryChip: {
     paddingHorizontal: 16,
@@ -264,24 +286,39 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  productsList: {
-    paddingHorizontal: 16,
-    paddingBottom: 100,
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  row: {
+  emptyText: {
+    color: '#666',
+    fontSize: 16,
+    marginTop: 12,
+  },
+  productsScroll: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  productRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 16,
   },
   productCard: {
     width: CARD_WIDTH,
     backgroundColor: '#1a1a1a',
     borderRadius: 12,
-    marginBottom: 16,
     overflow: 'hidden',
   },
+  emptyCard: {
+    width: CARD_WIDTH,
+  },
   productImageContainer: {
-    width: '100%',
-    height: CARD_WIDTH * 1.2,
+    width: CARD_WIDTH,
+    height: CARD_WIDTH,
     backgroundColor: '#2a2a2a',
+    overflow: 'hidden',
   },
   productImage: {
     width: '100%',
@@ -302,34 +339,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   productInfo: {
-    padding: 12,
+    padding: 10,
   },
   productName: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     marginBottom: 4,
-    lineHeight: 18,
+    lineHeight: 16,
   },
   productColorCode: {
     color: '#c9a050',
     fontSize: 11,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   productPrice: {
     color: '#c9a050',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 100,
-  },
-  emptyText: {
-    color: '#666',
-    fontSize: 16,
-    marginTop: 12,
   },
 });
