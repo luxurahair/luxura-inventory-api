@@ -135,6 +135,17 @@ def normalize_product(wix_product: Dict[str, Any], version: str) -> Dict[str, An
         except Exception:
             qty = 0
 
+        raw_product_options = wix_product.get("productOptions") or {}
+
+        if isinstance(raw_product_options, dict):
+            normalized_options = raw_product_options
+        elif isinstance(raw_product_options, list):
+            normalized_options = {
+                "productOptions": raw_product_options
+            }
+        else:
+            normalized_options = {}
+
         return {
             "wix_id": wix_product.get("id") or wix_product.get("_id"),
             "sku": sku,
@@ -144,8 +155,7 @@ def normalize_product(wix_product: Dict[str, Any], version: str) -> Dict[str, An
             "handle": wix_product.get("slug"),
             "is_in_stock": bool(inventory.get("inStock", True)),
             "quantity": qty,
-            "options": wix_product.get("productOptions") or {},
+            "options": normalized_options,
         }
 
     raise ValueError(f"Version de catalogue inconnue: {version}")
-   
