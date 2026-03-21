@@ -8,9 +8,9 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
-  Image,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -18,24 +18,21 @@ import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = Math.floor((width - 48) / 2);
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CARD_SIZE = Math.floor((SCREEN_WIDTH - 48) / 2);
 
 interface Product {
-  id: string;
+  id: number | string;
   name: string;
   price: number;
-  description: string;
-  category: string;
   images: string[];
-  in_stock: boolean;
-  color_code?: string;
+  quantity?: number;
+  sku?: string;
 }
 
 interface Category {
   id: string;
   name: string;
-  description: string;
 }
 
 export default function CatalogueScreen() {
@@ -63,10 +60,10 @@ export default function CatalogueScreen() {
         }),
         axios.get(`${API_URL}/api/categories`),
       ]);
-      setProducts(productsRes.data || []);
+      setProducts((productsRes.data || []).slice(0, 30));
       setCategories(categoriesRes.data || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -74,6 +71,7 @@ export default function CatalogueScreen() {
   };
 
   useEffect(() => {
+    setLoading(true);
     fetchData();
   }, [selectedCategory, searchQuery]);
 
@@ -82,136 +80,117 @@ export default function CatalogueScreen() {
     fetchData();
   };
 
-  // Split products into pairs for 2-column layout
-  const productPairs: Product[][] = [];
+  // Create rows of 2 products
+  const rows: (Product | null)[][] = [];
   for (let i = 0; i < products.length; i += 2) {
-    productPairs.push(products.slice(i, i + 2));
+    const row: (Product | null)[] = [products[i]];
+    if (i + 1 < products.length) {
+      row.push(products[i + 1]);
+    } else {
+      row.push(null);
+    }
+    rows.push(row);
   }
 
-  const ProductCard = ({ item }: { item: Product }) => (
+  const ProductCard = ({ product }: { product: Product }) => (
     <TouchableOpacity
-      style={styles.productCard}
-      onPress={() => router.push(`/product/${item.id}`)}
+      onPress={() => router.push(`/product/${product.id}`)}
       activeOpacity={0.8}
+      style={{
+        width: CARD_SIZE,
+        backgroundColor: '#1a1a1a',
+        borderRadius: 10,
+        overflow: 'hidden',
+      }}
     >
-      <View style={styles.productImageContainer}>
-        <Image 
-          source={{ uri: item.images[0] }} 
-          style={styles.productImage}
-          resizeMode="cover"
-        />
-        {!item.in_stock && (
-          <View style={styles.outOfStockBadge}>
-            <Text style={styles.outOfStockText}>Rupture</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-        {item.color_code && (
-          <Text style={styles.productColorCode}>{item.color_code}</Text>
-        )}
-        <Text style={styles.productPrice}>{item.price.toFixed(2)} $</Text>
+      <Image
+        source={{ uri: product.images?.[0] }}
+        style={{
+          width: CARD_SIZE,
+          height: CARD_SIZE,
+        }}
+        contentFit="cover"
+      />
+      {product.quantity !== undefined && product.quantity <= 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Épuisé</Text>
+        </View>
+      )}
+      <View style={styles.info}>
+        <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+        {product.sku && <Text style={styles.sku}>{product.sku}</Text>}
+        <Text style={styles.price}>{product.price?.toFixed(2)} $</Text>
       </View>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.title}>Catalogue</Text>
-        <TouchableOpacity onPress={() => router.push('/cart')} style={styles.cartButton}>
+        <TouchableOpacity onPress={() => router.push('/cart')}>
           <Ionicons name="bag-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#666" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Rechercher un produit..."
-            placeholderTextColor="#666"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#666" />
-            </TouchableOpacity>
-          )}
-        </View>
+      <View style={styles.searchBox}>
+        <Ionicons name="search" size={18} color="#666" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Rechercher..."
+          placeholderTextColor="#666"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
       </View>
 
-      {/* Category Filter */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        style={styles.categoriesScroll}
-        contentContainerStyle={styles.categoriesList}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cats}>
         <TouchableOpacity
-          style={[
-            styles.categoryChip,
-            selectedCategory === null && styles.categoryChipActive,
-          ]}
+          style={[styles.cat, !selectedCategory && styles.catActive]}
           onPress={() => setSelectedCategory(null)}
         >
-          <Text style={[
-            styles.categoryChipText,
-            selectedCategory === null && styles.categoryChipTextActive,
-          ]}>
-            Tous
-          </Text>
+          <Text style={[styles.catText, !selectedCategory && styles.catTextActive]}>Tous</Text>
         </TouchableOpacity>
-        {categories.map((category) => (
+        {categories.map((c) => (
           <TouchableOpacity
-            key={category.id}
-            style={[
-              styles.categoryChip,
-              selectedCategory === category.id && styles.categoryChipActive,
-            ]}
-            onPress={() => setSelectedCategory(category.id)}
+            key={c.id}
+            style={[styles.cat, selectedCategory === c.id && styles.catActive]}
+            onPress={() => setSelectedCategory(c.id)}
           >
-            <Text style={[
-              styles.categoryChipText,
-              selectedCategory === category.id && styles.categoryChipTextActive,
-            ]}>
-              {category.name}
-            </Text>
+            <Text style={[styles.catText, selectedCategory === c.id && styles.catTextActive]}>{c.name}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* Products Grid */}
+      <Text style={styles.count}>{products.length} produits</Text>
+
       {loading ? (
-        <View style={styles.loadingContainer}>
+        <View style={styles.loading}>
           <ActivityIndicator size="large" color="#c9a050" />
-        </View>
-      ) : products.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="search-outline" size={48} color="#666" />
-          <Text style={styles.emptyText}>Aucun produit trouvé</Text>
         </View>
       ) : (
         <ScrollView
-          style={styles.productsScroll}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#c9a050" />
-          }
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#c9a050" />}
         >
-          {productPairs.map((pair, index) => (
-            <View key={index} style={styles.productRow}>
-              {pair.map((product) => (
-                <ProductCard key={product.id} item={product} />
-              ))}
-              {pair.length === 1 && <View style={styles.emptyCard} />}
+          {rows.map((row, rowIndex) => (
+            <View
+              key={rowIndex}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                marginBottom: 12,
+              }}
+            >
+              {row[0] && <ProductCard product={row[0]} />}
+              {row[1] ? (
+                <ProductCard product={row[1]} />
+              ) : (
+                <View style={{ width: CARD_SIZE }} />
+              )}
             </View>
           ))}
-          <View style={{ height: 100 }} />
         </ScrollView>
       )}
     </View>
@@ -219,143 +198,103 @@ export default function CatalogueScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0c0c0c',
+  container: { 
+    flex: 1, 
+    backgroundColor: '#0c0c0c' 
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 16, 
+    paddingBottom: 12 
   },
-  title: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '800',
+  title: { 
+    color: '#fff', 
+    fontSize: 26, 
+    fontWeight: '800' 
   },
-  cartButton: {
-    padding: 4,
+  searchBox: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#1a1a1a', 
+    borderRadius: 10, 
+    marginHorizontal: 16, 
+    paddingHorizontal: 12, 
+    paddingVertical: 10, 
+    marginBottom: 10 
   },
-  searchContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 12,
+  searchInput: { 
+    flex: 1, 
+    color: '#fff', 
+    fontSize: 15, 
+    marginLeft: 8 
   },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 8,
+  cats: { 
+    maxHeight: 40, 
+    marginBottom: 8, 
+    paddingHorizontal: 16 
   },
-  searchInput: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 16,
+  cat: { 
+    paddingHorizontal: 14, 
+    paddingVertical: 8, 
+    borderRadius: 16, 
+    backgroundColor: '#1a1a1a', 
+    marginRight: 8 
   },
-  categoriesScroll: {
-    maxHeight: 50,
-    marginBottom: 12,
+  catActive: { 
+    backgroundColor: '#c9a050' 
   },
-  categoriesList: {
-    paddingHorizontal: 16,
+  catText: { 
+    color: '#fff', 
+    fontSize: 13 
   },
-  categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#1a1a1a',
-    marginRight: 8,
+  catTextActive: { 
+    color: '#000' 
   },
-  categoryChipActive: {
-    backgroundColor: '#c9a050',
+  count: { 
+    color: '#666', 
+    fontSize: 11, 
+    paddingHorizontal: 16, 
+    marginBottom: 8 
   },
-  categoryChipText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
+  loading: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
   },
-  categoryChipTextActive: {
-    color: '#000',
+  badge: { 
+    position: 'absolute', 
+    top: 6, 
+    right: 6, 
+    backgroundColor: '#f44', 
+    paddingHorizontal: 6, 
+    paddingVertical: 2, 
+    borderRadius: 4 
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  badgeText: { 
+    color: '#fff', 
+    fontSize: 9, 
+    fontWeight: '600' 
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  info: { 
+    padding: 8 
   },
-  emptyText: {
-    color: '#666',
-    fontSize: 16,
-    marginTop: 12,
+  name: { 
+    color: '#fff', 
+    fontSize: 11, 
+    fontWeight: '500', 
+    marginBottom: 2, 
+    lineHeight: 14 
   },
-  productsScroll: {
-    flex: 1,
-    paddingHorizontal: 16,
+  sku: { 
+    color: '#c9a050', 
+    fontSize: 9, 
+    marginBottom: 4 
   },
-  productRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  productCard: {
-    width: CARD_WIDTH,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  emptyCard: {
-    width: CARD_WIDTH,
-  },
-  productImageContainer: {
-    width: CARD_WIDTH,
-    height: CARD_WIDTH,
-    backgroundColor: '#2a2a2a',
-    overflow: 'hidden',
-  },
-  productImage: {
-    width: '100%',
-    height: '100%',
-  },
-  outOfStockBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#ff4444',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  outOfStockText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  productInfo: {
-    padding: 10,
-  },
-  productName: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 4,
-    lineHeight: 16,
-  },
-  productColorCode: {
-    color: '#c9a050',
-    fontSize: 11,
-    marginBottom: 4,
-  },
-  productPrice: {
-    color: '#c9a050',
-    fontSize: 14,
-    fontWeight: '700',
+  price: { 
+    color: '#c9a050', 
+    fontSize: 13, 
+    fontWeight: '700' 
   },
 });
