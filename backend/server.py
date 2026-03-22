@@ -227,7 +227,10 @@ WIX_PRODUCT_IMAGES = {
     "bande-adhésive-série-aurora-blond-platine-60a": "https://static.wixstatic.com/media/f1b961_e75015e3740242dab6c3567bf8445811~mv2.png",
     "bande-adhésive-série-aurora-blond-pha": "https://static.wixstatic.com/media/f1b961_54514ba920d34aed9aa1f10c62f1759a~mv2.jpg",
     "bande-adhésive-série-aurora-ombré-blond-miel-cb": "https://static.wixstatic.com/media/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png",
+    "bande-adhésive-série-aurora-ombré-blond-cendré-hps": "https://static.wixstatic.com/media/f1b961_13645139441a4ad0bdae63bca7d65c37~mv2.png",
+    "bande-adhésive-série-aurora-balayage-blond-foncé-6-24": "https://static.wixstatic.com/media/f1b961_387bbe6d47cd4217a7b0157f398d9a63~mv2.png",
     "bande-adhésive-tenue-ultra": "https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg",
+    "pince-d-application-bande-adhésive": "https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg",
     # PONYTAILS
     "ponytail-queue-de-cheval-série-everly-noir-foncé-1": "https://static.wixstatic.com/media/f1b961_7c4c9a8b07484a5eb66b12e9b9322b4a~mv2.jpg",
     "ponytail-queue-de-cheval-série-everly-ombré-brun-miel-du": "https://static.wixstatic.com/media/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png",
