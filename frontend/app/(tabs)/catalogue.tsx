@@ -9,8 +9,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Dimensions,
+  Image,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -28,6 +28,8 @@ interface Product {
   images: string[];
   quantity?: number;
   sku?: string;
+  in_stock?: boolean;
+  category?: string;
 }
 
 interface Category {
@@ -60,7 +62,7 @@ export default function CatalogueScreen() {
         }),
         axios.get(`${API_URL}/api/categories`),
       ]);
-      setProducts((productsRes.data || []).slice(0, 30));
+      setProducts((productsRes.data || []).slice(0, 50));
       setCategories(categoriesRes.data || []);
     } catch (error) {
       console.error('Error:', error);
@@ -103,15 +105,17 @@ export default function CatalogueScreen() {
         overflow: 'hidden',
       }}
     >
-      <Image
-        source={{ uri: product.images?.[0] }}
-        style={{
-          width: CARD_SIZE,
-          height: CARD_SIZE,
-        }}
-        contentFit="cover"
-      />
-      {product.quantity !== undefined && product.quantity <= 0 && (
+      <View style={{ width: CARD_SIZE, height: CARD_SIZE, backgroundColor: '#222' }}>
+        <Image
+          source={{ uri: product.images?.[0] }}
+          style={{
+            width: CARD_SIZE,
+            height: CARD_SIZE,
+          }}
+          resizeMode="cover"
+        />
+      </View>
+      {!product.in_stock && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>Épuisé</Text>
         </View>

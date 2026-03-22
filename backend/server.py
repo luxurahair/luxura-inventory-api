@@ -91,57 +91,102 @@ class Category(BaseModel):
     wix_url: Optional[str] = None
     order: int = 0
 
-# ==================== HELPER: Detect category from product name ====================
+# ==================== HELPER: Detect category from handle (Wix URL) ====================
 
-def detect_category(name: str) -> str:
-    """Detect product category from name"""
+def detect_category_from_handle(handle: str, name: str) -> str:
+    """Detect product category from Wix handle - more accurate than name-based detection"""
+    if not handle:
+        handle = ""
+    handle_lower = handle.lower()
     name_lower = name.lower()
+    
+    # Priority 1: Check handle (most reliable - matches Wix URLs)
+    if 'genius' in handle_lower or 'vivian' in handle_lower:
+        return 'genius'
+    elif 'halo' in handle_lower or 'everly' in handle_lower:
+        return 'halo'
+    elif 'bande' in handle_lower or 'aurora' in handle_lower or 'tape' in handle_lower or 'adhésive' in handle_lower:
+        return 'tape'
+    elif 'i-tip' in handle_lower or 'itip' in handle_lower or 'eleanor' in handle_lower:
+        return 'i-tip'
+    elif 'trame-invisible' in handle_lower:
+        return 'genius'  # Trame invisible = Genius Weft
+    
+    # Priority 2: Check name for essentials/accessories
+    essentials_keywords = ['spray', 'brosse', 'fer', 'shampooing', 'lotion', 'anneau', 'ensemble', 
+                          'duo', 'kit', 'accessoire', 'outil', 'colle', 'remover', 'peigne']
+    for keyword in essentials_keywords:
+        if keyword in name_lower or keyword in handle_lower:
+            return 'essentiels'
+    
+    # Priority 3: Fallback to name-based detection
     if 'genius' in name_lower or 'trame invisible' in name_lower or 'vivian' in name_lower:
         return 'genius'
-    elif 'halo' in name_lower or 'everly' in name_lower:
+    elif 'halo' in name_lower:
         return 'halo'
-    elif 'bande' in name_lower or 'tape' in name_lower or 'aurora' in name_lower or 'adhésive' in name_lower:
+    elif 'bande' in name_lower or 'adhésive' in name_lower or 'aurora' in name_lower:
         return 'tape'
-    elif 'i-tip' in name_lower or 'itip' in name_lower or 'eleanor' in name_lower:
+    elif 'i-tip' in name_lower or 'itip' in name_lower:
         return 'i-tip'
-    else:
-        return 'essentiels'
+    elif 'ponytail' in name_lower or 'queue de cheval' in name_lower:
+        return 'halo'  # Ponytails go with Halo category
+    
+    return 'essentiels'
 
-def get_category_image(category: str) -> str:
-    """Get default placeholder image for category - using smaller square images with Wix resizing"""
-    # Using Wix image transformation to force 300x300 square images
+# Wix product images mapping - scraped from luxuradistribution.com categories
+# Format: partial_handle -> image_url (400x400 optimized)
+WIX_PRODUCT_IMAGES = {
+    # GENIUS
+    "genius-trame-invisible-série-vivian-noir-foncé-1": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",
+    "genius-trame-invisible-série-vivian-dark-chocolate-dc": "https://static.wixstatic.com/media/f1b961_58c11630ff1349728c47e56190218422~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_58c11630ff1349728c47e56190218422~mv2.png",
+    "genius-ssd-trame-invisible-série-vivian-brun-cacao": "https://static.wixstatic.com/media/f1b961_11271a5d5d91485883888a201592829c~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_11271a5d5d91485883888a201592829c~mv2.jpg",
+    "genius-trame-invisible-série-vivian-brun-2": "https://static.wixstatic.com/media/f1b961_2596437db6134f7bbdc1c5b2d72907fd~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_2596437db6134f7bbdc1c5b2d72907fd~mv2.jpg",
+    "genius-trame-invisible-série-vivian-brun-moyen-3": "https://static.wixstatic.com/media/f1b961_47ff485b2f674fdc9245cc856004cd46~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_47ff485b2f674fdc9245cc856004cd46~mv2.png",
+    "genius-série-vivian-brun-lumineux-blond-foncé-6": "https://static.wixstatic.com/media/f1b961_5769d9b826004a6f91eb9112dc140cfb~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_5769d9b826004a6f91eb9112dc140cfb~mv2.png",
+    "genius-trame-invisible-série-vivian-foochow": "https://static.wixstatic.com/media/f1b961_28d930f0f9924b229beb3be484bc1fbd~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_28d930f0f9924b229beb3be484bc1fbd~mv2.jpg",
+    "genius-trame-invisible-série-vivian-blond-platine-60a": "https://static.wixstatic.com/media/f1b961_c3168b50e6d9464db8365cdef0b16557~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_c3168b50e6d9464db8365cdef0b16557~mv2.png",
+    "genius-trame-invisible-série-vivian-balayage-blond-beige-18-22": "https://static.wixstatic.com/media/f1b961_b7d3eb648bf443cb8d30e3e23fa62ad8~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_b7d3eb648bf443cb8d30e3e23fa62ad8~mv2.png",
+    "genius-trame-invisible-série-vivian-balayage-blond-foncé-6-24": "https://static.wixstatic.com/media/f1b961_387bbe6d47cd4217a7b0157f398d9a63~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_387bbe6d47cd4217a7b0157f398d9a63~mv2.png",
+    "genius-série-vivian-balayage-blond-cendré-613-18a": "https://static.wixstatic.com/media/f1b961_c15e5a01c6024a1699cb92a2be325f8f~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_c15e5a01c6024a1699cb92a2be325f8f~mv2.png",
+    "genius-trame-invisible-série-vivian-5atp18b62": "https://static.wixstatic.com/media/f1b961_0e7cf48e1d59418bbf1b562c21494176~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_0e7cf48e1d59418bbf1b562c21494176~mv2.jpg",
+    "genius-trame-invisible-série-vivian-chengtu": "https://static.wixstatic.com/media/f1b961_e440aecc44e44c69b0d56dad273a95e9~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_e440aecc44e44c69b0d56dad273a95e9~mv2.jpg",
+    "genius-série-vivian-ombré-blond-miel-cb": "https://static.wixstatic.com/media/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png",
+    "genius-nouvelle-trame-invisible-série-vivian-cannelle-cinnamon": "https://static.wixstatic.com/media/f1b961_23960136c3df4e84852f5dde15475d17~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_23960136c3df4e84852f5dde15475d17~mv2.jpg",
+    # HALO
+    "halo-série-everly-noir-foncé-1": "https://static.wixstatic.com/media/f1b961_7c4c9a8b07484a5eb66b12e9b9322b4a~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_7c4c9a8b07484a5eb66b12e9b9322b4a~mv2.jpg",
+    "halo-série-everly-noir-doux-brun-foncé-1b": "https://static.wixstatic.com/media/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png",
+    "halo-série-everly-brun-moyen-3": "https://static.wixstatic.com/media/f1b961_d1bb2905a7b748f5ac4676d5c96bae2a~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_d1bb2905a7b748f5ac4676d5c96bae2a~mv2.png",
+    "halo-série-everly-brun-lumineux-blond-foncé-6": "https://static.wixstatic.com/media/f1b961_5b61b7d6874a47abb7997a78d99c7125~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_5b61b7d6874a47abb7997a78d99c7125~mv2.png",
+    "halo-série-everly-blond-platine-60a": "https://static.wixstatic.com/media/f1b961_1e9953c3551440479117fa2954918173~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_1e9953c3551440479117fa2954918173~mv2.png",
+    "halo-série-everly-balayage-blond-foncé-6-24": "https://static.wixstatic.com/media/f1b961_7858886b3ecb41e5bdf5be80b2aa4359~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_7858886b3ecb41e5bdf5be80b2aa4359~mv2.png",
+    "halo-série-everly-balayage-blond-cendré-613-18a": "https://static.wixstatic.com/media/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png",
+    "halo-série-everly-balayage-blond-beige-18-22": "https://static.wixstatic.com/media/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png",
+    "halo-série-everly-ombré-blond-miel-cb": "https://static.wixstatic.com/media/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png",
+    "halo-série-everly-ombré-brun-nuit-db": "https://static.wixstatic.com/media/f1b961_601ee2f6e66b48d6b09e471501537fc9~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_601ee2f6e66b48d6b09e471501537fc9~mv2.png",
+    # TAPE / BANDE ADHESIVE
+    "bande-invisible-série-aurora-ice-white-icw": "https://static.wixstatic.com/media/f1b961_9b2d02f5f8fe47369534f67678bbc79d~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_9b2d02f5f8fe47369534f67678bbc79d~mv2.jpg",
+    "bande-adhésive-série-aurora-dark-chocolate-dc": "https://static.wixstatic.com/media/f1b961_fa7cd15003c94b16a263bd39d22dc48c~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_fa7cd15003c94b16a263bd39d22dc48c~mv2.jpg",
+    "bande-adhésive-série-aurora-noir-foncé-1-jet-black": "https://static.wixstatic.com/media/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png",
+    "bande-adhésive-série-aurora-brun-foncé-noir-doux-1b": "https://static.wixstatic.com/media/f1b961_088e24bf74854319bab62d49634b608a~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_088e24bf74854319bab62d49634b608a~mv2.png",
+    "bande-adhésive-série-aurora-brun-lumineux-blond-foncé-6": "https://static.wixstatic.com/media/f1b961_5d6668fdf8114e3d99f528fe612222f0~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_5d6668fdf8114e3d99f528fe612222f0~mv2.png",
+    "bande-adhésive-série-aurora-brun-moyen-3": "https://static.wixstatic.com/media/f1b961_a0bb462af6f44e25aa751ea359024bba~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_a0bb462af6f44e25aa751ea359024bba~mv2.png",
+    "bande-adhésive-série-aurora-blond-platine-60a": "https://static.wixstatic.com/media/f1b961_e75015e3740242dab6c3567bf8445811~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_e75015e3740242dab6c3567bf8445811~mv2.png",
+}
+
+def get_product_image(handle: str, category: str) -> str:
+    """Get product image from Wix mapping or category fallback"""
+    if handle and handle in WIX_PRODUCT_IMAGES:
+        return WIX_PRODUCT_IMAGES[handle]
+    
+    # Category-specific default images (real product photos from Wix)
     category_images = {
-        "genius": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png/v1/crop/x_0,y_100,w_1000,h_1000/fill/w_300,h_300,al_c,q_85/genius.webp",
-        "halo": "https://static.wixstatic.com/media/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png/v1/crop/x_0,y_100,w_1000,h_1000/fill/w_300,h_300,al_c,q_85/halo.webp",
-        "tape": "https://static.wixstatic.com/media/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png/v1/fill/w_300,h_300,al_c,q_85/tape.webp",
-        "i-tip": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/crop/x_0,y_100,w_1000,h_1000/fill/w_300,h_300,al_c,q_85/itip.webp",
-        "essentiels": "https://static.wixstatic.com/media/de6cdb_1977c4f9e78645a38131eaa992c478ce~mv2.jpg/v1/fill/w_300,h_300,al_c,q_85/essentiels.webp"
+        "genius": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",
+        "halo": "https://static.wixstatic.com/media/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png",
+        "tape": "https://static.wixstatic.com/media/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png",
+        "i-tip": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+        "essentiels": "https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/s-l1200.jpg"
     }
-    return category_images.get(category, "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png/v1/crop/x_0,y_100,w_1000,h_1000/fill/w_300,h_300,al_c,q_85/default.webp")
-
-def extract_image_from_options(options: Dict[str, Any]) -> Optional[str]:
-    """Extract first image URL from product options"""
-    if not options:
-        return None
-    
-    images = options.get('images')
-    if images and isinstance(images, list) and len(images) > 0:
-        # Wix media format
-        first_img = images[0]
-        if isinstance(first_img, dict):
-            url = first_img.get('url') or first_img.get('src')
-            if url:
-                return url
-        elif isinstance(first_img, str):
-            return first_img
-    
-    # Try mainMedia
-    main_media = images.get('mainMedia') if isinstance(images, dict) else None
-    if main_media:
-        if isinstance(main_media, dict):
-            return main_media.get('url') or main_media.get('src')
-    
-    return None
+    return category_images.get(category, category_images["genius"])
 
 # ==================== AUTH HELPERS ====================
 
@@ -284,9 +329,10 @@ async def logout(request: Request, response: Response):
 async def get_products(
     category: Optional[str] = None,
     search: Optional[str] = None,
-    in_stock: Optional[bool] = None
+    in_stock: Optional[bool] = None,
+    group_variants: Optional[bool] = True  # Group variants by handle by default
 ):
-    """Get all products from Luxura Inventory API"""
+    """Get all products from Luxura Inventory API - grouped by handle to show unique products"""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(f"{LUXURA_API_URL}/products")
@@ -296,16 +342,22 @@ async def get_products(
             
             products = response.json()
             
-            # Transform products for mobile app
-            result = []
+            # Group products by handle to get unique base products
+            products_by_handle = {}
+            
             for p in products:
-                # Skip test products
                 name = p.get('name', '')
-                if 'test' in name.lower():
+                
+                # Skip test products
+                if 'test' in name.lower() and p.get('price', 0) < 1:
                     continue
                 
-                # Detect category
-                product_category = detect_category(name)
+                handle = p.get('handle', '')
+                if not handle:
+                    continue  # Skip products without handle
+                
+                # Detect category from handle (more reliable than name)
+                product_category = detect_category_from_handle(handle, name)
                 
                 # Filter by category if specified
                 if category and product_category != category:
@@ -317,32 +369,115 @@ async def get_products(
                     if search_lower not in name.lower() and search_lower not in (p.get('sku') or '').lower():
                         continue
                 
-                # Filter by stock if specified
+                # Check stock status
                 is_in_stock = p.get('is_in_stock', False) or p.get('quantity', 0) > 0
+                
+                # Filter by stock if specified
                 if in_stock is not None and is_in_stock != in_stock:
                     continue
                 
-                # Extract image from options
                 options = p.get('options', {})
-                image = extract_image_from_options(options)
                 
-                # Build Wix URL from handle
-                handle = p.get('handle') or options.get('base', {}).get('handle')
-                wix_url = f"https://www.luxuradistribution.com/product-page/{handle}" if handle else "https://www.luxuradistribution.com"
+                # If grouping variants, only keep the base product (without variant info in options.choices)
+                if group_variants:
+                    # Check if this is a variant or base product
+                    is_variant = 'choices' in options and options.get('choices')
+                    has_product_options = 'productOptions' in options and options.get('productOptions')
+                    
+                    if handle not in products_by_handle:
+                        # First product with this handle
+                        products_by_handle[handle] = {
+                            'product': p,
+                            'category': product_category,
+                            'is_base': has_product_options or not is_variant,
+                            'variants': [],
+                            'any_in_stock': is_in_stock
+                        }
+                    else:
+                        # Update stock status if any variant is in stock
+                        if is_in_stock:
+                            products_by_handle[handle]['any_in_stock'] = True
+                        
+                        # Prefer base product over variant
+                        if has_product_options and not products_by_handle[handle]['is_base']:
+                            products_by_handle[handle]['product'] = p
+                            products_by_handle[handle]['is_base'] = True
+                        
+                        # Collect variant info
+                        if is_variant:
+                            variant_choice = options.get('choices', {}).get('Longeur', '')
+                            if variant_choice:
+                                products_by_handle[handle]['variants'].append({
+                                    'id': p.get('id'),
+                                    'choice': variant_choice,
+                                    'in_stock': is_in_stock
+                                })
+                else:
+                    # Not grouping - treat each as unique
+                    products_by_handle[f"{handle}_{p.get('id')}"] = {
+                        'product': p,
+                        'category': product_category,
+                        'variants': [],
+                        'any_in_stock': is_in_stock
+                    }
+            
+            # Build result from grouped products
+            result = []
+            for handle, data in products_by_handle.items():
+                p = data['product']
+                product_category = data['category']
+                name = p.get('name', '')
+                options = p.get('options', {})
+                
+                # Clean up name (remove variant suffix if present)
+                clean_name = name.split(' — ')[0].strip()
+                
+                # Get image from our Wix mapping
+                image = get_product_image(p.get('handle', ''), product_category)
+                
+                # Build Wix URL
+                product_handle = p.get('handle', '')
+                wix_url = f"https://www.luxuradistribution.com/product-page/{product_handle}" if product_handle else "https://www.luxuradistribution.com"
+                
+                # Extract available variants from productOptions
+                variants = []
+                product_options = options.get('productOptions', [])
+                if product_options:
+                    for opt in product_options:
+                        if opt.get('name') == 'Longeur':
+                            for choice in opt.get('choices', []):
+                                variants.append({
+                                    'value': choice.get('value', ''),
+                                    'in_stock': choice.get('inStock', False)
+                                })
+                
+                # Add collected variants from API
+                if data['variants']:
+                    for v in data['variants']:
+                        if not any(var['value'] == v['choice'] for var in variants):
+                            variants.append({
+                                'value': v['choice'],
+                                'in_stock': v['in_stock']
+                            })
                 
                 result.append({
                     "id": p.get('id'),
-                    "name": name,
+                    "name": clean_name,
                     "price": p.get('price', 0),
                     "description": p.get('description', ''),
                     "category": product_category,
-                    "images": [image] if image else [get_category_image(product_category)],
-                    "in_stock": is_in_stock,
+                    "images": [image],
+                    "in_stock": data['any_in_stock'],
                     "quantity": p.get('quantity', 0),
                     "sku": p.get('sku'),
                     "wix_url": wix_url,
-                    "options": options
+                    "handle": product_handle,
+                    "variants": variants if variants else None
                 })
+            
+            # Sort by category order, then by name
+            category_order = {'genius': 0, 'halo': 1, 'tape': 2, 'i-tip': 3, 'essentiels': 4}
+            result.sort(key=lambda x: (category_order.get(x['category'], 99), x['name']))
             
             return result
             
@@ -369,23 +504,46 @@ async def get_product(product_id: int):
             
             # Transform for mobile app
             name = p.get('name', '')
+            handle = p.get('handle', '')
             options = p.get('options', {})
-            image = extract_image_from_options(options)
-            handle = p.get('handle') or options.get('base', {}).get('handle')
+            
+            # Detect category from handle
+            category = detect_category_from_handle(handle, name)
+            
+            # Get image from Wix mapping
+            image = get_product_image(handle, category)
+            
+            # Build Wix URL
             wix_url = f"https://www.luxuradistribution.com/product-page/{handle}" if handle else "https://www.luxuradistribution.com"
+            
+            # Clean name (remove variant suffix)
+            clean_name = name.split(' — ')[0].strip()
+            
+            # Extract variants
+            variants = []
+            product_options = options.get('productOptions', [])
+            if product_options:
+                for opt in product_options:
+                    if opt.get('name') == 'Longeur':
+                        for choice in opt.get('choices', []):
+                            variants.append({
+                                'value': choice.get('value', ''),
+                                'in_stock': choice.get('inStock', False)
+                            })
             
             return {
                 "id": p.get('id'),
-                "name": name,
+                "name": clean_name,
                 "price": p.get('price', 0),
                 "description": p.get('description', ''),
-                "category": detect_category(name),
-                "images": [image] if image else ["https://static.wixstatic.com/media/de6cdb_df3cf3adbce44d49b39546b5178c459d~mv2.jpg"],
+                "category": category,
+                "images": [image],
                 "in_stock": p.get('is_in_stock', False) or p.get('quantity', 0) > 0,
                 "quantity": p.get('quantity', 0),
                 "sku": p.get('sku'),
                 "wix_url": wix_url,
-                "options": options
+                "handle": handle,
+                "variants": variants if variants else None
             }
             
     except HTTPException:
