@@ -819,6 +819,247 @@ async def get_categories():
     ]
     return categories
 
+# ==================== SKU MIGRATION ENDPOINTS ====================
+
+def extract_color_info_for_sku(name: str) -> tuple:
+    """Extraire le code couleur et le nom de couleur du nom du produit"""
+    if not name:
+        return '', ''
+    
+    # Pattern pour trouver #CODE dans le nom
+    code_match = re.search(r'#([A-Za-z0-9/]+)', name)
+    color_code = code_match.group(1) if code_match else ''
+    
+    base_lower = name.lower()
+    detected_color = ''
+    
+    # Chercher dans le nom - ordre de priorité
+    if 'noir' in base_lower or 'black' in base_lower or 'ébène' in base_lower or 'jet' in base_lower:
+        if 'doux' in base_lower:
+            detected_color = 'noir-doux'
+        else:
+            detected_color = 'noir-ebene'
+    elif 'mystère' in base_lower or 'mystere' in base_lower:
+        detected_color = 'brun-mystere'
+    elif 'châtaigne' in base_lower or 'chataigne' in base_lower:
+        detected_color = 'brun-chataigne'
+    elif 'chocolat' in base_lower:
+        detected_color = 'chocolat-noir'
+    elif 'cacao' in base_lower:
+        detected_color = 'brun-cacao'
+    elif 'ombré' in base_lower or 'ombre' in base_lower:
+        if 'miel' in base_lower:
+            detected_color = 'ombre-miel'
+        elif 'cendré' in base_lower or 'cendre' in base_lower:
+            detected_color = 'ombre-cendre'
+        else:
+            detected_color = 'ombre'
+    elif 'platine' in base_lower:
+        detected_color = 'blond-platine'
+    elif 'caramel' in base_lower:
+        detected_color = 'blond-caramel'
+    elif 'cendré' in base_lower or 'cendre' in base_lower:
+        detected_color = 'blond-cendre'
+    elif 'blond' in base_lower:
+        detected_color = 'blond'
+    elif 'brun' in base_lower:
+        detected_color = 'brun'
+    elif 'blanc' in base_lower or 'ice' in base_lower or 'ivory' in base_lower or 'polar' in base_lower:
+        detected_color = 'blanc-polaire'
+    elif 'balayage' in base_lower:
+        detected_color = 'balayage'
+    elif 'vénitien' in base_lower or 'venetien' in base_lower:
+        detected_color = 'balayage-venitien'
+    
+    return color_code, detected_color
+
+def generate_standardized_sku(product: dict) -> str:
+    """Générer un SKU standardisé pour un produit
+    Format: {TYPE}{LONGUEUR}{POIDS}-{CODE_COULEUR}-{NOM_COULEUR}
+    Exemple: H20140-613-18A-BLOND-CARAMEL
+    """
+    name = product.get('name') or ''
+    handle = product.get('handle') or ''
+    
+    # Détecter le type de produit
+    handle_lower = handle.lower()
+    if 'halo' in handle_lower or 'everly' in handle_lower:
+        prefix = 'H'
+    elif 'genius' in handle_lower or 'vivian' in handle_lower:
+        prefix = 'G'
+    elif 'bande' in handle_lower or 'aurora' in handle_lower or 'tape' in handle_lower:
+        prefix = 'T'
+    elif 'i-tip' in handle_lower or 'eleanor' in handle_lower:
+        prefix = 'I'
+    else:
+        prefix = 'E'  # Essentiels
+    
+    # Extraire longueur et poids du nom de variante
+    length = ''
+    weight = ''
+    
+    # Pattern: 20" 140 grammes ou 18" 25 grammes
+    variant_match = re.search(r'(\d+)["\'\′]?\s*(\d+)\s*gram', name.lower())
+    if variant_match:
+        length = variant_match.group(1)
+        weight = variant_match.group(2)
+    
+    # Extraire code couleur et nom
+    color_code, color_name = extract_color_info_for_sku(name)
+    
+    # Nettoyer le code couleur (remplacer / par -)
+    clean_code = color_code.replace('/', '-')
+    
+    # Construire le SKU
+    if length and weight:
+        sku = f'{prefix}{length}{weight}-{clean_code}-{color_name}'
+    else:
+        # Produit parent sans variante
+        sku = f'{prefix}-{clean_code}-{color_name}' if clean_code else f'{prefix}-{color_name}'
+    
+    return sku.strip('-').upper()
+
+@api_router.get("/sku/preview")
+async def preview_sku_migration():
+    """Prévisualiser les nouveaux SKUs sans les appliquer"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(f"{LUXURA_API_URL}/products")
+            if response.status_code != 200:
+                raise HTTPException(status_code=502, detail="Unable to fetch products")
+            
+            products = response.json()
+            
+            preview = []
+            for p in products:
+                name = p.get('name') or ''
+                handle = p.get('handle') or ''
+                
+                # Skip products that are not in our categories
+                category = detect_category_from_handle(handle, name)
+                if category is None:
+                    continue
+                
+                old_sku = p.get('sku') or ''
+                new_sku = generate_standardized_sku(p)
+                
+                # Only include if SKU would change
+                if old_sku != new_sku:
+                    preview.append({
+                        "id": p.get('id'),
+                        "name": name[:60],
+                        "old_sku": old_sku or "AUCUN",
+                        "new_sku": new_sku,
+                        "category": category
+                    })
+            
+            return {
+                "total_products": len(products),
+                "products_to_update": len(preview),
+                "preview": preview[:100]  # Limit preview to 100 items
+            }
+            
+    except Exception as e:
+        logger.error(f"Error previewing SKU migration: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/sku/migrate")
+async def migrate_skus(dry_run: bool = True, category: Optional[str] = None):
+    """
+    Migrer les SKUs vers le nouveau format standardisé
+    - dry_run=True: Prévisualise uniquement (par défaut)
+    - dry_run=False: Applique les changements
+    - category: Filtrer par catégorie (genius, halo, tape, i-tip, essentiels)
+    """
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.get(f"{LUXURA_API_URL}/products")
+            if response.status_code != 200:
+                raise HTTPException(status_code=502, detail="Unable to fetch products")
+            
+            products = response.json()
+            
+            results = {
+                "dry_run": dry_run,
+                "total_products": len(products),
+                "updated": [],
+                "skipped": [],
+                "errors": []
+            }
+            
+            for p in products:
+                name = p.get('name') or ''
+                handle = p.get('handle') or ''
+                product_id = p.get('id')
+                
+                # Detect category
+                prod_category = detect_category_from_handle(handle, name)
+                if prod_category is None:
+                    continue
+                
+                # Filter by category if specified
+                if category and prod_category != category:
+                    continue
+                
+                old_sku = p.get('sku') or ''
+                new_sku = generate_standardized_sku(p)
+                
+                # Skip if SKU wouldn't change
+                if old_sku == new_sku:
+                    results["skipped"].append({
+                        "id": product_id,
+                        "name": name[:40],
+                        "reason": "SKU already correct"
+                    })
+                    continue
+                
+                if dry_run:
+                    results["updated"].append({
+                        "id": product_id,
+                        "name": name[:40],
+                        "old_sku": old_sku or "AUCUN",
+                        "new_sku": new_sku
+                    })
+                else:
+                    # Actually update the product
+                    try:
+                        update_response = await client.put(
+                            f"{LUXURA_API_URL}/products/{product_id}",
+                            json={"sku": new_sku}
+                        )
+                        if update_response.status_code == 200:
+                            results["updated"].append({
+                                "id": product_id,
+                                "name": name[:40],
+                                "old_sku": old_sku or "AUCUN",
+                                "new_sku": new_sku,
+                                "status": "SUCCESS"
+                            })
+                        else:
+                            results["errors"].append({
+                                "id": product_id,
+                                "name": name[:40],
+                                "error": f"HTTP {update_response.status_code}"
+                            })
+                    except Exception as e:
+                        results["errors"].append({
+                            "id": product_id,
+                            "name": name[:40],
+                            "error": str(e)
+                        })
+            
+            results["summary"] = {
+                "updated_count": len(results["updated"]),
+                "skipped_count": len(results["skipped"]),
+                "error_count": len(results["errors"])
+            }
+            
+            return results
+            
+    except Exception as e:
+        logger.error(f"Error migrating SKUs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ==================== CART ENDPOINTS ====================
 
 @api_router.get("/cart")
