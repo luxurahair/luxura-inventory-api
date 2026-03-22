@@ -831,12 +831,12 @@ COLOR_CODE_MAPPING = {
     "1B": ("OFF-BLACK", "Noir Soie", "SOLID"),             # Noir naturel soyeux
     
     # ════════════════════ BRUNS LUXUEUX ════════════════════
-    "2": ("ESPRESSO", "Espresso Profond", "SOLID"),        # Brun espresso
+    "2": ("ESPRESSO", "Espresso Intense", "SOLID"),        # Brun espresso
     "DB": ("DARK-MYSTERY", "Nuit Mystère", "SOLID"),       # Brun mystère foncé
-    "DC": ("DARK-CHOCOLATE", "Chocolat Brun", "SOLID"),    # Chocolat tirant brun (pas noir)
-    "CACAO": ("CACAO-VELVET", "Cacao Velours", "SOLID"),   # Brun cacao velouté
-    "CHENGTU": ("ASIAN-SILK", "Soie d'Orient", "SOLID"),   # Brun asiatique soyeux
-    "FOOCHOW": ("ORIENTAL-CASHMERE", "Cachemire Oriental", "SOLID"), # Brun oriental
+    "DC": ("CHOCOLAT-PROFOND", "Chocolat Profond", "SOLID"),  # Brun foncé chocolat - PAS noir!
+    "CACAO": ("CACAO-VELOURS", "Cacao Velours", "SOLID"),   # Brun cacao velouté
+    "CHENGTU": ("SOIE-ORIENT", "Soie d'Orient", "SOLID"),   # Brun asiatique soyeux
+    "FOOCHOW": ("CACHEMIRE-ORIENTAL", "Cachemire Oriental", "SOLID"), # Brun oriental
     
     # ════════════════════ BRUNS CHÂTAIGNE ════════════════════
     "3": ("CHESTNUT", "Châtaigne Naturelle", "SOLID"),     # Châtaigne unie
@@ -857,9 +857,9 @@ COLOR_CODE_MAPPING = {
     "6/6T24": ("CARAMEL-GOLDEN-DIMENSION", "Caramel Soleil", "OMBRE-PIANO"),
     
     # ════════════════════ BLONDS PIANO HARMONISÉ ════════════════════
-    # #18/22 = Ash blonde #18 + Light beige blonde #22 - PAS NOIR!
+    # #18/22 = Ash blonde #18 + Light beige blonde #22 - PAS DE ROSE!
     # Analysé: blend harmonieux de blond cendré et beige doré, effet sun-kissed
-    "18/22": ("ASH-BEIGE-BLEND", "Sable Doré", "PIANO"),
+    "18/22": ("CHAMPAGNE-DORE", "Champagne Doré", "PIANO"),
     
     # ════════════════════ BLONDS PLATINE ════════════════════
     "60A": ("PLATINUM", "Platine Pur", "SOLID"),           # Platine glacé
@@ -868,8 +868,8 @@ COLOR_CODE_MAPPING = {
     "613/18A": ("PLATINUM-BALAYAGE", "Diamant Glacé", "BALAYAGE"),
     
     # ════════════════════ BLANCS PRÉCIEUX ════════════════════
-    "IVORY": ("IVORY-PRECIOUS", "Ivoire Précieux", "SOLID"), # Blanc ivoire
-    "ICW": ("ICE-WHITE", "Ice White", "SOLID"),              # Blanc glacé (Ice White)
+    "IVORY": ("IVOIRE-PRECIEUX", "Ivoire Précieux", "SOLID"), # Blanc ivoire
+    "ICW": ("CRISTAL-POLAIRE", "Cristal Polaire", "SOLID"),   # Blanc glacé polaire
     
     # ════════════════════ OMBRÉS SIGNATURE ════════════════════
     "CB": ("HONEY-OMBRE", "Miel Sauvage Ombré", "OMBRE"),    # Ombré miel naturel
@@ -880,10 +880,10 @@ COLOR_CODE_MAPPING = {
     # ════════════════════ ESPRESSO DIMENSION ════════════════════
     "2BTP18/1006": ("ESPRESSO-LUMINOUS", "Espresso Lumière", "OMBRE-PIANO"),
     
-    # ════════════════════ VÉNITIEN MULTI-DIMENSIONNEL ════════════════════
+    # ════════════════════ VÉNITIEN SIGNATURE ════════════════════
     # #T14/P14/24 = Ombré #14 (dark blonde) + Piano #14/#24 (ash + golden blonde)
-    # Analysé: Blend sophistiqué ash blonde + golden blonde, effet piano avec gradient subtil
-    "T14/P14/24": ("VENETIAN-MULTI-DIMENSION", "Toscane Dorée", "OMBRE-PIANO"),
+    # Analysé: Blend sophistiqué multi-dimensionnel, ombré subtil avec piano highlights
+    "T14/P14/24": ("VENISE-DOREE", "Venise Dorée", "OMBRE-PIANO"),
 }
 
 def get_color_info_from_code(color_code: str) -> tuple:
