@@ -4,13 +4,13 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
   Alert,
   Linking,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -140,7 +140,7 @@ export default function ProductScreen() {
           <Image
             source={{ uri: product.images[selectedImageIndex] || product.images[0] }}
             style={styles.mainImage}
-            resizeMode="cover"
+            contentFit="cover"
           />
           {!product.in_stock && (
             <View style={styles.outOfStockOverlay}>
@@ -161,7 +161,7 @@ export default function ProductScreen() {
                   selectedImageIndex === index && styles.thumbnailActive,
                 ]}
               >
-                <Image source={{ uri: image }} style={styles.thumbnailImage} resizeMode="cover" />
+                <Image source={{ uri: image }} style={styles.thumbnailImage} contentFit="cover" />
               </TouchableOpacity>
             ))}
           </ScrollView>

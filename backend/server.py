@@ -4,6 +4,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import re
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
@@ -132,6 +133,19 @@ def detect_category_from_handle(handle: str, name: str) -> str:
         return 'halo'  # Ponytails go with Halo category
     
     return 'essentiels'
+
+def clean_html(text: str) -> str:
+    """Remove HTML tags and clean up description text"""
+    if not text:
+        return ""
+    # Remove HTML tags
+    clean = re.sub(r'<[^>]+>', '', text)
+    # Replace HTML entities
+    clean = clean.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+    clean = clean.replace('&#39;', "'").replace('&quot;', '"')
+    # Remove extra whitespace
+    clean = re.sub(r'\s+', ' ', clean).strip()
+    return clean
 
 # Wix product images mapping - scraped from luxuradistribution.com categories
 # Format: partial_handle -> image_url (400x400 optimized)
@@ -464,7 +478,7 @@ async def get_products(
                     "id": p.get('id'),
                     "name": clean_name,
                     "price": p.get('price', 0),
-                    "description": p.get('description', ''),
+                    "description": clean_html(p.get('description', '')),
                     "category": product_category,
                     "images": [image],
                     "in_stock": data['any_in_stock'],
@@ -535,7 +549,7 @@ async def get_product(product_id: int):
                 "id": p.get('id'),
                 "name": clean_name,
                 "price": p.get('price', 0),
-                "description": p.get('description', ''),
+                "description": clean_html(p.get('description', '')),
                 "category": category,
                 "images": [image],
                 "in_stock": p.get('is_in_stock', False) or p.get('quantity', 0) > 0,

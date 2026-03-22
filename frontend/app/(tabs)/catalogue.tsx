@@ -10,9 +10,9 @@ import {
   RefreshControl,
   Dimensions,
   FlatList,
-  Image,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -95,7 +95,7 @@ export default function CatalogueScreen() {
         <Image
           source={{ uri: product.images?.[0] }}
           style={styles.productImage}
-          resizeMode="cover"
+          contentFit="cover"
         />
         {!product.in_stock && (
           <View style={styles.badge}>
