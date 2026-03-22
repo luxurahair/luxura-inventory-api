@@ -1,288 +1,486 @@
-# Luxura Distribution - Real Playwright Backlink Automation
-# Actually submits to directories with human-like behavior
+# Luxura Distribution - FULL Backlink Automation with Email Verification
+# Handles form submission, CAPTCHA attempts, and email verification
 
 import asyncio
 import random
 import os
+import re
 from datetime import datetime
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
+from dotenv import load_dotenv
 
-# ==================== LUXURA BUSINESS INFO ====================
+load_dotenv("/app/backend/.env")
+
+# ==================== CONFIGURATION ====================
 
 BUSINESS = {
     "name": "Luxura Distribution",
     "name_full": "Luxura Distribution Inc.",
     "description": "Importateur et distributeur direct d'extensions capillaires professionnelles au Québec. Qualité salon haut de gamme. Plus de 30 salons partenaires.",
-    "description_long": "Luxura Distribution est un importateur et distributeur direct d'extensions capillaires professionnelles au Québec. Notre mission est d'offrir aux salons un approvisionnement fiable, constant et transparent. Extensions Genius Weft, Tape-in, Halo et plus. Qualité Remy Hair 100% naturels.",
     "address": "1887, 83e Rue",
     "city": "St-Georges",
     "province": "Québec",
-    "province_abbr": "QC",
+    "province_abbr": "QC", 
     "postal_code": "G6A 1M9",
     "country": "Canada",
     "full_address": "1887, 83e Rue, St-Georges, QC G6A 1M9, Canada",
     "phone": "(418) 222-3939",
     "phone_clean": "4182223939",
-    "email": "info@luxuradistribution.com",
+    "email": os.getenv("LUXURA_EMAIL", "info@luxuradistribution.com"),
+    "password": os.getenv("LUXURA_PASSWORD", ""),
+    "password_alt": os.getenv("LUXURA_PASSWORD_ALT", ""),
     "website": "https://www.luxuradistribution.com",
-    "categories": ["Extensions capillaires", "Produits coiffure", "Distributeur beauté", "Hair Extensions"],
-    "keywords": "extensions cheveux, rallonges capillaires, genius weft, tape-in, salon professionnel, québec"
+    "category": "Hair Extensions / Extensions capillaires",
 }
 
 SCREENSHOTS_DIR = "/tmp/backlinks"
+os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
+
+# ==================== HELPERS ====================
 
 async def human_delay(min_sec=1.0, max_sec=3.0):
     await asyncio.sleep(random.uniform(min_sec, max_sec))
 
-async def human_type(page, selector, text):
-    """Type like a human"""
-    await page.click(selector)
-    await human_delay(0.2, 0.5)
+async def human_type(element, text, delay_range=(30, 80)):
+    """Type like a human with variable speed"""
     for char in text:
-        await page.type(selector, char, delay=random.randint(30, 80))
-    await human_delay(0.3, 0.7)
+        await element.type(char, delay=random.randint(*delay_range))
+    await human_delay(0.2, 0.5)
+
+async def safe_click(page, selector, timeout=5000):
+    """Safely click an element if it exists"""
+    try:
+        elem = await page.wait_for_selector(selector, timeout=timeout)
+        if elem:
+            await elem.click()
+            return True
+    except:
+        pass
+    return False
+
+async def safe_fill(page, selector, text, timeout=5000):
+    """Safely fill a field if it exists"""
+    try:
+        elem = await page.wait_for_selector(selector, timeout=timeout)
+        if elem:
+            await elem.click()
+            await human_delay(0.2, 0.4)
+            await elem.fill("")  # Clear first
+            await human_type(elem, text)
+            return True
+    except:
+        pass
+    return False
 
 async def save_screenshot(page, name):
     """Save screenshot with timestamp"""
-    os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
     filename = f"{SCREENSHOTS_DIR}/{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-    await page.screenshot(path=filename)
-    print(f"📸 Screenshot saved: {filename}")
+    await page.screenshot(path=filename, full_page=False)
+    print(f"📸 {filename}")
     return filename
+
+async def try_solve_checkbox_captcha(page):
+    """Try to solve simple checkbox CAPTCHA (reCAPTCHA v2 checkbox)"""
+    try:
+        # Look for reCAPTCHA iframe
+        frames = page.frames
+        for frame in frames:
+            if "recaptcha" in frame.url:
+                # Try to click the checkbox
+                checkbox = await frame.query_selector(".recaptcha-checkbox-border")
+                if checkbox:
+                    await checkbox.click()
+                    await human_delay(2, 4)
+                    print("✅ Clicked reCAPTCHA checkbox")
+                    return True
+    except Exception as e:
+        print(f"⚠️ CAPTCHA attempt: {e}")
+    return False
+
+# ==================== EMAIL VERIFICATION ====================
+
+async def check_email_for_verification(page, context):
+    """Login to email and look for verification links"""
+    print("\n📧 CHECKING EMAIL FOR VERIFICATION LINKS...")
+    
+    email = BUSINESS["email"]
+    passwords = [BUSINESS["password"], BUSINESS["password_alt"]]
+    
+    verification_links = []
+    
+    try:
+        # Try to login to webmail
+        # First try Outlook/Hotmail style
+        await page.goto("https://outlook.live.com/owa/", timeout=30000)
+        await human_delay(2, 3)
+        
+        # Check if it's a custom domain email - might use different provider
+        if "@luxuradistribution.com" in email:
+            # Try common webmail providers for custom domains
+            webmail_urls = [
+                f"https://mail.luxuradistribution.com",
+                f"https://webmail.luxuradistribution.com", 
+                "https://mail.google.com",  # If using Google Workspace
+            ]
+            
+            for url in webmail_urls:
+                try:
+                    await page.goto(url, timeout=10000)
+                    await human_delay(1, 2)
+                    await save_screenshot(page, "email_login_attempt")
+                    
+                    # Look for login form
+                    email_field = await page.query_selector('input[type="email"], input[name="email"], input[name="username"], #email, #username')
+                    if email_field:
+                        await email_field.fill(email)
+                        await human_delay(0.5, 1)
+                        
+                        # Look for password field
+                        pass_field = await page.query_selector('input[type="password"], input[name="password"], #password')
+                        if pass_field:
+                            for pwd in passwords:
+                                if pwd:
+                                    await pass_field.fill(pwd)
+                                    await human_delay(0.5, 1)
+                                    
+                                    # Try to submit
+                                    submit = await page.query_selector('button[type="submit"], input[type="submit"], .login-btn, #login')
+                                    if submit:
+                                        await submit.click()
+                                        await human_delay(3, 5)
+                                        await save_screenshot(page, "email_after_login")
+                                        
+                                        # Check if logged in
+                                        content = await page.content()
+                                        if "inbox" in content.lower() or "boîte" in content.lower():
+                                            print("✅ Email login successful!")
+                                            
+                                            # Look for verification emails
+                                            # Search for recent emails with "verify", "confirm", "activation"
+                                            links = await page.query_selector_all('a[href*="verify"], a[href*="confirm"], a[href*="activate"]')
+                                            for link in links:
+                                                href = await link.get_attribute("href")
+                                                if href:
+                                                    verification_links.append(href)
+                                            
+                                            break
+                        break
+                except Exception as e:
+                    print(f"⚠️ Webmail {url}: {e}")
+                    continue
+        
+        await save_screenshot(page, "email_final")
+        
+    except Exception as e:
+        print(f"❌ Email check error: {e}")
+    
+    return verification_links
 
 # ==================== DIRECTORY SUBMISSIONS ====================
 
 async def submit_hotfrog(page):
-    """Submit to Hotfrog Canada"""
-    print("\n🔥 HOTFROG CANADA")
+    """Submit to Hotfrog Canada with full form fill"""
+    print("\n🔥 HOTFROG CANADA - Full Submission")
+    result = {"directory": "Hotfrog", "status": "started", "fields_filled": []}
+    
     try:
         await page.goto("https://www.hotfrog.ca/add-a-business", timeout=30000)
         await human_delay(2, 4)
-        await save_screenshot(page, "hotfrog_1_landing")
+        await save_screenshot(page, "hotfrog_01_landing")
         
-        # Look for form fields
-        selectors_tried = []
+        # Common field selectors to try
+        field_mappings = [
+            ('input[name="businessName"], input[name="company"], #businessName, #company', BUSINESS["name"]),
+            ('input[name="address"], input[name="street"], #address, #street', BUSINESS["full_address"]),
+            ('input[name="city"], #city', BUSINESS["city"]),
+            ('input[name="state"], input[name="province"], #state, #province', BUSINESS["province"]),
+            ('input[name="zip"], input[name="postalCode"], #zip, #postalCode', BUSINESS["postal_code"]),
+            ('input[name="phone"], input[name="telephone"], #phone', BUSINESS["phone"]),
+            ('input[name="email"], #email', BUSINESS["email"]),
+            ('input[name="website"], input[name="url"], #website', BUSINESS["website"]),
+            ('textarea[name="description"], #description', BUSINESS["description"]),
+        ]
         
-        # Try common field names
-        for name_sel in ['input[name="businessName"]', 'input[name="company"]', 'input[name="name"]', '#businessName', '#company-name']:
-            try:
-                if await page.is_visible(name_sel, timeout=2000):
-                    await human_type(page, name_sel, BUSINESS["name"])
-                    selectors_tried.append(f"✅ {name_sel}")
+        for selectors, value in field_mappings:
+            for selector in selectors.split(", "):
+                if await safe_fill(page, selector, value, timeout=2000):
+                    result["fields_filled"].append(selector)
                     break
-            except:
-                selectors_tried.append(f"❌ {name_sel}")
         
         await human_delay(1, 2)
-        await save_screenshot(page, "hotfrog_2_form")
+        await save_screenshot(page, "hotfrog_02_filled")
         
-        return {"status": "visited", "selectors": selectors_tried, "url": page.url}
+        # Try to handle CAPTCHA
+        await try_solve_checkbox_captcha(page)
+        
+        # Look for submit button
+        submit_clicked = await safe_click(page, 'button[type="submit"], input[type="submit"], .submit-btn, #submit')
+        if submit_clicked:
+            await human_delay(3, 5)
+            await save_screenshot(page, "hotfrog_03_submitted")
+            result["status"] = "submitted"
+        else:
+            result["status"] = "form_filled"
+        
+        result["url"] = page.url
         
     except Exception as e:
+        result["status"] = "error"
+        result["error"] = str(e)
         print(f"❌ Hotfrog error: {e}")
-        return {"status": "error", "error": str(e)}
+    
+    return result
 
 async def submit_cylex(page):
     """Submit to Cylex Canada"""
-    print("\n🔥 CYLEX CANADA")
+    print("\n🔥 CYLEX CANADA - Full Submission")
+    result = {"directory": "Cylex", "status": "started", "fields_filled": []}
+    
     try:
         await page.goto("https://www.cylex.ca/add-company", timeout=30000)
         await human_delay(2, 4)
-        await save_screenshot(page, "cylex_1_landing")
+        await save_screenshot(page, "cylex_01_landing")
         
-        # Check if there's a form
-        content = await page.content()
-        has_form = "form" in content.lower()
+        # Try to fill form fields
+        field_mappings = [
+            ('#company_name, input[name="company_name"]', BUSINESS["name"]),
+            ('#street, input[name="street"]', BUSINESS["address"]),
+            ('#city, input[name="city"]', BUSINESS["city"]),
+            ('#zip, input[name="zip"]', BUSINESS["postal_code"]),
+            ('#phone, input[name="phone"]', BUSINESS["phone"]),
+            ('#email, input[name="email"]', BUSINESS["email"]),
+            ('#website, input[name="website"]', BUSINESS["website"]),
+        ]
+        
+        for selector, value in field_mappings:
+            if await safe_fill(page, selector, value, timeout=2000):
+                result["fields_filled"].append(selector)
         
         await human_delay(1, 2)
-        await save_screenshot(page, "cylex_2_page")
+        await save_screenshot(page, "cylex_02_filled")
         
-        return {"status": "visited", "has_form": has_form, "url": page.url}
+        # Try submit
+        if await safe_click(page, 'button[type="submit"], input[type="submit"], .submit'):
+            await human_delay(3, 5)
+            await save_screenshot(page, "cylex_03_submitted")
+            result["status"] = "submitted"
+        else:
+            result["status"] = "form_filled"
+        
+        result["url"] = page.url
         
     except Exception as e:
-        print(f"❌ Cylex error: {e}")
-        return {"status": "error", "error": str(e)}
+        result["status"] = "error"
+        result["error"] = str(e)
+    
+    return result
 
 async def submit_yelp(page):
     """Submit to Yelp Business"""
-    print("\n🔥 YELP BUSINESS")
+    print("\n🔥 YELP BUSINESS - Attempting Submission")
+    result = {"directory": "Yelp", "status": "started"}
+    
     try:
-        await page.goto("https://business.yelp.ca/", timeout=30000)
+        await page.goto("https://biz.yelp.ca/signup_business/new", timeout=30000)
         await human_delay(2, 4)
-        await save_screenshot(page, "yelp_1_landing")
+        await save_screenshot(page, "yelp_01_landing")
         
-        # Look for claim/add business button
-        buttons = await page.query_selector_all("a, button")
-        claim_found = False
-        for btn in buttons[:20]:
-            text = await btn.inner_text()
-            if any(word in text.lower() for word in ["claim", "add", "get started", "commencer"]):
-                claim_found = True
-                break
+        # Yelp has strong bot detection, try basic fill
+        # Look for business name field
+        if await safe_fill(page, 'input[name="business_name"], #business-name', BUSINESS["name"]):
+            result["fields_filled"] = ["business_name"]
         
-        await save_screenshot(page, "yelp_2_page")
+        await human_delay(1, 2)
+        await save_screenshot(page, "yelp_02_attempt")
         
-        return {"status": "visited", "claim_button_found": claim_found, "url": page.url}
+        # Yelp likely needs manual completion due to strong verification
+        result["status"] = "needs_manual"
+        result["note"] = "Yelp has strong bot detection - may need manual completion"
+        result["url"] = page.url
         
     except Exception as e:
-        print(f"❌ Yelp error: {e}")
-        return {"status": "error", "error": str(e)}
-
-async def submit_pages_jaunes(page):
-    """Submit to Pages Jaunes Canada"""
-    print("\n🔥 PAGES JAUNES CANADA")
-    try:
-        await page.goto("https://www.pagesjaunes.ca/", timeout=30000)
-        await human_delay(2, 4)
-        await save_screenshot(page, "pagesjaunes_1_landing")
-        
-        # Search for Luxura to see if already listed
-        search_box = await page.query_selector('input[type="search"], input[name="q"], input[placeholder*="Search"]')
-        if search_box:
-            await search_box.type(BUSINESS["name"], delay=50)
-            await human_delay(0.5, 1)
-        
-        await save_screenshot(page, "pagesjaunes_2_search")
-        
-        return {"status": "visited", "url": page.url}
-        
-    except Exception as e:
-        print(f"❌ Pages Jaunes error: {e}")
-        return {"status": "error", "error": str(e)}
-
-async def submit_411(page):
-    """Submit to 411.ca"""
-    print("\n🔥 411.CA")
-    try:
-        await page.goto("https://www.411.ca/", timeout=30000)
-        await human_delay(2, 4)
-        await save_screenshot(page, "411_1_landing")
-        
-        # Look for business listing options
-        links = await page.query_selector_all("a")
-        add_business = False
-        for link in links[:30]:
-            try:
-                text = await link.inner_text()
-                href = await link.get_attribute("href")
-                if any(word in text.lower() for word in ["add", "business", "claim"]):
-                    add_business = True
-                    break
-            except:
-                pass
-        
-        await save_screenshot(page, "411_2_page")
-        
-        return {"status": "visited", "add_business_found": add_business, "url": page.url}
-        
-    except Exception as e:
-        print(f"❌ 411.ca error: {e}")
-        return {"status": "error", "error": str(e)}
+        result["status"] = "error"
+        result["error"] = str(e)
+    
+    return result
 
 async def submit_canpages(page):
     """Submit to Canpages"""
-    print("\n🔥 CANPAGES")
+    print("\n🔥 CANPAGES - Submission")
+    result = {"directory": "Canpages", "status": "started"}
+    
     try:
         await page.goto("https://www.canpages.ca/", timeout=30000)
         await human_delay(2, 4)
-        await save_screenshot(page, "canpages_1_landing")
+        await save_screenshot(page, "canpages_01_landing")
         
-        await save_screenshot(page, "canpages_2_page")
+        # Look for add business link
+        add_links = await page.query_selector_all('a')
+        for link in add_links:
+            try:
+                text = await link.inner_text()
+                if any(word in text.lower() for word in ["add", "claim", "business", "list"]):
+                    href = await link.get_attribute("href")
+                    result["add_business_link"] = href
+                    await link.click()
+                    await human_delay(2, 3)
+                    await save_screenshot(page, "canpages_02_add_page")
+                    break
+            except:
+                continue
         
-        return {"status": "visited", "url": page.url}
+        result["status"] = "visited"
+        result["url"] = page.url
         
     except Exception as e:
-        print(f"❌ Canpages error: {e}")
-        return {"status": "error", "error": str(e)}
+        result["status"] = "error"
+        result["error"] = str(e)
+    
+    return result
 
-async def check_google_mybusiness(page):
-    """Check Google My Business status"""
-    print("\n🔥 GOOGLE MY BUSINESS CHECK")
+async def submit_iglobal(page):
+    """Submit to iGlobal"""
+    print("\n🔥 IGLOBAL - Submission")
+    result = {"directory": "iGlobal", "status": "started", "fields_filled": []}
+    
     try:
-        # Search for Luxura on Google Maps
-        await page.goto("https://www.google.com/maps/search/Luxura+Distribution+St-Georges+Quebec", timeout=30000)
-        await human_delay(3, 5)
-        await save_screenshot(page, "google_maps_1_search")
+        await page.goto("https://ca.iglobal.co/register", timeout=30000)
+        await human_delay(2, 4)
+        await save_screenshot(page, "iglobal_01_landing")
         
-        # Check if business appears
-        content = await page.content()
-        listed = "luxura" in content.lower()
+        # Try to fill registration form
+        if await safe_fill(page, 'input[name="company"], #company', BUSINESS["name"]):
+            result["fields_filled"].append("company")
+        if await safe_fill(page, 'input[name="email"], #email', BUSINESS["email"]):
+            result["fields_filled"].append("email")
+        if await safe_fill(page, 'input[type="password"], #password', BUSINESS["password"]):
+            result["fields_filled"].append("password")
         
-        await save_screenshot(page, "google_maps_2_results")
+        await human_delay(1, 2)
+        await save_screenshot(page, "iglobal_02_filled")
         
-        return {"status": "visited", "possibly_listed": listed, "url": page.url}
+        result["status"] = "form_filled"
+        result["url"] = page.url
         
     except Exception as e:
-        print(f"❌ Google Maps error: {e}")
-        return {"status": "error", "error": str(e)}
+        result["status"] = "error"
+        result["error"] = str(e)
+    
+    return result
+
+async def submit_411(page):
+    """Submit to 411.ca"""
+    print("\n🔥 411.CA - Submission")
+    result = {"directory": "411.ca", "status": "started"}
+    
+    try:
+        await page.goto("https://www.411.ca/", timeout=30000)
+        await human_delay(2, 4)
+        await save_screenshot(page, "411_01_landing")
+        
+        # Search for existing listing first
+        search_box = await page.query_selector('input[type="search"], input[name="q"], #search')
+        if search_box:
+            await search_box.fill(BUSINESS["name"])
+            await human_delay(1, 2)
+            
+            # Submit search
+            await page.keyboard.press("Enter")
+            await human_delay(2, 3)
+            await save_screenshot(page, "411_02_search_results")
+        
+        result["status"] = "searched"
+        result["url"] = page.url
+        
+    except Exception as e:
+        result["status"] = "error"
+        result["error"] = str(e)
+    
+    return result
 
 # ==================== MAIN RUNNER ====================
 
-async def main():
-    print("=" * 60)
-    print("🚀 LUXURA DISTRIBUTION - BACKLINK AUTOMATION")
-    print("=" * 60)
+async def run_full_automation():
+    """Run complete backlink automation with email verification"""
+    print("=" * 70)
+    print("🚀 LUXURA DISTRIBUTION - FULL BACKLINK AUTOMATION")
+    print("=" * 70)
     print(f"Business: {BUSINESS['name']}")
-    print(f"Address: {BUSINESS['full_address']}")
+    print(f"Email: {BUSINESS['email']}")
     print(f"Website: {BUSINESS['website']}")
-    print("=" * 60)
+    print("=" * 70)
     
-    results = {}
+    all_results = {}
     
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=True,
-            args=['--no-sandbox', '--disable-dev-shm-usage']
+            args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled']
         )
         
         context = await browser.new_context(
             viewport={"width": 1920, "height": 1080},
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-            locale="fr-CA"
+            locale="fr-CA",
+            timezone_id="America/Toronto"
         )
+        
+        # Add some cookies to look more human
+        await context.add_cookies([
+            {"name": "visited", "value": "true", "domain": ".hotfrog.ca", "path": "/"},
+            {"name": "visited", "value": "true", "domain": ".cylex.ca", "path": "/"},
+        ])
         
         page = await context.new_page()
         
-        # Run submissions
-        directories = [
-            ("google_maps", check_google_mybusiness),
-            ("hotfrog", submit_hotfrog),
-            ("cylex", submit_cylex),
-            ("yelp", submit_yelp),
-            ("pages_jaunes", submit_pages_jaunes),
+        # Run all submissions
+        submissions = [
+            ("Hotfrog", submit_hotfrog),
+            ("Cylex", submit_cylex),
+            ("iGlobal", submit_iglobal),
             ("411", submit_411),
-            ("canpages", submit_canpages),
+            ("Canpages", submit_canpages),
+            ("Yelp", submit_yelp),
         ]
         
-        for name, func in directories:
+        for name, func in submissions:
             try:
-                results[name] = await func(page)
-                await human_delay(2, 5)  # Wait between sites
+                print(f"\n{'='*50}")
+                all_results[name] = await func(page)
+                await human_delay(3, 6)  # Longer delay between sites
             except Exception as e:
-                results[name] = {"status": "error", "error": str(e)}
+                all_results[name] = {"status": "error", "error": str(e)}
+        
+        # Check email for verification links
+        print(f"\n{'='*50}")
+        verification_links = await check_email_for_verification(page, context)
+        all_results["email_verification"] = {
+            "links_found": len(verification_links),
+            "links": verification_links[:5]  # First 5 links
+        }
         
         await browser.close()
     
-    # Print summary
-    print("\n" + "=" * 60)
-    print("📊 RÉSUMÉ DES SOUMISSIONS")
-    print("=" * 60)
+    # Print final summary
+    print("\n" + "=" * 70)
+    print("📊 RÉSUMÉ FINAL - SOUMISSIONS BACKLINKS")
+    print("=" * 70)
     
-    for name, result in results.items():
+    for name, result in all_results.items():
         status = result.get("status", "unknown")
-        icon = "✅" if status == "visited" else "❌"
-        print(f"{icon} {name}: {status}")
+        fields = len(result.get("fields_filled", []))
+        icon = "✅" if status in ["submitted", "form_filled"] else "⚠️" if status == "visited" else "❌"
+        print(f"{icon} {name}: {status}" + (f" ({fields} fields)" if fields else ""))
         if result.get("error"):
-            print(f"   └── Error: {result['error'][:50]}")
+            print(f"   └── Error: {result['error'][:60]}")
     
-    # List screenshots
-    print("\n📸 SCREENSHOTS GÉNÉRÉES:")
-    if os.path.exists(SCREENSHOTS_DIR):
-        for f in sorted(os.listdir(SCREENSHOTS_DIR)):
-            print(f"   - {f}")
+    # List all screenshots
+    print(f"\n📸 SCREENSHOTS ({len(os.listdir(SCREENSHOTS_DIR))} files):")
+    for f in sorted(os.listdir(SCREENSHOTS_DIR))[-10:]:  # Last 10
+        print(f"   - {f}")
     
-    return results
+    return all_results
 
 if __name__ == "__main__":
-    results = asyncio.run(main())
-    print("\n✅ Automation complete!")
+    results = asyncio.run(run_full_automation())
+    print("\n✅ Full automation complete!")
