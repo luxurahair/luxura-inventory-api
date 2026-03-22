@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for Luxura Distribution
-Tests all backend endpoints to verify functionality
+Backend Testing Suite for Luxura Distribution
+Tests backend APIs AND Playwright backlink automation system
 """
 
 import requests
 import json
 import sys
+import asyncio
+import os
 from datetime import datetime
+from pathlib import Path
+
+# Add backend to path for backlink automation testing
+sys.path.append('/app/backend')
 
 # Base URL for the API
 BASE_URL = "https://hair-extensions-shop.preview.emergentagent.com/api"
@@ -332,21 +338,213 @@ class LuxuraAPITester:
         self.test_cart_unauthorized()
         self.test_auth_endpoints()
         
-        # Summary
-        print("\n" + "=" * 80)
-        print("📊 TEST SUMMARY")
-        print("=" * 80)
-        print(f"Total Tests: {self.total_tests}")
-        print(f"Passed: {self.passed_tests}")
-        print(f"Failed: {self.total_tests - self.passed_tests}")
-        print(f"Success Rate: {(self.passed_tests / self.total_tests * 100):.1f}%")
+    def test_backlink_automation_system(self):
+        """Test the Playwright backlink automation system"""
+        print("\n🔗 TESTING BACKLINK AUTOMATION SYSTEM")
+        print("-" * 40)
         
-        # Failed tests details
-        failed_tests = [r for r in self.results if not r["success"]]
-        if failed_tests:
-            print(f"\n❌ FAILED TESTS ({len(failed_tests)}):")
-            for test in failed_tests:
-                print(f"  - {test['test']}: {test['message']}")
+        # Test 1: Import backlink automation module
+        try:
+            from backlink_automation import (
+                LUXURA_BUSINESS, 
+                DIRECTORIES, 
+                run_backlink_automation,
+                get_business_info,
+                get_directories_list
+            )
+            self.log_result("Backlink Module Import", True, "Successfully imported backlink automation module")
+            
+            # Test business info
+            business_info = get_business_info()
+            if business_info.get("company_name") == "Luxura Distribution":
+                self.log_result("Business Info Validation", True, "Business info correctly configured")
+            else:
+                self.log_result("Business Info Validation", False, "Business info missing or incorrect")
+            
+            # Test directories list
+            directories = get_directories_list()
+            if len(directories) >= 5:
+                self.log_result("Directories List", True, f"Found {len(directories)} target directories")
+                
+                # Check for required directories from review request
+                required_dirs = ["Hotfrog Canada", "Cylex Canada", "iGlobal.co", "Canpages", "Yelp Canada"]
+                found_dirs = [d.get("name", "") for d in directories]
+                missing_dirs = [d for d in required_dirs if d not in found_dirs]
+                
+                if not missing_dirs:
+                    self.log_result("Required Directories", True, "All required directories are configured")
+                else:
+                    self.log_result("Required Directories", False, f"Missing directories: {', '.join(missing_dirs)}")
+            else:
+                self.log_result("Directories List", False, f"Only {len(directories)} directories found, expected at least 5")
+                
+        except ImportError as e:
+            self.log_result("Backlink Module Import", False, f"Cannot import backlink automation: {str(e)}")
+            return
+        except Exception as e:
+            self.log_result("Backlink Module Import", False, f"Error testing backlink module: {str(e)}")
+            return
+        
+        # Test 2: Playwright dependency
+        try:
+            import playwright
+            self.log_result("Playwright Dependency", True, "Playwright is installed")
+        except ImportError:
+            self.log_result("Playwright Dependency", False, "Playwright is not installed - required for automation")
+        
+        # Test 3: Screenshot directory
+        try:
+            screenshot_dir = Path("/tmp/backlinks")
+            screenshot_dir.mkdir(exist_ok=True)
+            test_file = screenshot_dir / "test_write.txt"
+            test_file.write_text("test")
+            test_file.unlink()
+            self.log_result("Screenshot Directory", True, f"Screenshot directory is ready and writable")
+        except Exception as e:
+            self.log_result("Screenshot Directory", False, f"Cannot create screenshot directory: {str(e)}")
+        
+        # Test 4: Business info completeness
+        required_fields = ["company_name", "full_address", "phone", "email", "website", "description_short"]
+        missing_fields = [field for field in required_fields if not business_info.get(field)]
+        
+        if not missing_fields:
+            self.log_result("Business Info Completeness", True, "All required business fields are present")
+        else:
+            self.log_result("Business Info Completeness", False, f"Missing fields: {', '.join(missing_fields)}")
+        
+        # Test 5: Automation functions exist
+        try:
+            from backlink_automation import submit_to_hotfrog, submit_to_cylex, human_delay, human_type
+            functions = ["submit_to_hotfrog", "submit_to_cylex", "human_delay", "human_type"]
+            all_callable = all(callable(eval(func)) for func in functions)
+            
+            if all_callable:
+                self.log_result("Automation Functions", True, "All automation functions are properly defined")
+            else:
+                self.log_result("Automation Functions", False, "Some automation functions are missing or not callable")
+        except Exception as e:
+            self.log_result("Automation Functions", False, f"Error checking automation functions: {str(e)}")
+
+    def test_seo_backlink_endpoints(self):
+        """Test SEO and backlink-related API endpoints"""
+        print("\n🔍 TESTING SEO & BACKLINK ENDPOINTS")
+        print("-" * 40)
+        
+        # Test backlink opportunities endpoint
+        try:
+            response = self.session.get(f"{BASE_URL}/seo/backlink-opportunities")
+            if response.status_code == 200:
+                data = response.json()
+                if "directories_quebec" in data and "salon_partnerships" in data:
+                    self.log_result("Backlink Opportunities API", True, f"Returns backlink strategy with {len(data)} sections")
+                else:
+                    self.log_result("Backlink Opportunities API", False, "Missing expected backlink data sections")
+            else:
+                self.log_result("Backlink Opportunities API", False, f"HTTP {response.status_code}")
+        except Exception as e:
+            self.log_result("Backlink Opportunities API", False, f"Error: {str(e)}")
+        
+        # Test business info endpoint
+        try:
+            response = self.session.get(f"{BASE_URL}/seo/luxura-business-info")
+            if response.status_code == 200:
+                data = response.json()
+                if "company" in data and data.get("company", {}).get("name") == "Luxura Distribution":
+                    self.log_result("Business Info API", True, "Returns correct Luxura business information")
+                else:
+                    self.log_result("Business Info API", False, "Business info API returns incorrect data")
+            else:
+                self.log_result("Business Info API", False, f"HTTP {response.status_code}")
+        except Exception as e:
+            self.log_result("Business Info API", False, f"Error: {str(e)}")
+        
+        # Test SEO stats endpoint
+        try:
+            response = self.session.get(f"{BASE_URL}/seo/stats")
+            if response.status_code == 200:
+                data = response.json()
+                if "total_blog_posts" in data:
+                    self.log_result("SEO Stats API", True, f"Returns SEO statistics with {data.get('total_blog_posts', 0)} blog posts")
+                else:
+                    self.log_result("SEO Stats API", False, "SEO stats missing expected data")
+            else:
+                self.log_result("SEO Stats API", False, f"HTTP {response.status_code}")
+        except Exception as e:
+            self.log_result("SEO Stats API", False, f"Error: {str(e)}")
+
+    def run_all_tests(self):
+        """Run all tests including backlink automation"""
+        print("🚀 Starting Luxura Distribution Complete Testing Suite")
+        print("=" * 60)
+        
+        # Core API Tests
+        print("\n📡 TESTING CORE APIs")
+        print("-" * 30)
+        self.test_health_check()
+        self.test_products_list()
+        self.test_single_product()
+        self.test_product_category_filter()
+        self.test_categories_list()
+        self.test_blog_list()
+        self.test_single_blog_post()
+        self.test_salons_list()
+        
+        # Auth Tests (expect 401 for protected endpoints)
+        print("\n🔐 TESTING AUTH PROTECTION")
+        print("-" * 30)
+        self.test_auth_endpoints()
+        self.test_cart_api_protection()
+        
+        # SEO & Backlink Tests
+        self.test_seo_backlink_endpoints()
+        
+        # Backlink Automation Tests
+        self.test_backlink_automation_system()
+        
+        # Print Enhanced Summary
+        print("\n" + "=" * 60)
+        print("📊 COMPLETE TEST SUMMARY")
+        print("=" * 60)
+        print(f"✅ PASSED: {self.passed_tests}")
+        print(f"❌ FAILED: {self.total_tests - self.passed_tests}")
+        print(f"📈 TOTAL: {self.total_tests}")
+        
+        # Categorize results
+        api_tests = [r for r in self.results if "API" in r["test"] or "Health" in r["test"]]
+        backlink_tests = [r for r in self.results if "Backlink" in r["test"] or "Playwright" in r["test"] or "Screenshot" in r["test"]]
+        seo_tests = [r for r in self.results if "SEO" in r["test"] or "Business Info" in r["test"]]
+        
+        api_passed = len([r for r in api_tests if r["success"]])
+        backlink_passed = len([r for r in backlink_tests if r["success"]])
+        seo_passed = len([r for r in seo_tests if r["success"]])
+        
+        print(f"\n📊 BREAKDOWN:")
+        print(f"   🔌 Core APIs: {api_passed}/{len(api_tests)} passed")
+        print(f"   🔗 Backlink System: {backlink_passed}/{len(backlink_tests)} passed")
+        print(f"   🔍 SEO Features: {seo_passed}/{len(seo_tests)} passed")
+        
+        # Critical Issues
+        critical_failures = [r for r in self.results if not r["success"] and any(keyword in r["test"] for keyword in ["Health", "Import", "Playwright"])]
+        
+        if critical_failures:
+            print(f"\n🚨 CRITICAL ISSUES ({len(critical_failures)}):")
+            for failure in critical_failures:
+                print(f"   • {failure['test']}: {failure['message']}")
+        
+        # Recommendations
+        print(f"\n💡 RECOMMENDATIONS:")
+        
+        playwright_failed = any("Playwright" in r["test"] and not r["success"] for r in self.results)
+        if playwright_failed:
+            print("   • Install Playwright: pip install playwright && playwright install")
+        
+        if self.passed_tests == self.total_tests:
+            print("   • 🎉 ALL SYSTEMS OPERATIONAL! Ready for directory submissions.")
+            print("   • Consider adding API endpoints for backlink automation")
+        elif self.passed_tests >= self.total_tests * 0.8:
+            print("   • ✅ Most systems working. Fix critical issues before production.")
+        else:
+            print("   • ⚠️ Multiple issues detected. Review and fix before proceeding.")
         
         return self.results
 
