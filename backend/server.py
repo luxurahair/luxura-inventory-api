@@ -13,7 +13,7 @@ from datetime import datetime, timezone, timedelta
 import httpx
 import json
 import asyncio
-from color_system import COLOR_SYSTEM, get_color_info, get_seo_description, get_all_colors_for_filter
+from color_system import COLOR_SYSTEM, get_color_info, get_seo_description, get_all_colors_for_filter, get_colors_by_category, get_colors_by_type
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -827,7 +827,17 @@ async def get_colors():
     """Get all Luxura colors with full info for filters and SEO"""
     return get_all_colors_for_filter()
 
-@api_router.get("/colors/{color_code}")
+@api_router.get("/colors/by-category")
+async def get_colors_grouped_by_category():
+    """Get all colors grouped by category (Noir, Brun, Caramel, Blond, Froid)"""
+    return get_colors_by_category()
+
+@api_router.get("/colors/by-type")
+async def get_colors_grouped_by_type():
+    """Get all colors grouped by type (Solid, Ombre, Balayage, Piano)"""
+    return get_colors_by_type()
+
+@api_router.get("/colors/detail/{color_code}")
 async def get_color(color_code: str):
     """Get detailed info for a specific color code"""
     info = get_color_info(color_code)
