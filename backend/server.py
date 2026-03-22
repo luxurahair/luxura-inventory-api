@@ -105,28 +105,40 @@ class Category(BaseModel):
 
 # ==================== HELPER: Detect category from handle (Wix URL) ====================
 
+# ALLOWED CATEGORIES - Only these 5 categories are sold by Luxura
+ALLOWED_CATEGORIES = {'genius', 'tape', 'i-tip', 'halo', 'essentiels'}
+
+# EXCLUDED PRODUCTS - Products to skip (Clips, Ponytails, etc.)
+EXCLUDED_KEYWORDS = ['clips', 'ponytail', 'queue de cheval', 'test']
+
 def detect_category_from_handle(handle: str, name: str) -> str:
-    """Detect product category from Wix handle - more accurate than name-based detection"""
+    """Detect product category from Wix handle - more accurate than name-based detection
+    Returns None for products that should be excluded (Clips, Ponytails, etc.)
+    """
     if not handle:
         handle = ""
     handle_lower = handle.lower()
     name_lower = name.lower()
     
+    # EXCLUDE: Clips, Ponytails, and other non-sold products
+    for excluded in EXCLUDED_KEYWORDS:
+        if excluded in handle_lower or excluded in name_lower:
+            return None  # Will be filtered out
+    
     # Priority 1: Check handle (most reliable - matches Wix URLs)
-    if 'genius' in handle_lower or 'vivian' in handle_lower:
+    if 'genius' in handle_lower or 'vivian' in handle_lower or 'trame-invisible' in handle_lower:
         return 'genius'
-    elif 'halo' in handle_lower or 'everly' in handle_lower:
+    elif 'halo' in handle_lower or ('everly' in handle_lower and 'clips' not in handle_lower):
         return 'halo'
     elif 'bande' in handle_lower or 'aurora' in handle_lower or 'tape' in handle_lower or 'adhésive' in handle_lower:
         return 'tape'
     elif 'i-tip' in handle_lower or 'itip' in handle_lower or 'eleanor' in handle_lower:
         return 'i-tip'
-    elif 'trame-invisible' in handle_lower:
-        return 'genius'  # Trame invisible = Genius Weft
     
     # Priority 2: Check name for essentials/accessories
     essentials_keywords = ['spray', 'brosse', 'fer', 'shampooing', 'lotion', 'anneau', 'ensemble', 
-                          'duo', 'kit', 'accessoire', 'outil', 'colle', 'remover', 'peigne']
+                          'duo', 'kit', 'accessoire', 'outil', 'colle', 'remover', 'peigne', 
+                          'tenue ultra', 'installation']
     for keyword in essentials_keywords:
         if keyword in name_lower or keyword in handle_lower:
             return 'essentiels'
@@ -134,15 +146,14 @@ def detect_category_from_handle(handle: str, name: str) -> str:
     # Priority 3: Fallback to name-based detection
     if 'genius' in name_lower or 'trame invisible' in name_lower or 'vivian' in name_lower:
         return 'genius'
-    elif 'halo' in name_lower:
+    elif 'halo' in name_lower and 'clips' not in name_lower:
         return 'halo'
     elif 'bande' in name_lower or 'adhésive' in name_lower or 'aurora' in name_lower:
         return 'tape'
     elif 'i-tip' in name_lower or 'itip' in name_lower:
         return 'i-tip'
-    elif 'ponytail' in name_lower or 'queue de cheval' in name_lower:
-        return 'halo'  # Ponytails go with Halo category
     
+    # Default to essentiels for accessories, but may be filtered if not matching
     return 'essentiels'
 
 def clean_html(text: str) -> str:
@@ -459,15 +470,44 @@ async def get_products(
     in_stock: Optional[bool] = None,
     include_variants: Optional[bool] = True  # Include variant details
 ):
-    """Get all products from Luxura Inventory API - grouped by handle with variants"""
+    """Get all products from Luxura Inventory API - grouped by handle with variants
+    ONLY returns: Genius, Tape (Bande Adhésive), I-Tip, Halo, Essentiels
+    EXCLUDES: Clips, Ponytails, test products
+    """
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"{LUXURA_API_URL}/products")
+            # Fetch products AND inventory in parallel for accurate quantities
+            products_task = client.get(f"{LUXURA_API_URL}/products")
+            inventory_task = client.get(f"{LUXURA_API_URL}/inventory/view")
             
-            if response.status_code != 200:
+            products_response, inventory_response = await asyncio.gather(
+                products_task, inventory_task, return_exceptions=True
+            )
+            
+            if isinstance(products_response, Exception) or products_response.status_code != 200:
                 raise HTTPException(status_code=502, detail="Unable to fetch products from Luxura API")
             
-            products = response.json()
+            products = products_response.json()
+            
+            # Build inventory lookup by product name/sku for accurate quantities
+            inventory_by_name = {}
+            inventory_by_sku = {}
+            if not isinstance(inventory_response, Exception) and inventory_response.status_code == 200:
+                inventory_data = inventory_response.json()
+                for inv in inventory_data:
+                    inv_name = inv.get('name', '')
+                    inv_sku = inv.get('sku', '')
+                    inv_qty = inv.get('quantity', 0)
+                    if inv_name:
+                        # Store by clean name (without variant suffix)
+                        clean_inv_name = inv_name.split(' — ')[0].strip().lower()
+                        if clean_inv_name not in inventory_by_name:
+                            inventory_by_name[clean_inv_name] = 0
+                        inventory_by_name[clean_inv_name] += inv_qty
+                        # Also store full name
+                        inventory_by_name[inv_name.lower()] = inventory_by_name.get(inv_name.lower(), 0) + inv_qty
+                    if inv_sku:
+                        inventory_by_sku[inv_sku.upper()] = inventory_by_sku.get(inv_sku.upper(), 0) + inv_qty
             
             # Group products by handle
             products_by_handle = {}
@@ -483,8 +523,16 @@ async def get_products(
                 if not handle:
                     continue
                 
-                # Detect category from handle
+                # Detect category from handle - returns None for excluded products
                 product_category = detect_category_from_handle(handle, name)
+                
+                # SKIP products with excluded categories (Clips, Ponytails, etc.)
+                if product_category is None:
+                    continue
+                
+                # SKIP products not in allowed categories
+                if product_category not in ALLOWED_CATEGORIES:
+                    continue
                 
                 # Filter by category if specified
                 if category and product_category != category:
@@ -511,16 +559,27 @@ async def get_products(
                     variant_info = extract_variant_info(p)
                     products_by_handle[handle]['variants'].append(variant_info)
                     
+                    # Get real quantity from inventory
+                    sku = p.get('sku', '').upper()
+                    variant_qty = inventory_by_sku.get(sku, variant_info['quantity'])
+                    variant_info['quantity'] = variant_qty
+                    
                     # Update stock totals from variants
-                    if variant_info['is_in_stock'] or variant_info['quantity'] > 0:
+                    if variant_info['is_in_stock'] or variant_qty > 0:
                         products_by_handle[handle]['any_in_stock'] = True
-                    products_by_handle[handle]['total_quantity'] += variant_info['quantity']
+                    products_by_handle[handle]['total_quantity'] += variant_qty
                 else:
-                    # This is a parent product - use its is_in_stock status
+                    # This is a parent product
                     if products_by_handle[handle]['parent'] is None:
                         products_by_handle[handle]['parent'] = p
-                        # Use parent's is_in_stock as the primary indicator
-                        if p.get('is_in_stock', False):
+                        
+                        # Get real quantity from inventory by name
+                        clean_name = name.split(' — ')[0].strip().lower()
+                        parent_qty = inventory_by_name.get(clean_name, 0)
+                        if parent_qty > 0:
+                            products_by_handle[handle]['total_quantity'] += parent_qty
+                            products_by_handle[handle]['any_in_stock'] = True
+                        elif p.get('is_in_stock', False):
                             products_by_handle[handle]['any_in_stock'] = True
             
             # Build result
