@@ -339,14 +339,51 @@ async def logout(request: Request, response: Response):
 
 # ==================== PRODUCT ENDPOINTS (from Luxura API) ====================
 
+def is_variant_record(product: dict) -> bool:
+    """Check if a product record is a variant (has wix_variant_id)"""
+    options = product.get('options', {})
+    return bool(options.get('wix_variant_id'))
+
+def extract_variant_info(product: dict) -> dict:
+    """Extract variant information from a product record"""
+    options = product.get('options', {})
+    choices = options.get('choices', {})
+    
+    # Parse the "Longeur" field which contains both length and weight
+    longeur = choices.get('Longeur', '')
+    
+    # Parse formats like "20\" 50 grammes" or "18' 50 grammes"
+    length = ''
+    weight = ''
+    
+    if longeur:
+        import re
+        # Match patterns like: 20" 50 grammes, 18' 100 grammes, etc.
+        match = re.match(r"(\d+[\"']?)\s*(\d+\s*grammes?)?", longeur.strip())
+        if match:
+            length = match.group(1) or ''
+            weight = match.group(2) or ''
+    
+    return {
+        'id': product.get('id'),
+        'sku': product.get('sku'),
+        'wix_variant_id': options.get('wix_variant_id'),
+        'longeur_raw': longeur,
+        'length': length,
+        'weight': weight,
+        'price': product.get('price', 0),
+        'quantity': product.get('quantity', 0),
+        'is_in_stock': product.get('is_in_stock', False)
+    }
+
 @api_router.get("/products")
 async def get_products(
     category: Optional[str] = None,
     search: Optional[str] = None,
     in_stock: Optional[bool] = None,
-    group_variants: Optional[bool] = True  # Group variants by handle by default
+    include_variants: Optional[bool] = True  # Include variant details
 ):
-    """Get all products from Luxura Inventory API - grouped by handle to show unique products"""
+    """Get all products from Luxura Inventory API - grouped by handle with variants"""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(f"{LUXURA_API_URL}/products")
@@ -356,7 +393,7 @@ async def get_products(
             
             products = response.json()
             
-            # Group products by handle to get unique base products
+            # Group products by handle
             products_by_handle = {}
             
             for p in products:
@@ -368,9 +405,9 @@ async def get_products(
                 
                 handle = p.get('handle', '')
                 if not handle:
-                    continue  # Skip products without handle
+                    continue
                 
-                # Detect category from handle (more reliable than name)
+                # Detect category from handle
                 product_category = detect_category_from_handle(handle, name)
                 
                 # Filter by category if specified
@@ -383,111 +420,94 @@ async def get_products(
                     if search_lower not in name.lower() and search_lower not in (p.get('sku') or '').lower():
                         continue
                 
-                # Check stock status
-                is_in_stock = p.get('is_in_stock', False) or p.get('quantity', 0) > 0
-                
-                # Filter by stock if specified
-                if in_stock is not None and is_in_stock != in_stock:
-                    continue
-                
-                options = p.get('options', {})
-                
-                # If grouping variants, only keep the base product (without variant info in options.choices)
-                if group_variants:
-                    # Check if this is a variant or base product
-                    is_variant = 'choices' in options and options.get('choices')
-                    has_product_options = 'productOptions' in options and options.get('productOptions')
-                    
-                    if handle not in products_by_handle:
-                        # First product with this handle
-                        products_by_handle[handle] = {
-                            'product': p,
-                            'category': product_category,
-                            'is_base': has_product_options or not is_variant,
-                            'variants': [],
-                            'any_in_stock': is_in_stock
-                        }
-                    else:
-                        # Update stock status if any variant is in stock
-                        if is_in_stock:
-                            products_by_handle[handle]['any_in_stock'] = True
-                        
-                        # Prefer base product over variant
-                        if has_product_options and not products_by_handle[handle]['is_base']:
-                            products_by_handle[handle]['product'] = p
-                            products_by_handle[handle]['is_base'] = True
-                        
-                        # Collect variant info
-                        if is_variant:
-                            variant_choice = options.get('choices', {}).get('Longeur', '')
-                            if variant_choice:
-                                products_by_handle[handle]['variants'].append({
-                                    'id': p.get('id'),
-                                    'choice': variant_choice,
-                                    'in_stock': is_in_stock
-                                })
-                else:
-                    # Not grouping - treat each as unique
-                    products_by_handle[f"{handle}_{p.get('id')}"] = {
-                        'product': p,
-                        'category': product_category,
+                # Initialize handle group if needed
+                if handle not in products_by_handle:
+                    products_by_handle[handle] = {
+                        'parent': None,
                         'variants': [],
-                        'any_in_stock': is_in_stock
+                        'category': product_category,
+                        'any_in_stock': False,
+                        'total_quantity': 0
                     }
+                
+                # Check if this is a variant or parent
+                if is_variant_record(p):
+                    variant_info = extract_variant_info(p)
+                    products_by_handle[handle]['variants'].append(variant_info)
+                    
+                    # Update stock totals
+                    if variant_info['is_in_stock'] or variant_info['quantity'] > 0:
+                        products_by_handle[handle]['any_in_stock'] = True
+                    products_by_handle[handle]['total_quantity'] += variant_info['quantity']
+                else:
+                    # This is a parent product
+                    if products_by_handle[handle]['parent'] is None:
+                        products_by_handle[handle]['parent'] = p
             
-            # Build result from grouped products
+            # Build result
             result = []
             for handle, data in products_by_handle.items():
-                p = data['product']
-                product_category = data['category']
-                name = p.get('name', '')
-                options = p.get('options', {})
+                parent = data['parent']
+                variants = data['variants']
+                category = data['category']
                 
-                # Clean up name (remove variant suffix if present)
+                # If no parent, use first variant as base
+                if parent is None and variants:
+                    # Find a variant to use as base info
+                    base_name = variants[0].get('longeur_raw', '')
+                    for v in variants:
+                        if v.get('sku'):
+                            parent = {'name': v.get('sku', '').split('-')[0] if v.get('sku') else handle}
+                            break
+                
+                if parent is None:
+                    continue
+                
+                name = parent.get('name', '')
+                # Clean up name (remove variant suffix)
                 clean_name = name.split(' — ')[0].strip()
                 
-                # Get image from our Wix mapping
-                image = get_product_image(p.get('handle', ''), product_category)
+                # Get image
+                image = get_product_image(handle, category)
                 
                 # Build Wix URL
-                product_handle = p.get('handle', '')
-                wix_url = f"https://www.luxuradistribution.com/product-page/{product_handle}" if product_handle else "https://www.luxuradistribution.com"
+                wix_url = f"https://www.luxuradistribution.com/product-page/{handle}" if handle else "https://www.luxuradistribution.com"
                 
-                # Extract available variants from productOptions
-                variants = []
-                product_options = options.get('productOptions', [])
-                if product_options:
-                    for opt in product_options:
-                        if opt.get('name') == 'Longeur':
-                            for choice in opt.get('choices', []):
-                                variants.append({
-                                    'value': choice.get('value', ''),
-                                    'in_stock': choice.get('inStock', False)
-                                })
+                # Filter by stock if specified
+                if in_stock is not None:
+                    if in_stock and not data['any_in_stock']:
+                        continue
+                    if not in_stock and data['any_in_stock']:
+                        continue
                 
-                # Add collected variants from API
-                if data['variants']:
-                    for v in data['variants']:
-                        if not any(var['value'] == v['choice'] for var in variants):
-                            variants.append({
-                                'value': v['choice'],
-                                'in_stock': v['in_stock']
-                            })
+                # Get base price from parent or first variant
+                price = parent.get('price', 0)
+                if price == 0 and variants:
+                    price = variants[0].get('price', 0)
                 
-                result.append({
-                    "id": p.get('id'),
+                # Sort variants by length/weight
+                sorted_variants = sorted(variants, key=lambda v: (v.get('length', ''), v.get('weight', '')))
+                
+                product_data = {
+                    "id": parent.get('id'),
                     "name": clean_name,
-                    "price": p.get('price', 0),
-                    "description": clean_html(p.get('description', '')),
-                    "category": product_category,
+                    "price": price,
+                    "description": clean_html(parent.get('description', '')),
+                    "category": category,
                     "images": [image],
                     "in_stock": data['any_in_stock'],
-                    "quantity": p.get('quantity', 0),
-                    "sku": p.get('sku'),
+                    "total_quantity": data['total_quantity'],
+                    "sku": parent.get('sku'),
                     "wix_url": wix_url,
-                    "handle": product_handle,
-                    "variants": variants if variants else None
-                })
+                    "handle": handle,
+                    "variant_count": len(variants)
+                }
+                
+                # Include variant details if requested
+                if include_variants and variants:
+                    product_data["variants"] = sorted_variants
+                
+                result.append(product_data)
             
             # Sort by category order, then by name
             category_order = {'genius': 0, 'halo': 1, 'tape': 2, 'i-tip': 3, 'essentiels': 4}
@@ -503,9 +523,10 @@ async def get_products(
 
 @api_router.get("/products/{product_id}")
 async def get_product(product_id: int):
-    """Get a single product from Luxura Inventory API"""
+    """Get a single product with all its variants from Luxura Inventory API"""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
+            # First get the specific product
             response = await client.get(f"{LUXURA_API_URL}/products/{product_id}")
             
             if response.status_code == 404:
@@ -515,11 +536,8 @@ async def get_product(product_id: int):
                 raise HTTPException(status_code=502, detail="Unable to fetch product from Luxura API")
             
             p = response.json()
-            
-            # Transform for mobile app
-            name = p.get('name', '')
             handle = p.get('handle', '')
-            options = p.get('options', {})
+            name = p.get('name', '')
             
             # Detect category from handle
             category = detect_category_from_handle(handle, name)
@@ -533,18 +551,55 @@ async def get_product(product_id: int):
             # Clean name (remove variant suffix)
             clean_name = name.split(' — ')[0].strip()
             
-            # Extract variants
-            variants = []
-            product_options = options.get('productOptions', [])
-            if product_options:
-                for opt in product_options:
-                    if opt.get('name') == 'Longeur':
-                        for choice in opt.get('choices', []):
-                            variants.append({
-                                'value': choice.get('value', ''),
-                                'in_stock': choice.get('inStock', False)
-                            })
+            # Now fetch ALL products to find variants with same handle
+            all_response = await client.get(f"{LUXURA_API_URL}/products")
+            if all_response.status_code == 200:
+                all_products = all_response.json()
+                
+                # Find all variants with same handle
+                variants = []
+                parent_product = None
+                total_quantity = 0
+                any_in_stock = False
+                
+                for prod in all_products:
+                    if prod.get('handle') == handle:
+                        if is_variant_record(prod):
+                            variant_info = extract_variant_info(prod)
+                            variants.append(variant_info)
+                            total_quantity += variant_info['quantity']
+                            if variant_info['is_in_stock'] or variant_info['quantity'] > 0:
+                                any_in_stock = True
+                        else:
+                            parent_product = prod
+                
+                # Sort variants by length/weight
+                variants = sorted(variants, key=lambda v: (v.get('length', ''), v.get('weight', '')))
+                
+                # Use parent product info if available
+                if parent_product:
+                    clean_name = parent_product.get('name', clean_name).split(' — ')[0].strip()
+                    description = clean_html(parent_product.get('description', ''))
+                else:
+                    description = clean_html(p.get('description', ''))
+                
+                return {
+                    "id": p.get('id'),
+                    "name": clean_name,
+                    "price": p.get('price', 0),
+                    "description": description,
+                    "category": category,
+                    "images": [image],
+                    "in_stock": any_in_stock,
+                    "total_quantity": total_quantity,
+                    "sku": p.get('sku'),
+                    "wix_url": wix_url,
+                    "handle": handle,
+                    "variants": variants if variants else None,
+                    "variant_count": len(variants)
+                }
             
+            # Fallback if we can't get all products
             return {
                 "id": p.get('id'),
                 "name": clean_name,
@@ -553,11 +608,12 @@ async def get_product(product_id: int):
                 "category": category,
                 "images": [image],
                 "in_stock": p.get('is_in_stock', False) or p.get('quantity', 0) > 0,
-                "quantity": p.get('quantity', 0),
+                "total_quantity": p.get('quantity', 0),
                 "sku": p.get('sku'),
                 "wix_url": wix_url,
                 "handle": handle,
-                "variants": variants if variants else None
+                "variants": None,
+                "variant_count": 0
             }
             
     except HTTPException:
@@ -601,14 +657,16 @@ async def get_cart(request: Request):
                 response = await client.get(f"{LUXURA_API_URL}/products/{item['product_id']}")
                 if response.status_code == 200:
                     p = response.json()
-                    options = p.get('options', {})
-                    image = extract_image_from_options(options)
+                    handle = p.get('handle', '')
+                    name = p.get('name', '')
+                    category = detect_category_from_handle(handle, name)
+                    image = get_product_image(handle, category)
                     
                     product_data = {
                         "id": p.get('id'),
-                        "name": p.get('name', ''),
+                        "name": name,
                         "price": p.get('price', 0),
-                        "images": [image] if image else ["https://static.wixstatic.com/media/de6cdb_df3cf3adbce44d49b39546b5178c459d~mv2.jpg"],
+                        "images": [image],
                         "in_stock": p.get('is_in_stock', False)
                     }
                     

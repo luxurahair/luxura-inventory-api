@@ -33,6 +33,7 @@ interface Product {
   sku?: string;
   in_stock?: boolean;
   category?: string;
+  variant_count?: number;
 }
 
 interface Category {
@@ -100,6 +101,11 @@ export default function CatalogueScreen() {
         {!product.in_stock && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>Épuisé</Text>
+          </View>
+        )}
+        {product.variant_count && product.variant_count > 0 && (
+          <View style={styles.variantBadge}>
+            <Text style={styles.variantBadgeText}>{product.variant_count} options</Text>
           </View>
         )}
       </View>
@@ -318,5 +324,19 @@ const styles = StyleSheet.create({
     color: '#c9a050', 
     fontSize: 13, 
     fontWeight: '700' 
+  },
+  variantBadge: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    backgroundColor: 'rgba(201, 160, 80, 0.9)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  variantBadgeText: {
+    color: '#000',
+    fontSize: 9,
+    fontWeight: '600',
   },
 });

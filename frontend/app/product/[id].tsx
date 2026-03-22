@@ -22,6 +22,18 @@ import { useCartStore } from '../../src/store/cartStore';
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const { width } = Dimensions.get('window');
 
+interface Variant {
+  id: number;
+  sku: string | null;
+  wix_variant_id: string;
+  longeur_raw: string;
+  length: string;
+  weight: string;
+  price: number;
+  quantity: number;
+  is_in_stock: boolean;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -31,9 +43,13 @@ interface Product {
   category: string;
   images: string[];
   in_stock: boolean;
+  total_quantity?: number;
   color_code?: string;
   series?: string;
   wix_url?: string;
+  handle?: string;
+  variants?: Variant[];
+  variant_count?: number;
 }
 
 export default function ProductScreen() {
@@ -48,12 +64,19 @@ export default function ProductScreen() {
   const [addingToCart, setAddingToCart] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         const response = await axios.get(`${API_URL}/api/products/${id}`);
         setProduct(response.data);
+        
+        // Auto-select first in-stock variant if available
+        if (response.data.variants && response.data.variants.length > 0) {
+          const inStockVariant = response.data.variants.find((v: Variant) => v.is_in_stock || v.quantity > 0);
+          setSelectedVariant(inStockVariant || response.data.variants[0]);
+        }
       } catch (error) {
         console.error('Error fetching product:', error);
         Alert.alert('Erreur', 'Impossible de charger le produit');
@@ -185,6 +208,69 @@ export default function ProductScreen() {
           
           <Text style={styles.descriptionTitle}>Description</Text>
           <Text style={styles.description}>{product.description}</Text>
+          
+          {/* Variant Selector */}
+          {product.variants && product.variants.length > 0 && (
+            <View style={styles.variantSection}>
+              <Text style={styles.variantTitle}>Sélectionner une variante</Text>
+              <View style={styles.variantGrid}>
+                {product.variants.map((variant, index) => {
+                  const isSelected = selectedVariant?.id === variant.id;
+                  const isAvailable = variant.is_in_stock || variant.quantity > 0;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={variant.id || index}
+                      style={[
+                        styles.variantButton,
+                        isSelected && styles.variantButtonSelected,
+                        !isAvailable && styles.variantButtonDisabled,
+                      ]}
+                      onPress={() => setSelectedVariant(variant)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[
+                        styles.variantText,
+                        isSelected && styles.variantTextSelected,
+                        !isAvailable && styles.variantTextDisabled,
+                      ]}>
+                        {variant.longeur_raw}
+                      </Text>
+                      {variant.sku && (
+                        <Text style={[
+                          styles.variantSku,
+                          isSelected && styles.variantSkuSelected,
+                        ]}>
+                          {variant.sku}
+                        </Text>
+                      )}
+                      {!isAvailable && (
+                        <Text style={styles.variantOutOfStock}>Épuisé</Text>
+                      )}
+                      {isAvailable && variant.quantity > 0 && (
+                        <Text style={[
+                          styles.variantStock,
+                          isSelected && styles.variantStockSelected,
+                        ]}>
+                          {variant.quantity} en stock
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              
+              {selectedVariant && (
+                <View style={styles.selectedVariantInfo}>
+                  <Text style={styles.selectedVariantLabel}>Variante sélectionnée:</Text>
+                  <Text style={styles.selectedVariantValue}>{selectedVariant.longeur_raw}</Text>
+                  {selectedVariant.sku && (
+                    <Text style={styles.selectedVariantSku}>SKU: {selectedVariant.sku}</Text>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
           
           <View style={styles.featuresSection}>
             <View style={styles.feature}>
@@ -515,5 +601,95 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Variant Selector Styles
+  variantSection: {
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  variantTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  variantGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  variantButton: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#333',
+    minWidth: 100,
+  },
+  variantButtonSelected: {
+    borderColor: '#c9a050',
+    backgroundColor: '#2a2a1a',
+  },
+  variantButtonDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#111',
+  },
+  variantText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  variantTextSelected: {
+    color: '#c9a050',
+  },
+  variantTextDisabled: {
+    color: '#666',
+    textDecorationLine: 'line-through',
+  },
+  variantSku: {
+    color: '#888',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  variantSkuSelected: {
+    color: '#c9a050',
+  },
+  variantStock: {
+    color: '#4a4',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  variantStockSelected: {
+    color: '#6c6',
+  },
+  variantOutOfStock: {
+    color: '#f44',
+    fontSize: 10,
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  selectedVariantInfo: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#c9a050',
+  },
+  selectedVariantLabel: {
+    color: '#888',
+    fontSize: 12,
+  },
+  selectedVariantValue: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  selectedVariantSku: {
+    color: '#c9a050',
+    fontSize: 12,
+    marginTop: 4,
   },
 });
