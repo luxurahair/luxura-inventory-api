@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   Dimensions,
+  FlatList,
   Image,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +21,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CARD_SIZE = Math.floor((SCREEN_WIDTH - 48) / 2);
+const CARD_WIDTH = Math.floor((SCREEN_WIDTH - 48) / 2);
+const IMAGE_SIZE = CARD_WIDTH;
 
 interface Product {
   id: number | string;
@@ -82,44 +85,24 @@ export default function CatalogueScreen() {
     fetchData();
   };
 
-  // Create rows of 2 products
-  const rows: (Product | null)[][] = [];
-  for (let i = 0; i < products.length; i += 2) {
-    const row: (Product | null)[] = [products[i]];
-    if (i + 1 < products.length) {
-      row.push(products[i + 1]);
-    } else {
-      row.push(null);
-    }
-    rows.push(row);
-  }
-
-  const ProductCard = ({ product }: { product: Product }) => (
+  const renderProductCard = ({ item: product }: { item: Product }) => (
     <TouchableOpacity
       onPress={() => router.push(`/product/${product.id}`)}
       activeOpacity={0.8}
-      style={{
-        width: CARD_SIZE,
-        backgroundColor: '#1a1a1a',
-        borderRadius: 10,
-        overflow: 'hidden',
-      }}
+      style={styles.card}
     >
-      <View style={{ width: CARD_SIZE, height: CARD_SIZE, backgroundColor: '#222' }}>
+      <View style={styles.imageContainer}>
         <Image
           source={{ uri: product.images?.[0] }}
-          style={{
-            width: CARD_SIZE,
-            height: CARD_SIZE,
-          }}
+          style={styles.productImage}
           resizeMode="cover"
         />
+        {!product.in_stock && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>Épuisé</Text>
+          </View>
+        )}
       </View>
-      {!product.in_stock && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>Épuisé</Text>
-        </View>
-      )}
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         {product.sku && <Text style={styles.sku}>{product.sku}</Text>}
@@ -128,15 +111,8 @@ export default function CatalogueScreen() {
     </TouchableOpacity>
   );
 
-  return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.title}>Catalogue</Text>
-        <TouchableOpacity onPress={() => router.push('/cart')}>
-          <Ionicons name="bag-outline" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
+  const renderHeader = () => (
+    <>
       <View style={styles.searchBox}>
         <Ionicons name="search" size={18} color="#666" />
         <TextInput
@@ -148,7 +124,12 @@ export default function CatalogueScreen() {
         />
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cats}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.cats}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
+      >
         <TouchableOpacity
           style={[styles.cat, !selectedCategory && styles.catActive]}
           onPress={() => setSelectedCategory(null)}
@@ -167,35 +148,43 @@ export default function CatalogueScreen() {
       </ScrollView>
 
       <Text style={styles.count}>{products.length} produits</Text>
+    </>
+  );
+
+  return (
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <Text style={styles.title}>Catalogue</Text>
+        <TouchableOpacity onPress={() => router.push('/cart')}>
+          <Ionicons name="bag-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
       {loading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator size="large" color="#c9a050" />
-        </View>
+        <>
+          {renderHeader()}
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" color="#c9a050" />
+          </View>
+        </>
       ) : (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#c9a050" />}
-        >
-          {rows.map((row, rowIndex) => (
-            <View
-              key={rowIndex}
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                marginBottom: 12,
-              }}
-            >
-              {row[0] && <ProductCard product={row[0]} />}
-              {row[1] ? (
-                <ProductCard product={row[1]} />
-              ) : (
-                <View style={{ width: CARD_SIZE }} />
-              )}
-            </View>
-          ))}
-        </ScrollView>
+        <FlatList
+          data={products}
+          renderItem={renderProductCard}
+          keyExtractor={(item) => String(item.id)}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.listContent}
+          ListHeaderComponent={renderHeader}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh} 
+              tintColor="#c9a050" 
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        />
       )}
     </View>
   );
@@ -211,7 +200,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', 
     alignItems: 'center', 
     paddingHorizontal: 16, 
-    paddingBottom: 12 
+    paddingBottom: 12,
+    zIndex: 10,
   },
   title: { 
     color: '#fff', 
@@ -236,8 +226,7 @@ const styles = StyleSheet.create({
   },
   cats: { 
     maxHeight: 40, 
-    marginBottom: 8, 
-    paddingHorizontal: 16 
+    marginBottom: 8,
   },
   cat: { 
     paddingHorizontal: 14, 
@@ -266,6 +255,35 @@ const styles = StyleSheet.create({
     flex: 1, 
     justifyContent: 'center', 
     alignItems: 'center' 
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
+  },
+  row: {
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  card: {
+    width: CARD_WIDTH,
+    maxWidth: CARD_WIDTH,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  imageContainer: {
+    width: CARD_WIDTH,
+    height: CARD_WIDTH,
+    maxWidth: CARD_WIDTH,
+    maxHeight: CARD_WIDTH,
+    backgroundColor: '#222',
+    overflow: 'hidden',
+  },
+  productImage: {
+    width: CARD_WIDTH,
+    height: CARD_WIDTH,
+    maxWidth: CARD_WIDTH,
+    maxHeight: CARD_WIDTH,
   },
   badge: { 
     position: 'absolute', 
