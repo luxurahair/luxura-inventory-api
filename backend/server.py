@@ -821,72 +821,72 @@ async def get_categories():
 
 # ==================== SKU MIGRATION ENDPOINTS ====================
 
-# MAPPING PRÉCIS DES CODES COULEUR LUXURA
-# Basé sur l'analyse visuelle des images + codes standards de l'industrie
-# Format: CODE -> (NOM_TECHNIQUE, NOM_LUXE_FRANCAIS, TYPE)
+# MAPPING LUXE DES CODES COULEUR LUXURA
+# Inspiré des grandes marques: Bellami, Great Lengths, Cashmere Hair
+# Format: CODE -> (NOM_TECHNIQUE, NOM_LUXE, TYPE)
 # TYPE: SOLID, OMBRE, PIANO, OMBRE-PIANO, BALAYAGE
 
 COLOR_CODE_MAPPING = {
-    # ════════════════════ NOIRS (Level 1) ════════════════════
-    "1": ("JET-BLACK", "Noir Intense", "SOLID"),           # Noir Jet - le plus foncé
-    "1B": ("OFF-BLACK", "Noir Naturel", "SOLID"),          # Noir naturel plus doux
+    # ════════════════════ NOIRS INTENSES ════════════════════
+    "1": ("JET-BLACK", "Onyx Noir", "SOLID"),              # Noir intense jet
+    "1B": ("OFF-BLACK", "Noir Soie", "SOLID"),             # Noir naturel soyeux
     
-    # ════════════════════ BRUNS FONCÉS (Level 2) ════════════════════
-    "2": ("ESPRESSO", "Espresso Profond", "SOLID"),        # Brun très foncé
-    "DB": ("DARK-MYSTERY", "Mystère Nocturne", "SOLID"),   # Brun mystère foncé
-    "DC": ("DARK-CHOCOLATE", "Chocolat Noir", "SOLID"),    # Chocolat noir riche
-    "CACAO": ("CACAO-VELOURS", "Cacao Velours", "SOLID"),  # Brun cacao
-    "CHENGTU": ("ASIAN-SILK", "Soie Asiatique", "SOLID"),  # Brun oriental asiatique
-    "FOOCHOW": ("ORIENTAL-MYSTIQUE", "Orient Mystique", "SOLID"), # Brun oriental
+    # ════════════════════ BRUNS LUXUEUX ════════════════════
+    "2": ("ESPRESSO", "Espresso Intense", "SOLID"),        # Brun espresso profond
+    "DB": ("DARK-MYSTERY", "Nuit Mystère", "SOLID"),       # Brun mystère nocturne
+    "DC": ("DARK-CHOCOLATE", "Chocolat Noir Belge", "SOLID"), # Chocolat noir riche
+    "CACAO": ("CACAO-VELVET", "Cacao Velours", "SOLID"),   # Brun cacao velouté
+    "CHENGTU": ("ASIAN-SILK", "Soie d'Orient", "SOLID"),   # Brun asiatique soyeux
+    "FOOCHOW": ("ORIENTAL-MYSTIQUE", "Cachemire Oriental", "SOLID"), # Brun oriental
     
-    # ════════════════════ BRUNS MOYENS (Level 3-4) ════════════════════
-    "3": ("CHESTNUT", "Châtaigne Douce", "SOLID"),         # Brun châtaigne uni
-    "CINNAMON": ("CINNAMON-SPICE", "Cannelle Épicée", "SOLID"),  # Cannelle chaude
+    # ════════════════════ BRUNS CHÂTAIGNE ════════════════════
+    "3": ("CHESTNUT", "Châtaigne Douce", "SOLID"),         # Châtaigne naturelle
+    "CINNAMON": ("CINNAMON-SPICE", "Cannelle Épicée", "SOLID"), # Cannelle chaude
     
-    # ════════════════════ BRUNS OMBRE + PIANO ════════════════════
-    # #3/3T24 = Base brun #3 + Ombré brun #3 + Piano mèches #24 blond
-    "3/3T24": ("CHESTNUT-OMBRE-PIANO", "Châtaigne Lumière Dorée", "OMBRE-PIANO"),
+    # ════════════════════ BRUNS DIMENSION (Ombré + Piano) ════════════════════
+    # Base châtaigne #3 + Ombré + Mèches dorées #24
+    "3/3T24": ("CHESTNUT-GOLDEN-DIMENSION", "Châtaigne Lumière Dorée", "OMBRE-PIANO"),
     
-    # ════════════════════ BLONDS CARAMEL (Level 6) ════════════════════
-    "6": ("CARAMEL", "Caramel Doré", "SOLID"),             # Blond caramel uni
-    "BM": ("HONEY-WILD", "Miel Sauvage", "SOLID"),         # Brun miel
+    # ════════════════════ CARAMEL & MIEL ════════════════════
+    "6": ("CARAMEL", "Caramel Doré", "SOLID"),             # Caramel classique
+    "BM": ("HONEY-WILD", "Miel Sauvage", "SOLID"),         # Brun miel naturel
     
-    # ════════════════════ BLONDS CARAMEL BALAYAGE/PIANO ════════════════════
-    # #6/24 = Base #6 caramel + Balayage vers #24 blond doré
-    "6/24": ("CARAMEL-BALAYAGE", "Miel Soleil", "BALAYAGE"),
-    # #6/6T24 = Base #6 + Ombré #6 + Piano mèches #24
-    "6/6T24": ("CARAMEL-OMBRE-PIANO", "Miel Doré Lumineux", "OMBRE-PIANO"),
+    # ════════════════════ CARAMEL DIMENSION ════════════════════
+    # Balayage caramel vers blond doré
+    "6/24": ("CARAMEL-BALAYAGE", "Golden Hour", "BALAYAGE"),
+    # Caramel avec ombré et mèches piano dorées
+    "6/6T24": ("CARAMEL-GOLDEN-DIMENSION", "Caramel Soleil", "OMBRE-PIANO"),
     
-    # ════════════════════ BLONDS PIANO (Level 18-22) - PAS NOIR! ════════════════════
-    # #18/22 = Piano mèches blond cendré #18 + blond beige #22 (sun-kissed)
-    "18/22": ("ASH-BEIGE-PIANO", "Étoile Dorée", "PIANO"),
+    # ════════════════════ BLONDS PIANO (Mèches) ════════════════════
+    # Mèches blond cendré #18 + blond beige #22 - effet sun-kissed
+    "18/22": ("ASH-BEIGE-PIANO", "Champagne Rosé", "PIANO"),
     
-    # ════════════════════ BLONDS PLATINE (Level 60+) ════════════════════
-    "60A": ("PLATINUM", "Platine Pur", "SOLID"),           # Blond platine uni
+    # ════════════════════ BLONDS PLATINE ════════════════════
+    "60A": ("PLATINUM", "Platine Pur", "SOLID"),           # Platine glacé
     "PHA": ("PURE-ASH", "Cendré Céleste", "SOLID"),        # Blond cendré pur
-    # #613/18A = Platine #613 + Balayage cendré #18A
-    "613/18A": ("PLATINUM-ASH-BALAYAGE", "Platine Étoilé", "BALAYAGE"),
+    # Platine avec balayage cendré sophistiqué
+    "613/18A": ("PLATINUM-BALAYAGE", "Diamant Glacé", "BALAYAGE"),
     
-    # ════════════════════ BLANCS ════════════════════
-    "IVORY": ("IVORY-PRECIOUS", "Ivoire Précieux", "SOLID"),   # Blanc ivoire
-    "ICW": ("ICE-CRYSTAL", "Cristal Polaire", "SOLID"),        # Blanc glacé
+    # ════════════════════ BLANCS PRÉCIEUX ════════════════════
+    "IVORY": ("IVORY-PRECIOUS", "Ivoire Précieux", "SOLID"),  # Blanc ivoire luxe
+    "ICW": ("ICE-CRYSTAL", "Cristal Polaire", "SOLID"),       # Blanc glacé arctique
     
-    # ════════════════════ OMBRÉS LUXE (dégradé sans mèches) ════════════════════
-    # #CB = Ombré miel sauvage (brun → miel)
+    # ════════════════════ OMBRÉS SIGNATURE ════════════════════
+    # Ombré miel sauvage naturel
     "CB": ("HONEY-OMBRE", "Miel Sauvage Ombré", "OMBRE"),
-    # #HPS = Ombré cendré luxe (ash brown → ash blonde)
+    # Ombré cendré luxe - effet étoilé
     "HPS": ("ASH-LUXE-OMBRE", "Cendré Étoilé", "OMBRE"),
-    # #5AT60 = Ombré glacier (brun #5 ash → platine #60)
-    "5AT60": ("GLACIER-OMBRE", "Glacier Nordique", "OMBRE"),
-    # #5ATP18B62 = Ombré nordique complexe (multi-tons)
+    # Ombré glacier - transition dramatique vers platine
+    "5AT60": ("GLACIER-OMBRE", "Aurore Glaciale", "OMBRE"),
+    # Ombré nordique multi-dimensionnel
     "5ATP18B62": ("NORDIC-OMBRE", "Aurore Boréale", "OMBRE"),
     
-    # ════════════════════ ESPRESSO AVEC PIANO ════════════════════
-    # #2BTP18/1006 = Base espresso #2B + transition + piano mèches claires
-    "2BTP18/1006": ("ESPRESSO-LUMINOUS-PIANO", "Espresso Lumineux", "OMBRE-PIANO"),
+    # ════════════════════ ESPRESSO DIMENSION ════════════════════
+    # Espresso avec mèches lumineuses sophistiquées
+    "2BTP18/1006": ("ESPRESSO-LUMINOUS", "Espresso Lumière", "OMBRE-PIANO"),
     
-    # ════════════════════ BALAYAGES VÉNITIENS ════════════════════
-    # #T14/P14/24 = Transition #14 + Piano #14 + #24 (multi-dimensional)
+    # ════════════════════ BALAYAGE VÉNITIEN ════════════════════
+    # Multi-dimensionnel vénitien luxueux
     "T14/P14/24": ("VENETIAN-BALAYAGE", "Venise Dorée", "BALAYAGE"),
 }
 
