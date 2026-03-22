@@ -73,6 +73,10 @@ def extract_color_code(name: str) -> str:
 
 
 def generate_sku(product: dict) -> str:
+    """
+    Génère SKU format Luxura: TYPE-LONGUEUR-POIDS-CODE-NOM
+    Ex: H-16-120-60A-PLATINE-PUR
+    """
     name = product.get('name') or ''
     handle = product.get('handle') or ''
     
@@ -88,19 +92,23 @@ def generate_sku(product: dict) -> str:
     else:
         prefix = 'E'
     
+    # Extraire longueur et poids: "16" 120 grammes" ou "20' 140 grammes"
     length, weight = '', ''
     m = re.search(r'(\d+)["\'\′]?\s*(\d+)\s*gram', name.lower())
     if m:
         length, weight = m.group(1), m.group(2)
     
+    # Extraire code couleur et nom luxura
     color_code = extract_color_code(name)
     color_info = get_color_info(color_code)
     sku_name = color_info.get("sku", color_code.replace("/", "-"))
     clean_code = color_code.replace('/', '-')
     
+    # Format: TYPE-LONGUEUR-POIDS-CODE-NOM
     if length and weight:
-        return f'{prefix}{length}{weight}-{clean_code}-{sku_name}'.upper()
+        return f'{prefix}-{length}-{weight}-{clean_code}-{sku_name}'.upper()
     else:
+        # Produit sans variante (accessoire)
         return f'{prefix}-{clean_code}-{sku_name}'.upper()
 
 
