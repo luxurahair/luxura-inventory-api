@@ -1605,6 +1605,84 @@ async def get_luxura_business_info():
         ]
     }
 
+@api_router.post("/backlinks/run")
+async def run_backlink_automation(background_tasks: BackgroundTasks):
+    """Run Playwright automation to submit to business directories"""
+    
+    async def run_automation():
+        import subprocess
+        import os
+        
+        # Create screenshots directory
+        os.makedirs("/tmp/backlinks", exist_ok=True)
+        
+        # Run the backlink automation script
+        try:
+            result = subprocess.run(
+                ["python3", "/app/backend/backlink_automation.py"],
+                capture_output=True,
+                text=True,
+                timeout=300,
+                cwd="/app/backend"
+            )
+            
+            # Log results
+            await db.backlink_runs.insert_one({
+                "date": datetime.now(timezone.utc),
+                "stdout": result.stdout[:5000] if result.stdout else None,
+                "stderr": result.stderr[:5000] if result.stderr else None,
+                "return_code": result.returncode,
+                "success": result.returncode == 0
+            })
+            
+            logger.info(f"Backlink automation completed with code {result.returncode}")
+            
+        except subprocess.TimeoutExpired:
+            await db.backlink_runs.insert_one({
+                "date": datetime.now(timezone.utc),
+                "error": "Timeout after 5 minutes",
+                "success": False
+            })
+        except Exception as e:
+            await db.backlink_runs.insert_one({
+                "date": datetime.now(timezone.utc),
+                "error": str(e),
+                "success": False
+            })
+    
+    background_tasks.add_task(run_automation)
+    
+    return {
+        "success": True,
+        "message": "Automatisation backlinks démarrée en arrière-plan",
+        "note": "Vérifiez /api/backlinks/status pour les résultats"
+    }
+
+@api_router.get("/backlinks/status")
+async def get_backlink_status():
+    """Get status of backlink automation runs"""
+    
+    runs = await db.backlink_runs.find({}).sort("date", -1).to_list(10)
+    
+    # Get screenshots if any
+    import os
+    screenshots = []
+    if os.path.exists("/tmp/backlinks"):
+        screenshots = os.listdir("/tmp/backlinks")
+    
+    return {
+        "recent_runs": [
+            {
+                "date": run.get("date").isoformat() if run.get("date") else None,
+                "success": run.get("success"),
+                "error": run.get("error"),
+                "return_code": run.get("return_code")
+            } for run in runs
+        ],
+        "screenshots": screenshots,
+        "screenshots_path": "/tmp/backlinks"
+    }
+
 # ==================== SALON ENDPOINTS ====================
 
 @api_router.get("/salons")

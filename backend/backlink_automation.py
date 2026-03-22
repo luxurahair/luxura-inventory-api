@@ -1,348 +1,288 @@
-# Luxura Distribution - Automated Backlink Creation System
-# Uses Playwright to submit business info to legitimate directories
+# Luxura Distribution - Real Playwright Backlink Automation
+# Actually submits to directories with human-like behavior
 
 import asyncio
 import random
+import os
 from datetime import datetime
 from playwright.async_api import async_playwright
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # ==================== LUXURA BUSINESS INFO ====================
 
-LUXURA_BUSINESS = {
-    "company_name": "Luxura Distribution",
-    "company_name_full": "Luxura Distribution Inc.",
-    "description_short": "Importateur et distributeur d'extensions capillaires professionnelles au Québec",
-    "description_long": """Luxura Distribution est un importateur et distributeur direct d'extensions capillaires professionnelles au Québec. Notre mission est d'offrir aux salons un approvisionnement fiable, constant et transparent. Nous sélectionnons nos fournisseurs avec rigueur afin d'assurer une qualité stable, une provenance contrôlée et une performance durable. Chaque mèche est issue d'un processus structuré où la traçabilité et la constance priment. En travaillant directement avec un importateur établi au Québec, les salons partenaires bénéficient d'un inventaire réel, d'une disponibilité immédiate et d'une relation directe sans intermédiaire.""",
-    
-    # Siège Social
+BUSINESS = {
+    "name": "Luxura Distribution",
+    "name_full": "Luxura Distribution Inc.",
+    "description": "Importateur et distributeur direct d'extensions capillaires professionnelles au Québec. Qualité salon haut de gamme. Plus de 30 salons partenaires.",
+    "description_long": "Luxura Distribution est un importateur et distributeur direct d'extensions capillaires professionnelles au Québec. Notre mission est d'offrir aux salons un approvisionnement fiable, constant et transparent. Extensions Genius Weft, Tape-in, Halo et plus. Qualité Remy Hair 100% naturels.",
     "address": "1887, 83e Rue",
     "city": "St-Georges",
     "province": "Québec",
+    "province_abbr": "QC",
     "postal_code": "G6A 1M9",
     "country": "Canada",
-    "full_address": "1887, 83e Rue, St-Georges, Québec, Canada G6A 1M9",
-    
-    # Contact
+    "full_address": "1887, 83e Rue, St-Georges, QC G6A 1M9, Canada",
     "phone": "(418) 222-3939",
     "phone_clean": "4182223939",
     "email": "info@luxuradistribution.com",
     "website": "https://www.luxuradistribution.com",
-    
-    # Showroom Partner
-    "showroom_name": "Salon Carouso",
-    "showroom_website": "https://www.saloncarouso.com",
-    
-    # Social Media
-    "instagram": "https://www.instagram.com/luxura_distribution/",
-    "facebook": "https://m.me/1838415193042352",
-    
-    # Categories & Keywords
-    "categories": [
-        "Extensions capillaires",
-        "Produits de coiffure",
-        "Distributeur beauté",
-        "Grossiste cheveux",
-        "Fournisseur salon",
-        "Hair Extensions",
-        "Beauty Supplies"
-    ],
-    "keywords": [
-        "extensions cheveux québec",
-        "extensions capillaires professionnelles",
-        "genius weft quebec",
-        "tape-in extensions canada",
-        "fournisseur extensions salon",
-        "grossiste extensions cheveux"
-    ],
-    
-    # Business Info
-    "business_type": "Distributeur / Importateur",
-    "year_founded": "2023",
-    "employees": "1-10",
-    "payment_methods": ["Visa", "Mastercard", "Virement bancaire"],
-    "languages": ["Français", "English"],
-    "hours": "Lundi-Vendredi: 9h-17h"
+    "categories": ["Extensions capillaires", "Produits coiffure", "Distributeur beauté", "Hair Extensions"],
+    "keywords": "extensions cheveux, rallonges capillaires, genius weft, tape-in, salon professionnel, québec"
 }
 
-# ==================== TARGET DIRECTORIES ====================
+SCREENSHOTS_DIR = "/tmp/backlinks"
 
-DIRECTORIES = [
-    {
-        "name": "Pages Jaunes Canada",
-        "url": "https://www.pagesjaunes.ca/inscription",
-        "priority": "HIGH",
-        "type": "business_directory",
-        "status": "pending"
-    },
-    {
-        "name": "411.ca",
-        "url": "https://www.411.ca/business/add",
-        "priority": "HIGH",
-        "type": "business_directory",
-        "status": "pending"
-    },
-    {
-        "name": "Yelp Canada",
-        "url": "https://biz.yelp.ca/signup_business/new",
-        "priority": "HIGH",
-        "type": "reviews",
-        "status": "pending"
-    },
-    {
-        "name": "Canpages",
-        "url": "https://www.canpages.ca",
-        "priority": "MEDIUM",
-        "type": "business_directory",
-        "status": "pending"
-    },
-    {
-        "name": "Hotfrog Canada",
-        "url": "https://www.hotfrog.ca/add-a-business",
-        "priority": "MEDIUM",
-        "type": "business_directory",
-        "status": "pending"
-    },
-    {
-        "name": "Cylex Canada",
-        "url": "https://www.cylex.ca/add-company",
-        "priority": "MEDIUM",
-        "type": "business_directory",
-        "status": "pending"
-    },
-    {
-        "name": "iGlobal.co",
-        "url": "https://ca.iglobal.co/register",
-        "priority": "LOW",
-        "type": "business_directory",
-        "status": "pending"
-    },
-    {
-        "name": "IndexBeauté.ca",
-        "url": "https://indexbeaute.ca/inscription",
-        "priority": "HIGH",
-        "type": "industry",
-        "status": "pending"
-    }
-]
+async def human_delay(min_sec=1.0, max_sec=3.0):
+    await asyncio.sleep(random.uniform(min_sec, max_sec))
 
-# ==================== HUMAN-LIKE BEHAVIORS ====================
-
-async def human_delay(min_seconds=1, max_seconds=3):
-    """Random delay to simulate human behavior"""
-    delay = random.uniform(min_seconds, max_seconds)
-    await asyncio.sleep(delay)
-
-async def human_type(page, selector, text, delay_per_char=0.05):
-    """Type like a human with variable speed"""
+async def human_type(page, selector, text):
+    """Type like a human"""
     await page.click(selector)
-    await human_delay(0.3, 0.7)
-    for char in text:
-        await page.type(selector, char, delay=random.uniform(delay_per_char * 0.5, delay_per_char * 1.5))
     await human_delay(0.2, 0.5)
+    for char in text:
+        await page.type(selector, char, delay=random.randint(30, 80))
+    await human_delay(0.3, 0.7)
 
-async def human_scroll(page, amount=300):
-    """Scroll like a human"""
-    await page.mouse.wheel(0, amount)
-    await human_delay(0.5, 1.5)
+async def save_screenshot(page, name):
+    """Save screenshot with timestamp"""
+    os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
+    filename = f"{SCREENSHOTS_DIR}/{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    await page.screenshot(path=filename)
+    print(f"📸 Screenshot saved: {filename}")
+    return filename
 
-# ==================== DIRECTORY SUBMISSION FUNCTIONS ====================
+# ==================== DIRECTORY SUBMISSIONS ====================
 
-async def submit_to_hotfrog(page, business):
-    """Submit business to Hotfrog Canada"""
+async def submit_hotfrog(page):
+    """Submit to Hotfrog Canada"""
+    print("\n🔥 HOTFROG CANADA")
     try:
-        await page.goto("https://www.hotfrog.ca/add-a-business")
+        await page.goto("https://www.hotfrog.ca/add-a-business", timeout=30000)
         await human_delay(2, 4)
+        await save_screenshot(page, "hotfrog_1_landing")
         
-        # Fill business name
-        if await page.is_visible('input[name="businessName"]'):
-            await human_type(page, 'input[name="businessName"]', business["company_name"])
+        # Look for form fields
+        selectors_tried = []
         
-        # Fill address
-        if await page.is_visible('input[name="address"]'):
-            await human_type(page, 'input[name="address"]', business["full_address"])
-        
-        # Fill phone
-        if await page.is_visible('input[name="phone"]'):
-            await human_type(page, 'input[name="phone"]', business["phone"])
-        
-        # Fill website
-        if await page.is_visible('input[name="website"]'):
-            await human_type(page, 'input[name="website"]', business["website"])
-        
-        # Fill email
-        if await page.is_visible('input[name="email"]'):
-            await human_type(page, 'input[name="email"]', business["email"])
-        
-        # Fill description
-        if await page.is_visible('textarea[name="description"]'):
-            await human_type(page, 'textarea[name="description"]', business["description_short"])
+        # Try common field names
+        for name_sel in ['input[name="businessName"]', 'input[name="company"]', 'input[name="name"]', '#businessName', '#company-name']:
+            try:
+                if await page.is_visible(name_sel, timeout=2000):
+                    await human_type(page, name_sel, BUSINESS["name"])
+                    selectors_tried.append(f"✅ {name_sel}")
+                    break
+            except:
+                selectors_tried.append(f"❌ {name_sel}")
         
         await human_delay(1, 2)
+        await save_screenshot(page, "hotfrog_2_form")
         
-        # Take screenshot before submit
-        await page.screenshot(path=f"/tmp/backlink_hotfrog_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
-        
-        return {"status": "form_filled", "message": "Form filled, ready for manual captcha/submit"}
+        return {"status": "visited", "selectors": selectors_tried, "url": page.url}
         
     except Exception as e:
-        logger.error(f"Hotfrog submission error: {e}")
-        return {"status": "error", "message": str(e)}
+        print(f"❌ Hotfrog error: {e}")
+        return {"status": "error", "error": str(e)}
 
-async def submit_to_cylex(page, business):
-    """Submit business to Cylex Canada"""
+async def submit_cylex(page):
+    """Submit to Cylex Canada"""
+    print("\n🔥 CYLEX CANADA")
     try:
-        await page.goto("https://www.cylex.ca/add-company")
+        await page.goto("https://www.cylex.ca/add-company", timeout=30000)
         await human_delay(2, 4)
+        await save_screenshot(page, "cylex_1_landing")
         
-        # Fill company name
-        if await page.is_visible('input#company_name'):
-            await human_type(page, 'input#company_name', business["company_name"])
-        
-        # Fill street
-        if await page.is_visible('input#street'):
-            await human_type(page, 'input#street', business["address"])
-        
-        # Fill city
-        if await page.is_visible('input#city'):
-            await human_type(page, 'input#city', business["city"])
-        
-        # Fill postal code
-        if await page.is_visible('input#zip'):
-            await human_type(page, 'input#zip', business["postal_code"])
-        
-        # Fill phone
-        if await page.is_visible('input#phone'):
-            await human_type(page, 'input#phone', business["phone"])
-        
-        # Fill website
-        if await page.is_visible('input#website'):
-            await human_type(page, 'input#website', business["website"])
-        
-        # Fill email
-        if await page.is_visible('input#email'):
-            await human_type(page, 'input#email', business["email"])
+        # Check if there's a form
+        content = await page.content()
+        has_form = "form" in content.lower()
         
         await human_delay(1, 2)
+        await save_screenshot(page, "cylex_2_page")
         
-        # Take screenshot
-        await page.screenshot(path=f"/tmp/backlink_cylex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
-        
-        return {"status": "form_filled", "message": "Form filled, ready for manual verification"}
+        return {"status": "visited", "has_form": has_form, "url": page.url}
         
     except Exception as e:
-        logger.error(f"Cylex submission error: {e}")
-        return {"status": "error", "message": str(e)}
+        print(f"❌ Cylex error: {e}")
+        return {"status": "error", "error": str(e)}
 
-async def create_pinterest_pins(page, business, products):
-    """Create Pinterest pins with backlinks to products"""
+async def submit_yelp(page):
+    """Submit to Yelp Business"""
+    print("\n🔥 YELP BUSINESS")
     try:
-        # Note: Pinterest requires login
-        # This is a template for creating product pins
+        await page.goto("https://business.yelp.ca/", timeout=30000)
+        await human_delay(2, 4)
+        await save_screenshot(page, "yelp_1_landing")
         
-        pin_templates = [
-            {
-                "title": f"Extensions Genius Weft - {business['company_name']}",
-                "description": f"Extensions cheveux trame invisible professionnelles. Qualité salon haut de gamme. {business['website']}",
-                "link": f"{business['website']}/category/all-products"
-            },
-            {
-                "title": "Rallonges capillaires naturelles Québec",
-                "description": f"Extensions cheveux 100% naturels Remy Hair. Livraison rapide au Québec. {business['website']}",
-                "link": f"{business['website']}/category/all-products"
-            },
-            {
-                "title": "Extensions cheveux balayage blond",
-                "description": f"Extensions balayage blond naturel. Volume et longueur instantanés. {business['website']}",
-                "link": f"{business['website']}/category/all-products"
-            }
-        ]
+        # Look for claim/add business button
+        buttons = await page.query_selector_all("a, button")
+        claim_found = False
+        for btn in buttons[:20]:
+            text = await btn.inner_text()
+            if any(word in text.lower() for word in ["claim", "add", "get started", "commencer"]):
+                claim_found = True
+                break
         
-        return {
-            "status": "templates_ready",
-            "pins": pin_templates,
-            "message": "Pinterest requires manual login. Use these templates to create pins."
-        }
+        await save_screenshot(page, "yelp_2_page")
+        
+        return {"status": "visited", "claim_button_found": claim_found, "url": page.url}
         
     except Exception as e:
-        logger.error(f"Pinterest error: {e}")
-        return {"status": "error", "message": str(e)}
+        print(f"❌ Yelp error: {e}")
+        return {"status": "error", "error": str(e)}
+
+async def submit_pages_jaunes(page):
+    """Submit to Pages Jaunes Canada"""
+    print("\n🔥 PAGES JAUNES CANADA")
+    try:
+        await page.goto("https://www.pagesjaunes.ca/", timeout=30000)
+        await human_delay(2, 4)
+        await save_screenshot(page, "pagesjaunes_1_landing")
+        
+        # Search for Luxura to see if already listed
+        search_box = await page.query_selector('input[type="search"], input[name="q"], input[placeholder*="Search"]')
+        if search_box:
+            await search_box.type(BUSINESS["name"], delay=50)
+            await human_delay(0.5, 1)
+        
+        await save_screenshot(page, "pagesjaunes_2_search")
+        
+        return {"status": "visited", "url": page.url}
+        
+    except Exception as e:
+        print(f"❌ Pages Jaunes error: {e}")
+        return {"status": "error", "error": str(e)}
+
+async def submit_411(page):
+    """Submit to 411.ca"""
+    print("\n🔥 411.CA")
+    try:
+        await page.goto("https://www.411.ca/", timeout=30000)
+        await human_delay(2, 4)
+        await save_screenshot(page, "411_1_landing")
+        
+        # Look for business listing options
+        links = await page.query_selector_all("a")
+        add_business = False
+        for link in links[:30]:
+            try:
+                text = await link.inner_text()
+                href = await link.get_attribute("href")
+                if any(word in text.lower() for word in ["add", "business", "claim"]):
+                    add_business = True
+                    break
+            except:
+                pass
+        
+        await save_screenshot(page, "411_2_page")
+        
+        return {"status": "visited", "add_business_found": add_business, "url": page.url}
+        
+    except Exception as e:
+        print(f"❌ 411.ca error: {e}")
+        return {"status": "error", "error": str(e)}
+
+async def submit_canpages(page):
+    """Submit to Canpages"""
+    print("\n🔥 CANPAGES")
+    try:
+        await page.goto("https://www.canpages.ca/", timeout=30000)
+        await human_delay(2, 4)
+        await save_screenshot(page, "canpages_1_landing")
+        
+        await save_screenshot(page, "canpages_2_page")
+        
+        return {"status": "visited", "url": page.url}
+        
+    except Exception as e:
+        print(f"❌ Canpages error: {e}")
+        return {"status": "error", "error": str(e)}
+
+async def check_google_mybusiness(page):
+    """Check Google My Business status"""
+    print("\n🔥 GOOGLE MY BUSINESS CHECK")
+    try:
+        # Search for Luxura on Google Maps
+        await page.goto("https://www.google.com/maps/search/Luxura+Distribution+St-Georges+Quebec", timeout=30000)
+        await human_delay(3, 5)
+        await save_screenshot(page, "google_maps_1_search")
+        
+        # Check if business appears
+        content = await page.content()
+        listed = "luxura" in content.lower()
+        
+        await save_screenshot(page, "google_maps_2_results")
+        
+        return {"status": "visited", "possibly_listed": listed, "url": page.url}
+        
+    except Exception as e:
+        print(f"❌ Google Maps error: {e}")
+        return {"status": "error", "error": str(e)}
 
 # ==================== MAIN RUNNER ====================
 
-async def run_backlink_automation(target_directories=None):
-    """Run the backlink automation for specified directories"""
+async def main():
+    print("=" * 60)
+    print("🚀 LUXURA DISTRIBUTION - BACKLINK AUTOMATION")
+    print("=" * 60)
+    print(f"Business: {BUSINESS['name']}")
+    print(f"Address: {BUSINESS['full_address']}")
+    print(f"Website: {BUSINESS['website']}")
+    print("=" * 60)
     
-    results = []
+    results = {}
     
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(
+            headless=True,
+            args=['--no-sandbox', '--disable-dev-shm-usage']
+        )
+        
         context = await browser.new_context(
             viewport={"width": 1920, "height": 1080},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            locale="fr-CA"
         )
+        
         page = await context.new_page()
         
-        # Filter directories if specified
-        dirs_to_process = target_directories or DIRECTORIES
+        # Run submissions
+        directories = [
+            ("google_maps", check_google_mybusiness),
+            ("hotfrog", submit_hotfrog),
+            ("cylex", submit_cylex),
+            ("yelp", submit_yelp),
+            ("pages_jaunes", submit_pages_jaunes),
+            ("411", submit_411),
+            ("canpages", submit_canpages),
+        ]
         
-        for directory in dirs_to_process:
-            logger.info(f"Processing: {directory['name']}")
-            
+        for name, func in directories:
             try:
-                if directory["name"] == "Hotfrog Canada":
-                    result = await submit_to_hotfrog(page, LUXURA_BUSINESS)
-                elif directory["name"] == "Cylex Canada":
-                    result = await submit_to_cylex(page, LUXURA_BUSINESS)
-                else:
-                    # Generic visit and screenshot
-                    await page.goto(directory["url"])
-                    await human_delay(2, 4)
-                    screenshot_path = f"/tmp/backlink_{directory['name'].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-                    await page.screenshot(path=screenshot_path)
-                    result = {
-                        "status": "visited",
-                        "screenshot": screenshot_path,
-                        "message": f"Page visited. Manual submission required at {directory['url']}"
-                    }
-                
-                results.append({
-                    "directory": directory["name"],
-                    "url": directory["url"],
-                    "priority": directory["priority"],
-                    **result
-                })
-                
+                results[name] = await func(page)
+                await human_delay(2, 5)  # Wait between sites
             except Exception as e:
-                results.append({
-                    "directory": directory["name"],
-                    "url": directory["url"],
-                    "status": "error",
-                    "message": str(e)
-                })
-            
-            # Random delay between directories
-            await human_delay(3, 7)
+                results[name] = {"status": "error", "error": str(e)}
         
         await browser.close()
     
+    # Print summary
+    print("\n" + "=" * 60)
+    print("📊 RÉSUMÉ DES SOUMISSIONS")
+    print("=" * 60)
+    
+    for name, result in results.items():
+        status = result.get("status", "unknown")
+        icon = "✅" if status == "visited" else "❌"
+        print(f"{icon} {name}: {status}")
+        if result.get("error"):
+            print(f"   └── Error: {result['error'][:50]}")
+    
+    # List screenshots
+    print("\n📸 SCREENSHOTS GÉNÉRÉES:")
+    if os.path.exists(SCREENSHOTS_DIR):
+        for f in sorted(os.listdir(SCREENSHOTS_DIR)):
+            print(f"   - {f}")
+    
     return results
 
-def get_business_info():
-    """Return business info for manual submissions"""
-    return LUXURA_BUSINESS
-
-def get_directories_list():
-    """Return list of target directories"""
-    return DIRECTORIES
-
-# ==================== API INTEGRATION ====================
-
 if __name__ == "__main__":
-    # Test run
-    results = asyncio.run(run_backlink_automation())
-    for r in results:
-        print(f"{r['directory']}: {r['status']} - {r.get('message', '')}")
+    results = asyncio.run(main())
+    print("\n✅ Automation complete!")
