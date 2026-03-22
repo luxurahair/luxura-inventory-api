@@ -1665,10 +1665,19 @@ async def get_backlink_status():
     runs = await db.backlink_runs.find({}).sort("date", -1).to_list(10)
     
     # Get screenshots if any
-    import os
     screenshots = []
     if os.path.exists("/tmp/backlinks"):
         screenshots = os.listdir("/tmp/backlinks")
+    
+    # Get verification status
+    verification_status = {}
+    status_file = "/tmp/backlinks/verification_status.json"
+    if os.path.exists(status_file):
+        try:
+            with open(status_file, 'r') as f:
+                verification_status = json.load(f)
+        except:
+            pass
     
     return {
         "recent_runs": [
@@ -1680,7 +1689,87 @@ async def get_backlink_status():
             } for run in runs
         ],
         "screenshots": screenshots,
-        "screenshots_path": "/tmp/backlinks"
+        "screenshots_path": "/tmp/backlinks",
+        "verification_status": verification_status
+    }
+
+@api_router.post("/backlinks/auto-verify")
+async def start_auto_verification(background_tasks: BackgroundTasks):
+    """Start automatic verification loop - checks every 10 minutes until all verified"""
+    
+    async def run_auto_verify():
+        import subprocess
+        try:
+            # Run verification loop with 30 iterations, 10 minute intervals
+            result = subprocess.run(
+                ["python3", "/app/backend/auto_verification_loop.py", "30", "10"],
+                capture_output=True,
+                text=True,
+                timeout=18000,  # 5 hours max
+                cwd="/app/backend"
+            )
+            
+            await db.backlink_runs.insert_one({
+                "date": datetime.now(timezone.utc),
+                "type": "auto_verify_loop",
+                "stdout": result.stdout[-5000:] if result.stdout else None,
+                "return_code": result.returncode,
+                "success": result.returncode == 0
+            })
+            
+        except subprocess.TimeoutExpired:
+            await db.backlink_runs.insert_one({
+                "date": datetime.now(timezone.utc),
+                "type": "auto_verify_loop",
+                "error": "Loop completed after 5 hours",
+                "success": True
+            })
+        except Exception as e:
+            await db.backlink_runs.insert_one({
+                "date": datetime.now(timezone.utc),
+                "type": "auto_verify_loop",
+                "error": str(e),
+                "success": False
+            })
+    
+    background_tasks.add_task(run_auto_verify)
+    
+    return {
+        "success": True,
+        "message": "🔄 Boucle de vérification automatique démarrée!",
+        "details": {
+            "check_interval": "10 minutes",
+            "max_duration": "5 heures",
+            "email": "info@luxuradistribution.com"
+        },
+        "note": "Vérifiez /api/backlinks/status pour voir la progression"
+    }
+
+@api_router.get("/backlinks/verification-status")
+async def get_verification_status():
+    """Get current verification status for all directories"""
+    
+    status_file = "/tmp/backlinks/verification_status.json"
+    status = {}
+    
+    if os.path.exists(status_file):
+        try:
+            with open(status_file, 'r') as f:
+                status = json.load(f)
+        except:
+            pass
+    
+    verified_count = sum(1 for d in status.values() if d.get("verified"))
+    submitted_count = sum(1 for d in status.values() if d.get("submitted"))
+    
+    return {
+        "directories": status,
+        "summary": {
+            "verified": verified_count,
+            "submitted": submitted_count,
+            "pending": submitted_count - verified_count
+        },
+        "all_verified": verified_count >= submitted_count and submitted_count > 0
     }
 
 # ==================== SALON ENDPOINTS ====================
