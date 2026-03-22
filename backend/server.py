@@ -1542,6 +1542,69 @@ async def get_seo_stats():
         "recommendation": "Configure un CRON pour appeler POST /api/seo/daily-generation chaque jour"
     }
 
+@api_router.get("/seo/luxura-business-info")
+async def get_luxura_business_info():
+    """Get Luxura business info for manual directory submissions"""
+    return {
+        "company": {
+            "name": "Luxura Distribution",
+            "name_full": "Luxura Distribution Inc.",
+            "description": "Importateur et distributeur direct d'extensions capillaires professionnelles au Québec. Qualité salon haut de gamme, approvisionnement fiable et transparent.",
+        },
+        "headquarters": {
+            "address": "1887, 83e Rue",
+            "city": "St-Georges",
+            "province": "Québec",
+            "postal_code": "G6A 1M9",
+            "country": "Canada",
+            "full_address": "1887, 83e Rue, St-Georges, Québec, Canada G6A 1M9"
+        },
+        "contact": {
+            "phone": "(418) 222-3939",
+            "email": "info@luxuradistribution.com",
+            "website": "https://www.luxuradistribution.com"
+        },
+        "showroom": {
+            "name": "Salon Carouso",
+            "website": "https://www.saloncarouso.com",
+            "note": "Partenaire showroom pour voir les produits en personne"
+        },
+        "social_media": {
+            "instagram": "https://www.instagram.com/luxura_distribution/",
+            "facebook_messenger": "https://m.me/1838415193042352"
+        },
+        "categories": [
+            "Extensions capillaires",
+            "Produits de coiffure professionnels",
+            "Distributeur beauté",
+            "Grossiste cheveux",
+            "Fournisseur salon",
+            "Hair Extensions",
+            "Beauty Supplies Wholesale"
+        ],
+        "seo_keywords": [
+            "extensions cheveux québec",
+            "extensions capillaires professionnelles",
+            "genius weft quebec",
+            "tape-in extensions canada",
+            "fournisseur extensions salon",
+            "grossiste extensions cheveux",
+            "rallonges cheveux naturels"
+        ],
+        "business_hours": "Lundi-Vendredi: 9h-17h",
+        "submission_checklist": [
+            "✅ Google My Business (CRITIQUE)",
+            "✅ Pages Jaunes Canada",
+            "✅ Yelp Canada",
+            "✅ 411.ca",
+            "✅ Canpages.ca",
+            "✅ Hotfrog.ca",
+            "✅ Cylex.ca",
+            "✅ IndexBeauté.ca (industrie)",
+            "✅ Pinterest (créer pins produits)"
+        ]
+    }
+
 # ==================== SALON ENDPOINTS ====================
 
 @api_router.get("/salons")
