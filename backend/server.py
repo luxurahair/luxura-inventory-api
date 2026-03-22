@@ -993,8 +993,8 @@ def extract_color_info_for_sku(name: str) -> tuple:
 
 def generate_standardized_sku(product: dict) -> str:
     """Générer un SKU standardisé pour un produit
-    Format: {TYPE}{LONGUEUR}{POIDS}-{CODE_COULEUR}-{NOM_COULEUR}
-    Exemple: H20140-613-18A-BLOND-CARAMEL
+    Format: {TYPE}{LONGUEUR}{POIDS}-{CODE_COULEUR}-{NOM_SKU}
+    Exemple: H20140-6-24-GOLDEN-HOUR
     """
     name = product.get('name') or ''
     handle = product.get('handle') or ''
@@ -1022,20 +1022,25 @@ def generate_standardized_sku(product: dict) -> str:
         length = variant_match.group(1)
         weight = variant_match.group(2)
     
-    # Extraire code couleur et nom
-    color_code, color_name = extract_color_info_for_sku(name)
+    # Extraire code couleur
+    color_code, _ = extract_color_info_for_sku(name)
     
-    # Nettoyer le code couleur (remplacer / par -)
+    # Obtenir le nom SKU depuis le système de couleurs
+    color_info = get_color_info(color_code)
+    sku_name = color_info.get("sku", color_code.replace("/", "-"))
+    
+    # Nettoyer le code couleur pour le SKU (remplacer / par -)
     clean_code = color_code.replace('/', '-')
     
     # Construire le SKU
     if length and weight:
-        sku = f'{prefix}{length}{weight}-{clean_code}-{color_name}'
+        # Variante avec dimensions: H20140-6-24-GOLDEN-HOUR
+        sku = f'{prefix}{length}{weight}-{clean_code}-{sku_name}'
     else:
-        # Produit parent sans variante
-        sku = f'{prefix}-{clean_code}-{color_name}' if clean_code else f'{prefix}-{color_name}'
+        # Produit parent sans dimensions: H-6-24-GOLDEN-HOUR
+        sku = f'{prefix}-{clean_code}-{sku_name}'
     
-    return sku.strip('-').upper()
+    return sku.upper()
 
 @api_router.get("/sku/preview")
 async def preview_sku_migration():
