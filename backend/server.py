@@ -13,6 +13,7 @@ from datetime import datetime, timezone, timedelta
 import httpx
 import json
 import asyncio
+from color_system import COLOR_SYSTEM, get_color_info, get_seo_description, get_all_colors_for_filter
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -818,6 +819,35 @@ async def get_categories():
         Category(id="essentiels", name="Essentiels", description="Outils et produits d'entretien professionnels", image="https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg/v1/fill/w_600,h_600,q_85/s-l1200.jpg", wix_url="https://www.luxuradistribution.com/essentiels", order=5),
     ]
     return categories
+
+# ==================== COLOR SYSTEM ENDPOINTS ====================
+
+@api_router.get("/colors")
+async def get_colors():
+    """Get all Luxura colors with full info for filters and SEO"""
+    return get_all_colors_for_filter()
+
+@api_router.get("/colors/{color_code}")
+async def get_color(color_code: str):
+    """Get detailed info for a specific color code"""
+    info = get_color_info(color_code)
+    return {
+        "code": color_code,
+        **info
+    }
+
+@api_router.get("/colors/seo/{color_code}")
+async def get_color_seo(color_code: str, product_type: str = "extensions"):
+    """Get SEO description for a color"""
+    info = get_color_info(color_code)
+    return {
+        "code": color_code,
+        "luxura_name": info.get("luxura", ""),
+        "seo_description": get_seo_description(color_code, product_type),
+        "type": info.get("type", "SOLID"),
+        "tone": info.get("tone", "NEUTRE")
+    }
+
 
 # ==================== SKU MIGRATION ENDPOINTS ====================
 
