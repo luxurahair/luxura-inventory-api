@@ -821,6 +821,97 @@ async def get_categories():
 
 # ==================== SKU MIGRATION ENDPOINTS ====================
 
+# MAPPING PRÉCIS DES CODES COULEUR LUXURA
+# Basé sur le système de numérotation universel des extensions de cheveux
+COLOR_CODE_MAPPING = {
+    # NOIRS (Level 1)
+    "1": "JET-BLACK",           # Noir Jet - le plus foncé
+    "1B": "OFF-BLACK",          # Noir Naturel - plus doux, légèrement brun
+    
+    # BRUNS FONCÉS (Level 2-3)
+    "2": "ESPRESSO",            # Brun très foncé/Espresso
+    "DB": "DARK-MYSTERY",       # Brun Mystère foncé
+    "DC": "DARK-CHOCOLATE",     # Chocolat Noir
+    "CACAO": "CACAO-BROWN",     # Brun Cacao
+    "CHENGTU": "ASIAN-BROWN",   # Brun Asiatique
+    "FOOCHOW": "ORIENTAL-BROWN", # Brun Oriental
+    
+    # BRUNS MOYENS (Level 3-4)
+    "3": "CHESTNUT-BROWN",      # Brun Châtaigne
+    "3/3T24": "BROWN-OMBRE-BLONDE", # Brun vers Blond - Ombré/Transition
+    "CINNAMON": "CINNAMON-SPICE", # Cannelle Épicée
+    
+    # BLONDS FONCÉS/CARAMEL (Level 6)
+    "6": "CARAMEL-BLONDE",      # Blond Caramel Foncé
+    "6/24": "CARAMEL-BALAYAGE", # Balayage Caramel vers Doré
+    "6/6T24": "CARAMEL-HIGHLIGHTED", # Caramel avec Mèches Blondes
+    
+    # BLONDS CLAIRS/PIANO (Level 18-22) - PAS NOIR!
+    "18/22": "ASH-PIANO-BLONDE", # Piano Blond Cendré (mélange ash+honey)
+    
+    # BLONDS PLATINE (Level 60+)
+    "60A": "PLATINUM-BLONDE",   # Blond Platine
+    "613/18A": "PLATINUM-ASH-BALAYAGE", # Platine avec Cendré Balayage
+    "PHA": "PURE-ASH-BLONDE",   # Blond Cendré Pur
+    
+    # BLANCS
+    "IVORY": "IVORY-WHITE",     # Blanc Ivoire
+    "ICW": "ICE-WHITE",         # Blanc Polaire/Glacé
+    
+    # OMBRÉS ET BALAYAGES SPÉCIAUX
+    "CB": "HONEY-WILD-OMBRE",   # Ombré Miel Sauvage
+    "HPS": "ASH-LUXE-OMBRE",    # Ombré Cendré Luxe
+    "BM": "HONEY-BROWN",        # Brun Miel
+    "5AT60": "GLACIER-OMBRE",   # Ombré Glacier (brun vers platine)
+    "5ATP18B62": "NORDIC-OMBRE", # Ombré Nordique
+    "2BTP18/1006": "ESPRESSO-HIGHLIGHTED", # Espresso avec Mèches
+    "T14/P14/24": "VENETIAN-BALAYAGE", # Balayage Vénitien
+}
+
+def get_color_name_from_code(color_code: str) -> str:
+    """Obtenir le nom de couleur à partir du code
+    Utilise le mapping précis basé sur les standards de l'industrie
+    """
+    if not color_code:
+        return ""
+    
+    # Nettoyer le code (enlever espaces, mettre en majuscules)
+    clean_code = color_code.strip().upper()
+    
+    # Chercher correspondance exacte
+    if clean_code in COLOR_CODE_MAPPING:
+        return COLOR_CODE_MAPPING[clean_code]
+    
+    # Chercher correspondance partielle (sans /)
+    normalized = clean_code.replace("/", "-")
+    for code, name in COLOR_CODE_MAPPING.items():
+        if code.replace("/", "-") == normalized:
+            return name
+    
+    # Fallback: générer un nom basé sur les règles
+    # Codes numériques simples
+    if clean_code.isdigit():
+        level = int(clean_code)
+        if level <= 2:
+            return f"DARK-BROWN-{clean_code}"
+        elif level <= 4:
+            return f"MEDIUM-BROWN-{clean_code}"
+        elif level <= 7:
+            return f"LIGHT-BROWN-{clean_code}"
+        else:
+            return f"BLONDE-{clean_code}"
+    
+    # Codes avec T (Transition/Ombre)
+    if "T" in clean_code:
+        return f"OMBRE-{clean_code.replace('/', '-')}"
+    
+    # Codes avec P (Piano/Highlighted)
+    if "P" in clean_code:
+        return f"PIANO-{clean_code.replace('/', '-')}"
+    
+    # Default: utiliser le code tel quel
+    return clean_code.replace("/", "-")
+
 def extract_color_info_for_sku(name: str) -> tuple:
     """Extraire le code couleur et le nom de couleur du nom du produit"""
     if not name:
@@ -828,50 +919,12 @@ def extract_color_info_for_sku(name: str) -> tuple:
     
     # Pattern pour trouver #CODE dans le nom
     code_match = re.search(r'#([A-Za-z0-9/]+)', name)
-    color_code = code_match.group(1) if code_match else ''
+    color_code = code_match.group(1).upper() if code_match else ''
     
-    base_lower = name.lower()
-    detected_color = ''
+    # Obtenir le nom de couleur précis depuis le mapping
+    color_name = get_color_name_from_code(color_code)
     
-    # Chercher dans le nom - ordre de priorité
-    if 'noir' in base_lower or 'black' in base_lower or 'ébène' in base_lower or 'jet' in base_lower:
-        if 'doux' in base_lower:
-            detected_color = 'noir-doux'
-        else:
-            detected_color = 'noir-ebene'
-    elif 'mystère' in base_lower or 'mystere' in base_lower:
-        detected_color = 'brun-mystere'
-    elif 'châtaigne' in base_lower or 'chataigne' in base_lower:
-        detected_color = 'brun-chataigne'
-    elif 'chocolat' in base_lower:
-        detected_color = 'chocolat-noir'
-    elif 'cacao' in base_lower:
-        detected_color = 'brun-cacao'
-    elif 'ombré' in base_lower or 'ombre' in base_lower:
-        if 'miel' in base_lower:
-            detected_color = 'ombre-miel'
-        elif 'cendré' in base_lower or 'cendre' in base_lower:
-            detected_color = 'ombre-cendre'
-        else:
-            detected_color = 'ombre'
-    elif 'platine' in base_lower:
-        detected_color = 'blond-platine'
-    elif 'caramel' in base_lower:
-        detected_color = 'blond-caramel'
-    elif 'cendré' in base_lower or 'cendre' in base_lower:
-        detected_color = 'blond-cendre'
-    elif 'blond' in base_lower:
-        detected_color = 'blond'
-    elif 'brun' in base_lower:
-        detected_color = 'brun'
-    elif 'blanc' in base_lower or 'ice' in base_lower or 'ivory' in base_lower or 'polar' in base_lower:
-        detected_color = 'blanc-polaire'
-    elif 'balayage' in base_lower:
-        detected_color = 'balayage'
-    elif 'vénitien' in base_lower or 'venetien' in base_lower:
-        detected_color = 'balayage-venitien'
-    
-    return color_code, detected_color
+    return color_code, color_name
 
 def generate_standardized_sku(product: dict) -> str:
     """Générer un SKU standardisé pour un produit
