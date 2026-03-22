@@ -822,98 +822,127 @@ async def get_categories():
 # ==================== SKU MIGRATION ENDPOINTS ====================
 
 # MAPPING PRÉCIS DES CODES COULEUR LUXURA
-# Basé sur le système de numérotation universel des extensions de cheveux
+# Basé sur l'analyse visuelle des images + codes standards de l'industrie
+# Format: CODE -> (NOM_TECHNIQUE, NOM_LUXE_FRANCAIS, TYPE)
+# TYPE: SOLID, OMBRE, PIANO, OMBRE-PIANO, BALAYAGE
+
 COLOR_CODE_MAPPING = {
-    # NOIRS (Level 1)
-    "1": "JET-BLACK",           # Noir Jet - le plus foncé
-    "1B": "OFF-BLACK",          # Noir Naturel - plus doux, légèrement brun
+    # ════════════════════ NOIRS (Level 1) ════════════════════
+    "1": ("JET-BLACK", "Noir Intense", "SOLID"),           # Noir Jet - le plus foncé
+    "1B": ("OFF-BLACK", "Noir Naturel", "SOLID"),          # Noir naturel plus doux
     
-    # BRUNS FONCÉS (Level 2-3)
-    "2": "ESPRESSO",            # Brun très foncé/Espresso
-    "DB": "DARK-MYSTERY",       # Brun Mystère foncé
-    "DC": "DARK-CHOCOLATE",     # Chocolat Noir
-    "CACAO": "CACAO-BROWN",     # Brun Cacao
-    "CHENGTU": "ASIAN-BROWN",   # Brun Asiatique
-    "FOOCHOW": "ORIENTAL-BROWN", # Brun Oriental
+    # ════════════════════ BRUNS FONCÉS (Level 2) ════════════════════
+    "2": ("ESPRESSO", "Espresso Profond", "SOLID"),        # Brun très foncé
+    "DB": ("DARK-MYSTERY", "Mystère Nocturne", "SOLID"),   # Brun mystère foncé
+    "DC": ("DARK-CHOCOLATE", "Chocolat Noir", "SOLID"),    # Chocolat noir riche
+    "CACAO": ("CACAO-VELOURS", "Cacao Velours", "SOLID"),  # Brun cacao
+    "CHENGTU": ("ASIAN-SILK", "Soie Asiatique", "SOLID"),  # Brun oriental asiatique
+    "FOOCHOW": ("ORIENTAL-MYSTIQUE", "Orient Mystique", "SOLID"), # Brun oriental
     
-    # BRUNS MOYENS (Level 3-4)
-    "3": "CHESTNUT-BROWN",      # Brun Châtaigne
-    "3/3T24": "BROWN-OMBRE-BLONDE", # Brun vers Blond - Ombré/Transition
-    "CINNAMON": "CINNAMON-SPICE", # Cannelle Épicée
+    # ════════════════════ BRUNS MOYENS (Level 3-4) ════════════════════
+    "3": ("CHESTNUT", "Châtaigne Douce", "SOLID"),         # Brun châtaigne uni
+    "CINNAMON": ("CINNAMON-SPICE", "Cannelle Épicée", "SOLID"),  # Cannelle chaude
     
-    # BLONDS FONCÉS/CARAMEL (Level 6)
-    "6": "CARAMEL-BLONDE",      # Blond Caramel Foncé
-    "6/24": "CARAMEL-BALAYAGE", # Balayage Caramel vers Doré
-    "6/6T24": "CARAMEL-HIGHLIGHTED", # Caramel avec Mèches Blondes
+    # ════════════════════ BRUNS OMBRE + PIANO ════════════════════
+    # #3/3T24 = Base brun #3 + Ombré brun #3 + Piano mèches #24 blond
+    "3/3T24": ("CHESTNUT-OMBRE-PIANO", "Châtaigne Lumière Dorée", "OMBRE-PIANO"),
     
-    # BLONDS CLAIRS/PIANO (Level 18-22) - PAS NOIR!
-    "18/22": "ASH-PIANO-BLONDE", # Piano Blond Cendré (mélange ash+honey)
+    # ════════════════════ BLONDS CARAMEL (Level 6) ════════════════════
+    "6": ("CARAMEL", "Caramel Doré", "SOLID"),             # Blond caramel uni
+    "BM": ("HONEY-WILD", "Miel Sauvage", "SOLID"),         # Brun miel
     
-    # BLONDS PLATINE (Level 60+)
-    "60A": "PLATINUM-BLONDE",   # Blond Platine
-    "613/18A": "PLATINUM-ASH-BALAYAGE", # Platine avec Cendré Balayage
-    "PHA": "PURE-ASH-BLONDE",   # Blond Cendré Pur
+    # ════════════════════ BLONDS CARAMEL BALAYAGE/PIANO ════════════════════
+    # #6/24 = Base #6 caramel + Balayage vers #24 blond doré
+    "6/24": ("CARAMEL-BALAYAGE", "Miel Soleil", "BALAYAGE"),
+    # #6/6T24 = Base #6 + Ombré #6 + Piano mèches #24
+    "6/6T24": ("CARAMEL-OMBRE-PIANO", "Miel Doré Lumineux", "OMBRE-PIANO"),
     
-    # BLANCS
-    "IVORY": "IVORY-WHITE",     # Blanc Ivoire
-    "ICW": "ICE-WHITE",         # Blanc Polaire/Glacé
+    # ════════════════════ BLONDS PIANO (Level 18-22) - PAS NOIR! ════════════════════
+    # #18/22 = Piano mèches blond cendré #18 + blond beige #22 (sun-kissed)
+    "18/22": ("ASH-BEIGE-PIANO", "Étoile Dorée", "PIANO"),
     
-    # OMBRÉS ET BALAYAGES SPÉCIAUX
-    "CB": "HONEY-WILD-OMBRE",   # Ombré Miel Sauvage
-    "HPS": "ASH-LUXE-OMBRE",    # Ombré Cendré Luxe
-    "BM": "HONEY-BROWN",        # Brun Miel
-    "5AT60": "GLACIER-OMBRE",   # Ombré Glacier (brun vers platine)
-    "5ATP18B62": "NORDIC-OMBRE", # Ombré Nordique
-    "2BTP18/1006": "ESPRESSO-HIGHLIGHTED", # Espresso avec Mèches
-    "T14/P14/24": "VENETIAN-BALAYAGE", # Balayage Vénitien
+    # ════════════════════ BLONDS PLATINE (Level 60+) ════════════════════
+    "60A": ("PLATINUM", "Platine Pur", "SOLID"),           # Blond platine uni
+    "PHA": ("PURE-ASH", "Cendré Céleste", "SOLID"),        # Blond cendré pur
+    # #613/18A = Platine #613 + Balayage cendré #18A
+    "613/18A": ("PLATINUM-ASH-BALAYAGE", "Platine Étoilé", "BALAYAGE"),
+    
+    # ════════════════════ BLANCS ════════════════════
+    "IVORY": ("IVORY-PRECIOUS", "Ivoire Précieux", "SOLID"),   # Blanc ivoire
+    "ICW": ("ICE-CRYSTAL", "Cristal Polaire", "SOLID"),        # Blanc glacé
+    
+    # ════════════════════ OMBRÉS LUXE (dégradé sans mèches) ════════════════════
+    # #CB = Ombré miel sauvage (brun → miel)
+    "CB": ("HONEY-OMBRE", "Miel Sauvage Ombré", "OMBRE"),
+    # #HPS = Ombré cendré luxe (ash brown → ash blonde)
+    "HPS": ("ASH-LUXE-OMBRE", "Cendré Étoilé", "OMBRE"),
+    # #5AT60 = Ombré glacier (brun #5 ash → platine #60)
+    "5AT60": ("GLACIER-OMBRE", "Glacier Nordique", "OMBRE"),
+    # #5ATP18B62 = Ombré nordique complexe (multi-tons)
+    "5ATP18B62": ("NORDIC-OMBRE", "Aurore Boréale", "OMBRE"),
+    
+    # ════════════════════ ESPRESSO AVEC PIANO ════════════════════
+    # #2BTP18/1006 = Base espresso #2B + transition + piano mèches claires
+    "2BTP18/1006": ("ESPRESSO-LUMINOUS-PIANO", "Espresso Lumineux", "OMBRE-PIANO"),
+    
+    # ════════════════════ BALAYAGES VÉNITIENS ════════════════════
+    # #T14/P14/24 = Transition #14 + Piano #14 + #24 (multi-dimensional)
+    "T14/P14/24": ("VENETIAN-BALAYAGE", "Venise Dorée", "BALAYAGE"),
 }
 
-def get_color_name_from_code(color_code: str) -> str:
-    """Obtenir le nom de couleur à partir du code
-    Utilise le mapping précis basé sur les standards de l'industrie
+def get_color_info_from_code(color_code: str) -> tuple:
+    """Obtenir les informations complètes de couleur à partir du code
+    Retourne: (nom_technique, nom_luxe, type_coloration)
     """
     if not color_code:
-        return ""
+        return ("UNKNOWN", "Inconnu", "SOLID")
     
-    # Nettoyer le code (enlever espaces, mettre en majuscules)
+    # Nettoyer le code
     clean_code = color_code.strip().upper()
     
     # Chercher correspondance exacte
     if clean_code in COLOR_CODE_MAPPING:
         return COLOR_CODE_MAPPING[clean_code]
     
-    # Chercher correspondance partielle (sans /)
+    # Chercher correspondance sans /
     normalized = clean_code.replace("/", "-")
-    for code, name in COLOR_CODE_MAPPING.items():
+    for code, info in COLOR_CODE_MAPPING.items():
         if code.replace("/", "-") == normalized:
-            return name
+            return info
     
-    # Fallback: générer un nom basé sur les règles
-    # Codes numériques simples
-    if clean_code.isdigit():
-        level = int(clean_code)
+    # Fallback intelligent basé sur la structure du code
+    color_type = "SOLID"
+    
+    # Détecter le type basé sur la structure
+    if "T" in clean_code and "P" in clean_code:
+        color_type = "OMBRE-PIANO"  # Transition + Piano
+    elif "T" in clean_code:
+        color_type = "OMBRE"  # Transition/Ombre
+    elif "P" in clean_code:
+        color_type = "PIANO"  # Piano/Mèches
+    elif "/" in color_code and clean_code[0].isdigit():
+        # Ex: 6/24 = balayage
+        color_type = "BALAYAGE"
+    
+    # Générer un nom basé sur le niveau
+    base_num = ''.join(filter(str.isdigit, clean_code[:2]))
+    if base_num:
+        level = int(base_num)
         if level <= 2:
-            return f"DARK-BROWN-{clean_code}"
+            return (f"DARK-{clean_code.replace('/', '-')}", f"Brun Foncé {clean_code}", color_type)
         elif level <= 4:
-            return f"MEDIUM-BROWN-{clean_code}"
+            return (f"MEDIUM-{clean_code.replace('/', '-')}", f"Châtaigne {clean_code}", color_type)
         elif level <= 7:
-            return f"LIGHT-BROWN-{clean_code}"
+            return (f"LIGHT-{clean_code.replace('/', '-')}", f"Caramel {clean_code}", color_type)
         else:
-            return f"BLONDE-{clean_code}"
+            return (f"BLONDE-{clean_code.replace('/', '-')}", f"Blond {clean_code}", color_type)
     
-    # Codes avec T (Transition/Ombre)
-    if "T" in clean_code:
-        return f"OMBRE-{clean_code.replace('/', '-')}"
-    
-    # Codes avec P (Piano/Highlighted)
-    if "P" in clean_code:
-        return f"PIANO-{clean_code.replace('/', '-')}"
-    
-    # Default: utiliser le code tel quel
-    return clean_code.replace("/", "-")
+    return (clean_code.replace("/", "-"), clean_code, color_type)
 
 def extract_color_info_for_sku(name: str) -> tuple:
-    """Extraire le code couleur et le nom de couleur du nom du produit"""
+    """Extraire le code couleur et le nom technique du nom du produit
+    Retourne: (code_couleur, nom_technique)
+    """
     if not name:
         return '', ''
     
@@ -921,10 +950,10 @@ def extract_color_info_for_sku(name: str) -> tuple:
     code_match = re.search(r'#([A-Za-z0-9/]+)', name)
     color_code = code_match.group(1).upper() if code_match else ''
     
-    # Obtenir le nom de couleur précis depuis le mapping
-    color_name = get_color_name_from_code(color_code)
+    # Obtenir les infos depuis le mapping
+    tech_name, luxe_name, color_type = get_color_info_from_code(color_code)
     
-    return color_code, color_name
+    return color_code, tech_name
 
 def generate_standardized_sku(product: dict) -> str:
     """Générer un SKU standardisé pour un produit
