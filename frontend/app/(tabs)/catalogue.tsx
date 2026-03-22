@@ -35,6 +35,7 @@ interface Product {
   price: number;
   images: string[];
   quantity?: number;
+  total_quantity?: number;
   sku?: string;
   in_stock?: boolean;
   category?: string;
@@ -93,36 +94,60 @@ export default function CatalogueScreen() {
 
   const CARD_WIDTH = getCardWidth();
   
-  const renderProductCard = ({ item: product }: { item: Product }) => (
-    <TouchableOpacity
-      onPress={() => router.push(`/product/${product.id}`)}
-      activeOpacity={0.8}
-      style={[styles.card, { width: CARD_WIDTH }]}
-    >
-      <View style={[styles.imageContainer, { width: CARD_WIDTH, height: CARD_WIDTH }]}>
-        <Image
-          source={{ uri: product.images?.[0] }}
-          style={{ width: CARD_WIDTH, height: CARD_WIDTH }}
-          contentFit="cover"
-        />
-        {!product.in_stock && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>Épuisé</Text>
+  const renderProductCard = ({ item: product }: { item: Product }) => {
+    const stockQty = product.total_quantity || product.quantity || 0;
+    const isLowStock = stockQty > 0 && stockQty <= 5;
+    
+    return (
+      <TouchableOpacity
+        onPress={() => router.push(`/product/${product.id}`)}
+        activeOpacity={0.8}
+        style={[styles.card, { width: CARD_WIDTH }]}
+      >
+        <View style={[styles.imageContainer, { width: CARD_WIDTH, height: CARD_WIDTH }]}>
+          <Image
+            source={{ uri: product.images?.[0] }}
+            style={{ width: CARD_WIDTH, height: CARD_WIDTH }}
+            contentFit="cover"
+          />
+          {!product.in_stock && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>Épuisé</Text>
+            </View>
+          )}
+          {product.in_stock && isLowStock && (
+            <View style={styles.lowStockBadge}>
+              <Text style={styles.lowStockBadgeText}>Stock limité</Text>
+            </View>
+          )}
+          {product.variant_count && product.variant_count > 0 && (
+            <View style={styles.variantBadge}>
+              <Text style={styles.variantBadgeText}>{product.variant_count} options</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.info}>
+          <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+          <View style={styles.stockRow}>
+            {product.in_stock ? (
+              <View style={styles.stockIndicator}>
+                <View style={[styles.stockDot, isLowStock ? styles.stockDotLow : styles.stockDotOk]} />
+                <Text style={[styles.stockText, isLowStock ? styles.stockTextLow : styles.stockTextOk]}>
+                  {stockQty > 0 ? `${stockQty} en stock` : 'En stock'}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.stockIndicator}>
+                <View style={[styles.stockDot, styles.stockDotOut]} />
+                <Text style={[styles.stockText, styles.stockTextOut]}>Épuisé</Text>
+              </View>
+            )}
           </View>
-        )}
-        {product.variant_count && product.variant_count > 0 && (
-          <View style={styles.variantBadge}>
-            <Text style={styles.variantBadgeText}>{product.variant_count} options</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
-        {product.sku && <Text style={styles.sku}>{product.sku}</Text>}
-        <Text style={styles.price}>{product.price?.toFixed(2)} $</Text>
-      </View>
-    </TouchableOpacity>
-  );
+          <Text style={styles.price}>{product.price?.toFixed(2)} $</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderHeader = () => (
     <>
@@ -336,5 +361,55 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 9,
     fontWeight: '600',
+  },
+  lowStockBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: '#f5a623',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  lowStockBadgeText: {
+    color: '#000',
+    fontSize: 9,
+    fontWeight: '600',
+  },
+  stockRow: {
+    marginTop: 2,
+    marginBottom: 4,
+  },
+  stockIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stockDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 4,
+  },
+  stockDotOk: {
+    backgroundColor: '#4CAF50',
+  },
+  stockDotLow: {
+    backgroundColor: '#f5a623',
+  },
+  stockDotOut: {
+    backgroundColor: '#f44336',
+  },
+  stockText: {
+    fontSize: 9,
+    fontWeight: '500',
+  },
+  stockTextOk: {
+    color: '#4CAF50',
+  },
+  stockTextLow: {
+    color: '#f5a623',
+  },
+  stockTextOut: {
+    color: '#f44336',
   },
 });
