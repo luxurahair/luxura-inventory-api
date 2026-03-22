@@ -822,29 +822,28 @@ async def get_categories():
 # ==================== SKU MIGRATION ENDPOINTS ====================
 
 # MAPPING LUXE DES CODES COULEUR LUXURA
-# Inspiré des grandes marques: Bellami, Great Lengths, Cashmere Hair
+# Basé sur l'ANALYSE VISUELLE des images + codes standards
 # Format: CODE -> (NOM_TECHNIQUE, NOM_LUXE, TYPE)
-# TYPE: SOLID, OMBRE, PIANO, OMBRE-PIANO, BALAYAGE
 
 COLOR_CODE_MAPPING = {
     # ════════════════════ NOIRS INTENSES ════════════════════
-    "1": ("JET-BLACK", "Onyx Noir", "SOLID"),              # Noir intense jet
+    "1": ("JET-BLACK", "Onyx Intense", "SOLID"),           # Noir jet pur
     "1B": ("OFF-BLACK", "Noir Soie", "SOLID"),             # Noir naturel soyeux
     
     # ════════════════════ BRUNS LUXUEUX ════════════════════
-    "2": ("ESPRESSO", "Espresso Intense", "SOLID"),        # Brun espresso profond
-    "DB": ("DARK-MYSTERY", "Nuit Mystère", "SOLID"),       # Brun mystère nocturne
-    "DC": ("DARK-CHOCOLATE", "Chocolat Noir Belge", "SOLID"), # Chocolat noir riche
+    "2": ("ESPRESSO", "Espresso Profond", "SOLID"),        # Brun espresso
+    "DB": ("DARK-MYSTERY", "Nuit Mystère", "SOLID"),       # Brun mystère foncé
+    "DC": ("DARK-CHOCOLATE", "Chocolat Brun", "SOLID"),    # Chocolat tirant brun (pas noir)
     "CACAO": ("CACAO-VELVET", "Cacao Velours", "SOLID"),   # Brun cacao velouté
     "CHENGTU": ("ASIAN-SILK", "Soie d'Orient", "SOLID"),   # Brun asiatique soyeux
-    "FOOCHOW": ("ORIENTAL-MYSTIQUE", "Cachemire Oriental", "SOLID"), # Brun oriental
+    "FOOCHOW": ("ORIENTAL-CASHMERE", "Cachemire Oriental", "SOLID"), # Brun oriental
     
     # ════════════════════ BRUNS CHÂTAIGNE ════════════════════
-    "3": ("CHESTNUT", "Châtaigne Douce", "SOLID"),         # Châtaigne naturelle
+    "3": ("CHESTNUT", "Châtaigne Naturelle", "SOLID"),     # Châtaigne unie
     "CINNAMON": ("CINNAMON-SPICE", "Cannelle Épicée", "SOLID"), # Cannelle chaude
     
-    # ════════════════════ BRUNS DIMENSION (Ombré + Piano) ════════════════════
-    # Base châtaigne #3 + Ombré + Mèches dorées #24
+    # ════════════════════ CHÂTAIGNE DIMENSION (Ombré + Piano) ════════════════════
+    # Base #3 châtaigne + Ombré + Piano mèches #24 dorées
     "3/3T24": ("CHESTNUT-GOLDEN-DIMENSION", "Châtaigne Lumière Dorée", "OMBRE-PIANO"),
     
     # ════════════════════ CARAMEL & MIEL ════════════════════
@@ -852,42 +851,39 @@ COLOR_CODE_MAPPING = {
     "BM": ("HONEY-WILD", "Miel Sauvage", "SOLID"),         # Brun miel naturel
     
     # ════════════════════ CARAMEL DIMENSION ════════════════════
-    # Balayage caramel vers blond doré
+    # Balayage caramel #6 vers doré #24
     "6/24": ("CARAMEL-BALAYAGE", "Golden Hour", "BALAYAGE"),
-    # Caramel avec ombré et mèches piano dorées
+    # Caramel #6 + Ombré + Piano mèches #24 dorées
     "6/6T24": ("CARAMEL-GOLDEN-DIMENSION", "Caramel Soleil", "OMBRE-PIANO"),
     
-    # ════════════════════ BLONDS PIANO (Mèches) ════════════════════
-    # Mèches blond cendré #18 + blond beige #22 - effet sun-kissed
-    "18/22": ("ASH-BEIGE-PIANO", "Champagne Rosé", "PIANO"),
+    # ════════════════════ BLONDS PIANO HARMONISÉ ════════════════════
+    # #18/22 = Ash blonde #18 + Light beige blonde #22 - PAS NOIR!
+    # Analysé: blend harmonieux de blond cendré et beige doré, effet sun-kissed
+    "18/22": ("ASH-BEIGE-BLEND", "Sable Doré", "PIANO"),
     
     # ════════════════════ BLONDS PLATINE ════════════════════
     "60A": ("PLATINUM", "Platine Pur", "SOLID"),           # Platine glacé
     "PHA": ("PURE-ASH", "Cendré Céleste", "SOLID"),        # Blond cendré pur
-    # Platine avec balayage cendré sophistiqué
+    # Platine #613 + balayage cendré #18A
     "613/18A": ("PLATINUM-BALAYAGE", "Diamant Glacé", "BALAYAGE"),
     
     # ════════════════════ BLANCS PRÉCIEUX ════════════════════
-    "IVORY": ("IVORY-PRECIOUS", "Ivoire Précieux", "SOLID"),  # Blanc ivoire luxe
-    "ICW": ("ICE-CRYSTAL", "Cristal Polaire", "SOLID"),       # Blanc glacé arctique
+    "IVORY": ("IVORY-PRECIOUS", "Ivoire Précieux", "SOLID"), # Blanc ivoire
+    "ICW": ("ICE-WHITE", "Ice White", "SOLID"),              # Blanc glacé (Ice White)
     
     # ════════════════════ OMBRÉS SIGNATURE ════════════════════
-    # Ombré miel sauvage naturel
-    "CB": ("HONEY-OMBRE", "Miel Sauvage Ombré", "OMBRE"),
-    # Ombré cendré luxe - effet étoilé
-    "HPS": ("ASH-LUXE-OMBRE", "Cendré Étoilé", "OMBRE"),
-    # Ombré glacier - transition dramatique vers platine
-    "5AT60": ("GLACIER-OMBRE", "Aurore Glaciale", "OMBRE"),
-    # Ombré nordique multi-dimensionnel
-    "5ATP18B62": ("NORDIC-OMBRE", "Aurore Boréale", "OMBRE"),
+    "CB": ("HONEY-OMBRE", "Miel Sauvage Ombré", "OMBRE"),    # Ombré miel naturel
+    "HPS": ("ASH-LUXE-OMBRE", "Cendré Étoilé", "OMBRE"),     # Ombré cendré luxe
+    "5AT60": ("GLACIER-OMBRE", "Aurore Glaciale", "OMBRE"),  # Ombré vers platine
+    "5ATP18B62": ("NORDIC-OMBRE", "Aurore Boréale", "OMBRE"), # Ombré nordique
     
     # ════════════════════ ESPRESSO DIMENSION ════════════════════
-    # Espresso avec mèches lumineuses sophistiquées
     "2BTP18/1006": ("ESPRESSO-LUMINOUS", "Espresso Lumière", "OMBRE-PIANO"),
     
-    # ════════════════════ BALAYAGE VÉNITIEN ════════════════════
-    # Multi-dimensionnel vénitien luxueux
-    "T14/P14/24": ("VENETIAN-BALAYAGE", "Venise Dorée", "BALAYAGE"),
+    # ════════════════════ VÉNITIEN MULTI-DIMENSIONNEL ════════════════════
+    # #T14/P14/24 = Ombré #14 (dark blonde) + Piano #14/#24 (ash + golden blonde)
+    # Analysé: Blend sophistiqué ash blonde + golden blonde, effet piano avec gradient subtil
+    "T14/P14/24": ("VENETIAN-MULTI-DIMENSION", "Toscane Dorée", "OMBRE-PIANO"),
 }
 
 def get_color_info_from_code(color_code: str) -> tuple:
