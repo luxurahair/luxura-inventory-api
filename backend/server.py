@@ -148,59 +148,124 @@ def clean_html(text: str) -> str:
     return clean
 
 # Wix product images mapping - scraped from luxuradistribution.com categories
-# Format: partial_handle -> image_url (400x400 optimized)
+# Format: handle -> image_url (400x400 optimized)
 WIX_PRODUCT_IMAGES = {
     # GENIUS
-    "genius-trame-invisible-série-vivian-noir-foncé-1": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",
-    "genius-trame-invisible-série-vivian-dark-chocolate-dc": "https://static.wixstatic.com/media/f1b961_58c11630ff1349728c47e56190218422~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_58c11630ff1349728c47e56190218422~mv2.png",
-    "genius-ssd-trame-invisible-série-vivian-brun-cacao": "https://static.wixstatic.com/media/f1b961_11271a5d5d91485883888a201592829c~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_11271a5d5d91485883888a201592829c~mv2.jpg",
-    "genius-trame-invisible-série-vivian-brun-2": "https://static.wixstatic.com/media/f1b961_2596437db6134f7bbdc1c5b2d72907fd~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_2596437db6134f7bbdc1c5b2d72907fd~mv2.jpg",
-    "genius-trame-invisible-série-vivian-brun-moyen-3": "https://static.wixstatic.com/media/f1b961_47ff485b2f674fdc9245cc856004cd46~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_47ff485b2f674fdc9245cc856004cd46~mv2.png",
-    "genius-série-vivian-brun-lumineux-blond-foncé-6": "https://static.wixstatic.com/media/f1b961_5769d9b826004a6f91eb9112dc140cfb~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_5769d9b826004a6f91eb9112dc140cfb~mv2.png",
-    "genius-trame-invisible-série-vivian-foochow": "https://static.wixstatic.com/media/f1b961_28d930f0f9924b229beb3be484bc1fbd~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_28d930f0f9924b229beb3be484bc1fbd~mv2.jpg",
-    "genius-trame-invisible-série-vivian-blond-platine-60a": "https://static.wixstatic.com/media/f1b961_c3168b50e6d9464db8365cdef0b16557~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_c3168b50e6d9464db8365cdef0b16557~mv2.png",
-    "genius-trame-invisible-série-vivian-balayage-blond-beige-18-22": "https://static.wixstatic.com/media/f1b961_b7d3eb648bf443cb8d30e3e23fa62ad8~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_b7d3eb648bf443cb8d30e3e23fa62ad8~mv2.png",
-    "genius-trame-invisible-série-vivian-balayage-blond-foncé-6-24": "https://static.wixstatic.com/media/f1b961_387bbe6d47cd4217a7b0157f398d9a63~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_387bbe6d47cd4217a7b0157f398d9a63~mv2.png",
-    "genius-série-vivian-balayage-blond-cendré-613-18a": "https://static.wixstatic.com/media/f1b961_c15e5a01c6024a1699cb92a2be325f8f~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_c15e5a01c6024a1699cb92a2be325f8f~mv2.png",
-    "genius-trame-invisible-série-vivian-5atp18b62": "https://static.wixstatic.com/media/f1b961_0e7cf48e1d59418bbf1b562c21494176~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_0e7cf48e1d59418bbf1b562c21494176~mv2.jpg",
-    "genius-trame-invisible-série-vivian-chengtu": "https://static.wixstatic.com/media/f1b961_e440aecc44e44c69b0d56dad273a95e9~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_e440aecc44e44c69b0d56dad273a95e9~mv2.jpg",
-    "genius-série-vivian-ombré-blond-miel-cb": "https://static.wixstatic.com/media/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png",
-    "genius-nouvelle-trame-invisible-série-vivian-cannelle-cinnamon": "https://static.wixstatic.com/media/f1b961_23960136c3df4e84852f5dde15475d17~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_23960136c3df4e84852f5dde15475d17~mv2.jpg",
+    "genius-trame-invisible-série-vivian-noir-foncé-1": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",
+    "genius-trame-invisible-série-vivian-dark-chocolate-dc": "https://static.wixstatic.com/media/f1b961_58c11630ff1349728c47e56190218422~mv2.png",
+    "genius-ssd-trame-invisible-série-vivian-brun-cacao": "https://static.wixstatic.com/media/f1b961_11271a5d5d91485883888a201592829c~mv2.jpg",
+    "genius-trame-invisible-série-vivian-brun-2": "https://static.wixstatic.com/media/f1b961_2596437db6134f7bbdc1c5b2d72907fd~mv2.jpg",
+    "genius-trame-invisible-série-vivian-brun-moyen-3": "https://static.wixstatic.com/media/f1b961_47ff485b2f674fdc9245cc856004cd46~mv2.png",
+    "genius-série-vivian-brun-lumineux-blond-foncé-6": "https://static.wixstatic.com/media/f1b961_5769d9b826004a6f91eb9112dc140cfb~mv2.png",
+    "genius-trame-invisible-série-vivian-foochow": "https://static.wixstatic.com/media/f1b961_28d930f0f9924b229beb3be484bc1fbd~mv2.jpg",
+    "genius-trame-invisible-série-vivian-blond-platine-60a": "https://static.wixstatic.com/media/f1b961_c3168b50e6d9464db8365cdef0b16557~mv2.png",
+    "genius-trame-invisible-série-vivian-balayage-blond-beige-18-22": "https://static.wixstatic.com/media/f1b961_b7d3eb648bf443cb8d30e3e23fa62ad8~mv2.png",
+    "genius-trame-invisible-série-vivian-balayage-blond-foncé-6-24": "https://static.wixstatic.com/media/f1b961_387bbe6d47cd4217a7b0157f398d9a63~mv2.png",
+    "genius-série-vivian-balayage-blond-cendré-613-18a": "https://static.wixstatic.com/media/f1b961_c15e5a01c6024a1699cb92a2be325f8f~mv2.png",
+    "genius-trame-invisible-série-vivian-5atp18b62": "https://static.wixstatic.com/media/f1b961_0e7cf48e1d59418bbf1b562c21494176~mv2.jpg",
+    "genius-trame-invisible-série-vivian-chengtu": "https://static.wixstatic.com/media/f1b961_e440aecc44e44c69b0d56dad273a95e9~mv2.jpg",
+    "genius-série-vivian-ombré-blond-miel-cb": "https://static.wixstatic.com/media/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png",
+    "genius-nouvelle-trame-invisible-série-vivian-cannelle-cinnamon": "https://static.wixstatic.com/media/f1b961_23960136c3df4e84852f5dde15475d17~mv2.jpg",
+    "genius-trame-invisible-série-vivian-t14-p14-24": "https://static.wixstatic.com/media/f1b961_9c2192c6fa5f4458913d46ea8a8f9dae~mv2.jpg",
+    "genius-trame-invisible-série-vivian-blanc-polar-ivory": "https://static.wixstatic.com/media/f1b961_2dbcedc5036044b69e1ba01c58cc93d4~mv2.jpg",
+    "genius-trame-invisible-série-vivian-perfect-highlift-ash-pha": "https://static.wixstatic.com/media/f1b961_54514ba920d34aed9aa1f10c62f1759a~mv2.jpg",
+    "genius-sdd-série-vivian-ombré-2btp18-1006": "https://static.wixstatic.com/media/f1b961_75316de55cf441ecb82211cbc8d91010~mv2.jpg",
+    "genius-ssd-série-vivian-ombré-blond-cendré-5at60": "https://static.wixstatic.com/media/f1b961_9f8115b4f7614340b0dc9aeba39bd699~mv2.jpg",
+    "genius-ombré-blond-moka-6-6t24": "https://static.wixstatic.com/media/f1b961_276e2a0ba6ab4e92a0da09977692256e~mv2.png",
     # HALO
-    "halo-série-everly-noir-foncé-1": "https://static.wixstatic.com/media/f1b961_7c4c9a8b07484a5eb66b12e9b9322b4a~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_7c4c9a8b07484a5eb66b12e9b9322b4a~mv2.jpg",
-    "halo-série-everly-noir-doux-brun-foncé-1b": "https://static.wixstatic.com/media/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png",
-    "halo-série-everly-brun-moyen-3": "https://static.wixstatic.com/media/f1b961_d1bb2905a7b748f5ac4676d5c96bae2a~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_d1bb2905a7b748f5ac4676d5c96bae2a~mv2.png",
-    "halo-série-everly-brun-lumineux-blond-foncé-6": "https://static.wixstatic.com/media/f1b961_5b61b7d6874a47abb7997a78d99c7125~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_5b61b7d6874a47abb7997a78d99c7125~mv2.png",
-    "halo-série-everly-blond-platine-60a": "https://static.wixstatic.com/media/f1b961_1e9953c3551440479117fa2954918173~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_1e9953c3551440479117fa2954918173~mv2.png",
-    "halo-série-everly-balayage-blond-foncé-6-24": "https://static.wixstatic.com/media/f1b961_7858886b3ecb41e5bdf5be80b2aa4359~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_7858886b3ecb41e5bdf5be80b2aa4359~mv2.png",
-    "halo-série-everly-balayage-blond-cendré-613-18a": "https://static.wixstatic.com/media/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png",
-    "halo-série-everly-balayage-blond-beige-18-22": "https://static.wixstatic.com/media/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png",
-    "halo-série-everly-ombré-blond-miel-cb": "https://static.wixstatic.com/media/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png",
-    "halo-série-everly-ombré-brun-nuit-db": "https://static.wixstatic.com/media/f1b961_601ee2f6e66b48d6b09e471501537fc9~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_601ee2f6e66b48d6b09e471501537fc9~mv2.png",
+    "halo-série-everly-noir-foncé-1": "https://static.wixstatic.com/media/f1b961_7c4c9a8b07484a5eb66b12e9b9322b4a~mv2.jpg",
+    "halo-série-everly-noir-doux-brun-foncé-1b": "https://static.wixstatic.com/media/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png",
+    "halo-série-everly-brun-moyen-3": "https://static.wixstatic.com/media/f1b961_d1bb2905a7b748f5ac4676d5c96bae2a~mv2.png",
+    "halo-série-everly-brun-lumineux-blond-foncé-6": "https://static.wixstatic.com/media/f1b961_5b61b7d6874a47abb7997a78d99c7125~mv2.png",
+    "halo-série-everly-blond-platine-60a": "https://static.wixstatic.com/media/f1b961_1e9953c3551440479117fa2954918173~mv2.png",
+    "halo-série-everly-balayage-blond-foncé-6-24": "https://static.wixstatic.com/media/f1b961_7858886b3ecb41e5bdf5be80b2aa4359~mv2.png",
+    "halo-série-everly-balayage-blond-cendré-613-18a": "https://static.wixstatic.com/media/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png",
+    "halo-série-everly-balayage-blond-beige-18-22": "https://static.wixstatic.com/media/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png",
+    "halo-série-everly-ombré-blond-miel-cb": "https://static.wixstatic.com/media/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png",
+    "halo-série-everly-ombré-brun-nuit-db": "https://static.wixstatic.com/media/f1b961_601ee2f6e66b48d6b09e471501537fc9~mv2.png",
+    "halo-série-everly-ombré-blond-moka-6-6t24": "https://static.wixstatic.com/media/f1b961_276e2a0ba6ab4e92a0da09977692256e~mv2.png",
+    "halo-série-everly-ombré-brun-cacao-3-3t24": "https://static.wixstatic.com/media/f1b961_bc6218e7631045ff801eeb0195b3b8c9~mv2.png",
+    "halo-série-everly-ombré-blond-cendré-hps": "https://static.wixstatic.com/media/f1b961_13645139441a4ad0bdae63bca7d65c37~mv2.png",
+    # CLIPS (Halo category)
+    "clips-série-everly-noir-foncé-1": "https://static.wixstatic.com/media/f1b961_7c4c9a8b07484a5eb66b12e9b9322b4a~mv2.jpg",
+    "clips-série-everly-noir-doux-brun-foncé-1b": "https://static.wixstatic.com/media/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png",
+    "clips-série-everly-noir-doux-brun-foncé-3": "https://static.wixstatic.com/media/f1b961_d1bb2905a7b748f5ac4676d5c96bae2a~mv2.png",
+    "clips-série-everly-brun-lunimeux-blond-foncé-6": "https://static.wixstatic.com/media/f1b961_5b61b7d6874a47abb7997a78d99c7125~mv2.png",
+    "clips-série-everly-blond-platine-60a": "https://static.wixstatic.com/media/f1b961_1e9953c3551440479117fa2954918173~mv2.png",
+    "clips-série-everly-18-22": "https://static.wixstatic.com/media/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png",
+    "clips-série-everly-balaya-blond-beige-613-18a": "https://static.wixstatic.com/media/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png",
+    "clips-série-everly-ombré-blond-cendré-hps": "https://static.wixstatic.com/media/f1b961_13645139441a4ad0bdae63bca7d65c37~mv2.png",
     # TAPE / BANDE ADHESIVE
-    "bande-invisible-série-aurora-ice-white-icw": "https://static.wixstatic.com/media/f1b961_9b2d02f5f8fe47369534f67678bbc79d~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_9b2d02f5f8fe47369534f67678bbc79d~mv2.jpg",
-    "bande-adhésive-série-aurora-dark-chocolate-dc": "https://static.wixstatic.com/media/f1b961_fa7cd15003c94b16a263bd39d22dc48c~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_fa7cd15003c94b16a263bd39d22dc48c~mv2.jpg",
-    "bande-adhésive-série-aurora-noir-foncé-1-jet-black": "https://static.wixstatic.com/media/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png",
-    "bande-adhésive-série-aurora-brun-foncé-noir-doux-1b": "https://static.wixstatic.com/media/f1b961_088e24bf74854319bab62d49634b608a~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_088e24bf74854319bab62d49634b608a~mv2.png",
-    "bande-adhésive-série-aurora-brun-lumineux-blond-foncé-6": "https://static.wixstatic.com/media/f1b961_5d6668fdf8114e3d99f528fe612222f0~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_5d6668fdf8114e3d99f528fe612222f0~mv2.png",
-    "bande-adhésive-série-aurora-brun-moyen-3": "https://static.wixstatic.com/media/f1b961_a0bb462af6f44e25aa751ea359024bba~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_a0bb462af6f44e25aa751ea359024bba~mv2.png",
-    "bande-adhésive-série-aurora-blond-platine-60a": "https://static.wixstatic.com/media/f1b961_e75015e3740242dab6c3567bf8445811~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_e75015e3740242dab6c3567bf8445811~mv2.png",
+    "bande-invisible-série-aurora-ice-white-icw": "https://static.wixstatic.com/media/f1b961_9b2d02f5f8fe47369534f67678bbc79d~mv2.jpg",
+    "bande-adhésive-série-aurora-dark-chocolate-dc": "https://static.wixstatic.com/media/f1b961_fa7cd15003c94b16a263bd39d22dc48c~mv2.jpg",
+    "bande-adhésive-série-aurora-noir-foncé-1-jet-black": "https://static.wixstatic.com/media/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png",
+    "bande-adhésive-série-aurora-brun-foncé-noir-doux-1b": "https://static.wixstatic.com/media/f1b961_088e24bf74854319bab62d49634b608a~mv2.png",
+    "bande-adhésive-série-aurora-brun-lumineux-blond-foncé-6": "https://static.wixstatic.com/media/f1b961_5d6668fdf8114e3d99f528fe612222f0~mv2.png",
+    "bande-adhésive-série-aurora-brun-moyen-3": "https://static.wixstatic.com/media/f1b961_a0bb462af6f44e25aa751ea359024bba~mv2.png",
+    "bande-adhésive-série-aurora-blond-platine-60a": "https://static.wixstatic.com/media/f1b961_e75015e3740242dab6c3567bf8445811~mv2.png",
+    "bande-adhésive-série-aurora-blond-pha": "https://static.wixstatic.com/media/f1b961_54514ba920d34aed9aa1f10c62f1759a~mv2.jpg",
+    "bande-adhésive-série-aurora-ombré-blond-miel-cb": "https://static.wixstatic.com/media/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png",
+    "bande-adhésive-tenue-ultra": "https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg",
+    # PONYTAILS
+    "ponytail-queue-de-cheval-série-everly-noir-foncé-1": "https://static.wixstatic.com/media/f1b961_7c4c9a8b07484a5eb66b12e9b9322b4a~mv2.jpg",
+    "ponytail-queue-de-cheval-série-everly-ombré-brun-miel-du": "https://static.wixstatic.com/media/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png",
+    # ESSENTIALS
+    "anneau-de-couleur-haut-de-gamme": "https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg",
+    "ensemble-installation": "https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg",
+    "fer-à-friser-rotatif": "https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg",
+    "brosse-volumisante-et-séchante": "https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg",
 }
+
+def format_wix_image_url(base_url: str, size: int = 400) -> str:
+    """Format Wix image URL with proper size parameters"""
+    if not base_url:
+        return ""
+    # Remove any existing size parameters and add our own
+    if '/v1/fill/' in base_url:
+        # Already has parameters, replace them
+        parts = base_url.split('/v1/fill/')
+        base = parts[0]
+        # Get the filename after the parameters
+        if '/' in parts[1]:
+            filename = parts[1].split('/')[-1]
+        else:
+            filename = parts[1]
+        return f"{base}/v1/fill/w_{size},h_{size},al_c,q_80/{filename}"
+    else:
+        # Add parameters
+        return f"{base_url}/v1/fill/w_{size},h_{size},al_c,q_80/{base_url.split('/')[-1]}"
 
 def get_product_image(handle: str, category: str) -> str:
     """Get product image from Wix mapping or category fallback"""
-    if handle and handle in WIX_PRODUCT_IMAGES:
-        return WIX_PRODUCT_IMAGES[handle]
+    if handle:
+        # Direct match
+        if handle in WIX_PRODUCT_IMAGES:
+            return format_wix_image_url(WIX_PRODUCT_IMAGES[handle])
+        
+        # Try partial match for similar products
+        handle_lower = handle.lower()
+        for key, url in WIX_PRODUCT_IMAGES.items():
+            # Match base product type (e.g., genius-série-vivian matches genius-trame-invisible-série-vivian)
+            key_parts = key.split('-')
+            handle_parts = handle_lower.split('-')
+            
+            # Check if main identifiers match (product type + color code)
+            if len(key_parts) >= 3 and len(handle_parts) >= 3:
+                # Match product type (genius, halo, clips, etc.)
+                if key_parts[0] == handle_parts[0]:
+                    # Try to match color code at the end
+                    if key_parts[-1] == handle_parts[-1] or key_parts[-2:] == handle_parts[-2:]:
+                        return format_wix_image_url(url)
     
     # Category-specific default images (real product photos from Wix)
     category_images = {
-        "genius": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",
-        "halo": "https://static.wixstatic.com/media/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png",
-        "tape": "https://static.wixstatic.com/media/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png",
-        "i-tip": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_85/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
-        "essentiels": "https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/s-l1200.jpg"
+        "genius": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",
+        "halo": "https://static.wixstatic.com/media/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png",
+        "tape": "https://static.wixstatic.com/media/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png",
+        "i-tip": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+        "essentiels": "https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg"
     }
-    return category_images.get(category, category_images["genius"])
+    return format_wix_image_url(category_images.get(category, category_images["genius"]))
 
 # ==================== AUTH HELPERS ====================
 
@@ -435,14 +500,17 @@ async def get_products(
                     variant_info = extract_variant_info(p)
                     products_by_handle[handle]['variants'].append(variant_info)
                     
-                    # Update stock totals
+                    # Update stock totals from variants
                     if variant_info['is_in_stock'] or variant_info['quantity'] > 0:
                         products_by_handle[handle]['any_in_stock'] = True
                     products_by_handle[handle]['total_quantity'] += variant_info['quantity']
                 else:
-                    # This is a parent product
+                    # This is a parent product - use its is_in_stock status
                     if products_by_handle[handle]['parent'] is None:
                         products_by_handle[handle]['parent'] = p
+                        # Use parent's is_in_stock as the primary indicator
+                        if p.get('is_in_stock', False):
+                            products_by_handle[handle]['any_in_stock'] = True
             
             # Build result
             result = []
