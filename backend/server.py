@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Response, Request, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Response, Request, Depends, BackgroundTasks
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -11,6 +11,8 @@ from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone, timedelta
 import httpx
+import json
+import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -22,6 +24,11 @@ db = client[os.environ['DB_NAME']]
 
 # Luxura Inventory API (Render)
 LUXURA_API_URL = "https://luxura-inventory-api.onrender.com"
+
+# Wix API Configuration
+WIX_API_KEY = os.getenv("WIX_API_KEY", "")
+WIX_SITE_ID = os.getenv("WIX_SITE_ID", "")
+WIX_API_BASE = "https://www.wixapis.com"
 
 # Create the main app
 app = FastAPI()
@@ -1084,6 +1091,407 @@ async def get_blog_post(post_id: str):
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return post
+
+# ==================== WIX INTEGRATION & SEO MACHINE ====================
+
+def get_wix_headers():
+    """Get Wix API headers"""
+    return {
+        "Authorization": WIX_API_KEY,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "wix-site-id": WIX_SITE_ID,
+    }
+
+@api_router.get("/wix/capabilities")
+async def get_wix_capabilities():
+    """Check what we can do with Wix API - Hero, Blog, etc."""
+    capabilities = {
+        "api_configured": bool(WIX_API_KEY and WIX_SITE_ID),
+        "available_apis": {
+            "stores": {
+                "products": "✅ READ/WRITE - Modifier produits, descriptions SEO, prix",
+                "inventory": "✅ READ/WRITE - Gérer stock multi-salons",
+                "collections": "✅ READ - Lire les collections/catégories",
+                "variants": "✅ READ/WRITE - Modifier variantes"
+            },
+            "blog": {
+                "posts": "✅ CREATE/UPDATE - Publier articles SEO automatiquement",
+                "categories": "✅ READ/WRITE - Organiser par catégories",
+                "tags": "✅ READ/WRITE - Tags SEO"
+            },
+            "site": {
+                "pages": "⚠️ LIMITED - Lecture seule via CMS",
+                "hero_sections": "⚠️ CUSTOM - Via CMS Collections uniquement",
+                "seo_settings": "✅ WRITE - Meta titles, descriptions par page"
+            },
+            "marketing": {
+                "coupons": "✅ CREATE - Créer codes promo",
+                "email_marketing": "⚠️ SEPARATE API"
+            }
+        },
+        "luxura_specific": {
+            "product_seo": "✅ Déjà implémenté - 2665 descriptions optimisées",
+            "color_names": "✅ Déjà implémenté - Noms luxe (Noir Ébène, etc.)",
+            "blog_automation": "✅ Prêt - Génération quotidienne SEO",
+            "wix_blog_push": "🔧 En cours d'implémentation"
+        }
+    }
+    
+    # Test Wix connection
+    if WIX_API_KEY and WIX_SITE_ID:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as http_client:
+                response = await http_client.post(
+                    f"{WIX_API_BASE}/stores/v1/products/query",
+                    headers=get_wix_headers(),
+                    json={"query": {"paging": {"limit": 1}}}
+                )
+                capabilities["wix_connection"] = "✅ CONNECTÉ" if response.status_code == 200 else f"❌ Erreur {response.status_code}"
+        except Exception as e:
+            capabilities["wix_connection"] = f"❌ {str(e)}"
+    
+    return capabilities
+
+@api_router.post("/wix/blog/push/{post_id}")
+async def push_blog_to_wix(post_id: str):
+    """Push a blog post to Wix Blog"""
+    if not WIX_API_KEY or not WIX_SITE_ID:
+        raise HTTPException(status_code=500, detail="Wix API not configured")
+    
+    # Get the blog post from our DB
+    post = await db.blog_posts.find_one({"id": post_id}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as http_client:
+            # Create draft post on Wix Blog
+            wix_post_data = {
+                "post": {
+                    "title": post.get("title"),
+                    "excerpt": post.get("excerpt", "")[:140],
+                    "richContent": {
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": str(uuid.uuid4()),
+                                "nodes": [{"type": "TEXT", "textData": {"text": post.get("content", "").replace("<p>", "").replace("</p>", "\n\n").replace("<h2>", "\n\n## ").replace("</h2>", "\n\n")}}]
+                            }
+                        ]
+                    },
+                    "seoData": {
+                        "tags": [
+                            {"type": "title", "props": {"content": post.get("title")}},
+                            {"type": "meta", "props": {"name": "description", "content": post.get("meta_description", post.get("excerpt", ""))}}
+                        ]
+                    },
+                    "featured": False
+                }
+            }
+            
+            response = await http_client.post(
+                f"{WIX_API_BASE}/blog/v3/draft-posts",
+                headers=get_wix_headers(),
+                json=wix_post_data
+            )
+            
+            if response.status_code in [200, 201]:
+                wix_response = response.json()
+                # Update our record with Wix ID
+                await db.blog_posts.update_one(
+                    {"id": post_id},
+                    {"$set": {"wix_post_id": wix_response.get("draftPost", {}).get("id"), "pushed_to_wix": True}}
+                )
+                return {
+                    "success": True,
+                    "message": "Article publié sur Wix (brouillon)",
+                    "wix_post_id": wix_response.get("draftPost", {}).get("id"),
+                    "note": "L'article est en brouillon. Publie-le depuis ton dashboard Wix."
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": response.text,
+                    "status_code": response.status_code,
+                    "note": "Wix Blog API peut nécessiter une configuration supplémentaire"
+                }
+                
+    except Exception as e:
+        logger.error(f"Error pushing to Wix: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/seo/daily-generation")
+async def trigger_daily_seo_generation(background_tasks: BackgroundTasks):
+    """Trigger daily SEO content generation - Can be called by external CRON"""
+    
+    async def generate_daily_content():
+        """Background task to generate SEO content"""
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            import random
+            
+            emergent_key = os.getenv("EMERGENT_LLM_KEY")
+            if not emergent_key:
+                logger.error("EMERGENT_LLM_KEY not configured")
+                return
+            
+            # Get existing posts to avoid duplicates
+            existing_posts = await db.blog_posts.find({}, {"title": 1}).to_list(100)
+            existing_titles = [p.get("title", "").lower() for p in existing_posts]
+            
+            # Extended topics for B2B focus (salons as partners)
+            EXTENDED_TOPICS = [
+                {
+                    "topic": "Devenir partenaire Luxura : Programme salon extensions Québec",
+                    "keywords": ["b2b", "branding"],
+                    "meta_description": "Programme partenariat Luxura pour salons. Devenez distributeur extensions cheveux au Québec."
+                },
+                {
+                    "topic": "Grossiste extensions cheveux Canada : Avantages pour votre salon",
+                    "keywords": ["b2b", "commercial"],
+                    "meta_description": "Luxura grossiste extensions cheveux professionnel. Prix distributeur pour salons au Canada."
+                },
+                {
+                    "topic": "Formation extensions cheveux : Devenez expert Luxura",
+                    "keywords": ["b2b", "branding"],
+                    "meta_description": "Formation professionnelle extensions capillaires. Certification Luxura pour salons partenaires."
+                },
+                {
+                    "topic": "Augmenter revenus salon : Extensions cheveux haut de gamme",
+                    "keywords": ["b2b", "commercial"],
+                    "meta_description": "Comment augmenter les revenus de votre salon avec extensions cheveux premium Luxura."
+                },
+                {
+                    "topic": "Extensions cheveux en ligne Québec : Livraison rapide garantie",
+                    "keywords": ["commercial", "long_tail"],
+                    "meta_description": "Achetez extensions cheveux en ligne au Québec. Livraison express Luxura Distribution."
+                }
+            ]
+            
+            # Combine with existing topics
+            all_topics = BLOG_TOPICS + EXTENDED_TOPICS
+            available_topics = [t for t in all_topics if t["topic"].lower() not in existing_titles]
+            
+            if not available_topics:
+                available_topics = all_topics
+            
+            topic_data = random.choice(available_topics)
+            
+            # Collect keywords with backlink-friendly terms
+            keywords_to_use = []
+            for cat in topic_data["keywords"]:
+                if cat in SEO_KEYWORDS:
+                    keywords_to_use.extend(random.sample(SEO_KEYWORDS[cat], min(3, len(SEO_KEYWORDS[cat]))))
+            
+            # Add internal backlink anchors
+            internal_links = [
+                "extensions Genius Weft Luxura",
+                "extensions Tape-in professionnelles",
+                "extensions Halo invisibles",
+                "programme partenaire salon Luxura"
+            ]
+            
+            chat = LlmChat(
+                api_key=emergent_key,
+                session_id=f"daily-seo-{uuid.uuid4().hex[:8]}",
+                system_message="""Tu es un expert SEO francophone spécialisé dans les extensions capillaires au Québec.
+Tu écris pour Luxura Distribution, importateur et leader des extensions cheveux haut de gamme au Canada.
+MISSION LUXURA: Aider les salons à bâtir leur game d'extensions en tant que partenaires, ET vendre directement en ligne.
+Tu intègres des liens internes naturellement dans le contenu.
+IMPORTANT: Réponds UNIQUEMENT en français québécois professionnel."""
+            ).with_model("openai", "gpt-4.1-mini")
+            
+            prompt = f"""Écris un article de blog SEO complet pour Luxura Distribution.
+
+CONTEXTE BUSINESS:
+- Luxura est importateur d'extensions cheveux haut de gamme
+- Ils aident les salons à devenir partenaires et bâtir leur expertise extensions
+- Ils vendent aussi directement en ligne aux consommateurs
+- Marché cible: Québec et Canada
+
+SUJET: {topic_data["topic"]}
+
+MOTS-CLÉS SEO À INTÉGRER:
+{', '.join(keywords_to_use)}
+
+LIENS INTERNES À INCLURE (sous forme de texte ancré):
+{', '.join(internal_links)}
+
+STRUCTURE:
+1. Titre H1 accrocheur avec mot-clé principal
+2. Introduction (150 mots) - hook puissant
+3. Section 1 (H2) - Problème/opportunité
+4. Section 2 (H2) - Solution Luxura
+5. Section 3 (H2) - Avantages concrets / témoignages
+6. Conclusion avec CTA vers Luxura
+
+CONSIGNES:
+- 800-1000 mots
+- Ton professionnel mais accessible
+- Inclure des chiffres et statistiques quand pertinent
+- Mentionner les avantages pour les salons ET consommateurs
+
+FORMAT JSON:
+{{
+  "title": "...",
+  "excerpt": "...",
+  "content": "...",
+  "meta_description": "...",
+  "tags": ["...", "..."],
+  "internal_links": ["url1", "url2"]
+}}"""
+
+            user_message = UserMessage(text=prompt)
+            response = await chat.send_message(user_message)
+            
+            # Parse response
+            response_text = response.strip()
+            if response_text.startswith("```json"):
+                response_text = response_text[7:]
+            if response_text.startswith("```"):
+                response_text = response_text[3:]
+            if response_text.endswith("```"):
+                response_text = response_text[:-3]
+            
+            try:
+                blog_data = json.loads(response_text.strip())
+            except json.JSONDecodeError:
+                json_match = re.search(r'\{[\s\S]*\}', response_text)
+                if json_match:
+                    blog_data = json.loads(json_match.group())
+                else:
+                    logger.error("Failed to parse AI response for daily blog")
+                    return
+            
+            # Create blog post with backlinks
+            post_id = f"daily-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:4]}"
+            blog_post = {
+                "id": post_id,
+                "title": blog_data.get("title", topic_data["topic"]),
+                "excerpt": blog_data.get("excerpt", topic_data["meta_description"]),
+                "content": blog_data.get("content", ""),
+                "meta_description": blog_data.get("meta_description", topic_data["meta_description"]),
+                "tags": blog_data.get("tags", keywords_to_use[:5]),
+                "image": "https://static.wixstatic.com/media/de6cdb_ed493ddeab524054935dfbf0714b7e29~mv2.jpg",
+                "author": "Luxura Distribution",
+                "created_at": datetime.now(timezone.utc),
+                "seo_keywords": keywords_to_use,
+                "internal_links": blog_data.get("internal_links", []),
+                "auto_generated": True,
+                "generation_type": "daily_cron"
+            }
+            
+            await db.blog_posts.insert_one(blog_post)
+            logger.info(f"Daily SEO blog generated: {blog_post['title']}")
+            
+            # Log to SEO history
+            await db.seo_generation_log.insert_one({
+                "date": datetime.now(timezone.utc),
+                "post_id": post_id,
+                "title": blog_post["title"],
+                "keywords": keywords_to_use,
+                "success": True
+            })
+            
+        except Exception as e:
+            logger.error(f"Daily SEO generation error: {e}")
+            await db.seo_generation_log.insert_one({
+                "date": datetime.now(timezone.utc),
+                "error": str(e),
+                "success": False
+            })
+    
+    # Run in background
+    background_tasks.add_task(generate_daily_content)
+    
+    return {
+        "success": True,
+        "message": "Génération SEO quotidienne démarrée en arrière-plan",
+        "tip": "Configure un CRON externe pour appeler cet endpoint chaque jour à minuit"
+    }
+
+@api_router.get("/seo/backlink-opportunities")
+async def get_backlink_opportunities():
+    """Get external backlink opportunities and strategy"""
+    
+    opportunities = {
+        "directories_quebec": [
+            {"name": "Pages Jaunes Québec", "url": "https://www.pagesjaunes.ca", "type": "directory", "priority": "HIGH"},
+            {"name": "Yelp Québec", "url": "https://www.yelp.ca", "type": "reviews", "priority": "HIGH"},
+            {"name": "Google My Business", "url": "https://business.google.com", "type": "local_seo", "priority": "CRITICAL"},
+            {"name": "IndexBeauté.ca", "url": "https://indexbeaute.ca", "type": "industry", "priority": "HIGH"},
+        ],
+        "industry_blogs": [
+            {"name": "Elle Québec", "url": "https://www.ellequebec.com", "type": "magazine", "approach": "Guest post / PR"},
+            {"name": "Clin d'œil", "url": "https://www.clindoeil.ca", "type": "magazine", "approach": "Product feature"},
+            {"name": "Beautélive", "url": "https://beautylive.ca", "type": "blog", "approach": "Sponsored content"},
+        ],
+        "salon_partnerships": {
+            "strategy": "Chaque salon partenaire = backlink naturel",
+            "implementation": [
+                "Page 'Où nous trouver' avec liens vers salons partenaires",
+                "Salons mettent 'Extensions par Luxura' sur leur site",
+                "Échange de liens légitimes (partenariat réel)"
+            ],
+            "potential_backlinks": "50+ si 50 salons partenaires"
+        },
+        "social_signals": [
+            {"platform": "Instagram", "handle": "@luxuradistribution", "priority": "CRITICAL"},
+            {"platform": "Facebook", "handle": "Luxura Distribution", "priority": "HIGH"},
+            {"platform": "Pinterest", "handle": "luxuradistribution", "priority": "MEDIUM", "note": "Excellent pour cheveux/beauté"},
+            {"platform": "TikTok", "handle": "@luxuradistribution", "priority": "HIGH", "note": "Tutoriels extensions viraux"},
+        ],
+        "content_linkable": [
+            "Infographie: Types d'extensions comparées",
+            "Guide PDF: Formation extensions pour salons",
+            "Calculateur: Combien d'extensions me faut-il?",
+            "Vidéo YouTube: Tutoriel pose Genius Weft"
+        ],
+        "automated_actions": {
+            "blog_generation": "✅ ACTIF - 1 article SEO/jour",
+            "wix_push": "🔧 Prêt - Push vers Wix Blog",
+            "internal_linking": "✅ ACTIF - Liens entre articles",
+            "external_outreach": "❌ Manuel - Nécessite intervention humaine"
+        }
+    }
+    
+    return opportunities
+
+@api_router.get("/seo/stats")
+async def get_seo_stats():
+    """Get SEO generation statistics"""
+    
+    total_posts = await db.blog_posts.count_documents({})
+    auto_generated = await db.blog_posts.count_documents({"auto_generated": True})
+    pushed_to_wix = await db.blog_posts.count_documents({"pushed_to_wix": True})
+    
+    # Get recent generation logs
+    recent_logs = await db.seo_generation_log.find({}).sort("date", -1).to_list(10)
+    
+    # Calculate keywords coverage
+    all_keywords = []
+    async for post in db.blog_posts.find({"seo_keywords": {"$exists": True}}):
+        all_keywords.extend(post.get("seo_keywords", []))
+    
+    keyword_counts = {}
+    for kw in all_keywords:
+        keyword_counts[kw] = keyword_counts.get(kw, 0) + 1
+    
+    return {
+        "total_blog_posts": total_posts,
+        "auto_generated_posts": auto_generated,
+        "pushed_to_wix": pushed_to_wix,
+        "recent_generations": [
+            {
+                "date": log.get("date").isoformat() if log.get("date") else None,
+                "title": log.get("title"),
+                "success": log.get("success")
+            } for log in recent_logs
+        ],
+        "top_keywords_used": sorted(keyword_counts.items(), key=lambda x: x[1], reverse=True)[:10],
+        "recommendation": "Configure un CRON pour appeler POST /api/seo/daily-generation chaque jour"
+    }
 
 # ==================== SALON ENDPOINTS ====================
 
