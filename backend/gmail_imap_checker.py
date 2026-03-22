@@ -16,8 +16,8 @@ IMAP_SERVER = "imap.gmail.com"
 IMAP_PORT = 993
 
 EMAIL = os.getenv("LUXURA_EMAIL", "info@luxuradistribution.com")
-PASSWORD = os.getenv("LUXURA_PASSWORD", "")
-PASSWORD_ALT = os.getenv("LUXURA_PASSWORD_ALT", "")
+PASSWORD = os.getenv("LUXURA_APP_PASSWORD", "")  # App Password for Gmail
+PASSWORD_ALT = os.getenv("LUXURA_PASSWORD", "")  # Fallback to regular password
 
 def decode_mime_header(header):
     """Decode email header"""
