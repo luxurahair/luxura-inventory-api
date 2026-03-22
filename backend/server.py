@@ -29,6 +29,10 @@ LUXURA_API_URL = "https://luxura-inventory-api.onrender.com"
 WIX_API_KEY = os.getenv("WIX_API_KEY", "")
 WIX_SITE_ID = os.getenv("WIX_SITE_ID", "")
 WIX_API_BASE = "https://www.wixapis.com"
+WIX_INSTANCE_ID = os.getenv("WIX_INSTANCE_ID", "")
+
+# Luxura API - pour utiliser l'OAuth existant
+LUXURA_RENDER_API = "https://luxura-inventory-api.onrender.com"
 
 # Create the main app
 app = FastAPI()
@@ -1094,8 +1098,25 @@ async def get_blog_post(post_id: str):
 
 # ==================== WIX INTEGRATION & SEO MACHINE ====================
 
+async def get_wix_access_token():
+    """Get OAuth access token from Luxura API"""
+    if not WIX_INSTANCE_ID:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as http_client:
+            response = await http_client.post(
+                f"{LUXURA_RENDER_API}/wix/token",
+                params={"instance_id": WIX_INSTANCE_ID}
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("access_token")
+    except Exception as e:
+        logger.error(f"Error getting Wix token: {e}")
+    return None
+
 def get_wix_headers():
-    """Get Wix API headers"""
+    """Get Wix API headers (for simple API key auth)"""
     return {
         "Authorization": WIX_API_KEY,
         "Content-Type": "application/json",
@@ -1103,11 +1124,25 @@ def get_wix_headers():
         "wix-site-id": WIX_SITE_ID,
     }
 
+def get_wix_oauth_headers(access_token: str):
+    """Get Wix API headers with OAuth token"""
+    return {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
 @api_router.get("/wix/capabilities")
 async def get_wix_capabilities():
     """Check what we can do with Wix API - Hero, Blog, etc."""
+    
+    # Try to get OAuth token
+    oauth_token = await get_wix_access_token()
+    
     capabilities = {
         "api_configured": bool(WIX_API_KEY and WIX_SITE_ID),
+        "oauth_configured": bool(WIX_INSTANCE_ID),
+        "oauth_working": bool(oauth_token),
         "available_apis": {
             "stores": {
                 "products": "✅ READ/WRITE - Modifier produits, descriptions SEO, prix",
@@ -1122,7 +1157,7 @@ async def get_wix_capabilities():
             },
             "site": {
                 "pages": "⚠️ LIMITED - Lecture seule via CMS",
-                "hero_sections": "⚠️ CUSTOM - Via CMS Collections uniquement",
+                "hero_sections": "💡 VIA CMS - Crée une collection 'site_content' dans Wix CMS",
                 "seo_settings": "✅ WRITE - Meta titles, descriptions par page"
             },
             "marketing": {
@@ -1130,26 +1165,40 @@ async def get_wix_capabilities():
                 "email_marketing": "⚠️ SEPARATE API"
             }
         },
+        "luxura_api": {
+            "url": LUXURA_RENDER_API,
+            "wix_token_endpoint": f"{LUXURA_RENDER_API}/wix/token",
+            "wix_seo_push": f"{LUXURA_RENDER_API}/wix/seo/push_one",
+        },
         "luxura_specific": {
             "product_seo": "✅ Déjà implémenté - 2665 descriptions optimisées",
             "color_names": "✅ Déjà implémenté - Noms luxe (Noir Ébène, etc.)",
             "blog_automation": "✅ Prêt - Génération quotidienne SEO",
-            "wix_blog_push": "🔧 En cours d'implémentation"
+            "wix_push": "🔧 Via Luxura API OAuth"
+        },
+        "hero_modification_guide": {
+            "step1": "Dans Wix Editor, crée une Collection CMS appelée 'site_content'",
+            "step2": "Ajoute les champs: hero_title, hero_subtitle, hero_cta, hero_image",
+            "step3": "Connecte ton Hero à cette collection via Dynamic Pages",
+            "step4": "L'API peut alors modifier le contenu via Wix Data API",
+            "note": "C'est la seule façon de modifier le Hero via API - Wix bloque la modification directe du design"
         }
     }
     
-    # Test Wix connection
-    if WIX_API_KEY and WIX_SITE_ID:
+    # Test connection via OAuth if available
+    if oauth_token:
         try:
             async with httpx.AsyncClient(timeout=10.0) as http_client:
                 response = await http_client.post(
                     f"{WIX_API_BASE}/stores/v1/products/query",
-                    headers=get_wix_headers(),
+                    headers=get_wix_oauth_headers(oauth_token),
                     json={"query": {"paging": {"limit": 1}}}
                 )
-                capabilities["wix_connection"] = "✅ CONNECTÉ" if response.status_code == 200 else f"❌ Erreur {response.status_code}"
+                capabilities["wix_connection_oauth"] = "✅ CONNECTÉ via OAuth" if response.status_code == 200 else f"❌ Erreur {response.status_code}"
         except Exception as e:
-            capabilities["wix_connection"] = f"❌ {str(e)}"
+            capabilities["wix_connection_oauth"] = f"❌ {str(e)}"
+    else:
+        capabilities["wix_connection_oauth"] = "⚠️ WIX_INSTANCE_ID non configuré"
     
     return capabilities
 
