@@ -825,37 +825,252 @@ async def clear_cart(request: Request):
 
 # ==================== BLOG ENDPOINTS ====================
 
+# SEO Keywords for Luxura Distribution - Hair Extensions Quebec
+SEO_KEYWORDS = {
+    "commercial": [
+        "extensions capillaires Québec",
+        "extensions cheveux naturel Québec",
+        "acheter extensions cheveux professionnel",
+        "extensions cheveux haut de gamme Canada",
+        "rallonges cheveux naturel invisibles",
+        "extensions trame invisible Québec",
+        "extensions Genius weft Québec",
+        "extensions cheveux salon professionnel"
+    ],
+    "long_tail": [
+        "extensions cheveux blond balayage 20 pouces",
+        "trame invisible cheveux naturel prix Québec",
+        "extensions Genius weft avis Canada",
+        "extensions cheveux pour salon professionnel fournisseur",
+        "rallonges cheveux naturels sans colle",
+        "extensions cheveux couture invisible durable",
+        "extensions cheveux Remy vs synthétique différence",
+        "extensions cheveux pour cheveux fins solution"
+    ],
+    "problems": [
+        "cheveux fins que faire solution",
+        "comment ajouter du volume cheveux",
+        "perte de cheveux femme solution esthétique",
+        "cheveux clairsemés femme solution",
+        "comment épaissir cheveux naturellement"
+    ],
+    "b2b": [
+        "fournisseur extensions cheveux Québec salon",
+        "distributeur extensions capillaires Canada",
+        "grossiste extensions cheveux professionnel",
+        "extensions cheveux dépôt salon",
+        "partenariat salon extensions cheveux",
+        "extensions cheveux wholesale Canada"
+    ],
+    "branding": [
+        "extensions cheveux luxe Québec",
+        "extensions capillaires premium Canada",
+        "extensions cheveux haut de gamme salon",
+        "qualité professionnelle extensions cheveux",
+        "extensions cheveux 100% naturels vierges"
+    ]
+}
+
+BLOG_TOPICS = [
+    {
+        "topic": "Comment choisir ses extensions cheveux - Guide complet",
+        "keywords": ["commercial", "long_tail"],
+        "meta_description": "Guide expert pour choisir vos extensions cheveux naturel au Québec. Comparatif Genius Weft, Tape-in, Halo."
+    },
+    {
+        "topic": "Extensions Genius Weft vs Tape-in : Quelle technique choisir ?",
+        "keywords": ["commercial", "long_tail"],
+        "meta_description": "Comparaison détaillée entre extensions Genius Weft et Tape-in. Avantages, durabilité et prix au Québec."
+    },
+    {
+        "topic": "Solution cheveux fins : Extensions invisibles pour volume naturel",
+        "keywords": ["problems", "long_tail"],
+        "meta_description": "Découvrez comment les extensions trame invisible transforment les cheveux fins en chevelure volumineuse."
+    },
+    {
+        "topic": "Fournisseur extensions cheveux salon : Pourquoi choisir Luxura",
+        "keywords": ["b2b", "branding"],
+        "meta_description": "Luxura Distribution - Votre partenaire grossiste extensions cheveux professionnelles au Québec et Canada."
+    },
+    {
+        "topic": "Entretien extensions cheveux : Guide professionnel",
+        "keywords": ["long_tail", "branding"],
+        "meta_description": "Conseils d'experts pour entretenir vos extensions cheveux naturel. Durée de vie 12-18 mois garantie."
+    },
+    {
+        "topic": "Tendances coiffure 2025 : Extensions balayage et couleurs naturelles",
+        "keywords": ["long_tail", "branding"],
+        "meta_description": "Les tendances extensions cheveux 2025 au Québec. Balayage blond, ombré naturel et couleurs luxe."
+    },
+    {
+        "topic": "Extensions cheveux pour mariage : Transformation spectaculaire",
+        "keywords": ["commercial", "problems"],
+        "meta_description": "Extensions cheveux pour mariage au Québec. Volume et longueur spectaculaires pour le grand jour."
+    },
+    {
+        "topic": "Cheveux clairsemés femme : Solutions professionnelles",
+        "keywords": ["problems", "branding"],
+        "meta_description": "Solutions extensions cheveux pour femmes aux cheveux clairsemés. Résultats naturels garantis."
+    }
+]
+
+class BlogGenerateRequest(BaseModel):
+    topic_index: Optional[int] = None
+
+@api_router.get("/blog/keywords")
+async def get_seo_keywords():
+    """Get available SEO keywords for blog generation"""
+    return {
+        "keywords": SEO_KEYWORDS,
+        "topics": [{"index": i, "topic": t["topic"], "meta": t["meta_description"]} for i, t in enumerate(BLOG_TOPICS)]
+    }
+
+@api_router.post("/blog/generate")
+async def generate_seo_blog():
+    """Generate a new SEO-optimized blog post using AI"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        import random
+        
+        emergent_key = os.getenv("EMERGENT_LLM_KEY")
+        if not emergent_key:
+            raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+        
+        # Get existing blog posts to avoid duplicates
+        existing_posts = await db.blog_posts.find({}, {"title": 1}).to_list(100)
+        existing_titles = [p.get("title", "").lower() for p in existing_posts]
+        
+        # Select a topic that hasn't been covered
+        available_topics = [t for t in BLOG_TOPICS if t["topic"].lower() not in existing_titles]
+        
+        if not available_topics:
+            available_topics = BLOG_TOPICS
+        
+        topic_data = random.choice(available_topics)
+        
+        # Collect relevant keywords
+        keywords_to_use = []
+        for cat in topic_data["keywords"]:
+            keywords_to_use.extend(random.sample(SEO_KEYWORDS[cat], min(3, len(SEO_KEYWORDS[cat]))))
+        
+        # Generate blog content using AI
+        chat = LlmChat(
+            api_key=emergent_key,
+            session_id=f"blog-gen-{uuid.uuid4().hex[:8]}",
+            system_message="""Tu es un expert SEO francophone spécialisé dans les extensions capillaires au Québec. 
+Tu écris pour Luxura Distribution, le leader des extensions cheveux haut de gamme au Canada.
+Ton style est professionnel, informatif et engageant. Tu utilises naturellement les mots-clés SEO fournis.
+Tu connais parfaitement les produits: Genius Weft (trame invisible révolutionnaire), Tape-in, Halo, I-Tip.
+IMPORTANT: Réponds UNIQUEMENT en français québécois."""
+        ).with_model("openai", "gpt-4.1-mini")
+        
+        prompt = f"""Écris un article de blog SEO complet pour Luxura Distribution.
+
+SUJET: {topic_data["topic"]}
+
+MOTS-CLÉS À INTÉGRER NATURELLEMENT:
+{', '.join(keywords_to_use)}
+
+STRUCTURE REQUISE:
+1. Titre accrocheur (H1) - inclure un mot-clé principal
+2. Introduction (150 mots) - hook + présentation du sujet
+3. Section 1 avec sous-titre H2
+4. Section 2 avec sous-titre H2  
+5. Section 3 avec sous-titre H2
+6. Conclusion avec appel à l'action vers Luxura Distribution
+
+CONSIGNES:
+- Longueur totale: 800-1000 mots
+- Intégrer les mots-clés naturellement (3-5 fois chacun)
+- Mentionner Luxura Distribution comme expert
+- Inclure des conseils pratiques
+- Ton professionnel mais accessible
+- Utiliser des listes à puces quand pertinent
+
+FORMAT DE RÉPONSE (JSON):
+{{
+  "title": "Titre SEO optimisé",
+  "excerpt": "Résumé de 150 caractères pour les aperçus",
+  "content": "Contenu complet de l'article avec balises HTML basiques (h2, p, ul, li)",
+  "meta_description": "Description meta SEO de 155 caractères max",
+  "tags": ["tag1", "tag2", "tag3"]
+}}"""
+
+        user_message = UserMessage(text=prompt)
+        response = await chat.send_message(user_message)
+        
+        # Parse the JSON response
+        import json
+        response_text = response.strip()
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        
+        try:
+            blog_data = json.loads(response_text.strip())
+        except json.JSONDecodeError:
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', response_text)
+            if json_match:
+                blog_data = json.loads(json_match.group())
+            else:
+                raise HTTPException(status_code=500, detail="Failed to parse AI response")
+        
+        # Create blog post document
+        post_id = f"seo-{uuid.uuid4().hex[:8]}"
+        blog_post = {
+            "id": post_id,
+            "title": blog_data.get("title", topic_data["topic"]),
+            "excerpt": blog_data.get("excerpt", topic_data["meta_description"]),
+            "content": blog_data.get("content", ""),
+            "meta_description": blog_data.get("meta_description", topic_data["meta_description"]),
+            "tags": blog_data.get("tags", keywords_to_use[:5]),
+            "image": f"https://static.wixstatic.com/media/de6cdb_ed493ddeab524054935dfbf0714b7e29~mv2.jpg",
+            "author": "Luxura Distribution",
+            "created_at": datetime.now(timezone.utc),
+            "seo_keywords": keywords_to_use,
+            "auto_generated": True
+        }
+        
+        await db.blog_posts.insert_one(blog_post)
+        
+        blog_post.pop("_id", None)
+        if isinstance(blog_post.get("created_at"), datetime):
+            blog_post["created_at"] = blog_post["created_at"].isoformat()
+        
+        return {
+            "success": True,
+            "message": "Article SEO généré avec succès",
+            "post": blog_post
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating blog: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/blog/{post_id}")
+async def delete_blog_post(post_id: str):
+    """Delete a blog post"""
+    result = await db.blog_posts.delete_one({"id": post_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return {"message": "Post deleted successfully"}
+
 @api_router.get("/blog")
 async def get_blog_posts():
     """Get all blog posts"""
     posts = await db.blog_posts.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
     if not posts:
-        # Return default posts if none exist
         return [
             {
                 "id": "entretien-extensions",
                 "title": "Comment entretenir vos extensions capillaires",
-                "content": "Les extensions capillaires nécessitent un entretien régulier pour maintenir leur beauté et leur durabilité.",
-                "excerpt": "Découvrez nos conseils d'experts pour maintenir vos extensions capillaires en parfait état.",
+                "content": "Les extensions capillaires nécessitent un entretien régulier.",
+                "excerpt": "Découvrez nos conseils d'experts pour maintenir vos extensions.",
                 "image": "https://static.wixstatic.com/media/de6cdb_ed493ddeab524054935dfbf0714b7e29~mv2.jpg",
-                "author": "Luxura Distribution",
-                "created_at": datetime.now(timezone.utc).isoformat()
-            },
-            {
-                "id": "choisir-extensions",
-                "title": "Guide: Choisir les bonnes extensions",
-                "content": "Choisir les bonnes extensions capillaires peut sembler complexe. Voici notre guide complet.",
-                "excerpt": "Tout ce que vous devez savoir pour choisir les extensions parfaites pour vous.",
-                "image": "https://static.wixstatic.com/media/de6cdb_b293ba02614747dc8403c5de83ca1ae1~mv2.jpg",
-                "author": "Luxura Distribution",
-                "created_at": datetime.now(timezone.utc).isoformat()
-            },
-            {
-                "id": "tendances-2025",
-                "title": "Tendances capillaires 2025",
-                "content": "Les tendances capillaires de 2025 mettent l'accent sur le naturel et la personnalisation.",
-                "excerpt": "Découvrez les tendances capillaires qui domineront 2025.",
-                "image": "https://static.wixstatic.com/media/de6cdb_534f544ed92641e6811d56bd5dba5a67~mv2.jpg",
                 "author": "Luxura Distribution",
                 "created_at": datetime.now(timezone.utc).isoformat()
             }

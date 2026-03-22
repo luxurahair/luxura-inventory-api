@@ -20,9 +20,14 @@ import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const CARD_WIDTH = Math.floor((SCREEN_WIDTH - 48) / 2);
-const IMAGE_SIZE = CARD_WIDTH;
+
+// Use fixed width for consistent layout on web and mobile
+const getCardWidth = () => {
+  const screenWidth = Dimensions.get('window').width;
+  // Cap the card width for larger screens
+  const maxContainerWidth = Math.min(screenWidth, 500);
+  return Math.floor((maxContainerWidth - 48) / 2);
+};
 
 interface Product {
   id: number | string;
@@ -86,16 +91,18 @@ export default function CatalogueScreen() {
     fetchData();
   };
 
+  const CARD_WIDTH = getCardWidth();
+  
   const renderProductCard = ({ item: product }: { item: Product }) => (
     <TouchableOpacity
       onPress={() => router.push(`/product/${product.id}`)}
       activeOpacity={0.8}
-      style={styles.card}
+      style={[styles.card, { width: CARD_WIDTH }]}
     >
-      <View style={styles.imageContainer}>
+      <View style={[styles.imageContainer, { width: CARD_WIDTH, height: CARD_WIDTH }]}>
         <Image
           source={{ uri: product.images?.[0] }}
-          style={styles.productImage}
+          style={{ width: CARD_WIDTH, height: CARD_WIDTH }}
           contentFit="cover"
         />
         {!product.in_stock && (
@@ -271,25 +278,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   card: {
-    width: CARD_WIDTH,
-    maxWidth: CARD_WIDTH,
     backgroundColor: '#1a1a1a',
     borderRadius: 10,
     overflow: 'hidden',
   },
   imageContainer: {
-    width: CARD_WIDTH,
-    height: CARD_WIDTH,
-    maxWidth: CARD_WIDTH,
-    maxHeight: CARD_WIDTH,
     backgroundColor: '#222',
     overflow: 'hidden',
   },
   productImage: {
-    width: CARD_WIDTH,
-    height: CARD_WIDTH,
-    maxWidth: CARD_WIDTH,
-    maxHeight: CARD_WIDTH,
+    // Dynamic sizing applied inline
   },
   badge: { 
     position: 'absolute', 
