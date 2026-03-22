@@ -664,13 +664,21 @@ async def get_products(
 
 @api_router.get("/products/{product_id}")
 async def get_product(product_id: int):
-    """Get a single product with all its variants from Luxura Inventory API"""
+    """Get a single product with all its variants from Luxura Inventory API
+    Fetches real inventory quantities from /inventory/view
+    """
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            # First get the specific product
-            response = await client.get(f"{LUXURA_API_URL}/products/{product_id}")
+            # Fetch product, all products (for variants), AND inventory in parallel
+            product_task = client.get(f"{LUXURA_API_URL}/products/{product_id}")
+            all_products_task = client.get(f"{LUXURA_API_URL}/products")
+            inventory_task = client.get(f"{LUXURA_API_URL}/inventory/view")
             
-            if response.status_code == 404:
+            response, all_response, inventory_response = await asyncio.gather(
+                product_task, all_products_task, inventory_task, return_exceptions=True
+            )
+            
+            if isinstance(response, Exception) or response.status_code == 404:
                 raise HTTPException(status_code=404, detail="Product not found")
             
             if response.status_code != 200:
@@ -679,6 +687,25 @@ async def get_product(product_id: int):
             p = response.json()
             handle = p.get('handle', '')
             name = p.get('name', '')
+            
+            # Build inventory lookup by SKU AND by name for real quantities
+            inventory_by_sku = {}
+            inventory_by_name = {}
+            if not isinstance(inventory_response, Exception) and inventory_response.status_code == 200:
+                inventory_data = inventory_response.json()
+                for inv in inventory_data:
+                    inv_sku = inv.get('sku') or ''
+                    inv_name = inv.get('name') or ''
+                    inv_qty = inv.get('quantity') or 0
+                    
+                    # Index by SKU (uppercase)
+                    if inv_sku and len(inv_sku) > 5:  # Valid SKU, not Wix UUID
+                        inventory_by_sku[inv_sku.upper()] = inventory_by_sku.get(inv_sku.upper(), 0) + inv_qty
+                    
+                    # Index by full name (for exact matches)
+                    if inv_name:
+                        inv_name_lower = inv_name.lower().strip()
+                        inventory_by_name[inv_name_lower] = inventory_by_name.get(inv_name_lower, 0) + inv_qty
             
             # Detect category from handle
             category = detect_category_from_handle(handle, name)
@@ -692,9 +719,8 @@ async def get_product(product_id: int):
             # Clean name (remove variant suffix)
             clean_name = name.split(' — ')[0].strip()
             
-            # Now fetch ALL products to find variants with same handle
-            all_response = await client.get(f"{LUXURA_API_URL}/products")
-            if all_response.status_code == 200:
+            # Process variants with real inventory quantities
+            if not isinstance(all_response, Exception) and all_response.status_code == 200:
                 all_products = all_response.json()
                 
                 # Find all variants with same handle
@@ -707,9 +733,25 @@ async def get_product(product_id: int):
                     if prod.get('handle') == handle:
                         if is_variant_record(prod):
                             variant_info = extract_variant_info(prod)
+                            
+                            # Get REAL quantity from inventory by SKU first, then by name
+                            variant_sku = (prod.get('sku') or '').upper()
+                            variant_name = (prod.get('name') or '').lower().strip()
+                            real_qty = 0
+                            
+                            # Try SKU first (most accurate)
+                            if variant_sku and variant_sku in inventory_by_sku:
+                                real_qty = inventory_by_sku[variant_sku]
+                            # Fallback to name match
+                            elif variant_name and variant_name in inventory_by_name:
+                                real_qty = inventory_by_name[variant_name]
+                            
+                            variant_info['quantity'] = real_qty
+                            variant_info['is_in_stock'] = real_qty > 0
+                            
                             variants.append(variant_info)
-                            total_quantity += variant_info['quantity']
-                            if variant_info['is_in_stock'] or variant_info['quantity'] > 0:
+                            total_quantity += real_qty
+                            if real_qty > 0:
                                 any_in_stock = True
                         else:
                             parent_product = prod

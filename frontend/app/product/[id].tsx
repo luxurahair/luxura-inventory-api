@@ -143,11 +143,21 @@ export default function ProductScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]} pointerEvents="box-none">
+        <TouchableOpacity 
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)/catalogue');
+            }
+          }} 
+          style={styles.headerButton}
+          activeOpacity={0.7}
+        >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push('/cart')} style={styles.headerButton}>
+        <TouchableOpacity onPress={() => router.push('/cart')} style={styles.headerButton} activeOpacity={0.7}>
           <Ionicons name="bag-outline" size={24} color="#fff" />
           {count > 0 && (
             <View style={styles.badge}>
