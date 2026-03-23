@@ -706,6 +706,11 @@ export default function ProductScreen() {
                   const isSelected = selectedVariant?.id === variant.id;
                   const isAvailable = variant.is_in_stock || variant.quantity > 0;
                   
+                  // Format propre pour l'affichage de la variante
+                  const variantLabel = variant.length && variant.weight 
+                    ? `${variant.length} - ${variant.weight}`
+                    : variant.longeur_raw || `Variante ${index + 1}`;
+                  
                   return (
                     <TouchableOpacity
                       key={variant.id || index}
@@ -722,16 +727,8 @@ export default function ProductScreen() {
                         isSelected && styles.variantTextSelected,
                         !isAvailable && styles.variantTextDisabled,
                       ]}>
-                        {variant.longeur_raw}
+                        {variantLabel}
                       </Text>
-                      {variant.sku && (
-                        <Text style={[
-                          styles.variantSku,
-                          isSelected && styles.variantSkuSelected,
-                        ]}>
-                          {variant.sku}
-                        </Text>
-                      )}
                       {!isAvailable && (
                         <Text style={styles.variantOutOfStock}>Épuisé</Text>
                       )}
@@ -751,10 +748,11 @@ export default function ProductScreen() {
               {selectedVariant && (
                 <View style={styles.selectedVariantInfo}>
                   <Text style={styles.selectedVariantLabel}>Variante sélectionnée:</Text>
-                  <Text style={styles.selectedVariantValue}>{selectedVariant.longeur_raw}</Text>
-                  {selectedVariant.sku && (
-                    <Text style={styles.selectedVariantSku}>SKU: {selectedVariant.sku}</Text>
-                  )}
+                  <Text style={styles.selectedVariantValue}>
+                    {selectedVariant.length && selectedVariant.weight 
+                      ? `${selectedVariant.length} - ${selectedVariant.weight}`
+                      : selectedVariant.longeur_raw}
+                  </Text>
                 </View>
               )}
             </View>
