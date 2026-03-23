@@ -597,7 +597,12 @@ export default function ProductScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        bounces={true}
+      >
         {/* Product Images */}
         <View style={styles.imageSection}>
           <Image
@@ -902,12 +907,14 @@ const styles = StyleSheet.create({
   },
   imageSection: {
     width: width,
-    height: width * 1.2,
+    height: 300,  // Hauteur fixe pour éviter les problèmes de layout
     backgroundColor: '#1a1a1a',
+    overflow: 'hidden',
   },
   mainImage: {
     width: '100%',
-    height: '100%',
+    height: 300,
+    resizeMode: 'contain',
   },
   outOfStockOverlay: {
     position: 'absolute',
