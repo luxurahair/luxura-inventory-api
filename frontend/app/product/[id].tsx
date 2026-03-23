@@ -22,6 +22,161 @@ import { useCartStore } from '../../src/store/cartStore';
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const { width } = Dimensions.get('window');
 
+// Component to format description into sections
+const FormattedDescription = ({ description }: { description: string }) => {
+  // Parse description into sections
+  const parseDescription = (desc: string) => {
+    if (!desc) return { intro: '', sections: [] };
+    
+    // Clean up the description
+    let cleanDesc = desc
+      .replace(/🎯/g, '')
+      .replace(/🔬/g, '')
+      .replace(/💎/g, '')
+      .replace(/✨/g, '')
+      .replace(/📍/g, '')
+      .replace(/•/g, '\n•');
+    
+    const sections: { title: string; items: string[] }[] = [];
+    let intro = '';
+    
+    // Extract intro (first paragraph before any section)
+    const introMatch = cleanDesc.match(/^([^•\n]+)/);
+    if (introMatch) {
+      intro = introMatch[1].trim();
+    }
+    
+    // Define section patterns
+    const sectionPatterns = [
+      { key: 'CONCEPT UNIQUE', title: 'CONCEPT' },
+      { key: 'CONCEPT', title: 'CONCEPT' },
+      { key: 'QUALITÉ PREMIUM', title: 'QUALITÉ PREMIUM' },
+      { key: 'QUALITÉ', title: 'QUALITÉ PREMIUM' },
+      { key: 'TECHNOLOGIE', title: 'TECHNOLOGIE' },
+      { key: 'AVANTAGES UNIQUES', title: 'AVANTAGES' },
+      { key: 'AVANTAGES', title: 'AVANTAGES' },
+      { key: 'DURÉE DE VIE', title: 'DURÉE DE VIE' },
+      { key: 'APPLICATION', title: 'APPLICATION' },
+      { key: 'COLLECTION', title: 'COLLECTION' },
+    ];
+    
+    // Extract sections
+    for (const pattern of sectionPatterns) {
+      const regex = new RegExp(`${pattern.key}[:\\s]*([^A-Z]*?)(?=[A-Z]{4,}|Luxura Distribution|$)`, 'i');
+      const match = cleanDesc.match(regex);
+      if (match && match[1]) {
+        const items = match[1]
+          .split(/[•\n]/)
+          .map(item => item.trim())
+          .filter(item => item.length > 3 && !item.includes(':'));
+        
+        if (items.length > 0) {
+          sections.push({ title: pattern.title, items });
+        }
+      }
+    }
+    
+    // If no sections found, create simple list from bullet points
+    if (sections.length === 0) {
+      const bulletItems = cleanDesc
+        .split(/[•\n]/)
+        .map(item => item.trim())
+        .filter(item => item.length > 10);
+      
+      if (bulletItems.length > 0) {
+        // Split into two columns
+        const mid = Math.ceil(bulletItems.length / 2);
+        sections.push({ title: 'CARACTÉRISTIQUES', items: bulletItems.slice(0, mid) });
+        if (bulletItems.length > mid) {
+          sections.push({ title: 'DÉTAILS', items: bulletItems.slice(mid) });
+        }
+      }
+    }
+    
+    return { intro, sections };
+  };
+  
+  const { intro, sections } = parseDescription(description);
+  
+  // If we have sections, display in a nice format
+  if (sections.length > 0) {
+    return (
+      <View style={descStyles.container}>
+        {intro ? (
+          <Text style={descStyles.intro}>{intro}</Text>
+        ) : null}
+        
+        <View style={descStyles.sectionsGrid}>
+          {sections.map((section, index) => (
+            <View key={index} style={descStyles.section}>
+              <Text style={descStyles.sectionTitle}>{section.title}</Text>
+              {section.items.map((item, itemIndex) => (
+                <View key={itemIndex} style={descStyles.bulletItem}>
+                  <Text style={descStyles.bullet}>•</Text>
+                  <Text style={descStyles.bulletText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
+  
+  // Fallback: simple description
+  return (
+    <View style={descStyles.container}>
+      <Text style={descStyles.sectionTitle}>Description</Text>
+      <Text style={descStyles.intro}>{description}</Text>
+    </View>
+  );
+};
+
+const descStyles = StyleSheet.create({
+  container: {
+    marginBottom: 20,
+  },
+  intro: {
+    color: '#ccc',
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  sectionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  section: {
+    width: '48%',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    color: '#c9a050',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  bulletItem: {
+    flexDirection: 'row',
+    marginBottom: 4,
+    paddingRight: 4,
+  },
+  bullet: {
+    color: '#888',
+    fontSize: 12,
+    marginRight: 6,
+    marginTop: 1,
+  },
+  bulletText: {
+    color: '#aaa',
+    fontSize: 12,
+    lineHeight: 18,
+    flex: 1,
+  },
+});
+
 interface Variant {
   id: number;
   sku: string | null;
@@ -216,8 +371,8 @@ export default function ProductScreen() {
           
           <View style={styles.divider} />
           
-          <Text style={styles.descriptionTitle}>Description</Text>
-          <Text style={styles.description}>{product.description}</Text>
+          {/* Formatted Description Sections */}
+          <FormattedDescription description={product.description} />
           
           {/* Variant Selector */}
           {product.variants && product.variants.length > 0 && (
