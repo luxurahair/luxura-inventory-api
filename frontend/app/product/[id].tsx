@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,56 @@ import { useCartStore } from '../../src/store/cartStore';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const { width } = Dimensions.get('window');
+
+// ═══════════════════════════════════════════════════════════════
+// COLOR SYSTEM - Noms de luxe Luxura (copie locale pour affichage)
+// ═══════════════════════════════════════════════════════════════
+const COLOR_LUXE_NAMES: { [key: string]: string } = {
+  "1": "Onyx Noir",
+  "1B": "Noir Soie",
+  "2": "Espresso Intense",
+  "DB": "Nuit Mystère",
+  "DC": "Chocolat Profond",
+  "CACAO": "Cacao Velours",
+  "CHENGTU": "Soie d'Orient",
+  "FOOCHOW": "Cachemire Oriental",
+  "3": "Châtaigne Douce",
+  "CINNAMON": "Cannelle Épicée",
+  "3/3T24": "Châtaigne Lumière Dorée",
+  "6": "Caramel Doré",
+  "BM": "Miel Sauvage",
+  "6/24": "Golden Hour",
+  "6/6T24": "Caramel Soleil",
+  "18/22": "Champagne Doré",
+  "60A": "Platine Pur",
+  "PHA": "Cendré Céleste",
+  "613/18A": "Diamant Glacé",
+  "IVORY": "Ivoire Précieux",
+  "ICW": "Cristal Polaire",
+  "CB": "Miel Sauvage Ombré",
+  "HPS": "Cendré Étoilé",
+  "5AT60": "Aurore Glaciale",
+  "5ATP18B62": "Aurore Boréale",
+  "2BTP18/1006": "Espresso Lumière",
+  "T14/P14/24": "Venise Dorée",
+};
+
+/**
+ * Extraire le code couleur d'un nom de produit et retourner le nom de luxe
+ * Exemple: "Halo Série Everly Balayage Blond Foncé #6/24" → "Golden Hour"
+ */
+function getLuxeName(productName: string): { luxeName: string; colorCode: string } {
+  if (!productName) return { luxeName: '', colorCode: '' };
+  
+  // Chercher le pattern #CODE dans le nom
+  const match = productName.match(/#([A-Za-z0-9/]+)/);
+  if (!match) return { luxeName: '', colorCode: '' };
+  
+  const colorCode = match[1].toUpperCase();
+  const luxeName = COLOR_LUXE_NAMES[colorCode] || '';
+  
+  return { luxeName, colorCode };
+}
 
 // Component to format description into sections
 const FormattedDescription = ({ description }: { description: string }) => {
@@ -297,8 +347,8 @@ export default function ProductScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]} pointerEvents="box-none">
+      {/* Header - Navigation fixe */}
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity 
           onPress={() => {
             if (router.canGoBack()) {
@@ -308,11 +358,17 @@ export default function ProductScreen() {
             }
           }} 
           style={styles.headerButton}
-          activeOpacity={0.7}
+          activeOpacity={0.6}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push('/cart')} style={styles.headerButton} activeOpacity={0.7}>
+        <TouchableOpacity 
+          onPress={() => router.push('/cart')} 
+          style={styles.headerButton} 
+          activeOpacity={0.6}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
           <Ionicons name="bag-outline" size={24} color="#fff" />
           {count > 0 && (
             <View style={styles.badge}>
@@ -361,13 +417,44 @@ export default function ProductScreen() {
             <Text style={styles.categoryText}>{product.series || 'Luxura'}</Text>
           </View>
           
-          <Text style={styles.productName}>{product.name}</Text>
-          
-          {product.color_code && (
-            <Text style={styles.colorCode}>Code couleur: {product.color_code}</Text>
-          )}
+          {/* Afficher le nom de luxe si disponible, sinon le nom brut */}
+          {(() => {
+            const { luxeName, colorCode } = getLuxeName(product.name);
+            return (
+              <>
+                <Text style={styles.productName}>
+                  {luxeName || product.name}
+                </Text>
+                {colorCode && (
+                  <Text style={styles.colorCode}>Code couleur: #{colorCode}</Text>
+                )}
+                {!colorCode && product.color_code && (
+                  <Text style={styles.colorCode}>Code couleur: {product.color_code}</Text>
+                )}
+              </>
+            );
+          })()}
           
           <Text style={styles.price}>{product.price.toFixed(2)} C$</Text>
+          
+          {/* Affichage du stock de la variante sélectionnée */}
+          {selectedVariant && (
+            <View style={styles.stockBadge}>
+              <Ionicons 
+                name={selectedVariant.quantity > 0 ? "checkmark-circle" : "close-circle"} 
+                size={16} 
+                color={selectedVariant.quantity > 0 ? "#4a4" : "#f44"} 
+              />
+              <Text style={[
+                styles.stockText,
+                selectedVariant.quantity > 0 ? styles.stockInStock : styles.stockOutOfStock
+              ]}>
+                {selectedVariant.quantity > 0 
+                  ? `${selectedVariant.quantity} en stock` 
+                  : 'Rupture de stock'}
+              </Text>
+            </View>
+          )}
           
           <View style={styles.divider} />
           
@@ -657,6 +744,27 @@ const styles = StyleSheet.create({
     color: '#c9a050',
     fontSize: 28,
     fontWeight: '800',
+  },
+  stockBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  stockText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  stockInStock: {
+    color: '#4a4',
+  },
+  stockOutOfStock: {
+    color: '#f44',
   },
   divider: {
     height: 1,
