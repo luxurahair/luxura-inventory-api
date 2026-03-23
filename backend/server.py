@@ -35,8 +35,15 @@ WIX_INSTANCE_ID = os.getenv("WIX_INSTANCE_ID", "")
 # Luxura API - pour utiliser l'OAuth existant
 LUXURA_RENDER_API = "https://luxura-inventory-api.onrender.com"
 
-# Create the main app
-app = FastAPI()
+# Create the main app with Swagger UI
+app = FastAPI(
+    title="Luxura Distribution API",
+    description="API pour l'application mobile Luxura - Extensions de cheveux professionnels",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
+)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")

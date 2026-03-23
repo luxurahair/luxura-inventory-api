@@ -152,6 +152,15 @@ export default function ProfileScreen() {
           />
         </View>
 
+        {/* Admin Section */}
+        <View style={styles.menuSection}>
+          <MenuItem
+            icon="settings-outline"
+            title="Admin Dashboard"
+            onPress={() => router.push('/admin')}
+          />
+        </View>
+
         {isAuthenticated && (
           <View style={styles.menuSection}>
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
