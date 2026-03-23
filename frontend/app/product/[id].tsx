@@ -72,11 +72,245 @@ function getLuxeName(productName: string): { luxeName: string; colorCode: string
   return { luxeName, colorCode };
 }
 
+// ═══════════════════════════════════════════════════════════════
+// SYSTÈME DE DESCRIPTION SEO LUXURA
+// Mots-clés ciblés: St-Georges → Québec → Montréal
+// ═══════════════════════════════════════════════════════════════
+
+interface SEOSection {
+  title: string;
+  items: string[];
+}
+
+interface SEOContent {
+  intro: string;
+  sections: SEOSection[];
+}
+
+// Descriptions SEO par catégorie de produit
+const SEO_TEMPLATES: { [category: string]: SEOContent } = {
+  halo: {
+    intro: "Extensions Halo à volume instantané sans engagement. Système avec fil invisible ajustable qui repose confortablement sur la tête, sans fixation permanente. Idéal pour femmes au Québec cherchant volume et longueur naturels.",
+    sections: [
+      {
+        title: "CONCEPT",
+        items: [
+          "Fil invisible ajustable",
+          "Aucune fixation permanente",
+          "100% réversible",
+          "Application en moins de 2 minutes",
+          "Retrait instantané sans aide professionnelle"
+        ]
+      },
+      {
+        title: "QUALITÉ PREMIUM",
+        items: [
+          "100% cheveux humains vierges Remy",
+          "Cuticules intactes",
+          "Mouvement naturel",
+          "Finition professionnelle salon Québec"
+        ]
+      },
+      {
+        title: "DURÉE DE VIE",
+        items: [
+          "Jusqu'à 12 mois et plus avec bon entretien"
+        ]
+      },
+      {
+        title: "APPLICATION",
+        items: [
+          "Auto-application simple",
+          "Aucune aide requise",
+          "Ajustement rapide et facile"
+        ]
+      }
+    ]
+  },
+  genius: {
+    intro: "Extensions Genius Weft à trame invisible ultra-fine. La technologie de pointe pour un volume spectaculaire et un confort inégalé. Parfait pour les salons professionnels de Montréal à Québec.",
+    sections: [
+      {
+        title: "TECHNOLOGIE",
+        items: [
+          "Trame invisible ultra-fine",
+          "Zéro tension sur le cuir chevelu",
+          "Couture plate professionnelle",
+          "Installation en moins de 45 minutes"
+        ]
+      },
+      {
+        title: "QUALITÉ PREMIUM",
+        items: [
+          "100% cheveux humains vierges Remy",
+          "Cuticules alignées naturellement",
+          "Texture soyeuse premium",
+          "Qualité salon haut de gamme Québec"
+        ]
+      },
+      {
+        title: "DURÉE DE VIE",
+        items: [
+          "12 à 18 mois avec entretien professionnel"
+        ]
+      },
+      {
+        title: "APPLICATION",
+        items: [
+          "Installation par professionnel recommandée",
+          "Couture ou micro-anneaux",
+          "Réutilisable plusieurs fois"
+        ]
+      }
+    ]
+  },
+  tape: {
+    intro: "Extensions à bande adhésive professionnelle Aurora. Application rapide et invisible pour un volume naturel instantané. Populaire dans les salons de St-Georges à Montréal.",
+    sections: [
+      {
+        title: "CONCEPT",
+        items: [
+          "Bande adhésive médicale",
+          "Pose sandwich invisible",
+          "Confort toute la journée",
+          "Aucun dommage aux cheveux"
+        ]
+      },
+      {
+        title: "QUALITÉ PREMIUM",
+        items: [
+          "100% cheveux humains Remy",
+          "Cuticules intactes",
+          "Adhésif hypoallergénique",
+          "Approuvé salons professionnels Canada"
+        ]
+      },
+      {
+        title: "DURÉE DE VIE",
+        items: [
+          "6 à 8 semaines par pose",
+          "Réutilisable 3-4 fois"
+        ]
+      },
+      {
+        title: "APPLICATION",
+        items: [
+          "Pose rapide 30-45 minutes",
+          "Retrait facile avec solvant",
+          "Repositionnable"
+        ]
+      }
+    ]
+  },
+  "i-tip": {
+    intro: "Extensions I-Tip à kératine pour une fusion naturelle et durable. Technique de pointe utilisée par les meilleurs stylistes du Québec pour un résultat imperceptible.",
+    sections: [
+      {
+        title: "TECHNOLOGIE",
+        items: [
+          "Pointe kératine italienne",
+          "Fusion à chaud précise",
+          "Mèche par mèche naturelle",
+          "Invisible à l'œil nu"
+        ]
+      },
+      {
+        title: "QUALITÉ PREMIUM",
+        items: [
+          "100% cheveux humains vierges Remy",
+          "Kératine de grade médical",
+          "Cuticules parfaitement alignées",
+          "Standard salon luxe Montréal"
+        ]
+      },
+      {
+        title: "DURÉE DE VIE",
+        items: [
+          "4 à 6 mois par application",
+          "Cheveux réutilisables 2-3 fois"
+        ]
+      },
+      {
+        title: "APPLICATION",
+        items: [
+          "Installation professionnelle requise",
+          "Pince à fusion ou ultrason",
+          "Retrait avec pince spécialisée"
+        ]
+      }
+    ]
+  },
+  essentiels: {
+    intro: "Outils et produits d'entretien professionnels Luxura. Essentiels pour maintenir la beauté et la longévité de vos extensions capillaires.",
+    sections: [
+      {
+        title: "QUALITÉ",
+        items: [
+          "Produits professionnels salon",
+          "Formules douces sans sulfate",
+          "Testés et approuvés par experts"
+        ]
+      },
+      {
+        title: "UTILISATION",
+        items: [
+          "Instructions détaillées incluses",
+          "Compatible toutes extensions",
+          "Résultats garantis"
+        ]
+      }
+    ]
+  }
+};
+
+// Générer la description SEO complète
+function generateSEODescription(category: string, colorCode: string, luxeName: string, seriesName: string): SEOContent {
+  const template = SEO_TEMPLATES[category] || SEO_TEMPLATES.halo;
+  
+  // Clone le template
+  const content: SEOContent = {
+    intro: template.intro,
+    sections: template.sections.map(s => ({ ...s, items: [...s.items] }))
+  };
+  
+  // Ajouter la section COLLECTION avec les infos du produit
+  const collectionSection: SEOSection = {
+    title: "COLLECTION",
+    items: [
+      `Série ${seriesName || 'Everly'}`,
+      "Collection polyvalente Luxura",
+      `Teinte: ${colorCode ? `#${colorCode}` : ''} ${luxeName || ''}`.trim()
+    ].filter(item => item.length > 0)
+  };
+  
+  content.sections.push(collectionSection);
+  
+  return content;
+}
+
 // Component to format description into sections
-const FormattedDescription = ({ description }: { description: string }) => {
-  // Parse description into sections
-  const parseDescription = (desc: string) => {
-    if (!desc) return { intro: '', sections: [] };
+const FormattedDescription = ({ 
+  description, 
+  category = 'halo', 
+  colorCode = '', 
+  luxeName = '',
+  seriesName = 'Everly'
+}: { 
+  description: string; 
+  category?: string;
+  colorCode?: string;
+  luxeName?: string;
+  seriesName?: string;
+}) => {
+  // Si pas de description ou description trop courte, générer du contenu SEO
+  const hasValidDescription = description && description.length > 100;
+  
+  // Utiliser le contenu SEO généré
+  const seoContent = generateSEODescription(category, colorCode, luxeName, seriesName);
+  
+  // Parser la description existante si elle est valide
+  const parseDescription = (desc: string): SEOContent => {
+    if (!desc) return seoContent;
     
     // Clean up the description
     let cleanDesc = desc
@@ -87,12 +321,12 @@ const FormattedDescription = ({ description }: { description: string }) => {
       .replace(/📍/g, '')
       .replace(/•/g, '\n•');
     
-    const sections: { title: string; items: string[] }[] = [];
+    const sections: SEOSection[] = [];
     let intro = '';
     
     // Extract intro (first paragraph before any section)
     const introMatch = cleanDesc.match(/^([^•\n]+)/);
-    if (introMatch) {
+    if (introMatch && introMatch[1].length > 20) {
       intro = introMatch[1].trim();
     }
     
@@ -126,61 +360,46 @@ const FormattedDescription = ({ description }: { description: string }) => {
       }
     }
     
-    // If no sections found, create simple list from bullet points
-    if (sections.length === 0) {
-      const bulletItems = cleanDesc
-        .split(/[•\n]/)
-        .map(item => item.trim())
-        .filter(item => item.length > 10);
-      
-      if (bulletItems.length > 0) {
-        // Split into two columns
-        const mid = Math.ceil(bulletItems.length / 2);
-        sections.push({ title: 'CARACTÉRISTIQUES', items: bulletItems.slice(0, mid) });
-        if (bulletItems.length > mid) {
-          sections.push({ title: 'DÉTAILS', items: bulletItems.slice(mid) });
-        }
-      }
+    // Si pas de sections trouvées, utiliser le template SEO
+    if (sections.length < 2) {
+      return seoContent;
     }
     
-    return { intro, sections };
+    return { intro: intro || seoContent.intro, sections };
   };
   
-  const { intro, sections } = parseDescription(description);
+  const { intro, sections } = hasValidDescription ? parseDescription(description) : seoContent;
   
-  // If we have sections, display in a nice format
-  if (sections.length > 0) {
-    return (
-      <View style={descStyles.container}>
-        {intro ? (
-          <Text style={descStyles.intro}>{intro}</Text>
-        ) : null}
-        
-        <View style={descStyles.sectionsGrid}>
-          {sections.map((section, index) => (
-            <View key={index} style={descStyles.section}>
-              <Text style={descStyles.sectionTitle}>{section.title}</Text>
-              {section.items.map((item, itemIndex) => (
-                <View key={itemIndex} style={descStyles.bulletItem}>
-                  <Text style={descStyles.bullet}>•</Text>
-                  <Text style={descStyles.bulletText}>{item}</Text>
-                </View>
-              ))}
-            </View>
-          ))}
-        </View>
-      </View>
-    );
-  }
-  
-  // Fallback: simple description
   return (
     <View style={descStyles.container}>
-      <Text style={descStyles.sectionTitle}>Description</Text>
-      <Text style={descStyles.intro}>{description}</Text>
+      {intro ? (
+        <Text style={descStyles.intro}>{intro}</Text>
+      ) : null}
+      
+      <View style={descStyles.sectionsGrid}>
+        {sections.map((section, index) => (
+          <View key={index} style={descStyles.section}>
+            <Text style={descStyles.sectionTitle}>{section.title}</Text>
+            {section.items.map((item, itemIndex) => (
+              <View key={itemIndex} style={descStyles.bulletItem}>
+                <Text style={descStyles.bullet}>•</Text>
+                <Text style={descStyles.bulletText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+        ))}
+      </View>
     </View>
   );
 };
+
+// Fallback simple description (deprecated)
+const SimpleDescription = ({ description }: { description: string }) => (
+  <View style={descStyles.container}>
+    <Text style={descStyles.sectionTitle}>Description</Text>
+    <Text style={descStyles.intro}>{description}</Text>
+    </View>
+);
 
 const descStyles = StyleSheet.create({
   container: {
@@ -458,8 +677,20 @@ export default function ProductScreen() {
           
           <View style={styles.divider} />
           
-          {/* Formatted Description Sections */}
-          <FormattedDescription description={product.description} />
+          {/* Formatted Description Sections - avec SEO dynamique */}
+          {(() => {
+            const { colorCode } = getLuxeName(product.name);
+            const luxeNameForDesc = COLOR_LUXE_NAMES[colorCode] || '';
+            return (
+              <FormattedDescription 
+                description={product.description}
+                category={product.category || 'halo'}
+                colorCode={colorCode}
+                luxeName={luxeNameForDesc}
+                seriesName={product.series || 'Everly'}
+              />
+            );
+          })()}
           
           {/* Variant Selector */}
           {product.variants && product.variants.length > 0 && (

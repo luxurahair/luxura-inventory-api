@@ -157,6 +157,121 @@ def detect_category_from_handle(handle: str, name: str) -> str:
     # Default to essentiels for accessories, but may be filtered if not matching
     return 'essentiels'
 
+def generate_product_name_from_handle(handle: str, category: str) -> str:
+    """
+    Génère le nom de produit complet depuis le handle Wix
+    Ex: 'halo-série-everly-noir-foncé-1' → 'Halo Everly Onyx Noir #1'
+    Ex: 'halo-série-everly-balayage-blond-foncé-6-24' → 'Halo Everly Golden Hour #6/24'
+    """
+    if not handle:
+        return ""
+    
+    # Mapping des codes couleur vers noms de luxe
+    # Format: code-handle → (nom_luxe, code_display)
+    color_luxe_map = {
+        # Noirs
+        "1": ("Onyx Noir", "#1"),
+        "1b": ("Noir Soie", "#1B"),
+        # Bruns
+        "2": ("Espresso Intense", "#2"),
+        "db": ("Nuit Mystère", "#DB"),
+        "dc": ("Chocolat Profond", "#DC"),
+        "cacao": ("Cacao Velours", "#CACAO"),
+        "chengtu": ("Soie d'Orient", "#CHENGTU"),
+        "foochow": ("Cachemire Oriental", "#FOOCHOW"),
+        # Châtaignes
+        "3": ("Châtaigne Douce", "#3"),
+        "cinnamon": ("Cannelle Épicée", "#CINNAMON"),
+        "3-3t24": ("Châtaigne Lumière", "#3/3T24"),
+        # Caramels
+        "6": ("Caramel Doré", "#6"),
+        "bm": ("Miel Sauvage", "#BM"),
+        "6-24": ("Golden Hour", "#6/24"),
+        "6-6t24": ("Caramel Soleil", "#6/6T24"),
+        # Blonds
+        "18-22": ("Champagne Doré", "#18/22"),
+        "60a": ("Platine Pur", "#60A"),
+        "pha": ("Cendré Céleste", "#PHA"),
+        "613-18a": ("Diamant Glacé", "#613/18A"),
+        # Blancs
+        "ivory": ("Ivoire Précieux", "#IVORY"),
+        "icw": ("Cristal Polaire", "#ICW"),
+        # Ombrés
+        "cb": ("Miel Sauvage Ombré", "#CB"),
+        "hps": ("Cendré Étoilé", "#HPS"),
+        "5at60": ("Aurore Glaciale", "#5AT60"),
+        "5atp18b62": ("Aurore Boréale", "#5ATP18B62"),
+        "2btp18-1006": ("Espresso Lumière", "#2BTP18/1006"),
+        "t14-p14-24": ("Venise Dorée", "#T14/P14/24"),
+    }
+    
+    # Série par catégorie
+    series_map = {
+        "halo": "Everly",
+        "genius": "Vivian",
+        "tape": "Aurora",
+        "i-tip": "Eleanor"
+    }
+    
+    # Type de produit
+    type_map = {
+        "halo": "Halo",
+        "genius": "Genius",
+        "tape": "Bande Adhésive",
+        "i-tip": "I-Tip"
+    }
+    
+    handle_lower = handle.lower()
+    
+    # Extraire le code couleur depuis la fin du handle
+    luxe_name = ""
+    color_suffix = ""
+    
+    # Chercher le code couleur dans le handle (du plus long au plus court pour éviter les faux positifs)
+    for code, (luxe, suffix) in sorted(color_luxe_map.items(), key=lambda x: -len(x[0])):
+        # Chercher à la fin du handle
+        if handle_lower.endswith(f"-{code}"):
+            luxe_name = luxe
+            color_suffix = suffix
+            break
+    
+    # Construire le nom
+    product_type = type_map.get(category, category.title())
+    series = series_map.get(category, "")
+    
+    if luxe_name:
+        name = f"{product_type} {series} {luxe_name} {color_suffix}".strip()
+    else:
+        # Fallback: extraire les infos du handle
+        # Ex: 'halo-série-everly-noir-foncé-1' → 'Halo Everly Noir Foncé #1'
+        parts = handle.split('-')
+        
+        # Chercher un code numérique à la fin
+        color_code = ""
+        if parts and parts[-1].replace('t', '').replace('p', '').isalnum():
+            potential_code = parts[-1]
+            if any(c.isdigit() for c in potential_code):
+                color_code = f"#{potential_code.upper()}"
+                parts = parts[:-1]
+        
+        # Nettoyer les parties
+        skip_words = {'serie', 'série', 'trame', 'invisible', 'bande', 'adhesive', 'adhésive'}
+        cleaned_parts = []
+        for p in parts:
+            p_lower = p.lower()
+            if p_lower not in skip_words and p_lower != category:
+                cleaned_parts.append(p.title())
+        
+        # Prendre les parties pertinentes
+        if len(cleaned_parts) > 3:
+            cleaned_parts = cleaned_parts[:1] + cleaned_parts[-2:]  # Type + couleur
+        
+        name = f"{product_type} {series} {' '.join(cleaned_parts)} {color_code}".strip()
+        # Nettoyer les espaces multiples
+        name = ' '.join(name.split())
+    
+    return name
+
 def clean_html(text: str) -> str:
     """Remove HTML tags and clean up description text"""
     if not text:
@@ -609,6 +724,11 @@ async def get_products(
                 # Clean up name (remove variant suffix)
                 clean_name = name.split(' — ')[0].strip()
                 
+                # TOUJOURS générer le nom de luxe depuis le handle pour les catégories principales
+                # Cela garantit que les noms sont cohérents et utilisent la nomenclature Luxura
+                if category in ['halo', 'genius', 'tape', 'i-tip']:
+                    clean_name = generate_product_name_from_handle(handle, category)
+                
                 # Get image
                 image = get_product_image(handle, category)
                 
@@ -636,6 +756,7 @@ async def get_products(
                     "price": price,
                     "description": clean_html(parent.get('description', '')),
                     "category": category,
+                    "series": "Everly" if category == "halo" else ("Vivian" if category == "genius" else ("Aurora" if category == "tape" else "Eleanor")),
                     "images": [image],
                     "in_stock": data['any_in_stock'],
                     "total_quantity": data['total_quantity'],
@@ -720,6 +841,10 @@ async def get_product(product_id: int):
             # Clean name (remove variant suffix)
             clean_name = name.split(' — ')[0].strip()
             
+            # Générer le nom de luxe depuis le handle pour les catégories principales
+            if category in ['halo', 'genius', 'tape', 'i-tip']:
+                clean_name = generate_product_name_from_handle(handle, category)
+            
             # Process variants with real inventory quantities
             if not isinstance(all_response, Exception) and all_response.status_code == 200:
                 all_products = all_response.json()
@@ -762,7 +887,7 @@ async def get_product(product_id: int):
                 
                 # Use parent product info if available
                 if parent_product:
-                    clean_name = parent_product.get('name', clean_name).split(' — ')[0].strip()
+                    # Ne pas écraser clean_name si c'est un nom de luxe déjà généré
                     description = clean_html(parent_product.get('description', ''))
                 else:
                     description = clean_html(p.get('description', ''))
