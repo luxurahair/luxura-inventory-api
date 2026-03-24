@@ -2372,6 +2372,153 @@ async def get_verification_status():
         "all_verified": verified_count >= submitted_count and submitted_count > 0
     }
 
+# ==================== WIX SKU DIRECT PATCH (Format CHOICES corrigé) ====================
+
+class WixVariantSkuPatch(BaseModel):
+    """Modèle pour patcher un SKU de variante Wix"""
+    wix_product_id: str
+    variants: List[Dict[str, str]]  # [{"choice": "16\" 120 grammes", "sku": "H-16-120-3-3T24"}]
+
+@api_router.post("/wix/patch-variant-skus")
+async def patch_wix_variant_skus(data: WixVariantSkuPatch, secret: str = ""):
+    """
+    Patcher les SKU des variantes Wix directement avec le format CHOICES corrigé.
+    
+    ⚠️ BUG WIX API V1: L'utilisation de {"id": "...", "sku": "..."} applique le MÊME SKU
+    à TOUTES les variantes du produit.
+    
+    ✅ SOLUTION: Utiliser {"choices": {"Longeur": "16\" 120 grammes"}, "variant": {"sku": "..."}}
+    pour identifier précisément chaque variante.
+    
+    Args:
+        data.wix_product_id: ID du produit Wix (ex: "c2e7afd1-810f-4003-9693-839d1912a818")
+        data.variants: Liste de variantes à patcher
+            [{"choice": "16\" 120 grammes", "sku": "H-16-120-3-3T24"}]
+        secret: Secret pour authentification
+    """
+    # Vérifier le secret
+    expected_secret = "9f3c2b8a7d1e4c5b9a0d7e6f3b2c1a9f"
+    if secret != expected_secret:
+        raise HTTPException(status_code=401, detail="Invalid secret")
+    
+    try:
+        # Obtenir le token OAuth depuis l'API Render
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # D'abord obtenir un token frais
+            token_response = await client.post(
+                f"{LUXURA_RENDER_API}/wix/token",
+                params={"instance_id": "ab8a5a88-69a5-4348-ad2e-06017de46f57"}
+            )
+            
+            if token_response.status_code != 200:
+                raise HTTPException(
+                    status_code=502, 
+                    detail=f"Failed to get Wix token: {token_response.text}"
+                )
+            
+            token_data = token_response.json()
+            access_token = token_data.get("access_token", "")
+            
+            if not access_token:
+                raise HTTPException(status_code=502, detail="No access token returned")
+            
+            # Construire le payload avec le format CHOICES (LA SOLUTION AU BUG!)
+            wix_variants = []
+            for v in data.variants:
+                wix_variants.append({
+                    "choices": {"Longeur": v["choice"]},  # "Longeur" est le nom de l'option dans Wix
+                    "variant": {"sku": v["sku"]}
+                })
+            
+            payload = {"variants": wix_variants}
+            
+            # Appeler l'API Wix Stores V1
+            wix_url = f"https://www.wixapis.com/stores/v1/products/{data.wix_product_id}/variants"
+            
+            patch_response = await client.patch(
+                wix_url,
+                headers={
+                    "Authorization": access_token,
+                    "Content-Type": "application/json"
+                },
+                json=payload
+            )
+            
+            # Vérifier la réponse
+            if patch_response.status_code not in [200, 204]:
+                return {
+                    "ok": False,
+                    "error": f"Wix API error: {patch_response.status_code}",
+                    "detail": patch_response.text[:500]
+                }
+            
+            # Vérifier les SKU après la mise à jour
+            verify_response = await client.get(
+                wix_url,
+                headers={"Authorization": access_token}
+            )
+            
+            if verify_response.status_code == 200:
+                verify_data = verify_response.json()
+                updated_variants = []
+                for v in verify_data.get("variants", []):
+                    updated_variants.append({
+                        "choices": v.get("choices", {}),
+                        "sku": v.get("variant", {}).get("sku", "")
+                    })
+                
+                return {
+                    "ok": True,
+                    "message": "SKU variants patched successfully with CHOICES format",
+                    "patched_count": len(data.variants),
+                    "verified_variants": updated_variants
+                }
+            
+            return {
+                "ok": True,
+                "message": "Patch sent successfully, verification failed",
+                "patched_count": len(data.variants)
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error patching Wix variant SKUs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/wix/token/refresh")
+async def refresh_wix_token():
+    """
+    Rafraîchir le token Wix OAuth via l'API Render.
+    Utile pour les CRON jobs qui ont besoin d'un token actif.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                f"{LUXURA_RENDER_API}/wix/token",
+                params={"instance_id": "ab8a5a88-69a5-4348-ad2e-06017de46f57"}
+            )
+            
+            if response.status_code != 200:
+                return {
+                    "ok": False,
+                    "error": f"Token refresh failed: {response.status_code}",
+                    "detail": response.text[:200]
+                }
+            
+            token_data = response.json()
+            
+            return {
+                "ok": True,
+                "message": "Token refreshed successfully",
+                "has_access_token": bool(token_data.get("access_token")),
+                "expires_in": token_data.get("expires_in")
+            }
+            
+    except Exception as e:
+        logger.error(f"Error refreshing Wix token: {e}")
+        return {"ok": False, "error": str(e)}
+
 # ==================== SALON ENDPOINTS ====================
 
 @api_router.get("/salons")
