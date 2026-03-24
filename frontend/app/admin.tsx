@@ -54,32 +54,40 @@ export default function AdminScreen() {
   });
 
   const fetchStatus = async () => {
-    try {
-      // Test local API
-      let localOk = false;
-      let productCount = 0;
-      let categoryCount = 0;
-      let stats: ProductStats = {
-        total: 0,
-        byCategory: {},
-        inStock: 0,
-        outOfStock: 0,
-        withVariants: 0,
-      };
+    // Set loading false immediately with empty data to show UI
+    let localOk = false;
+    let productCount = 0;
+    let categoryCount = 0;
+    let stats: ProductStats = {
+      total: 0,
+      byCategory: {},
+      inStock: 0,
+      outOfStock: 0,
+      withVariants: 0,
+    };
 
+    try {
+      // First get categories (fast)
+      const categoriesRes = await axios.get(`${API_URL}/api/categories`, { timeout: 5000 });
+      localOk = true;
+      categoryCount = (categoriesRes.data || []).length;
+      
+      // Update UI immediately with categories
+      setApiStatus({
+        local: true,
+        render: false,
+        productCount: 0,
+        categoryCount,
+      });
+      setLoading(false);
+      
+      // Then try products (can be slow due to Render)
       try {
-        const [productsRes, categoriesRes] = await Promise.all([
-          axios.get(`${API_URL}/api/products`, { timeout: 10000 }),
-          axios.get(`${API_URL}/api/categories`, { timeout: 10000 }),
-        ]);
-        
-        localOk = true;
+        const productsRes = await axios.get(`${API_URL}/api/products`, { timeout: 30000 });
         const products = productsRes.data || [];
         productCount = products.length;
-        categoryCount = (categoriesRes.data || []).length;
-
-        // Calculate stats
         stats.total = products.length;
+        
         products.forEach((p: any) => {
           const cat = p.category || 'autre';
           stats.byCategory[cat] = (stats.byCategory[cat] || 0) + 1;
@@ -87,32 +95,26 @@ export default function AdminScreen() {
           else stats.outOfStock++;
           if (p.variant_count > 0) stats.withVariants++;
         });
+        
         setProductStats(stats);
+        setApiStatus(prev => ({ ...prev, productCount }));
       } catch (e) {
-        console.log('Local API error:', e);
+        console.log('Products API slow or failed:', e);
       }
-
-      // Test Render API
-      let renderOk = false;
-      try {
-        const res = await axios.get(`${RENDER_API}/products`, { timeout: 10000 });
-        renderOk = res.status === 200;
-      } catch (e) {
-        console.log('Render API error:', e);
-      }
-
-      setApiStatus({
-        local: localOk,
-        render: renderOk,
-        productCount,
-        categoryCount,
-      });
-    } catch (error) {
-      console.error('Error fetching status:', error);
-    } finally {
+    } catch (e) {
+      console.log('Local API error:', e);
       setLoading(false);
-      setRefreshing(false);
     }
+    
+    // Check Render API separately
+    try {
+      const res = await axios.get(`${RENDER_API}/products`, { timeout: 15000 });
+      setApiStatus(prev => ({ ...prev, render: res.status === 200 }));
+    } catch (e) {
+      console.log('Render API unavailable');
+    }
+    
+    setRefreshing(false);
   };
 
   useEffect(() => {
