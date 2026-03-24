@@ -83,7 +83,11 @@ export default function ProfileScreen() {
         <Text style={styles.title}>Profil</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
         {/* Profile Section */}
         {isAuthenticated && user ? (
           <View style={styles.profileSection}>
@@ -176,8 +180,6 @@ export default function ProfileScreen() {
           <Text style={styles.appVersion}>Version 1.0.0</Text>
           <Text style={styles.appCopyright}>© 2025 Luxura Distribution</Text>
         </View>
-
-        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
@@ -187,6 +189,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0c0c0c',
+    overflow: 'hidden',
   },
   header: {
     paddingHorizontal: 16,
