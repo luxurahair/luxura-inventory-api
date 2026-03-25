@@ -1935,6 +1935,124 @@ async def delete_blog_post(post_id: str):
         raise HTTPException(status_code=404, detail="Post not found")
     return {"message": "Post deleted successfully"}
 
+# =====================================================
+# BLOG AUTOMATIQUE - 2 blogs/jour + Publication Wix
+# =====================================================
+
+@api_router.post("/blog/auto-generate")
+async def auto_generate_daily_blogs(count: int = 2):
+    """
+    Génère automatiquement des blogs SEO (2 par défaut) et les publie sur Wix.
+    
+    Focus: Halo, Genius, Tape-in, I-Tip
+    Images: Unsplash libres de droits
+    Publication: Automatique sur Wix Blog
+    """
+    try:
+        from blog_automation import generate_daily_blogs, BLOG_TOPICS_EXTENDED
+        
+        emergent_key = os.getenv("EMERGENT_LLM_KEY")
+        if not emergent_key:
+            raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY non configuré")
+        
+        wix_api_key = os.getenv("WIX_API_KEY")
+        wix_site_id = os.getenv("WIX_SITE_ID")
+        
+        results = await generate_daily_blogs(
+            db=db,
+            emergent_key=emergent_key,
+            wix_api_key=wix_api_key,
+            wix_site_id=wix_site_id,
+            publish_to_wix=True,
+            count=count
+        )
+        
+        return {
+            "success": True,
+            "message": f"{len(results)} blog(s) générés avec succès",
+            "posts": results,
+            "published_to_wix": any(p.get("published_to_wix") for p in results)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in auto-generate blogs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/blog/topics")
+async def get_blog_topics():
+    """Liste tous les sujets de blog disponibles par catégorie"""
+    try:
+        from blog_automation import BLOG_TOPICS_EXTENDED
+        
+        # Grouper par catégorie
+        by_category = {}
+        for topic in BLOG_TOPICS_EXTENDED:
+            cat = topic["category"]
+            if cat not in by_category:
+                by_category[cat] = []
+            by_category[cat].append({
+                "topic": topic["topic"],
+                "keywords": topic["keywords"],
+                "focus_product": topic.get("focus_product")
+            })
+        
+        return {
+            "total_topics": len(BLOG_TOPICS_EXTENDED),
+            "categories": by_category
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/blog/publish-to-wix/{post_id}")
+async def publish_blog_to_wix(post_id: str):
+    """Publie un blog existant sur Wix"""
+    try:
+        from blog_automation import create_wix_draft_post, publish_wix_draft
+        
+        # Récupérer le blog
+        post = await db.blog_posts.find_one({"id": post_id})
+        if not post:
+            raise HTTPException(status_code=404, detail="Blog non trouvé")
+        
+        if post.get("published_to_wix"):
+            return {"message": "Blog déjà publié sur Wix", "wix_post_id": post.get("wix_post_id")}
+        
+        wix_api_key = os.getenv("WIX_API_KEY")
+        wix_site_id = os.getenv("WIX_SITE_ID")
+        
+        if not wix_api_key or not wix_site_id:
+            raise HTTPException(status_code=500, detail="Configuration Wix manquante")
+        
+        # Créer et publier le draft
+        wix_result = await create_wix_draft_post(
+            api_key=wix_api_key,
+            site_id=wix_site_id,
+            title=post["title"],
+            content=post["content"],
+            excerpt=post.get("excerpt", ""),
+            cover_image=post.get("image", ""),
+            tags=post.get("tags", [])
+        )
+        
+        if wix_result:
+            draft_id = wix_result.get("draftPost", {}).get("id")
+            if draft_id:
+                published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
+                if published:
+                    await db.blog_posts.update_one(
+                        {"id": post_id},
+                        {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
+                    )
+                    return {"success": True, "message": "Blog publié sur Wix", "wix_post_id": draft_id}
+        
+        raise HTTPException(status_code=500, detail="Échec de la publication sur Wix")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error publishing to Wix: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/blog")
 async def get_blog_posts():
     """Get all blog posts with varied images"""
