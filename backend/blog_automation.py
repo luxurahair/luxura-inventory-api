@@ -366,44 +366,79 @@ def build_wix_image_uri(file_desc: Dict) -> str:
     Construit la vraie Wix image URI au format:
     wix:image://v1/<mediaId>/<filename>#originWidth=<w>&originHeight=<h>
     
-    C'est CE format qui fonctionne pour la featured image / cover media!
+    IMPORTANT: Utilise les vraies dimensions de l'image depuis file_desc.media.image.image
     """
     file_id = file_desc.get("id", "")
     display_name = file_desc.get("displayName", "cover.jpg")
     
-    # Récupérer les dimensions depuis media.image si disponible
+    # Récupérer les dimensions depuis media.image.image (structure Wix réelle)
     media = file_desc.get("media", {})
-    image = media.get("image", {}) if isinstance(media, dict) else {}
+    image_wrapper = media.get("image", {}) if isinstance(media, dict) else {}
+    image_data = image_wrapper.get("image", {}) if isinstance(image_wrapper, dict) else {}
     
-    width = image.get("width") or 1200
-    height = image.get("height") or 630
+    # Utiliser les vraies dimensions ou fallback
+    width = image_data.get("width") or 1200
+    height = image_data.get("height") or 630
     
     wix_uri = f"wix:image://v1/{file_id}/{display_name}#originWidth={width}&originHeight={height}"
     logger.info(f"Built Wix image URI: {wix_uri}")
     return wix_uri
 
+
+def get_wix_image_object(file_desc: Dict) -> Dict:
+    """
+    Construit l'objet image complet pour le PATCH du draft.
+    Format attendu par media.wixMedia.image
+    """
+    file_id = file_desc.get("id", "")
+    display_name = file_desc.get("displayName", "cover.jpg")
+    url = file_desc.get("url", "")
+    
+    # Récupérer les dimensions depuis media.image.image
+    media = file_desc.get("media", {})
+    image_wrapper = media.get("image", {}) if isinstance(media, dict) else {}
+    image_data = image_wrapper.get("image", {}) if isinstance(image_wrapper, dict) else {}
+    
+    width = image_data.get("width") or 1200
+    height = image_data.get("height") or 630
+    
+    # Construire la Wix URI
+    wix_uri = f"wix:image://v1/{file_id}/{display_name}#originWidth={width}&originHeight={height}"
+    
+    return {
+        "id": wix_uri,
+        "url": url,
+        "width": width,
+        "height": height
+    }
+
 async def attach_wix_image_to_draft(
     api_key: str,
     site_id: str,
     draft_id: str,
-    wix_image_uri: str
+    file_desc: Dict
 ) -> bool:
     """
-    Attache l'image au draft en utilisant le format wix:image://v1/...
-    Met à jour DEUX champs:
-    - media.wixMedia.image (pour la cover/featured image dans le feed)
-    - heroImage (pour l'image en haut de l'article)
+    Attache l'image au draft en utilisant media.wixMedia.image avec un OBJET.
+    
+    L'erreur "Expected an object" indique que Wix attend:
+    media.wixMedia.image = { id: "wix:image://...", url: "...", width: N, height: N }
+    et non pas une simple string.
     """
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            logger.info(f"Attaching image to draft {draft_id} with URI: {wix_image_uri[:60]}...")
+            logger.info(f"Attaching image to draft {draft_id}")
             
-            # Format 1: Juste media.wixMedia.image (la cover/featured image)
-            payload1 = {
+            # Construire l'objet image complet
+            image_obj = get_wix_image_object(file_desc)
+            logger.info(f"Image object: {image_obj}")
+            
+            # Payload avec l'objet image complet
+            payload = {
                 "draftPost": {
                     "media": {
                         "wixMedia": {
-                            "image": wix_image_uri
+                            "image": image_obj
                         }
                     }
                 }
@@ -416,40 +451,16 @@ async def attach_wix_image_to_draft(
                     "wix-site-id": site_id,
                     "Content-Type": "application/json"
                 },
-                json=payload1
+                json=payload
             )
+            
+            logger.info(f"PATCH response: {response.status_code}")
             
             if response.status_code in [200, 204]:
-                logger.info(f"Image (media.wixMedia) attached successfully to draft {draft_id}")
+                logger.info(f"Image attached successfully to draft {draft_id}")
                 return True
             else:
-                logger.warning(f"media.wixMedia failed: {response.status_code} - {response.text}")
-            
-            # Format 2: Essayer avec coverMedia
-            payload2 = {
-                "draftPost": {
-                    "coverMedia": {
-                        "image": wix_image_uri,
-                        "displayed": True
-                    }
-                }
-            }
-            
-            response2 = await client.patch(
-                f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
-                headers={
-                    "Authorization": api_key,
-                    "wix-site-id": site_id,
-                    "Content-Type": "application/json"
-                },
-                json=payload2
-            )
-            
-            if response2.status_code in [200, 204]:
-                logger.info(f"Image (coverMedia) attached successfully to draft {draft_id}")
-                return True
-            else:
-                logger.error(f"coverMedia also failed: {response2.status_code} - {response2.text}")
+                logger.error(f"Attach image failed: {response.status_code} - {response.text}")
                 return False
                 
     except Exception as e:
@@ -959,17 +970,17 @@ async def generate_daily_blogs(
                                 )
                                 
                                 if file_desc:
-                                    # ÉTAPE 3: Construire la Wix image URI
+                                    # ÉTAPE 3: Construire la Wix image URI (pour logging)
                                     wix_image_uri = build_wix_image_uri(file_desc)
                                     logger.info(f"Step 3: Built Wix URI: {wix_image_uri[:60]}...")
                                     
-                                    # ÉTAPE 4: Attacher l'image au brouillon via PATCH
+                                    # ÉTAPE 4: Attacher l'image au brouillon via PATCH (avec l'objet complet)
                                     logger.info(f"Step 4: Attaching image to draft")
                                     await attach_wix_image_to_draft(
                                         api_key=wix_api_key,
                                         site_id=wix_site_id,
                                         draft_id=draft_id,
-                                        wix_image_uri=wix_image_uri
+                                        file_desc=file_desc
                                     )
                                 else:
                                     logger.warning(f"File {wix_file_id} never became READY, publishing without cover")
