@@ -212,3 +212,70 @@ Luxura Distribution - Extensions de cheveux professionnels
 Québec, Canada
 - Site: www.luxuradistribution.com
 - Email: info@luxuradistribution.com
+
+---
+
+## Fonctionnalités Automatisées
+
+### 1. Système de Backlinks Automatiques
+
+**Endpoint**: `POST /api/backlinks/run`
+
+Lance l'automatisation Playwright pour soumettre Luxura aux annuaires d'entreprises :
+- Soumission automatique aux directories
+- Capture d'écran de confirmation
+- Vérification des emails de confirmation
+
+**Variables requises**:
+```env
+LUXURA_EMAIL=info@luxuradistribution.com
+LUXURA_APP_PASSWORD=zgvsfiajermjqpgh  # Mot de passe d'application Gmail
+```
+
+**Status**: `GET /api/backlinks/status`
+
+### 2. Génération de Blog SEO avec IA
+
+**Endpoint**: `POST /api/blog/generate`
+
+Génère automatiquement un article de blog optimisé SEO en utilisant l'IA (Emergent LLM).
+
+**Variables requises**:
+```env
+EMERGENT_LLM_KEY=sk-emergent-c23DdEcC8C04049755
+```
+
+**Endpoints blog**:
+- `GET /api/blog` - Liste tous les articles
+- `GET /api/blog/{id}` - Article spécifique
+- `POST /api/blog/generate` - Générer nouvel article
+- `DELETE /api/blog/{id}` - Supprimer un article
+
+### 3. Publication automatique sur Wix (À CONFIGURER)
+
+Pour publier automatiquement les blogs sur Wix :
+
+1. **API Wix Blog** : Utiliser l'endpoint `/wix/seo/push_apply` sur l'API Render
+2. **Cron Job** : Configurer sur Render pour exécuter quotidiennement
+
+**Commande cron suggérée**:
+```bash
+# Tous les jours à 9h00
+0 9 * * * curl -X POST https://luxura-inventory-api.onrender.com/blog/generate
+```
+
+### 4. Vérification automatique des emails (Backlinks)
+
+**Endpoint**: `POST /api/backlinks/auto-verify`
+
+Vérifie automatiquement les emails de confirmation reçus pour les backlinks soumis.
+
+---
+
+## Cron Jobs Recommandés
+
+| Tâche | Fréquence | Endpoint |
+|-------|-----------|----------|
+| Sync Wix → Supabase | Toutes les 6h | `/wix/sync` |
+| Génération Blog | Quotidien 9h | `/api/blog/generate` |
+| Vérification Backlinks | Quotidien 10h | `/api/backlinks/auto-verify` |

@@ -7,12 +7,14 @@ import {
   Image,
   ActivityIndicator,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import RenderHtml from 'react-native-render-html';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const LUXURA_LOGO = 'https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/i7uo40l8_Luxura%20Distribution%20-%20OR%20-%20PNG.png';
@@ -31,6 +33,7 @@ export default function BlogPostScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
 
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +64,79 @@ export default function BlogPostScreen() {
     });
   };
 
+  // Styles pour le HTML rendu
+  const tagsStyles = {
+    body: {
+      color: '#ccc',
+      fontSize: 16,
+      lineHeight: 26,
+    },
+    h1: {
+      color: '#fff',
+      fontSize: 28,
+      fontWeight: '800',
+      marginTop: 24,
+      marginBottom: 16,
+    },
+    h2: {
+      color: '#fff',
+      fontSize: 22,
+      fontWeight: '700',
+      marginTop: 20,
+      marginBottom: 12,
+    },
+    h3: {
+      color: '#fff',
+      fontSize: 18,
+      fontWeight: '600',
+      marginTop: 16,
+      marginBottom: 10,
+    },
+    p: {
+      color: '#ccc',
+      fontSize: 16,
+      lineHeight: 26,
+      marginBottom: 16,
+    },
+    strong: {
+      color: '#c9a050',
+      fontWeight: '700',
+    },
+    em: {
+      color: '#e0e0e0',
+      fontStyle: 'italic',
+    },
+    a: {
+      color: '#c9a050',
+      textDecorationLine: 'underline',
+    },
+    ul: {
+      color: '#ccc',
+      marginBottom: 16,
+      paddingLeft: 20,
+    },
+    ol: {
+      color: '#ccc',
+      marginBottom: 16,
+      paddingLeft: 20,
+    },
+    li: {
+      color: '#ccc',
+      fontSize: 16,
+      lineHeight: 26,
+      marginBottom: 8,
+    },
+    blockquote: {
+      borderLeftWidth: 4,
+      borderLeftColor: '#c9a050',
+      paddingLeft: 16,
+      marginLeft: 0,
+      marginVertical: 16,
+      fontStyle: 'italic',
+      color: '#aaa',
+    },
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -80,6 +156,11 @@ export default function BlogPostScreen() {
       </View>
     );
   }
+
+  // Préparer le contenu HTML
+  const htmlContent = post.content.includes('<') 
+    ? post.content 
+    : `<p>${post.content.split('\n\n').join('</p><p>')}</p>`;
 
   return (
     <View style={styles.container}>
@@ -125,23 +206,14 @@ export default function BlogPostScreen() {
 
           <View style={styles.divider} />
 
-          {/* Render content paragraphs */}
-          {post.content.split('\n\n').map((paragraph, index) => {
-            // Check if it's a header (starts with **)
-            if (paragraph.startsWith('**') && paragraph.includes('**')) {
-              const headerText = paragraph.replace(/\*\*/g, '');
-              return (
-                <Text key={index} style={styles.contentHeader}>
-                  {headerText}
-                </Text>
-              );
-            }
-            return (
-              <Text key={index} style={styles.paragraph}>
-                {paragraph.replace(/\*\*/g, '')}
-              </Text>
-            );
-          })}
+          {/* Render HTML content */}
+          <RenderHtml
+            contentWidth={width - 40}
+            source={{ html: htmlContent }}
+            tagsStyles={tagsStyles}
+            enableExperimentalBRCollapsing={true}
+            enableExperimentalMarginCollapsing={true}
+          />
         </View>
 
         <View style={{ height: 100 }} />
@@ -258,18 +330,5 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#2a2a2a',
     marginBottom: 20,
-  },
-  contentHeader: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 16,
-    marginBottom: 12,
-  },
-  paragraph: {
-    color: '#ccc',
-    fontSize: 16,
-    lineHeight: 26,
-    marginBottom: 16,
   },
 });
