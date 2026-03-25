@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
+const LUXURA_LOGO = 'https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/i7uo40l8_Luxura%20Distribution%20-%20OR%20-%20PNG.png';
 
 interface Product {
   id: string;
@@ -50,6 +51,9 @@ export default function HomeScreen() {
 
   const fetchData = async () => {
     try {
+      // Ping pour réveiller Render (cold start)
+      axios.get(`${API_URL}/api/ping`).catch(() => {});
+      
       const [productsRes, categoriesRes] = await Promise.all([
         axios.get(`${API_URL}/api/products`),
         axios.get(`${API_URL}/api/categories`),

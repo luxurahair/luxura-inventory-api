@@ -21,6 +21,7 @@ import { useCartStore } from '../../src/store/cartStore';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const { width } = Dimensions.get('window');
+const LUXURA_LOGO = 'https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/i7uo40l8_Luxura%20Distribution%20-%20OR%20-%20PNG.png';
 
 // ═══════════════════════════════════════════════════════════════
 // COLOR SYSTEM - Noms de luxe Luxura (copie locale pour affichage)
@@ -566,7 +567,7 @@ export default function ProductScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header - Navigation fixe */}
+      {/* Header - Navigation fixe avec logo */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity 
           onPress={() => {
@@ -582,6 +583,11 @@ export default function ProductScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
+        <Image 
+          source={{ uri: LUXURA_LOGO }}
+          style={styles.logoImage}
+          contentFit="contain"
+        />
         <TouchableOpacity 
           onPress={() => router.push('/cart')} 
           style={styles.headerButton} 
@@ -872,9 +878,14 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
     zIndex: 10,
+  },
+  logoImage: {
+    width: 100,
+    height: 28,
   },
   headerButton: {
     width: 44,

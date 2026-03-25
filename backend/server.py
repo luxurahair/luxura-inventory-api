@@ -1436,6 +1436,72 @@ async def clear_cart(request: Request):
 
 # ==================== BLOG ENDPOINTS ====================
 
+# Blog images variées basées sur le sujet - Extensions cheveux professionnelles
+BLOG_IMAGES = {
+    # Images de salons et stylistes
+    "salon": [
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",  # Salon moderne
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80",  # Coiffeuse professionnelle
+        "https://images.unsplash.com/photo-1595475884562-073c30d45670?w=800&q=80",  # Salon luxe
+        "https://images.unsplash.com/photo-1633681926035-ec1ac984418a?w=800&q=80",  # Styling
+    ],
+    # Images de cheveux et extensions
+    "hair": [
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",  # Cheveux longs blonds
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800&q=80",  # Cheveux bruns luxueux
+        "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=800&q=80",  # Cheveux ondulés
+        "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=800&q=80",  # Cheveux brillants
+        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=800&q=80",  # Portrait femme cheveux
+    ],
+    # Images mariage et événements
+    "wedding": [
+        "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80",  # Mariée coiffure
+        "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&q=80",  # Préparation mariée
+        "https://images.unsplash.com/photo-1595981234058-a9302fb97620?w=800&q=80",  # Coiffure élégante
+    ],
+    # Images tendances et mode
+    "trends": [
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80",  # Portrait mode
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&q=80",  # Femme stylée
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80",  # Cheveux colorés
+    ],
+    # Images soins et entretien
+    "care": [
+        "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=800&q=80",  # Produits capillaires
+        "https://images.unsplash.com/photo-1522338140262-f46f5913618a?w=800&q=80",  # Soins cheveux
+        "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=800&q=80",  # Brossage
+    ],
+    # Images B2B et professionnelles
+    "b2b": [
+        "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80",  # Business meeting
+        "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&q=80",  # Équipe pro
+        "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80",  # Partenariat
+    ],
+}
+
+def get_blog_image_for_topic(topic: str, keywords: list = None) -> str:
+    """Sélectionne une image appropriée basée sur le sujet et les mots-clés"""
+    import random
+    topic_lower = topic.lower()
+    
+    # Mapping sujet → catégorie d'image
+    if any(word in topic_lower for word in ['mariage', 'wedding', 'cérémonie', 'événement']):
+        category = 'wedding'
+    elif any(word in topic_lower for word in ['entretien', 'soin', 'laver', 'brush', 'care']):
+        category = 'care'
+    elif any(word in topic_lower for word in ['tendance', 'trend', '2025', 'mode', 'style']):
+        category = 'trends'
+    elif any(word in topic_lower for word in ['fournisseur', 'salon', 'professionnel', 'partenaire', 'b2b', 'grossiste']):
+        category = 'b2b'
+    elif any(word in topic_lower for word in ['technique', 'genius', 'tape', 'halo', 'installation']):
+        category = 'salon'
+    else:
+        category = 'hair'
+    
+    # Sélectionner une image aléatoire de la catégorie
+    images = BLOG_IMAGES.get(category, BLOG_IMAGES['hair'])
+    return random.choice(images)
+
 # SEO Keywords for Luxura Distribution - Hair Extensions Quebec
 SEO_KEYWORDS = {
     "commercial": [
@@ -1630,16 +1696,19 @@ FORMAT DE RÉPONSE (JSON):
             else:
                 raise HTTPException(status_code=500, detail="Failed to parse AI response")
         
-        # Create blog post document
+        # Create blog post document with varied image based on topic
         post_id = f"seo-{uuid.uuid4().hex[:8]}"
+        topic_title = blog_data.get("title", topic_data["topic"])
+        blog_image = get_blog_image_for_topic(topic_title, keywords_to_use)
+        
         blog_post = {
             "id": post_id,
-            "title": blog_data.get("title", topic_data["topic"]),
+            "title": topic_title,
             "excerpt": blog_data.get("excerpt", topic_data["meta_description"]),
             "content": blog_data.get("content", ""),
             "meta_description": blog_data.get("meta_description", topic_data["meta_description"]),
             "tags": blog_data.get("tags", keywords_to_use[:5]),
-            "image": f"https://static.wixstatic.com/media/de6cdb_ed493ddeab524054935dfbf0714b7e29~mv2.jpg",
+            "image": blog_image,
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc),
             "seo_keywords": keywords_to_use,
@@ -1672,20 +1741,58 @@ async def delete_blog_post(post_id: str):
 
 @api_router.get("/blog")
 async def get_blog_posts():
-    """Get all blog posts"""
+    """Get all blog posts with varied images"""
+    import random
+    
     posts = await db.blog_posts.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Update any posts that have the old static image
+    old_static_image = "https://static.wixstatic.com/media/de6cdb_ed493ddeab524054935dfbf0714b7e29~mv2.jpg"
+    
+    for post in posts:
+        if post.get("image") == old_static_image:
+            # Assign a varied image based on title
+            new_image = get_blog_image_for_topic(post.get("title", ""))
+            post["image"] = new_image
+            # Update in database
+            await db.blog_posts.update_one(
+                {"id": post["id"]},
+                {"$set": {"image": new_image}}
+            )
+    
     if not posts:
-        return [
+        # Default posts with varied images
+        default_posts = [
             {
                 "id": "entretien-extensions",
                 "title": "Comment entretenir vos extensions capillaires",
-                "content": "Les extensions capillaires nécessitent un entretien régulier.",
+                "content": "Les extensions capillaires nécessitent un entretien régulier pour maintenir leur beauté et leur durabilité.",
                 "excerpt": "Découvrez nos conseils d'experts pour maintenir vos extensions.",
-                "image": "https://static.wixstatic.com/media/de6cdb_ed493ddeab524054935dfbf0714b7e29~mv2.jpg",
+                "image": get_blog_image_for_topic("entretien soin extensions"),
+                "author": "Luxura Distribution",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            },
+            {
+                "id": "guide-genius-weft",
+                "title": "Extensions Genius Weft : Guide complet pour professionnels",
+                "content": "La technique Genius Weft révolutionne l'industrie des extensions capillaires au Québec.",
+                "excerpt": "Tout savoir sur les extensions Genius Weft - la trame invisible révolutionnaire.",
+                "image": get_blog_image_for_topic("salon professionnel technique"),
+                "author": "Luxura Distribution",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            },
+            {
+                "id": "tendances-2025",
+                "title": "Tendances coiffure 2025 : Balayage et extensions naturelles",
+                "content": "Les tendances capillaires évoluent vers plus de naturel et de sophistication.",
+                "excerpt": "Les couleurs et styles qui domineront 2025 au Québec.",
+                "image": get_blog_image_for_topic("tendances mode style 2025"),
                 "author": "Luxura Distribution",
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
         ]
+        return default_posts
+    
     return posts
 
 @api_router.get("/blog/{post_id}")
@@ -2549,7 +2656,43 @@ async def get_salons(city: Optional[str] = None):
         ]
     return salons
 
-# ==================== HEALTH CHECK ====================
+# ==================== HEALTH CHECK & PING ====================
+
+@api_router.get("/ping")
+async def ping_services():
+    """Ping all external services to wake them up (Render cold start)"""
+    results = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "local_api": "ok",
+        "luxura_render_api": "unknown",
+        "wix_api": "unknown"
+    }
+    
+    try:
+        # Ping Luxura Render API
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.get(f"{LUXURA_API_URL}/products", params={"limit": 1})
+                results["luxura_render_api"] = "ok" if response.status_code == 200 else f"error_{response.status_code}"
+            except Exception as e:
+                results["luxura_render_api"] = f"error: {str(e)[:50]}"
+            
+            # Ping Wix API if configured
+            if WIX_API_KEY and WIX_SITE_ID:
+                try:
+                    wix_response = await client.post(
+                        f"{WIX_API_BASE}/stores/v1/products/query",
+                        headers=get_wix_headers(),
+                        json={"query": {"paging": {"limit": 1}}},
+                        timeout=15.0
+                    )
+                    results["wix_api"] = "ok" if wix_response.status_code == 200 else f"error_{wix_response.status_code}"
+                except Exception as e:
+                    results["wix_api"] = f"error: {str(e)[:50]}"
+    except Exception as e:
+        results["error"] = str(e)
+    
+    return results
 
 @api_router.get("/")
 async def root():

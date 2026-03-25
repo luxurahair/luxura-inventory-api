@@ -16,6 +16,7 @@ import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
+const LUXURA_LOGO = 'https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/i7uo40l8_Luxura%20Distribution%20-%20OR%20-%20PNG.png';
 
 interface BlogPost {
   id: string;
@@ -87,7 +88,9 @@ export default function BlogScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.title}>Blog</Text>
+        <View style={styles.headerPlaceholder} />
+        <Image source={{ uri: LUXURA_LOGO }} style={styles.logoImage} resizeMode="contain" />
+        <View style={styles.headerPlaceholder} />
       </View>
 
       {/* Blog Posts */}
@@ -123,8 +126,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#0c0c0c',
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
+  },
+  headerPlaceholder: {
+    width: 44,
+  },
+  logoImage: {
+    width: 120,
+    height: 32,
   },
   title: {
     color: '#fff',

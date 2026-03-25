@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useCartStore } from '../store/cartStore';
 
+const LUXURA_LOGO = 'https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/i7uo40l8_Luxura%20Distribution%20-%20OR%20-%20PNG.png';
+
 interface HeaderProps {
   title?: string;
   showBack?: boolean;
@@ -16,7 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   title, 
   showBack = false, 
   showCart = true,
-  showLogo = false 
+  showLogo = true  // Default to true - show logo everywhere
 }) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -36,7 +38,11 @@ export const Header: React.FC<HeaderProps> = ({
       
       <View style={styles.center}>
         {showLogo ? (
-          <Text style={styles.logo}>LUXURA</Text>
+          <Image 
+            source={{ uri: LUXURA_LOGO }}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         ) : (
           <Text style={styles.title}>{title}</Text>
         )}
@@ -85,6 +91,10 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 32,
+  },
+  logoImage: {
+    width: 120,
+    height: 32,
   },
   logo: {
     color: '#c9a050',

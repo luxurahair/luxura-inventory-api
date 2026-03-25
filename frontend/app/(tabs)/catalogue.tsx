@@ -29,6 +29,8 @@ const getCardWidth = () => {
   return Math.floor((maxContainerWidth - 48) / 2);
 };
 
+const LUXURA_LOGO = 'https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/i7uo40l8_Luxura%20Distribution%20-%20OR%20-%20PNG.png';
+
 interface Product {
   id: number | string;
   name: string;
@@ -192,7 +194,12 @@ export default function CatalogueScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.title}>Catalogue</Text>
+        <View style={styles.headerPlaceholder} />
+        <Image 
+          source={{ uri: LUXURA_LOGO }}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <TouchableOpacity onPress={() => router.push('/cart')}>
           <Ionicons name="bag-outline" size={24} color="#fff" />
         </TouchableOpacity>
@@ -240,6 +247,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, 
     paddingBottom: 12,
     zIndex: 10,
+  },
+  headerPlaceholder: {
+    width: 44,
+  },
+  logoImage: {
+    width: 120,
+    height: 32,
   },
   title: { 
     color: '#fff', 
