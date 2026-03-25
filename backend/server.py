@@ -189,6 +189,33 @@ def detect_category_from_handle(handle: str, name: str) -> str:
     # Default to essentiels for accessories, but may be filtered if not matching
     return 'essentiels'
 
+def extract_color_size_for_inventory(name):
+    """Extract color code and size from product name for inventory matching"""
+    import re
+    color_match = re.search(r'#([A-Za-z0-9/]+)', name)
+    color = color_match.group(1).upper() if color_match else ""
+    size_match = re.search(r'(\d{2})["\']?\s*(\d{2,3})\s*gram', name, re.IGNORECASE)
+    size = f"{size_match.group(1)}-{size_match.group(2)}" if size_match else ""
+    return color, size
+
+def get_product_type_for_inventory(name, sku=""):
+    """Determine product type from name or SKU for inventory matching"""
+    name_lower = name.lower()
+    sku_lower = (sku or "").lower()
+    if 'genius' in name_lower or 'vivian' in name_lower or sku_lower.startswith('gw'):
+        return 'genius'
+    elif 'halo' in name_lower or 'everly' in name_lower:
+        return 'halo'
+    elif 'tape' in name_lower or 'aurora' in name_lower or 'bande' in name_lower:
+        return 'tape'
+    elif 'i-tip' in name_lower or 'eleanor' in name_lower:
+        return 'i-tip'
+    elif 'ponytail' in name_lower or 'victoria' in name_lower:
+        return 'ponytail'
+    elif 'clip' in name_lower or 'sophia' in name_lower:
+        return 'clip-in'
+    return 'other'
+
 def generate_product_name_from_handle(handle: str, category: str) -> str:
     """
     Génère le nom de produit complet depuis le handle Wix
@@ -643,6 +670,8 @@ async def get_products(
             # Build inventory lookup by product name/sku for accurate quantities
             inventory_by_name = {}
             inventory_by_sku = {}
+            inventory_by_key = {}  # New: lookup by type|color|size
+            
             if not isinstance(inventory_response, Exception) and inventory_response.status_code == 200:
                 inventory_data = inventory_response.json()
                 for inv in inventory_data:
@@ -657,6 +686,15 @@ async def get_products(
                         inventory_by_name[clean_inv_name] += inv_qty
                         # Also store full name
                         inventory_by_name[inv_name.lower()] = inventory_by_name.get(inv_name.lower(), 0) + inv_qty
+                        
+                        # NEW: Build key by type|color|size for better matching
+                        ptype = get_product_type_for_inventory(inv_name, inv_sku)
+                        color, size = extract_color_size_for_inventory(inv_name)
+                        inv_key = f"{ptype}|{color}|{size}"
+                        if inv_key not in inventory_by_key:
+                            inventory_by_key[inv_key] = 0
+                        inventory_by_key[inv_key] += inv_qty
+                        
                     if inv_sku:
                         inventory_by_sku[inv_sku.upper()] = inventory_by_sku.get(inv_sku.upper(), 0) + inv_qty
             
@@ -725,9 +763,26 @@ async def get_products(
                     variant_info = extract_variant_info(p)
                     products_by_handle[handle]['variants'].append(variant_info)
                     
-                    # Get real quantity from inventory
+                    # Get real quantity from inventory - try multiple methods
                     sku = p.get('sku', '').upper()
-                    variant_qty = inventory_by_sku.get(sku, variant_info['quantity'])
+                    variant_qty = 0
+                    
+                    # Method 1: Try by SKU
+                    if sku in inventory_by_sku:
+                        variant_qty = inventory_by_sku[sku]
+                    else:
+                        # Method 2: Try by type|color|size key
+                        ptype = get_product_type_for_inventory(name, sku)
+                        color, size = extract_color_size_for_inventory(name)
+                        inv_key = f"{ptype}|{color}|{size}"
+                        if inv_key in inventory_by_key:
+                            variant_qty = inventory_by_key[inv_key]
+                        else:
+                            # Method 3: Try without size (parent level)
+                            inv_key_no_size = f"{ptype}|{color}|"
+                            if inv_key_no_size in inventory_by_key:
+                                variant_qty = inventory_by_key[inv_key_no_size]
+                    
                     variant_info['quantity'] = variant_qty
                     
                     # Update stock totals from variants
@@ -739,9 +794,17 @@ async def get_products(
                     if products_by_handle[handle]['parent'] is None:
                         products_by_handle[handle]['parent'] = p
                         
-                        # Get real quantity from inventory by name
+                        # Get real quantity from inventory - try multiple methods
                         clean_name = name.split(' — ')[0].strip().lower()
                         parent_qty = inventory_by_name.get(clean_name, 0)
+                        
+                        # If no match by name, try by type|color key
+                        if parent_qty == 0:
+                            ptype = get_product_type_for_inventory(name, p.get('sku', ''))
+                            color, _ = extract_color_size_for_inventory(name)
+                            inv_key = f"{ptype}|{color}|"
+                            parent_qty = inventory_by_key.get(inv_key, 0)
+                        
                         if parent_qty > 0:
                             products_by_handle[handle]['total_quantity'] += parent_qty
                             products_by_handle[handle]['any_in_stock'] = True
@@ -806,7 +869,9 @@ async def get_products(
                     "series": "Everly" if category == "halo" else ("Vivian" if category == "genius" else ("Aurora" if category == "tape" else "Eleanor")),
                     "images": [image],
                     "in_stock": data['any_in_stock'],
+                    "is_in_stock": data['any_in_stock'],
                     "total_quantity": data['total_quantity'],
+                    "quantity": data['total_quantity'],  # Add quantity field for compatibility
                     "sku": parent.get('sku'),
                     "wix_url": wix_url,
                     "handle": handle,
