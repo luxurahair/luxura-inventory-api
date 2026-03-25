@@ -220,9 +220,33 @@ async def get_wix_member_id(api_key: str, site_id: str) -> Optional[str]:
     """Récupère le member ID du propriétaire du site pour la publication"""
     try:
         async with httpx.AsyncClient() as client:
-            # Try to get site members
-            response = await client.get(
+            # Try to get the current identity (site owner)
+            response = await client.post(
                 "https://www.wixapis.com/members/v1/members/query",
+                headers={
+                    "Authorization": api_key,
+                    "wix-site-id": site_id,
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "query": {
+                        "paging": {"limit": 1}
+                    }
+                },
+                timeout=30
+            )
+            logger.info(f"Wix members query response: {response.status_code}")
+            if response.status_code == 200:
+                data = response.json()
+                members = data.get("members", [])
+                if members:
+                    member_id = members[0].get("id")
+                    logger.info(f"Found Wix member ID: {member_id}")
+                    return member_id
+            
+            # Alternative: Try to get site properties to find owner
+            response2 = await client.get(
+                "https://www.wixapis.com/site-properties/v4/properties",
                 headers={
                     "Authorization": api_key,
                     "wix-site-id": site_id,
@@ -230,11 +254,10 @@ async def get_wix_member_id(api_key: str, site_id: str) -> Optional[str]:
                 },
                 timeout=30
             )
-            if response.status_code == 200:
-                data = response.json()
-                members = data.get("members", [])
-                if members:
-                    return members[0].get("id")
+            logger.info(f"Wix site properties response: {response2.status_code}")
+            if response2.status_code == 200:
+                data = response2.json()
+                logger.info(f"Site properties: {data}")
     except Exception as e:
         logger.error(f"Error getting Wix member ID: {e}")
     return None
@@ -266,26 +289,35 @@ async def create_wix_draft_post(
     content: str,
     excerpt: str,
     cover_image: str,
-    tags: List[str] = None
+    tags: List[str] = None,
+    member_id: str = None
 ) -> Optional[Dict]:
-    """Crée un brouillon de post sur Wix Blog"""
+    """Crée un brouillon de post sur Wix Blog v3 API"""
     try:
         async with httpx.AsyncClient() as client:
             # Convertir le contenu HTML en format Ricos (Wix rich content)
             rich_content = html_to_ricos(content)
             
+            # Format correct pour Wix Blog v3 API - memberId est OBLIGATOIRE pour les apps tierces
             payload = {
                 "draftPost": {
                     "title": title,
                     "excerpt": excerpt,
                     "richContent": rich_content,
-                    "coverMedia": {
-                        "image": cover_image,
+                    "heroImage": {
+                        "url": cover_image,
                         "displayed": True
                     },
-                    "tags": tags or []
+                    "language": "fr"
                 }
             }
+            
+            # Ajouter memberId si disponible (obligatoire pour apps tierces)
+            if member_id:
+                payload["draftPost"]["memberId"] = member_id
+            
+            logger.info(f"Creating Wix draft post: {title}")
+            logger.info(f"Payload: {json.dumps(payload, default=str)[:500]}")
             
             response = await client.post(
                 "https://www.wixapis.com/blog/v3/draft-posts",
@@ -299,9 +331,40 @@ async def create_wix_draft_post(
             )
             
             if response.status_code in [200, 201]:
-                return response.json()
+                result = response.json()
+                logger.info(f"Wix draft created successfully: {result}")
+                return result
             else:
                 logger.error(f"Wix draft creation failed: {response.status_code} - {response.text}")
+                
+                # Fallback: Try simpler payload without heroImage
+                simple_payload = {
+                    "draftPost": {
+                        "title": title,
+                        "excerpt": excerpt,
+                        "richContent": rich_content,
+                        "language": "fr"
+                    }
+                }
+                if member_id:
+                    simple_payload["draftPost"]["memberId"] = member_id
+                    
+                response2 = await client.post(
+                    "https://www.wixapis.com/blog/v3/draft-posts",
+                    headers={
+                        "Authorization": api_key,
+                        "wix-site-id": site_id,
+                        "Content-Type": "application/json"
+                    },
+                    json=simple_payload,
+                    timeout=30
+                )
+                if response2.status_code in [200, 201]:
+                    result = response2.json()
+                    logger.info(f"Wix draft created with simple payload: {result}")
+                    return result
+                else:
+                    logger.error(f"Wix simple draft also failed: {response2.status_code} - {response2.text}")
                 return None
                 
     except Exception as e:
@@ -422,7 +485,7 @@ def html_to_plain_text(html_content: str) -> str:
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
 
-async def publish_to_facebook(
+async def publish_to_facebook_page(
     fb_access_token: str,
     fb_page_id: str,
     title: str,
@@ -616,10 +679,20 @@ async def generate_daily_blogs(
     wix_api_key: str = None,
     wix_site_id: str = None,
     publish_to_wix: bool = True,
-    count: int = 2
+    count: int = 2,
+    fb_access_token: str = None,
+    fb_page_id: str = None,
+    publish_to_facebook: bool = False
 ) -> List[Dict]:
     """Génère automatiquement les blogs quotidiens avec OpenAI"""
     results = []
+    
+    # Récupérer le member ID pour Wix si on veut publier
+    wix_member_id = None
+    if publish_to_wix and wix_api_key and wix_site_id:
+        wix_member_id = await get_wix_member_id(wix_api_key, wix_site_id)
+        if not wix_member_id:
+            logger.warning("Could not get Wix member ID - will try publishing without it")
     
     # Récupérer les titres existants pour éviter les doublons
     existing_posts = await db.blog_posts.find({}, {"title": 1}).to_list(1000)
@@ -670,7 +743,8 @@ async def generate_daily_blogs(
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc),
             "auto_generated": True,
-            "published_to_wix": False
+            "published_to_wix": False,
+            "published_to_facebook": False
         }
         
         await db.blog_posts.insert_one(blog_post)
@@ -684,7 +758,8 @@ async def generate_daily_blogs(
                 content=blog_post["content"],
                 excerpt=blog_post["excerpt"],
                 cover_image=blog_post["image"],
-                tags=blog_post["tags"]
+                tags=blog_post["tags"],
+                member_id=wix_member_id
             )
             
             if wix_result:
@@ -698,6 +773,25 @@ async def generate_daily_blogs(
                             {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
                         )
                         blog_post["published_to_wix"] = True
+        
+        # Publier sur Facebook si configuré
+        if publish_to_facebook and fb_access_token and fb_page_id:
+            fb_result = await publish_to_facebook_page(
+                fb_access_token=fb_access_token,
+                fb_page_id=fb_page_id,
+                title=blog_post["title"],
+                content=blog_post["content"],
+                image_url=blog_post["image"],
+                link=None  # Ajouter le lien vers l'article Wix si disponible
+            )
+            
+            if fb_result:
+                fb_post_id = fb_result.get("id") or fb_result.get("post_id")
+                await db.blog_posts.update_one(
+                    {"id": post_id},
+                    {"$set": {"published_to_facebook": True, "facebook_post_id": fb_post_id}}
+                )
+                blog_post["published_to_facebook"] = True
         
         # Nettoyer pour la réponse
         blog_post.pop("_id", None)

@@ -1940,13 +1940,22 @@ async def delete_blog_post(post_id: str):
 # =====================================================
 
 @api_router.post("/blog/auto-generate")
-async def auto_generate_daily_blogs(count: int = 2):
+async def auto_generate_daily_blogs(
+    count: int = 2,
+    publish_to_wix: bool = True,
+    publish_to_facebook: bool = False
+):
     """
-    Génère automatiquement des blogs SEO (2 par défaut) et les publie sur Wix.
+    Génère automatiquement des blogs SEO (2 par défaut) et les publie sur Wix et/ou Facebook.
     
     Focus: Halo, Genius, Tape-in, I-Tip
     Images: Unsplash libres de droits
-    Publication: Automatique sur Wix Blog
+    Publication: Automatique sur Wix Blog et Facebook
+    
+    Args:
+        count: Nombre de blogs à générer (défaut: 2)
+        publish_to_wix: Publier sur Wix Blog (défaut: True)
+        publish_to_facebook: Publier sur Facebook Page (défaut: False)
     """
     try:
         from blog_automation import generate_daily_blogs, BLOG_TOPICS_EXTENDED
@@ -1957,21 +1966,27 @@ async def auto_generate_daily_blogs(count: int = 2):
         
         wix_api_key = os.getenv("WIX_API_KEY")
         wix_site_id = os.getenv("WIX_SITE_ID")
+        fb_access_token = os.getenv("FB_ACCESS_TOKEN")
+        fb_page_id = os.getenv("FB_PAGE_ID")
         
         results = await generate_daily_blogs(
             db=db,
             openai_key=openai_key,
             wix_api_key=wix_api_key,
             wix_site_id=wix_site_id,
-            publish_to_wix=True,
-            count=count
+            publish_to_wix=publish_to_wix,
+            count=count,
+            fb_access_token=fb_access_token,
+            fb_page_id=fb_page_id,
+            publish_to_facebook=publish_to_facebook
         )
         
         return {
             "success": True,
             "message": f"{len(results)} blog(s) générés avec succès",
             "posts": results,
-            "published_to_wix": any(p.get("published_to_wix") for p in results)
+            "published_to_wix": any(p.get("published_to_wix") for p in results),
+            "published_to_facebook": any(p.get("published_to_facebook") for p in results)
         }
         
     except Exception as e:
