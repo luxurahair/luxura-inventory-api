@@ -97,9 +97,6 @@ export default function CatalogueScreen() {
   const CARD_WIDTH = getCardWidth();
   
   const renderProductCard = ({ item: product }: { item: Product }) => {
-    const stockQty = product.total_quantity || product.quantity || 0;
-    const isLowStock = stockQty > 0 && stockQty <= 5;
-    
     return (
       <TouchableOpacity
         onPress={() => router.push(`/product/${product.id}`)}
@@ -117,11 +114,6 @@ export default function CatalogueScreen() {
               <Text style={styles.badgeText}>Épuisé</Text>
             </View>
           )}
-          {product.in_stock && isLowStock && (
-            <View style={styles.lowStockBadge}>
-              <Text style={styles.lowStockBadgeText}>Stock limité</Text>
-            </View>
-          )}
           {product.variant_count && product.variant_count > 0 && (
             <View style={styles.variantBadge}>
               <Text style={styles.variantBadgeText}>{product.variant_count} options</Text>
@@ -133,10 +125,8 @@ export default function CatalogueScreen() {
           <View style={styles.stockRow}>
             {product.in_stock ? (
               <View style={styles.stockIndicator}>
-                <View style={[styles.stockDot, isLowStock ? styles.stockDotLow : styles.stockDotOk]} />
-                <Text style={[styles.stockText, isLowStock ? styles.stockTextLow : styles.stockTextOk]}>
-                  {stockQty > 0 ? `${stockQty} en stock` : 'En stock'}
-                </Text>
+                <View style={[styles.stockDot, styles.stockDotOk]} />
+                <Text style={[styles.stockText, styles.stockTextOk]}>En stock</Text>
               </View>
             ) : (
               <View style={styles.stockIndicator}>

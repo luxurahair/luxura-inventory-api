@@ -667,24 +667,20 @@ export default function ProductScreen() {
           
           <Text style={styles.price}>{product.price.toFixed(2)} C$</Text>
           
-          {/* Affichage du stock de la variante sélectionnée */}
-          {selectedVariant && (
-            <View style={styles.stockBadge}>
-              <Ionicons 
-                name={selectedVariant.quantity > 0 ? "checkmark-circle" : "close-circle"} 
-                size={16} 
-                color={selectedVariant.quantity > 0 ? "#4a4" : "#f44"} 
-              />
-              <Text style={[
-                styles.stockText,
-                selectedVariant.quantity > 0 ? styles.stockInStock : styles.stockOutOfStock
-              ]}>
-                {selectedVariant.quantity > 0 
-                  ? `${selectedVariant.quantity} en stock` 
-                  : 'Rupture de stock'}
-              </Text>
-            </View>
-          )}
+          {/* Affichage simplifié du stock */}
+          <View style={styles.stockBadge}>
+            <Ionicons 
+              name={product.in_stock ? "checkmark-circle" : "close-circle"} 
+              size={16} 
+              color={product.in_stock ? "#4a4" : "#f44"} 
+            />
+            <Text style={[
+              styles.stockText,
+              product.in_stock ? styles.stockInStock : styles.stockOutOfStock
+            ]}>
+              {product.in_stock ? 'En stock' : 'Rupture de stock'}
+            </Text>
+          </View>
           
           <View style={styles.divider} />
           
