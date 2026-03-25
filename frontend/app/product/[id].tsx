@@ -377,73 +377,12 @@ const FormattedDescription = ({
   luxeName?: string;
   seriesName?: string;
 }) => {
-  // Si pas de description ou description trop courte, générer du contenu SEO
-  const hasValidDescription = description && description.length > 100;
-  
   // Utiliser le contenu SEO généré
   const seoContent = generateSEODescription(category, colorCode, luxeName, seriesName);
   
-  // Parser la description existante si elle est valide
-  const parseDescription = (desc: string): SEOContent => {
-    if (!desc) return seoContent;
-    
-    // Clean up the description
-    let cleanDesc = desc
-      .replace(/🎯/g, '')
-      .replace(/🔬/g, '')
-      .replace(/💎/g, '')
-      .replace(/✨/g, '')
-      .replace(/📍/g, '')
-      .replace(/•/g, '\n•');
-    
-    const sections: SEOSection[] = [];
-    let intro = '';
-    
-    // Extract intro (first paragraph before any section)
-    const introMatch = cleanDesc.match(/^([^•\n]+)/);
-    if (introMatch && introMatch[1].length > 20) {
-      intro = introMatch[1].trim();
-    }
-    
-    // Define section patterns
-    const sectionPatterns = [
-      { key: 'CONCEPT UNIQUE', title: 'CONCEPT' },
-      { key: 'CONCEPT', title: 'CONCEPT' },
-      { key: 'QUALITÉ PREMIUM', title: 'QUALITÉ PREMIUM' },
-      { key: 'QUALITÉ', title: 'QUALITÉ PREMIUM' },
-      { key: 'TECHNOLOGIE', title: 'TECHNOLOGIE' },
-      { key: 'AVANTAGES UNIQUES', title: 'AVANTAGES' },
-      { key: 'AVANTAGES', title: 'AVANTAGES' },
-      { key: 'DURÉE DE VIE', title: 'DURÉE DE VIE' },
-      { key: 'APPLICATION', title: 'APPLICATION' },
-      { key: 'COLLECTION', title: 'COLLECTION' },
-    ];
-    
-    // Extract sections
-    for (const pattern of sectionPatterns) {
-      const regex = new RegExp(`${pattern.key}[:\\s]*([^A-Z]*?)(?=[A-Z]{4,}|Luxura Distribution|$)`, 'i');
-      const match = cleanDesc.match(regex);
-      if (match && match[1]) {
-        const items = match[1]
-          .split(/[•\n]/)
-          .map(item => item.trim())
-          .filter(item => item.length > 3 && !item.includes(':'));
-        
-        if (items.length > 0) {
-          sections.push({ title: pattern.title, items });
-        }
-      }
-    }
-    
-    // Si pas de sections trouvées, utiliser le template SEO
-    if (sections.length < 2) {
-      return seoContent;
-    }
-    
-    return { intro: intro || seoContent.intro, sections };
-  };
-  
-  const { intro, sections } = hasValidDescription ? parseDescription(description) : seoContent;
+  // Toujours utiliser le template SEO pour garantir un affichage complet et cohérent
+  // Les templates contiennent toutes les sections: CONCEPT, QUALITÉ PREMIUM, DURÉE DE VIE, APPLICATION, COLLECTION
+  const { intro, sections } = seoContent;
   
   return (
     <View style={descStyles.container}>
@@ -490,10 +429,12 @@ const descStyles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    gap: 8,
   },
   section: {
     width: '48%',
-    marginBottom: 16,
+    marginBottom: 12,
+    minHeight: 80,
   },
   sectionTitle: {
     color: '#c9a050',
