@@ -765,27 +765,28 @@ CATÉGORIE: {category}
 MOTS-CLÉS À INTÉGRER: {', '.join(keywords)}
 {product_mention}
 
-STRUCTURE:
-1. Titre H1 accrocheur avec mot-clé principal
-2. Introduction engageante (100-150 mots)
-3. Section 1 avec H2 + contenu détaillé
-4. Section 2 avec H2 + contenu détaillé
-5. Section 3 avec H2 + liste à puces des avantages
-6. Conclusion avec appel à l'action Luxura Distribution
+STRUCTURE IMPORTANTE:
+1. Introduction engageante (100-150 mots) - SANS TITRE H1 car Wix l'affiche automatiquement
+2. Section 1 avec H2 + contenu détaillé
+3. Section 2 avec H2 + contenu détaillé
+4. Section 3 avec H2 + liste à puces des avantages
+5. Conclusion avec appel à l'action Luxura Distribution
 
-CONSIGNES:
+CONSIGNES CRITIQUES:
 - 800-1200 mots total
+- NE PAS inclure de balise <h1> dans le contenu - Wix affiche le titre automatiquement
+- Commencer directement par un paragraphe <p> d'introduction
 - Intégrer chaque mot-clé 2-3 fois naturellement
-- Utiliser des balises HTML: <h1>, <h2>, <p>, <ul>, <li>, <strong>
+- Utiliser des balises HTML: <h2>, <h3>, <p>, <ul>, <li>, <strong>
 - Mentionner Luxura Distribution comme expert
 - Inclure des statistiques ou faits si pertinent
 - Ton professionnel mais chaleureux
 
 FORMAT JSON STRICT:
 {{
-  "title": "Titre SEO optimisé",
+  "title": "Titre SEO optimisé (affiché par Wix automatiquement)",
   "excerpt": "Résumé accrocheur de 150 caractères max",
-  "content": "Contenu HTML complet",
+  "content": "Contenu HTML SANS h1 - commencer par <p>introduction</p>",
   "meta_description": "Description meta de 155 caractères max",
   "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
 }}"""
