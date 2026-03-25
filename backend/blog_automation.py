@@ -357,13 +357,17 @@ async def attach_wix_image_to_draft(
 ) -> bool:
     """
     Associe l'image Wix importée au draft blog via PATCH.
-    Format exact: draftPost.heroImage.id = wix_file_id
+    Utilise le format coverMedia qui fonctionne mieux que heroImage.
     """
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             logger.info(f"Attaching image {wix_file_id} to draft {draft_id}")
             
-            # Format exact selon la doc Wix: heroImage: { id: "..." }
+            # Format Wix Media URI complet
+            # Le format est: wix:image://v1/{mediaId}/filename#originWidth=800&originHeight=600
+            wix_media_uri = f"wix:image://v1/{wix_file_id}/cover.jpg#originWidth=800&originHeight=600"
+            
+            # Essayer avec media.wixMedia.image (format recommandé 2025)
             response = await client.patch(
                 f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
                 headers={
@@ -373,19 +377,70 @@ async def attach_wix_image_to_draft(
                 },
                 json={
                     "draftPost": {
-                        "heroImage": {
-                            "id": wix_file_id
+                        "media": {
+                            "wixMedia": {
+                                "image": wix_media_uri
+                            },
+                            "displayed": True,
+                            "custom": False
                         }
                     }
                 }
             )
             
             if response.status_code in [200, 204]:
-                logger.info(f"Image attached successfully to draft {draft_id}")
+                logger.info(f"Image attached successfully to draft {draft_id} (media.wixMedia)")
                 return True
             else:
-                logger.error(f"Attach image failed: {response.status_code} - {response.text}")
-                return False
+                logger.warning(f"media.wixMedia format failed: {response.status_code} - {response.text}")
+                
+                # Fallback: essayer avec coverMedia
+                response2 = await client.patch(
+                    f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
+                    headers={
+                        "Authorization": api_key,
+                        "wix-site-id": site_id,
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "draftPost": {
+                            "coverMedia": {
+                                "enabled": True,
+                                "image": wix_media_uri
+                            }
+                        }
+                    }
+                )
+                
+                if response2.status_code in [200, 204]:
+                    logger.info(f"Image attached successfully to draft {draft_id} (coverMedia)")
+                    return True
+                else:
+                    logger.warning(f"coverMedia format failed: {response2.status_code} - {response2.text}")
+                    
+                    # Fallback 2: essayer heroImage avec le format URI
+                    response3 = await client.patch(
+                        f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
+                        headers={
+                            "Authorization": api_key,
+                            "wix-site-id": site_id,
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "draftPost": {
+                                "heroImage": {
+                                    "id": wix_media_uri
+                                }
+                            }
+                        }
+                    )
+                    
+                    if response3.status_code in [200, 204]:
+                        logger.info(f"Image attached successfully to draft {draft_id} (heroImage URI)")
+                        return True
+                    else:
+                        logger.error(f"All formats failed: {response3.status_code} - {response3.text}")
+                        return False
                 
     except Exception as e:
         logger.error(f"Error attaching image to draft: {e}")
