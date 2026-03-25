@@ -403,17 +403,19 @@ def html_to_ricos(html_content: str) -> Dict:
     }
 
 # =====================================================
-# GÉNÉRATION DE BLOG AVEC IA
+# GÉNÉRATION DE BLOG AVEC OPENAI
 # =====================================================
 
 async def generate_blog_with_ai(
     topic_data: Dict,
-    emergent_key: str,
+    openai_key: str,
     existing_titles: List[str] = None
 ) -> Optional[Dict]:
-    """Génère un article de blog SEO optimisé avec l'IA"""
+    """Génère un article de blog SEO optimisé avec OpenAI GPT-4"""
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        import openai
+        
+        client = openai.AsyncOpenAI(api_key=openai_key)
         
         topic = topic_data["topic"]
         category = topic_data["category"]
@@ -439,12 +441,6 @@ PRODUITS LUXURA:
 LOCALISATION: Québec, Montréal, Canada
 LANGUE: Français québécois UNIQUEMENT"""
 
-        chat = LlmChat(
-            api_key=emergent_key,
-            session_id=f"blog-{uuid.uuid4().hex[:8]}",
-            system_message=system_message
-        ).with_model("openai", "gpt-4.1-mini")
-        
         product_mention = f"\nMentionne particulièrement le produit: {focus_product}" if focus_product else ""
         
         prompt = f"""Écris un article de blog SEO complet sur le sujet suivant:
@@ -479,12 +475,17 @@ FORMAT JSON STRICT:
   "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
 }}"""
 
-        user_message = UserMessage(text=prompt)
-        response = await chat.send_message(user_message)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=3000
+        )
         
-        # Parser la réponse JSON
-        import json
-        response_text = response.strip()
+        response_text = response.choices[0].message.content.strip()
         
         # Nettoyer les balises markdown
         if response_text.startswith("```json"):
@@ -513,7 +514,7 @@ FORMAT JSON STRICT:
         return blog_data
         
     except Exception as e:
-        logger.error(f"Error generating blog with AI: {e}")
+        logger.error(f"Error generating blog with OpenAI: {e}")
         return None
 
 # =====================================================
@@ -522,13 +523,13 @@ FORMAT JSON STRICT:
 
 async def generate_daily_blogs(
     db,
-    emergent_key: str,
+    openai_key: str,
     wix_api_key: str = None,
     wix_site_id: str = None,
     publish_to_wix: bool = True,
     count: int = 2
 ) -> List[Dict]:
-    """Génère automatiquement les blogs quotidiens"""
+    """Génère automatiquement les blogs quotidiens avec OpenAI"""
     results = []
     
     # Récupérer les titres existants pour éviter les doublons
@@ -560,7 +561,7 @@ async def generate_daily_blogs(
     
     # Générer chaque blog
     for topic_data in selected_topics:
-        blog_data = await generate_blog_with_ai(topic_data, emergent_key, existing_titles)
+        blog_data = await generate_blog_with_ai(topic_data, openai_key, existing_titles)
         
         if not blog_data:
             continue

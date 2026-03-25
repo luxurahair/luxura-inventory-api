@@ -1951,16 +1951,16 @@ async def auto_generate_daily_blogs(count: int = 2):
     try:
         from blog_automation import generate_daily_blogs, BLOG_TOPICS_EXTENDED
         
-        emergent_key = os.getenv("EMERGENT_LLM_KEY")
-        if not emergent_key:
-            raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY non configuré")
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if not openai_key:
+            raise HTTPException(status_code=500, detail="OPENAI_API_KEY non configuré")
         
         wix_api_key = os.getenv("WIX_API_KEY")
         wix_site_id = os.getenv("WIX_SITE_ID")
         
         results = await generate_daily_blogs(
             db=db,
-            emergent_key=emergent_key,
+            openai_key=openai_key,
             wix_api_key=wix_api_key,
             wix_site_id=wix_site_id,
             publish_to_wix=True,
