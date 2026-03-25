@@ -8,6 +8,7 @@ import random
 import uuid
 import httpx
 import asyncio
+import json
 from datetime import datetime, timezone
 from typing import Optional, List, Dict
 import logging
@@ -401,6 +402,94 @@ def html_to_ricos(html_content: str) -> Dict:
             "updatedTimestamp": datetime.now(timezone.utc).isoformat()
         }
     }
+
+# =====================================================
+# FACEBOOK PUBLISHING
+# =====================================================
+
+def html_to_plain_text(html_content: str) -> str:
+    """Convertit le HTML en texte brut pour Facebook"""
+    import re
+    # Remplacer les balises de titre par des lignes
+    text = re.sub(r'<h[1-6][^>]*>(.*?)</h[1-6]>', r'\n\n📌 \1\n', html_content)
+    # Remplacer les listes
+    text = re.sub(r'<li[^>]*>(.*?)</li>', r'• \1\n', text)
+    # Remplacer les paragraphes
+    text = re.sub(r'<p[^>]*>(.*?)</p>', r'\1\n\n', text)
+    # Supprimer toutes les autres balises
+    text = re.sub(r'<[^>]+>', '', text)
+    # Nettoyer les espaces multiples
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+async def publish_to_facebook(
+    fb_access_token: str,
+    fb_page_id: str,
+    title: str,
+    content: str,
+    image_url: str = None,
+    link: str = None
+) -> Optional[Dict]:
+    """
+    Publie un article sur la page Facebook Luxura Distribution.
+    
+    Args:
+        fb_access_token: Token d'accès de la page Facebook
+        fb_page_id: ID de la page Facebook
+        title: Titre du post
+        content: Contenu HTML (sera converti en texte)
+        image_url: URL de l'image (optionnel)
+        link: Lien vers l'article complet (optionnel)
+    
+    Returns:
+        Dict avec l'ID du post Facebook si succès, None sinon
+    """
+    try:
+        # Convertir HTML en texte pour Facebook
+        plain_text = html_to_plain_text(content)
+        
+        # Créer le message avec le titre
+        message = f"✨ {title}\n\n{plain_text[:1500]}"  # Facebook limite à ~2000 caractères
+        
+        if link:
+            message += f"\n\n🔗 Lire l'article complet: {link}"
+        
+        message += "\n\n#LuxuraDistribution #ExtensionsCheveux #Québec #Montréal #HairExtensions"
+        
+        async with httpx.AsyncClient() as client:
+            # Si on a une image, on publie un post avec photo
+            if image_url:
+                response = await client.post(
+                    f"https://graph.facebook.com/v19.0/{fb_page_id}/photos",
+                    data={
+                        "url": image_url,
+                        "caption": message,
+                        "access_token": fb_access_token
+                    },
+                    timeout=60
+                )
+            else:
+                # Sinon, on publie un post texte simple
+                response = await client.post(
+                    f"https://graph.facebook.com/v19.0/{fb_page_id}/feed",
+                    data={
+                        "message": message,
+                        "access_token": fb_access_token
+                    },
+                    timeout=30
+                )
+            
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"Facebook post published: {result.get('id') or result.get('post_id')}")
+                return result
+            else:
+                logger.error(f"Facebook publish failed: {response.status_code} - {response.text}")
+                return None
+                
+    except Exception as e:
+        logger.error(f"Error publishing to Facebook: {e}")
+        return None
 
 # =====================================================
 # GÉNÉRATION DE BLOG AVEC OPENAI
