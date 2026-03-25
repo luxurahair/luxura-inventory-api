@@ -7,7 +7,8 @@ Application mobile e-commerce pour Luxura Distribution (extensions de cheveux pr
 ```
 ├── /app/frontend/          # Application Expo (React Native)
 ├── /app/backend/           # API FastAPI (proxy local)
-├── API Render externe      # luxura-inventory-api.onrender.com
+├── Render: luxura_inventory_api       # API principale
+├── Render: luxura_inventory_sync_cron # Cron synchronisation
 └── Supabase               # Base de données PostgreSQL
 ```
 
@@ -15,7 +16,7 @@ Application mobile e-commerce pour Luxura Distribution (extensions de cheveux pr
 
 ## ⚠️ VARIABLES D'ENVIRONNEMENT COMPLÈTES
 
-### Backend Local (`/app/backend/.env`)
+### 1. Backend Local (`/app/backend/.env`)
 
 ```env
 # MongoDB Local
@@ -26,10 +27,10 @@ DB_NAME="test_database"
 EMERGENT_LLM_KEY=sk-emergent-c23DdEcC8C04049755
 
 # ==================== WIX API ====================
-WIX_API_KEY=IST.eyJraWQiOiJQb3pIX2FDMiIsImFsZyI6IlJTMjU2In0.eyJkYXRhIjoie1wiaWRcIjpcImM5MmRkY2UzLTYyYjItNGRkOS04MjMzLWUyODc0OGU3NDJlMlwiLFwiaWRlbnRpdHlcIjp7XCJ0eXBlXCI6XCJhcHBsaWNhdGlvblwiLFwiaWRcIjpcImIyOWFmMDE1LWEzZjEtNDFjMi1iYzI2LTQzMzUwODEyOTY1YlwifSxcInRlbmFudFwiOntcInR5cGVcIjpcImFjY291bnRcIixcImlkXCI6XCJlMjI1YzI1Yi02Y2IwLTQ1MTItOGFiMS1hZDIyZGM2ZTQyYTdcIn19IiwiaWF0IjoxNzQyNTk1NDk2fQ.qPQu9kJTkWn8ZZEb2_XDVB4iZMd_SvqIxUFX-gLp5rAEWGkUdXu26qUALQAPHjYA5P1vE9Lc-mW0Ioy-NMn8NUaU6oNaAe3f5MvKxWrRdLGtIHXaY8LFaHlFCcP1rexfQ6mZMg3p0u7nKPZ4hqGo2cIdmjZ7dK93M_R5VKEkYx9tAG9CRfywJdGFoX9fBmCQl8sJWQ2k9SzAw8wdxPm_A7YxhJgz5M8wRuQSp8iOmV7m2D9Y8cNnQ4h0Sx7qA2TXKpLEWtNvB9mFjC3bPwYpZ6dN7RaXvQ8TfUc4gPnL2GYKJE5wRmN3aXcTuV8bpWkH1yD9J6o0Mf2qAs4C3TdNQ
-WIX_SITE_ID=f1b961d0-c64e-4614-afd1-e9a1dc5ac057
+WIX_API_KEY=IST.eyJraWQiOiJQb3pIX2FDMiIsImFsZyI6IlJTMjU2In0.eyJkYXRhIjoie1wiaWRcIjpcIjYzNzc3NDkyLWMxYWUtNDdkZS1iYWJlLTQ1MDYzYTg4Y2Y5MFwiLFwiaWRlbnRpdHlcIjp7XCJ0eXBlXCI6XCJhcHBsaWNhdGlvblwiLFwiaWRcIjpcImRlOTc0ZTRjLTg0YTUtNDhmNy1hMzEwLWU5OGRlOWM4ZTFkNVwifSxcInRlbmFudFwiOntcInR5cGVcIjpcImFjY291bnRcIixcImlkXCI6XCJmMWI5NjFlZC04MmQ2LTRiMzgtOTY3Yi01NTdhMGMzNDUxNjVcIn19IiwiaWF0IjoxNzY0MzU4MjU1fQ.A0WDKrxYuUcCKdOkA9mT550__khyEbUxObTS3Mq87ZKW6UGPiwVuw-V3mylYq-W95-0yFkQueUirX1-yCDJDTQcnGB6AEnHDgF2Z3OnxZLg6dpKbCc3qOCCNTKYPXRpowdfEenrIDc0knGccjtc-iRBXjlMuFbMeu92mVv0gIk236ING73TP8nHcsc8z6aBK-YNyUs1qzg8N3EbVy3e3XNGgK1889X6-5Lj0t_dw2v68S2YZz412XZGhC4kOnoZWvh5WRytgZIkxsjsnY2r8y5BCZbPKuQoRYRQtlEJU4THceXhQZhmrsCiP9Nb8_xuv7_q3xzfXazFJ0g7RSe3ddw
+WIX_SITE_ID=6e62c946-d068-45c1-8f5f-7af998f0d7b3
 
-# ==================== WIX OAUTH (pour Render) ====================
+# ==================== WIX OAUTH ====================
 WIX_INSTANCE_ID=ab8a5a88-69a5-4348-ad2e-06017de46f57
 WIX_CLIENT_ID=1969322e-ef8d-4aa4-90e1-d6fd3eb994ff
 WIX_CLIENT_SECRET=58e2d7b7-5a8d-44dc-bd74-b9e0c37c58fc
@@ -40,6 +41,9 @@ WIX_REDIRECT_URL=https://luxura-inventory-api.onrender.com/wix/oauth/callback
 # ==================== SECRETS ====================
 WIX_PUSH_SECRET=9f3c2b8a7d1e4c5b9a0d7e6f3b2c1a9f
 SEO_SECRET=9f3c2b8a7d1e4c5b9a0d7e6f3b2c1a9f
+
+# ==================== SUPABASE ====================
+DATABASE_URL=postgresql+psycopg://postgres.cpnwntahrkfpenjsqzsy:Lianagir20180921@aws-1-ca-central-1.pooler.supabase.com:5432/postgres?sslmode=require
 
 # ==================== EMAIL ====================
 LUXURA_EMAIL=info@luxuradistribution.com
@@ -49,20 +53,28 @@ LUXURA_APP_PASSWORD=zgvsfiajermjqpgh
 LUXURA_SALON_ID=4
 ```
 
-### API Render (`luxura-inventory-api.onrender.com`)
+---
 
-⚠️ **Variables à configurer sur Render Dashboard > Environment** :
+### 2. Render: `luxura_inventory_api` (API principale)
+
+URL: `https://luxura-inventory-api.onrender.com`
 
 ```env
-# ==================== SUPABASE (PostgreSQL) ====================
-# ⚠️ MANQUANT - Obtenir depuis Supabase Dashboard > Settings > Database
-DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres
+# ==================== SUPABASE ====================
+DATABASE_URL=postgresql+psycopg://postgres.cpnwntahrkfpenjsqzsy:Lianagir20180921@aws-1-ca-central-1.pooler.supabase.com:5432/postgres?sslmode=require
+
+# ==================== CORS ====================
+CORS_ORIGINS=https://editor.wix.com,https://www.wix.com,https://static.parastorage.com,https://*.wixsite.com,https://*.wixstudio.io,https://*.wix.com
+
+# ==================== WIX API ====================
+WIX_API_KEY=IST.eyJraWQiOiJQb3pIX2FDMiIsImFsZyI6IlJTMjU2In0.eyJkYXRhIjoie1wiaWRcIjpcIjYzNzc3NDkyLWMxYWUtNDdkZS1iYWJlLTQ1MDYzYTg4Y2Y5MFwiLFwiaWRlbnRpdHlcIjp7XCJ0eXBlXCI6XCJhcHBsaWNhdGlvblwiLFwiaWRcIjpcImRlOTc0ZTRjLTg0YTUtNDhmNy1hMzEwLWU5OGRlOWM4ZTFkNVwifSxcInRlbmFudFwiOntcInR5cGVcIjpcImFjY291bnRcIixcImlkXCI6XCJmMWI5NjFlZC04MmQ2LTRiMzgtOTY3Yi01NTdhMGMzNDUxNjVcIn19IiwiaWF0IjoxNzY0MzU4MjU1fQ.A0WDKrxYuUcCKdOkA9mT550__khyEbUxObTS3Mq87ZKW6UGPiwVuw-V3mylYq-W95-0yFkQueUirX1-yCDJDTQcnGB6AEnHDgF2Z3OnxZLg6dpKbCc3qOCCNTKYPXRpowdfEenrIDc0knGccjtc-iRBXjlMuFbMeu92mVv0gIk236ING73TP8nHcsc8z6aBK-YNyUs1qzg8N3EbVy3e3XNGgK1889X6-5Lj0t_dw2v68S2YZz412XZGhC4kOnoZWvh5WRytgZIkxsjsnY2r8y5BCZbPKuQoRYRQtlEJU4THceXhQZhmrsCiP9Nb8_xuv7_q3xzfXazFJ0g7RSe3ddw
+WIX_SITE_ID=6e62c946-d068-45c1-8f5f-7af998f0d7b3
+WIX_ACCOUNT_ID=f1b961ed-82d6-4b38-967b-557a0c345165
 
 # ==================== WIX OAUTH ====================
 WIX_CLIENT_ID=1969322e-ef8d-4aa4-90e1-d6fd3eb994ff
 WIX_CLIENT_SECRET=58e2d7b7-5a8d-44dc-bd74-b9e0c37c58fc
 WIX_INSTANCE_ID=ab8a5a88-69a5-4348-ad2e-06017de46f57
-WIX_ACCOUNT_ID=f1b961ed-82d6-4b38-967b-557a0c345165
 WIX_OAUTH_SCOPES=SCOPE.DC-STORES-MEGA.MANAGE-STORES
 WIX_REDIRECT_URL=https://luxura-inventory-api.onrender.com/wix/oauth/callback
 
@@ -70,11 +82,38 @@ WIX_REDIRECT_URL=https://luxura-inventory-api.onrender.com/wix/oauth/callback
 WIX_PUSH_SECRET=9f3c2b8a7d1e4c5b9a0d7e6f3b2c1a9f
 SEO_SECRET=9f3c2b8a7d1e4c5b9a0d7e6f3b2c1a9f
 
-# ==================== OPTIONNEL ====================
-ENVIRONMENT=production
+# ==================== INVENTAIRE ====================
+LUXURA_SALON_ID=4
 ```
 
-### Frontend Expo (`/app/frontend/.env`)
+---
+
+### 3. Render: `luxura_inventory_sync_cron` (Cron Job)
+
+```env
+# ==================== SUPABASE ====================
+DATABASE_URL=postgresql+psycopg://postgres.cpnwntahrkfpenjsqzsy:Lianagir20180921@aws-1-ca-central-1.pooler.supabase.com:5432/postgres?sslmode=require
+
+# ==================== PYTHON ====================
+PYTHON_VERSION=3.12.7
+PYTHONUNBUFFERED=1
+
+# ==================== WIX API (différent de l'API principale) ====================
+WIX_API_KEY=IST.eyJraWQiOiJQb3pIX2FDMiIsImFsZyI6IlJTMjU2In0.eyJkYXRhIjoie1wiaWRcIjpcIjJjYjMzMjgzLTNlNTYtNDExOS04OGQ5LWU0YTQ0NjE4MDBkOFwiLFwiaWRlbnRpdHlcIjp7XCJ0eXBlXCI6XCJhcHBsaWNhdGlvblwiLFwiaWRcIjpcIjdkNjc2ZWM5LWZjMDAtNGI5NC1hMDUyLTEwNDNmODc4ZDQ4NlwifSxcInRlbmFudFwiOntcInR5cGVcIjpcImFjY291bnRcIixcImlkXCI6XCJmMWI5NjFlZC04MmQ2LTRiMzgtOTY3Yi01NTdhMGMzNDUxNjVcIn19IiwiaWF0IjoxNzY0MDIyMzEwfQ.OVzQv7PhALsLDcjHgTp9MCIeXMDrFfgPHKhRc2iNyRFUyJAbA3soVT_oT9WKlnvJJ8PdiYQ83MMR4pdxOpfMcBNMMSPRBfSfP4aBHhhKAuZe6JiFz_jKY2bGdku3WJszbtd4_Laj8Ij-0xpk5_udcP_JXxiUyckK2N3A625fbjOQjQ29-v0huXvabfGeSZTw1IHMS1qRt-bVST3N1pu7lQgwjm0-fbkEajkst5wrhwY4QtUFi7iVkPKCLJZPCYDi5qXBcmeMBH9pE745whHpdexDYVpe3glMGin1FHTziTJwP_Nyc7MBZERWFk-Vct3EXAvy3lNh-KTN0dFqiJ89GA
+WIX_SITE_ID=6e62c946-d068-45c1-8f5f-7af998f0d7b3
+
+# ==================== WIX OAUTH ====================
+WIX_CLIENT_ID=1969322e-ef8d-4aa4-90e1-d6fd3eb994ff
+WIX_CLIENT_SECRET=58e2d7b7-5a8d-44dc-bd74-b9e0c37c58fc
+WIX_INSTANCE_ID=ab8a5a88-69a5-4348-ad2e-06017de46f57
+
+# ==================== SECRETS ====================
+WIX_PUSH_SECRET=9f3c2b8a7d1e4c5b9a0d7e6f3b2c1a9f
+```
+
+---
+
+### 4. Frontend Expo (`/app/frontend/.env`)
 
 ```env
 EXPO_PUBLIC_BACKEND_URL=/api
@@ -83,6 +122,8 @@ EXPO_PUBLIC_BACKEND_URL=/api
 ---
 
 ## Structure Base de Données (Supabase)
+
+**Connection:** `postgres.cpnwntahrkfpenjsqzsy` @ `aws-1-ca-central-1.pooler.supabase.com`
 
 ### Tables principales
 
@@ -98,6 +139,8 @@ EXPO_PUBLIC_BACKEND_URL=/api
 - **Salon ID 4** = Inventaire principal Wix (source de vérité)
 - Autres salons = Inventaire déduit/transféré
 
+---
+
 ## Catégories de Produits
 
 | Catégorie | Série | Type |
@@ -110,35 +153,11 @@ EXPO_PUBLIC_BACKEND_URL=/api
 | Clip-In | Sophia | Extensions à clips amovibles |
 | Essentiels | Luxura | Outils et entretien |
 
-## Système de Mapping Images
+---
 
-Les images sont mappées par **code couleur** extrait du handle :
+## Endpoints API
 
-```python
-COLOR_CODE_IMAGES = {
-    "1": "...",       # Noir Foncé
-    "1b": "...",      # Noir Doux  
-    "6": "...",       # Caramel Doré
-    "6/6t24": "...",  # Caramel Soleil
-    "18/22": "...",   # Champagne Doré
-    "60a": "...",     # Platine Pur
-    "hps": "...",     # Cendré Étoilé
-    "613/18a": "...", # Diamant Glacé
-    # ... etc
-}
-```
-
-## Templates SEO par Catégorie
-
-Chaque catégorie a un template SEO optimisé avec 5 sections :
-
-1. **CONCEPT/TECHNOLOGIE** - Points différenciateurs
-2. **QUALITÉ PREMIUM** - Caractéristiques cheveux Remy
-3. **DURÉE DE VIE** - Longévité produit
-4. **APPLICATION** - Mode d'emploi
-5. **COLLECTION** - Série + Teinte (dynamique)
-
-## Endpoints API Locaux
+### API Locale (Backend Emergent)
 
 | Endpoint | Description |
 |----------|-------------|
@@ -148,7 +167,7 @@ Chaque catégorie a un template SEO optimisé avec 5 sections :
 | `GET /api/categories` | Liste des catégories |
 | `GET /api/ping` | Health check |
 
-## Endpoints API Render
+### API Render (luxura-inventory-api.onrender.com)
 
 | Endpoint | Description |
 |----------|-------------|
@@ -159,27 +178,23 @@ Chaque catégorie a un template SEO optimisé avec 5 sections :
 | `GET /salons` | Liste des salons |
 | `POST /wix/sync` | Déclencher synchronisation |
 
+---
+
 ## Commandes
 
 ```bash
 # Démarrer le backend
-cd /app/backend && uvicorn server:app --host 0.0.0.0 --port 8001
+sudo supervisorctl restart backend
 
 # Démarrer le frontend
-cd /app/frontend && npx expo start --tunnel --port 3000
-
-# Ou via supervisor
-sudo supervisorctl restart backend
 sudo supervisorctl restart expo
+
+# Voir les logs
+sudo supervisorctl tail -f backend
+sudo supervisorctl tail -f expo
 ```
 
-## Synchronisation Wix ↔ Supabase
-
-La synchronisation est gérée par l'API Render avec :
-
-1. **Cron Job** : Synchronise périodiquement les produits Wix vers Supabase
-2. **Webhook** : Réception des mises à jour Wix en temps réel
-3. **API `/inventory/view`** : Vue jointe produit + quantités par salon
+---
 
 ## ⚠️ Notes Importantes
 
@@ -187,11 +202,13 @@ La synchronisation est gérée par l'API Render avec :
 - **115 produits** synchronisés avec **229 variantes**
 - Toutes les variantes ont un SKU valide
 - L'inventaire du **Salon ID 4** est la source de vérité
-- API Render : `https://luxura-inventory-api.onrender.com`
+- **2 services Render** : API + Cron (clés WIX_API_KEY différentes!)
+
+---
 
 ## Contact
 
 Luxura Distribution - Extensions de cheveux professionnels
 Québec, Canada
-Site: www.luxuradistribution.com
-Email: info@luxuradistribution.com
+- Site: www.luxuradistribution.com
+- Email: info@luxuradistribution.com
