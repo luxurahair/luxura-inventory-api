@@ -113,30 +113,51 @@ class Category(BaseModel):
 
 # ==================== HELPER: Detect category from handle (Wix URL) ====================
 
-# ALLOWED CATEGORIES - Only these 5 categories are sold by Luxura
-ALLOWED_CATEGORIES = {'genius', 'tape', 'i-tip', 'halo', 'essentiels'}
+# ALLOWED CATEGORIES - All 7 categories sold by Luxura
+ALLOWED_CATEGORIES = {'genius', 'tape', 'i-tip', 'halo', 'essentiels', 'ponytail', 'clip-in'}
 
-# EXCLUDED PRODUCTS - Products to skip (Clips, Ponytails, etc.)
-EXCLUDED_KEYWORDS = ['clips', 'ponytail', 'queue de cheval', 'test']
+# EXCLUDED PRODUCTS - Products to skip (test products only)
+EXCLUDED_KEYWORDS = ['test']
 
 def detect_category_from_handle(handle: str, name: str) -> str:
     """Detect product category from Wix handle - more accurate than name-based detection
-    Returns None for products that should be excluded (Clips, Ponytails, etc.)
+    Returns None for products that should be excluded (test products only)
     """
     if not handle:
         handle = ""
     handle_lower = handle.lower()
     name_lower = name.lower()
     
-    # EXCLUDE: Clips, Ponytails, and other non-sold products
+    # EXCLUDE: Test products only
     for excluded in EXCLUDED_KEYWORDS:
         if excluded in handle_lower or excluded in name_lower:
             return None  # Will be filtered out
     
-    # Priority 1: Check handle (most reliable - matches Wix URLs)
-    if 'genius' in handle_lower or 'vivian' in handle_lower or 'trame-invisible' in handle_lower:
+    # PRIORITY 0: Check name FIRST for specific series names (most reliable)
+    # This catches cases where handle is wrong but name is correct
+    if 'vivian' in name_lower:
         return 'genius'
-    elif 'halo' in handle_lower or ('everly' in handle_lower and 'clips' not in handle_lower):
+    if 'victoria' in name_lower:
+        return 'ponytail'
+    if 'sophia' in name_lower:
+        return 'clip-in'
+    if 'everly' in name_lower and ('clip' not in name_lower and 'ponytail' not in name_lower):
+        return 'halo'
+    if 'aurora' in name_lower:
+        return 'tape'
+    if 'eleanor' in name_lower:
+        return 'i-tip'
+    
+    # Priority 1: Check handle (reliable for URLs)
+    # NEW: Ponytail (Victoria series) - STRICT: must have ponytail keyword
+    if 'ponytail' in handle_lower or 'queue-de-cheval' in handle_lower:
+        return 'ponytail'
+    # NEW: Clip-In (Sophia series) - STRICT: must have clip-in or clips keyword
+    elif 'clip-in' in handle_lower or 'clips' in handle_lower:
+        return 'clip-in'
+    elif 'genius' in handle_lower or 'vivian' in handle_lower or 'trame-invisible' in handle_lower:
+        return 'genius'
+    elif 'halo' in handle_lower or 'everly' in handle_lower:
         return 'halo'
     elif 'bande' in handle_lower or 'aurora' in handle_lower or 'tape' in handle_lower or 'adhésive' in handle_lower:
         return 'tape'
@@ -151,12 +172,16 @@ def detect_category_from_handle(handle: str, name: str) -> str:
         if keyword in name_lower or keyword in handle_lower:
             return 'essentiels'
     
-    # Priority 3: Fallback to name-based detection
-    if 'genius' in name_lower or 'trame invisible' in name_lower or 'vivian' in name_lower:
+    # Priority 3: Fallback to name-based detection - STRICT matching
+    if 'ponytail' in name_lower:
+        return 'ponytail'
+    elif 'clip-in' in name_lower:
+        return 'clip-in'
+    elif 'genius' in name_lower or 'trame invisible' in name_lower:
         return 'genius'
-    elif 'halo' in name_lower and 'clips' not in name_lower:
+    elif 'halo' in name_lower:
         return 'halo'
-    elif 'bande' in name_lower or 'adhésive' in name_lower or 'aurora' in name_lower:
+    elif 'bande' in name_lower or 'adhésive' in name_lower:
         return 'tape'
     elif 'i-tip' in name_lower or 'itip' in name_lower:
         return 'i-tip'
@@ -963,7 +988,9 @@ async def get_categories():
         Category(id="halo", name="Halo", description="Extensions Halo - Effet naturel et invisible", image="https://static.wixstatic.com/media/de6cdb_6ad19e7a2a2749c8899daf8f972180fe~mv2.jpg/v1/fill/w_600,h_600,q_85/low-angle-young-woman-nature.jpg", wix_url="https://www.luxuradistribution.com/halo", order=2),
         Category(id="tape", name="Bande Adhésive", description="Extensions à bande adhésive professionnelle", image="https://static.wixstatic.com/media/de6cdb_8baf5d4bb6a14e0d9f8b302234b6f500~mv2.jpg/v1/fill/w_600,h_600,q_85/portrait-young-blonde-woman-with-with-tanned-skin-fashion-clothing.jpg", wix_url="https://www.luxuradistribution.com/tape", order=3),
         Category(id="i-tip", name="I-Tip", description="Extensions i-TIP - Précision et personnalisation", image="https://static.wixstatic.com/media/de6cdb_324e161652d54a5298af88e97359f00c~mv2.jpg/v1/fill/w_600,h_600,q_85/2024-11-29_11-29-28_edited.jpg", wix_url="https://www.luxuradistribution.com/i-tip", order=4),
-        Category(id="essentiels", name="Essentiels", description="Outils et produits d'entretien professionnels", image="https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg/v1/fill/w_600,h_600,q_85/s-l1200.jpg", wix_url="https://www.luxuradistribution.com/essentiels", order=5),
+        Category(id="ponytail", name="Queue de Cheval", description="Ponytail Victoria - Volume XXL instantané", image="https://static.wixstatic.com/media/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png", wix_url="https://www.luxuradistribution.com/ponytail", order=5),
+        Category(id="clip-in", name="Extensions à Clips", description="Clip-In Sophia - Volume et longueur sans engagement", image="https://static.wixstatic.com/media/f1b961_1e9953c3551440479117fa2954918173~mv2.png", wix_url="https://www.luxuradistribution.com/clip-in", order=6),
+        Category(id="essentiels", name="Essentiels", description="Outils et produits d'entretien professionnels", image="https://static.wixstatic.com/media/de6cdb_5ba6af2b449d44039ce9c23d3517953b~mv2.jpg/v1/fill/w_600,h_600,q_85/s-l1200.jpg", wix_url="https://www.luxuradistribution.com/essentiels", order=7),
     ]
     return categories
 
