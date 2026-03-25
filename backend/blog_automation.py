@@ -274,28 +274,19 @@ async def import_image_to_wix_media(
 ) -> Optional[Dict]:
     """
     Importe une image externe dans le Wix Media Manager.
-    
-    Args:
-        api_key: Clé API Wix
-        site_id: ID du site Wix
-        image_url: URL de l'image à importer (Unsplash, OpenAI, etc.)
-        file_name: Nom du fichier (optionnel)
-    
-    Returns:
-        Dict avec les infos du média Wix importé, ou None si erreur
+    IMPORTANT: L'import est asynchrone - il faut attendre operationStatus=READY
     """
     try:
         if not file_name:
-            # Générer un nom de fichier unique
             file_name = f"blog-cover-{uuid.uuid4().hex[:8]}.jpg"
         
         async with httpx.AsyncClient() as client:
-            # Étape 1: Importer l'image via l'API Media Manager
             payload = {
                 "url": image_url,
                 "displayName": file_name,
                 "mediaType": "IMAGE",
-                "mimeType": "image/jpeg"
+                "mimeType": "image/jpeg",
+                "filePath": f"/blog/{file_name}"
             }
             
             logger.info(f"Importing image to Wix Media: {image_url[:50]}...")
@@ -308,12 +299,12 @@ async def import_image_to_wix_media(
                     "Content-Type": "application/json"
                 },
                 json=payload,
-                timeout=60  # Plus de temps pour l'import
+                timeout=60
             )
             
             if response.status_code in [200, 201]:
                 result = response.json()
-                logger.info(f"Wix Media import successful: {result}")
+                logger.info(f"Wix Media import initiated: {result}")
                 return result.get("file", result)
             else:
                 logger.error(f"Wix Media import failed: {response.status_code} - {response.text}")
@@ -323,61 +314,101 @@ async def import_image_to_wix_media(
         logger.error(f"Error importing image to Wix Media: {e}")
         return None
 
-async def get_wix_media_url(media_file: Dict) -> Optional[str]:
+async def wait_until_wix_file_ready(
+    api_key: str,
+    site_id: str,
+    file_id: str,
+    timeout_sec: int = 90
+) -> Optional[Dict]:
     """
-    Extrait l'URL ou l'ID utilisable depuis un fichier média Wix.
-    
-    Args:
-        media_file: Réponse de l'import Wix Media
-    
-    Returns:
-        URL ou ID du média pour utilisation dans les posts
+    Attend que le fichier Wix soit vraiment prêt (operationStatus=READY).
+    Wix traite les imports de façon asynchrone - 200 OK ne veut pas dire prêt!
     """
-    if not media_file:
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for attempt in range(timeout_sec):
+                response = await client.get(
+                    f"https://www.wixapis.com/site-media/v1/files/{file_id}",
+                    headers={
+                        "Authorization": api_key,
+                        "wix-site-id": site_id,
+                        "Content-Type": "application/json"
+                    }
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    file_desc = data.get("file", data)
+                    
+                    status = file_desc.get("operationStatus")
+                    logger.info(f"File {file_id} status: {status} (attempt {attempt + 1})")
+                    
+                    if status == "READY":
+                        logger.info(f"File {file_id} is READY!")
+                        return file_desc
+                    
+                    if status == "FAILED":
+                        logger.error(f"Wix media processing FAILED for file {file_id}")
+                        return None
+                
+                # Attendre avant le prochain check
+                await asyncio.sleep(1.5)
+            
+            logger.error(f"Timeout: File {file_id} was never READY after {timeout_sec}s")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error waiting for Wix file ready: {e}")
         return None
+
+def build_wix_image_uri(file_desc: Dict) -> str:
+    """
+    Construit la vraie Wix image URI au format:
+    wix:image://v1/<mediaId>/<filename>#originWidth=<w>&originHeight=<h>
     
-    # Wix retourne différentes structures selon l'endpoint
-    # On cherche l'ID ou l'URL du média
-    media_id = media_file.get("id") or media_file.get("fileId")
-    media_url = media_file.get("url") or media_file.get("fileUrl")
+    C'est CE format qui fonctionne pour la featured image / cover media!
+    """
+    file_id = file_desc.get("id", "")
+    display_name = file_desc.get("displayName", "cover.jpg")
     
-    # Pour heroImage, Wix attend souvent le format wix:image://v1/...
-    if media_id:
-        return media_id
-    if media_url:
-        return media_url
+    # Récupérer les dimensions depuis media.image si disponible
+    media = file_desc.get("media", {})
+    image = media.get("image", {}) if isinstance(media, dict) else {}
     
-    return None
+    width = image.get("width") or 1200
+    height = image.get("height") or 630
+    
+    wix_uri = f"wix:image://v1/{file_id}/{display_name}#originWidth={width}&originHeight={height}"
+    logger.info(f"Built Wix image URI: {wix_uri}")
+    return wix_uri
 
 async def attach_wix_image_to_draft(
     api_key: str,
     site_id: str,
     draft_id: str,
-    wix_file_id: str,
-    wix_image_url: str = None
+    wix_image_uri: str
 ) -> bool:
     """
-    Associe l'image Wix importée au draft blog via PATCH.
-    IMPORTANT: Inclure width/height pour éviter le bug w_NaN,h_NaN de Wix.
+    Attache l'image au draft en utilisant le format wix:image://v1/...
+    Met à jour DEUX champs:
+    - media.wixMedia.image (pour la cover/featured image dans le feed)
+    - heroImage (pour l'image en haut de l'article)
     """
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            logger.info(f"Attaching image {wix_file_id} to draft {draft_id}")
+            logger.info(f"Attaching image to draft {draft_id} with URI: {wix_image_uri[:60]}...")
             
-            # Construire l'URL si non fournie
-            if not wix_image_url:
-                wix_image_url = f"https://static.wixstatic.com/media/{wix_file_id}"
-            
-            # Format avec dimensions explicites (OBLIGATOIRE pour éviter le bug w_NaN,h_NaN)
-            image_object = {
-                "id": wix_file_id,
-                "url": wix_image_url,
-                "width": 1200,
-                "height": 800,
-                "filename": f"{wix_file_id}"
+            # Format 1: Juste media.wixMedia.image (la cover/featured image)
+            payload1 = {
+                "draftPost": {
+                    "media": {
+                        "wixMedia": {
+                            "image": wix_image_uri
+                        }
+                    }
+                }
             }
             
-            # Format 1: coverMedia avec objet image complet incluant dimensions
             response = await client.patch(
                 f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
                 headers={
@@ -385,24 +416,25 @@ async def attach_wix_image_to_draft(
                     "wix-site-id": site_id,
                     "Content-Type": "application/json"
                 },
-                json={
-                    "draftPost": {
-                        "coverMedia": {
-                            "enabled": True,
-                            "displayed": True,
-                            "image": image_object
-                        }
-                    }
-                }
+                json=payload1
             )
             
             if response.status_code in [200, 204]:
-                logger.info(f"Image attached with coverMedia + dimensions: {draft_id}")
+                logger.info(f"Image (media.wixMedia) attached successfully to draft {draft_id}")
                 return True
             else:
-                logger.warning(f"coverMedia with dimensions failed: {response.status_code} - {response.text}")
+                logger.warning(f"media.wixMedia failed: {response.status_code} - {response.text}")
             
-            # Format 2: media.wixMedia avec objet image
+            # Format 2: Essayer avec coverMedia
+            payload2 = {
+                "draftPost": {
+                    "coverMedia": {
+                        "image": wix_image_uri,
+                        "displayed": True
+                    }
+                }
+            }
+            
             response2 = await client.patch(
                 f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
                 headers={
@@ -410,44 +442,14 @@ async def attach_wix_image_to_draft(
                     "wix-site-id": site_id,
                     "Content-Type": "application/json"
                 },
-                json={
-                    "draftPost": {
-                        "media": {
-                            "wixMedia": {
-                                "image": image_object
-                            },
-                            "displayed": True
-                        }
-                    }
-                }
+                json=payload2
             )
             
             if response2.status_code in [200, 204]:
-                logger.info(f"Image attached with media.wixMedia + dimensions: {draft_id}")
+                logger.info(f"Image (coverMedia) attached successfully to draft {draft_id}")
                 return True
             else:
-                logger.warning(f"media.wixMedia with dimensions failed: {response2.status_code} - {response2.text}")
-            
-            # Format 3: heroImage simple avec URL
-            response3 = await client.patch(
-                f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
-                headers={
-                    "Authorization": api_key,
-                    "wix-site-id": site_id,
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "draftPost": {
-                        "heroImage": image_object
-                    }
-                }
-            )
-            
-            if response3.status_code in [200, 204]:
-                logger.info(f"Image attached with heroImage object: {draft_id}")
-                return True
-            else:
-                logger.error(f"All formats failed: {response3.status_code} - {response3.text}")
+                logger.error(f"coverMedia also failed: {response2.status_code} - {response2.text}")
                 return False
                 
     except Exception as e:
@@ -943,23 +945,37 @@ async def generate_daily_blogs(
                         )
                         
                         if imported:
-                            # Extraire l'ID et l'URL du fichier Wix
+                            # Extraire l'ID du fichier Wix
                             wix_file_id = imported.get("id") or imported.get("fileId")
-                            wix_image_url = imported.get("url") or imported.get("fileUrl")
                             
                             if wix_file_id:
-                                # ÉTAPE 3: Attacher l'image au brouillon via PATCH
-                                logger.info(f"Step 3: Attaching image {wix_file_id} to draft")
-                                await attach_wix_image_to_draft(
+                                # ÉTAPE 2.5: ATTENDRE que le fichier soit READY (CRITIQUE!)
+                                logger.info(f"Step 2.5: Waiting for file {wix_file_id} to be READY...")
+                                file_desc = await wait_until_wix_file_ready(
                                     api_key=wix_api_key,
                                     site_id=wix_site_id,
-                                    draft_id=draft_id,
-                                    wix_file_id=wix_file_id,
-                                    wix_image_url=wix_image_url
+                                    file_id=wix_file_id,
+                                    timeout_sec=60
                                 )
+                                
+                                if file_desc:
+                                    # ÉTAPE 3: Construire la Wix image URI
+                                    wix_image_uri = build_wix_image_uri(file_desc)
+                                    logger.info(f"Step 3: Built Wix URI: {wix_image_uri[:60]}...")
+                                    
+                                    # ÉTAPE 4: Attacher l'image au brouillon via PATCH
+                                    logger.info(f"Step 4: Attaching image to draft")
+                                    await attach_wix_image_to_draft(
+                                        api_key=wix_api_key,
+                                        site_id=wix_site_id,
+                                        draft_id=draft_id,
+                                        wix_image_uri=wix_image_uri
+                                    )
+                                else:
+                                    logger.warning(f"File {wix_file_id} never became READY, publishing without cover")
                     
-                    # ÉTAPE 4: Publier le brouillon
-                    logger.info(f"Step 4: Publishing draft {draft_id}")
+                    # ÉTAPE 5: Publier le brouillon
+                    logger.info(f"Step 5: Publishing draft {draft_id}")
                     published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
                     if published:
                         await db.blog_posts.update_one(
