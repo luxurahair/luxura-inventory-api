@@ -261,6 +261,80 @@ const SEO_TEMPLATES: { [category: string]: SEOContent } = {
         ]
       }
     ]
+  },
+  ponytail: {
+    intro: "Queue de cheval XXL Victoria pour un volume spectaculaire instantané. Fixation facile par clip ou cordon élastique. Idéal pour les événements spéciaux ou le quotidien au Québec.",
+    sections: [
+      {
+        title: "CONCEPT",
+        items: [
+          "Fixation par clip robuste",
+          "Cordon élastique ajustable",
+          "Application en moins de 2 minutes",
+          "Retrait instantané"
+        ]
+      },
+      {
+        title: "QUALITÉ PREMIUM",
+        items: [
+          "100% cheveux humains vierges Remy",
+          "Volume XXL naturel",
+          "Cuticules intactes",
+          "Qualité salon professionnel Québec"
+        ]
+      },
+      {
+        title: "DURÉE DE VIE",
+        items: [
+          "Jusqu'à 12 mois avec bon entretien"
+        ]
+      },
+      {
+        title: "APPLICATION",
+        items: [
+          "Auto-application simple",
+          "Compatible tous types de cheveux",
+          "Styles multiples possibles"
+        ]
+      }
+    ]
+  },
+  "clip-in": {
+    intro: "Extensions à clips Sophia pour volume et longueur sans engagement. Application rapide et invisible, retrait instantané. Parfait pour les femmes actives du Québec.",
+    sections: [
+      {
+        title: "CONCEPT",
+        items: [
+          "Clips silicones antidérapants",
+          "Trame invisible ultra-fine",
+          "Application en moins de 5 minutes",
+          "100% réversible sans dommage"
+        ]
+      },
+      {
+        title: "QUALITÉ PREMIUM",
+        items: [
+          "100% cheveux humains vierges Remy",
+          "Cuticules alignées naturellement",
+          "Mouvement fluide et naturel",
+          "Standard salon haut de gamme Montréal"
+        ]
+      },
+      {
+        title: "DURÉE DE VIE",
+        items: [
+          "12 à 18 mois avec entretien approprié"
+        ]
+      },
+      {
+        title: "APPLICATION",
+        items: [
+          "Auto-application simple",
+          "Aucune aide requise",
+          "Retrait en quelques secondes"
+        ]
+      }
+    ]
   }
 };
 

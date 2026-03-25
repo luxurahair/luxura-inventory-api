@@ -269,7 +269,9 @@ def generate_product_name_from_handle(handle: str, category: str) -> str:
         "halo": "Everly",
         "genius": "Vivian",
         "tape": "Aurora",
-        "i-tip": "Eleanor"
+        "i-tip": "Eleanor",
+        "ponytail": "Victoria",
+        "clip-in": "Sophia"
     }
     
     # Type de produit
@@ -277,7 +279,9 @@ def generate_product_name_from_handle(handle: str, category: str) -> str:
         "halo": "Halo",
         "genius": "Genius",
         "tape": "Bande Adhésive",
-        "i-tip": "I-Tip"
+        "i-tip": "I-Tip",
+        "ponytail": "Queue de Cheval",
+        "clip-in": "Extensions à Clips"
     }
     
     handle_lower = handle.lower()
@@ -314,7 +318,7 @@ def generate_product_name_from_handle(handle: str, category: str) -> str:
                 parts = parts[:-1]
         
         # Nettoyer les parties
-        skip_words = {'serie', 'série', 'trame', 'invisible', 'bande', 'adhesive', 'adhésive'}
+        skip_words = {'serie', 'série', 'trame', 'invisible', 'bande', 'adhesive', 'adhésive', 'aurora', 'everly', 'vivian', 'eleanor', 'victoria', 'sophia'}
         cleaned_parts = []
         for p in parts:
             p_lower = p.lower()
@@ -834,9 +838,9 @@ async def get_products(
                 # Clean up name (remove variant suffix)
                 clean_name = name.split(' — ')[0].strip()
                 
-                # TOUJOURS générer le nom de luxe depuis le handle pour les catégories principales
+                # TOUJOURS générer le nom de luxe depuis le handle pour TOUTES les catégories d'extensions
                 # Cela garantit que les noms sont cohérents et utilisent la nomenclature Luxura
-                if category in ['halo', 'genius', 'tape', 'i-tip']:
+                if category in ['halo', 'genius', 'tape', 'i-tip', 'ponytail', 'clip-in']:
                     clean_name = generate_product_name_from_handle(handle, category)
                 
                 # Get image
@@ -860,13 +864,23 @@ async def get_products(
                 # Sort variants by length/weight
                 sorted_variants = sorted(variants, key=lambda v: (v.get('length', ''), v.get('weight', '')))
                 
+                # Mapping des séries par catégorie
+                series_map = {
+                    "halo": "Everly",
+                    "genius": "Vivian", 
+                    "tape": "Aurora",
+                    "i-tip": "Eleanor",
+                    "ponytail": "Victoria",
+                    "clip-in": "Sophia"
+                }
+                
                 product_data = {
                     "id": parent.get('id'),
                     "name": clean_name,
                     "price": price,
                     "description": clean_html(parent.get('description', '')),
                     "category": category,
-                    "series": "Everly" if category == "halo" else ("Vivian" if category == "genius" else ("Aurora" if category == "tape" else "Eleanor")),
+                    "series": series_map.get(category, "Luxura"),
                     "images": [image],
                     "in_stock": data['any_in_stock'],
                     "is_in_stock": data['any_in_stock'],
@@ -885,7 +899,7 @@ async def get_products(
                 result.append(product_data)
             
             # Sort by category order, then by name
-            category_order = {'genius': 0, 'halo': 1, 'tape': 2, 'i-tip': 3, 'essentiels': 4}
+            category_order = {'genius': 0, 'halo': 1, 'tape': 2, 'i-tip': 3, 'ponytail': 4, 'clip-in': 5, 'essentiels': 6}
             result.sort(key=lambda x: (category_order.get(x['category'], 99), x['name']))
             
             return result
@@ -953,8 +967,8 @@ async def get_product(product_id: int):
             # Clean name (remove variant suffix)
             clean_name = name.split(' — ')[0].strip()
             
-            # Générer le nom de luxe depuis le handle pour les catégories principales
-            if category in ['halo', 'genius', 'tape', 'i-tip']:
+            # Générer le nom de luxe depuis le handle pour TOUTES les catégories d'extensions
+            if category in ['halo', 'genius', 'tape', 'i-tip', 'ponytail', 'clip-in']:
                 clean_name = generate_product_name_from_handle(handle, category)
             
             # Process variants with real inventory quantities
@@ -997,6 +1011,16 @@ async def get_product(product_id: int):
                 # Sort variants by length/weight
                 variants = sorted(variants, key=lambda v: (v.get('length', ''), v.get('weight', '')))
                 
+                # Mapping des séries par catégorie
+                series_map = {
+                    "halo": "Everly",
+                    "genius": "Vivian", 
+                    "tape": "Aurora",
+                    "i-tip": "Eleanor",
+                    "ponytail": "Victoria",
+                    "clip-in": "Sophia"
+                }
+                
                 # Use parent product info if available
                 if parent_product:
                     # Ne pas écraser clean_name si c'est un nom de luxe déjà généré
@@ -1010,6 +1034,7 @@ async def get_product(product_id: int):
                     "price": p.get('price', 0),
                     "description": description,
                     "category": category,
+                    "series": series_map.get(category, "Luxura"),
                     "images": [image],
                     "in_stock": any_in_stock,
                     "total_quantity": total_quantity,
@@ -1021,12 +1046,23 @@ async def get_product(product_id: int):
                 }
             
             # Fallback if we can't get all products
+            # Mapping des séries par catégorie
+            series_map_fallback = {
+                "halo": "Everly",
+                "genius": "Vivian", 
+                "tape": "Aurora",
+                "i-tip": "Eleanor",
+                "ponytail": "Victoria",
+                "clip-in": "Sophia"
+            }
+            
             return {
                 "id": p.get('id'),
                 "name": clean_name,
                 "price": p.get('price', 0),
                 "description": clean_html(p.get('description', '')),
                 "category": category,
+                "series": series_map_fallback.get(category, "Luxura"),
                 "images": [image],
                 "in_stock": p.get('is_in_stock', False) or p.get('quantity', 0) > 0,
                 "total_quantity": p.get('quantity', 0),
