@@ -935,8 +935,8 @@ async def get_products(
                     "category": category,
                     "series": series_map.get(category, "Luxura"),
                     "images": [image],
-                    "in_stock": data['any_in_stock'],
-                    "is_in_stock": data['any_in_stock'],
+                    "in_stock": data['total_quantity'] > 0,  # Basé sur la quantité réelle, pas sur Wix
+                    "is_in_stock": data['total_quantity'] > 0,
                     "total_quantity": data['total_quantity'],
                     "quantity": data['total_quantity'],  # Add quantity field for compatibility
                     "sku": parent.get('sku'),
