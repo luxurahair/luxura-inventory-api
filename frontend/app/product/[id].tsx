@@ -88,131 +88,135 @@ interface SEOContent {
   sections: SEOSection[];
 }
 
-// Descriptions SEO par catégorie de produit
+// Descriptions SEO optimisées par catégorie de produit
+// Mots-clés ciblés : extensions cheveux Québec, Montréal, Canada, cheveux naturels, Remy hair
 const SEO_TEMPLATES: { [category: string]: SEOContent } = {
   halo: {
-    intro: "Extensions Halo à volume instantané sans engagement. Système avec fil invisible ajustable qui repose confortablement sur la tête, sans fixation permanente. Idéal pour femmes au Québec cherchant volume et longueur naturels.",
+    intro: "Extensions Halo Everly – Volume instantané zéro dommage. Fil invisible breveté qui repose confortablement sans tirer. La méthode la plus sécuritaire pour cheveux fins ou fragilisés. Livraison rapide partout au Québec.",
     sections: [
       {
-        title: "CONCEPT",
+        title: "CONCEPT UNIQUE",
         items: [
-          "Fil invisible ajustable",
-          "Aucune fixation permanente",
-          "100% réversible",
+          "Fil invisible ajustable breveté",
+          "Poids réparti uniformément sur la tête",
+          "Zéro traction – protège contre l'alopécie",
           "Application en moins de 2 minutes",
-          "Retrait instantané sans aide professionnelle"
+          "Retrait instantané sans aide"
         ]
       },
       {
         title: "QUALITÉ PREMIUM",
         items: [
           "100% cheveux humains vierges Remy",
-          "Cuticules intactes",
-          "Mouvement naturel",
-          "Finition professionnelle salon Québec"
+          "Cuticules intactes alignées",
+          "Mouvement fluide et naturel",
+          "Provenance éthique certifiée"
         ]
       },
       {
         title: "DURÉE DE VIE",
         items: [
-          "Jusqu'à 12 mois et plus avec bon entretien"
+          "12 à 18 mois avec entretien approprié",
+          "Achat unique – économique à long terme"
         ]
       },
       {
         title: "APPLICATION",
         items: [
-          "Auto-application simple",
-          "Aucune aide requise",
-          "Ajustement rapide et facile"
+          "Auto-installation en 2 minutes",
+          "Aucune colle, clip ou couture",
+          "Ajustement rapide et discret"
         ]
       }
     ]
   },
   genius: {
-    intro: "Extensions Genius Weft à trame invisible ultra-fine. La technologie de pointe pour un volume spectaculaire et un confort inégalé. Parfait pour les salons professionnels de Montréal à Québec.",
+    intro: "Extensions Genius Weft Vivian – Trame ultra-fine révolutionnaire de 0.78mm. La technologie la plus avancée pour volume maximal avec minimum de matériel. Choix #1 des stylistes professionnels de Montréal à Québec.",
     sections: [
       {
-        title: "TECHNOLOGIE",
+        title: "TECHNOLOGIE AVANCÉE",
         items: [
-          "Trame invisible ultra-fine",
-          "Zéro tension sur le cuir chevelu",
-          "Couture plate professionnelle",
-          "Installation en moins de 45 minutes"
+          "Trame ultra-fine 0.78mm invisible",
+          "Découpable n'importe où sans effilochage",
+          "Moins de rangées = moins de tension",
+          "Plat contre le cuir chevelu"
         ]
       },
       {
         title: "QUALITÉ PREMIUM",
         items: [
           "100% cheveux humains vierges Remy",
-          "Cuticules alignées naturellement",
-          "Texture soyeuse premium",
-          "Qualité salon haut de gamme Québec"
+          "Densité supérieure par trame",
+          "Cuticules parfaitement alignées",
+          "Qualité salon luxe Canada"
         ]
       },
       {
         title: "DURÉE DE VIE",
         items: [
-          "12 à 18 mois avec entretien professionnel"
+          "12 à 18 mois avec entretien professionnel",
+          "Réutilisable 2-3 fois minimum"
         ]
       },
       {
         title: "APPLICATION",
         items: [
-          "Installation par professionnel recommandée",
-          "Couture ou micro-anneaux",
-          "Réutilisable plusieurs fois"
+          "Installation professionnelle recommandée",
+          "Couture plate ou micro-anneaux",
+          "Temps réduit vs autres méthodes"
         ]
       }
     ]
   },
   tape: {
-    intro: "Extensions à bande adhésive professionnelle Aurora. Application rapide et invisible pour un volume naturel instantané. Populaire dans les salons de St-Georges à Montréal.",
+    intro: "Extensions Bande Adhésive Aurora – Pose sandwich invisible et confortable. Adhésif médical hypoallergénique pour une tenue sécuritaire. Solution populaire dans les salons professionnels de St-Georges à Montréal.",
     sections: [
       {
-        title: "CONCEPT",
+        title: "CONCEPT SANDWICH",
         items: [
-          "Bande adhésive médicale",
-          "Pose sandwich invisible",
-          "Confort toute la journée",
-          "Aucun dommage aux cheveux"
+          "Bande adhésive médicale premium",
+          "Pose invisible entre deux mèches",
+          "Confort optimal toute la journée",
+          "Aucun dommage aux cheveux naturels"
         ]
       },
       {
         title: "QUALITÉ PREMIUM",
         items: [
-          "100% cheveux humains Remy",
-          "Cuticules intactes",
-          "Adhésif hypoallergénique",
-          "Approuvé salons professionnels Canada"
+          "100% cheveux humains vierges Remy",
+          "Adhésif hypoallergénique testé",
+          "Cuticules intactes et alignées",
+          "Approuvé salons Canada"
         ]
       },
       {
         title: "DURÉE DE VIE",
         items: [
           "6 à 8 semaines par pose",
-          "Réutilisable 3-4 fois"
+          "Cheveux réutilisables 3-4 fois",
+          "Économique sur 12-18 mois"
         ]
       },
       {
         title: "APPLICATION",
         items: [
-          "Pose rapide 30-45 minutes",
-          "Retrait facile avec solvant",
-          "Repositionnable"
+          "Pose professionnelle 30-45 min",
+          "Retrait facile avec solvant doux",
+          "Repositionnable facilement"
         ]
       }
     ]
   },
   "i-tip": {
-    intro: "Extensions I-Tip à kératine pour une fusion naturelle et durable. Technique de pointe utilisée par les meilleurs stylistes du Québec pour un résultat imperceptible.",
+    intro: "Extensions I-Tip Eleanor – Fusion kératine froide mèche par mèche. Technique premium pour un résultat ultra-naturel imperceptible. Méthode préférée des stylistes haut de gamme au Québec.",
     sections: [
       {
-        title: "TECHNOLOGIE",
+        title: "TECHNOLOGIE KÉRATINE",
         items: [
-          "Pointe kératine italienne",
-          "Fusion à chaud précise",
-          "Mèche par mèche naturelle",
-          "Invisible à l'œil nu"
+          "Pointe kératine italienne premium",
+          "Fusion froide sans chaleur excessive",
+          "Installation mèche par mèche",
+          "Invisible même à l'inspection proche"
         ]
       },
       {
@@ -227,50 +231,52 @@ const SEO_TEMPLATES: { [category: string]: SEOContent } = {
       {
         title: "DURÉE DE VIE",
         items: [
-          "4 à 6 mois par application",
-          "Cheveux réutilisables 2-3 fois"
+          "3 à 4 mois par application",
+          "Cheveux réutilisables 2-3 fois",
+          "Rentable sur le long terme"
         ]
       },
       {
         title: "APPLICATION",
         items: [
           "Installation professionnelle requise",
-          "Pince à fusion ou ultrason",
-          "Retrait avec pince spécialisée"
+          "Micro-anneaux silicone ou fusion",
+          "Retrait doux avec pince spécialisée"
         ]
       }
     ]
   },
   essentiels: {
-    intro: "Outils et produits d'entretien professionnels Luxura. Essentiels pour maintenir la beauté et la longévité de vos extensions capillaires.",
+    intro: "Outils et produits d'entretien professionnels Luxura. Essentiels pour maximiser la beauté et prolonger la durée de vie de vos extensions capillaires premium.",
     sections: [
       {
-        title: "QUALITÉ",
+        title: "QUALITÉ PROFESSIONNELLE",
         items: [
-          "Produits professionnels salon",
-          "Formules douces sans sulfate",
-          "Testés et approuvés par experts"
+          "Formules salon haut de gamme",
+          "Sans sulfate ni parabène",
+          "Testés par coiffeurs experts",
+          "Compatibles toutes extensions"
         ]
       },
       {
-        title: "UTILISATION",
+        title: "UTILISATION FACILE",
         items: [
           "Instructions détaillées incluses",
-          "Compatible toutes extensions",
-          "Résultats garantis"
+          "Résultats visibles immédiatement",
+          "Support client Québec disponible"
         ]
       }
     ]
   },
   ponytail: {
-    intro: "Queue de cheval XXL Victoria pour un volume spectaculaire instantané. Fixation facile par clip ou cordon élastique. Idéal pour les événements spéciaux ou le quotidien au Québec.",
+    intro: "Queue de Cheval Victoria – Volume XXL spectaculaire en 30 secondes. Fixation wrap-around ultra-sécurisée ou clip robuste. Transformation instantanée pour événements ou quotidien au Québec.",
     sections: [
       {
-        title: "CONCEPT",
+        title: "APPLICATION ÉCLAIR",
         items: [
-          "Fixation par clip robuste",
-          "Cordon élastique ajustable",
-          "Application en moins de 2 minutes",
+          "Installation en 30 secondes",
+          "Fixation wrap-around sécurisée",
+          "Clip robuste option alternative",
           "Retrait instantané"
         ]
       },
@@ -278,60 +284,64 @@ const SEO_TEMPLATES: { [category: string]: SEOContent } = {
         title: "QUALITÉ PREMIUM",
         items: [
           "100% cheveux humains vierges Remy",
-          "Volume XXL naturel",
-          "Cuticules intactes",
-          "Qualité salon professionnel Québec"
+          "Volume XXL naturel garanti",
+          "Cuticules intactes et alignées",
+          "Qualité salon professionnel"
         ]
       },
       {
         title: "DURÉE DE VIE",
         items: [
-          "Jusqu'à 12 mois avec bon entretien"
+          "12 mois et plus avec bon entretien",
+          "Réutilisation illimitée",
+          "Investissement économique"
         ]
       },
       {
-        title: "APPLICATION",
+        title: "POLYVALENCE",
         items: [
-          "Auto-application simple",
           "Compatible tous types de cheveux",
-          "Styles multiples possibles"
+          "Styles multiples possibles",
+          "Parfait événements spéciaux"
         ]
       }
     ]
   },
   "clip-in": {
-    intro: "Extensions à clips Sophia pour volume et longueur sans engagement. Application rapide et invisible, retrait instantané. Parfait pour les femmes actives du Québec.",
+    intro: "Extensions à Clips Sophia – Volume et longueur sans engagement permanent. Clips silicone antidérapants ultra-discrets. Solution parfaite pour femmes actives du Québec cherchant flexibilité totale.",
     sections: [
       {
-        title: "CONCEPT",
+        title: "LIBERTÉ TOTALE",
         items: [
-          "Clips silicones antidérapants",
-          "Trame invisible ultra-fine",
           "Application en moins de 5 minutes",
-          "100% réversible sans dommage"
+          "Retrait en quelques secondes",
+          "100% réversible sans dommage",
+          "Portez quand vous voulez"
         ]
       },
       {
         title: "QUALITÉ PREMIUM",
         items: [
           "100% cheveux humains vierges Remy",
-          "Cuticules alignées naturellement",
-          "Mouvement fluide et naturel",
-          "Standard salon haut de gamme Montréal"
+          "Clips silicone antidérapants",
+          "Trame invisible ultra-fine",
+          "Mouvement fluide et naturel"
         ]
       },
       {
         title: "DURÉE DE VIE",
         items: [
-          "12 à 18 mois avec entretien approprié"
+          "12 à 18 mois avec entretien",
+          "Réutilisation quotidienne possible",
+          "Meilleur rapport qualité-prix"
         ]
       },
       {
-        title: "APPLICATION",
+        title: "IDÉAL POUR",
         items: [
-          "Auto-application simple",
-          "Aucune aide requise",
-          "Retrait en quelques secondes"
+          "Débutantes en extensions",
+          "Événements spéciaux",
+          "Usage occasionnel ou quotidien"
         ]
       }
     ]
