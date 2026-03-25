@@ -638,8 +638,23 @@ async def get_products(
             # Group products by handle
             products_by_handle = {}
             
+            # SKUs d'accessoires à exclure (pas des extensions capillaires)
+            ACCESSORY_SKUS = {
+                'brvolum', 'frotatif', 'wtapejr', 'ringcol', 'outkitins', 
+                '35822369', 'wtultra60', 'p-tape', 'wtapec22'
+            }
+            
             for p in products:
                 name = p.get('name', '')
+                sku = (p.get('sku') or '').lower()
+                
+                # Skip accessory products (not hair extensions)
+                if sku in ACCESSORY_SKUS:
+                    continue
+                
+                # Skip products with "?" in name (broken/unmapped products)
+                if '? #?' in name or name.endswith('? #?'):
+                    continue
                 
                 # Skip test products
                 if 'test' in name.lower() and p.get('price', 0) < 1:
