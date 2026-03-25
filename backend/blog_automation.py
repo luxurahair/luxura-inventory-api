@@ -353,22 +353,57 @@ async def attach_wix_image_to_draft(
     api_key: str,
     site_id: str,
     draft_id: str,
-    wix_file_id: str
+    wix_file_id: str,
+    wix_image_url: str = None
 ) -> bool:
     """
     Associe l'image Wix importée au draft blog via PATCH.
-    Utilise le format coverMedia qui fonctionne mieux que heroImage.
+    IMPORTANT: Inclure width/height pour éviter le bug w_NaN,h_NaN de Wix.
     """
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             logger.info(f"Attaching image {wix_file_id} to draft {draft_id}")
             
-            # Format Wix Media URI complet
-            # Le format est: wix:image://v1/{mediaId}/filename#originWidth=800&originHeight=600
-            wix_media_uri = f"wix:image://v1/{wix_file_id}/cover.jpg#originWidth=800&originHeight=600"
+            # Construire l'URL si non fournie
+            if not wix_image_url:
+                wix_image_url = f"https://static.wixstatic.com/media/{wix_file_id}"
             
-            # Essayer avec media.wixMedia.image (format recommandé 2025)
+            # Format avec dimensions explicites (OBLIGATOIRE pour éviter le bug w_NaN,h_NaN)
+            image_object = {
+                "id": wix_file_id,
+                "url": wix_image_url,
+                "width": 1200,
+                "height": 800,
+                "filename": f"{wix_file_id}"
+            }
+            
+            # Format 1: coverMedia avec objet image complet incluant dimensions
             response = await client.patch(
+                f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
+                headers={
+                    "Authorization": api_key,
+                    "wix-site-id": site_id,
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "draftPost": {
+                        "coverMedia": {
+                            "enabled": True,
+                            "displayed": True,
+                            "image": image_object
+                        }
+                    }
+                }
+            )
+            
+            if response.status_code in [200, 204]:
+                logger.info(f"Image attached with coverMedia + dimensions: {draft_id}")
+                return True
+            else:
+                logger.warning(f"coverMedia with dimensions failed: {response.status_code} - {response.text}")
+            
+            # Format 2: media.wixMedia avec objet image
+            response2 = await client.patch(
                 f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
                 headers={
                     "Authorization": api_key,
@@ -379,68 +414,41 @@ async def attach_wix_image_to_draft(
                     "draftPost": {
                         "media": {
                             "wixMedia": {
-                                "image": wix_media_uri
+                                "image": image_object
                             },
-                            "displayed": True,
-                            "custom": False
+                            "displayed": True
                         }
                     }
                 }
             )
             
-            if response.status_code in [200, 204]:
-                logger.info(f"Image attached successfully to draft {draft_id} (media.wixMedia)")
+            if response2.status_code in [200, 204]:
+                logger.info(f"Image attached with media.wixMedia + dimensions: {draft_id}")
                 return True
             else:
-                logger.warning(f"media.wixMedia format failed: {response.status_code} - {response.text}")
-                
-                # Fallback: essayer avec coverMedia
-                response2 = await client.patch(
-                    f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
-                    headers={
-                        "Authorization": api_key,
-                        "wix-site-id": site_id,
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "draftPost": {
-                            "coverMedia": {
-                                "enabled": True,
-                                "image": wix_media_uri
-                            }
-                        }
+                logger.warning(f"media.wixMedia with dimensions failed: {response2.status_code} - {response2.text}")
+            
+            # Format 3: heroImage simple avec URL
+            response3 = await client.patch(
+                f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
+                headers={
+                    "Authorization": api_key,
+                    "wix-site-id": site_id,
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "draftPost": {
+                        "heroImage": image_object
                     }
-                )
-                
-                if response2.status_code in [200, 204]:
-                    logger.info(f"Image attached successfully to draft {draft_id} (coverMedia)")
-                    return True
-                else:
-                    logger.warning(f"coverMedia format failed: {response2.status_code} - {response2.text}")
-                    
-                    # Fallback 2: essayer heroImage avec le format URI
-                    response3 = await client.patch(
-                        f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
-                        headers={
-                            "Authorization": api_key,
-                            "wix-site-id": site_id,
-                            "Content-Type": "application/json"
-                        },
-                        json={
-                            "draftPost": {
-                                "heroImage": {
-                                    "id": wix_media_uri
-                                }
-                            }
-                        }
-                    )
-                    
-                    if response3.status_code in [200, 204]:
-                        logger.info(f"Image attached successfully to draft {draft_id} (heroImage URI)")
-                        return True
-                    else:
-                        logger.error(f"All formats failed: {response3.status_code} - {response3.text}")
-                        return False
+                }
+            )
+            
+            if response3.status_code in [200, 204]:
+                logger.info(f"Image attached with heroImage object: {draft_id}")
+                return True
+            else:
+                logger.error(f"All formats failed: {response3.status_code} - {response3.text}")
+                return False
                 
     except Exception as e:
         logger.error(f"Error attaching image to draft: {e}")
@@ -934,8 +942,9 @@ async def generate_daily_blogs(
                         )
                         
                         if imported:
-                            # Extraire l'ID du fichier Wix
+                            # Extraire l'ID et l'URL du fichier Wix
                             wix_file_id = imported.get("id") or imported.get("fileId")
+                            wix_image_url = imported.get("url") or imported.get("fileUrl")
                             
                             if wix_file_id:
                                 # ÉTAPE 3: Attacher l'image au brouillon via PATCH
@@ -944,7 +953,8 @@ async def generate_daily_blogs(
                                     api_key=wix_api_key,
                                     site_id=wix_site_id,
                                     draft_id=draft_id,
-                                    wix_file_id=wix_file_id
+                                    wix_file_id=wix_file_id,
+                                    wix_image_url=wix_image_url
                                 )
                     
                     # ÉTAPE 4: Publier le brouillon
