@@ -928,7 +928,7 @@ async def get_products(
                 }
                 
                 product_data = {
-                    "id": parent.get('id'),
+                    "id": parent.get('id') or hash(handle) % 100000,  # Generate ID from handle if missing
                     "name": clean_name,
                     "price": price,
                     "description": clean_html(parent.get('description', '')),
