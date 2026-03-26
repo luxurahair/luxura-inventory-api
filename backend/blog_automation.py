@@ -575,29 +575,19 @@ async def create_wix_draft_post(
     """
     Crée un brouillon de post sur Wix Blog v3 API.
     
-    AMÉLIORATION 2026: 
-    - heroImage inclus directement à la création
-    - coverMedia ajouté en fallback (contourne bug d'affichage Wix)
-    - media.wixMedia.image en backup additionnel
-    
-    Args:
-        api_key: Clé API Wix
-        site_id: ID du site Wix
-        title: Titre du post
-        content: Contenu HTML
-        excerpt: Extrait/résumé
-        hero_image_uri: URI Wix de l'image (format: wix:image://v1/...)
-        member_id: ID du membre (obligatoire pour apps tierces)
-    
-    Returns:
-        Dict avec draftPost si succès, None sinon
+    STRATÉGIE 2026 - CONTOURNEMENT BUG HEROIMAGE:
+    L'image est insérée DANS LE CORPS de l'article (richContent)
+    comme premier élément visuel. Cela contourne complètement
+    le bug Wix où heroImage ne s'affiche pas sur desktop.
     """
     try:
         async with httpx.AsyncClient(timeout=80) as client:
-            # Convertir le contenu HTML en format Ricos (Wix rich content)
-            rich_content = html_to_ricos(content)
+            # Convertir le HTML en Ricos AVEC l'image dans le corps
+            rich_content = html_to_ricos(content, hero_image_uri)
             
             logger.info(f"Creating Wix draft post: {title}")
+            if hero_image_uri:
+                logger.info(f"Image will be embedded in article body (bypassing heroImage bug)")
             
             draft_post = {
                 "title": title,
@@ -610,30 +600,12 @@ async def create_wix_draft_post(
             if member_id:
                 draft_post["memberId"] = member_id
             
-            # TRIPLE PROTECTION pour l'image de couverture (bug Wix 2024-2026)
+            # Garder heroImage aussi (au cas où ça marche un jour)
             if hero_image_uri:
-                # 1. heroImage - Format principal recommandé
                 draft_post["heroImage"] = {
                     "id": hero_image_uri,
-                    "altText": f"{title} - Extensions cheveux Luxura Distribution"
+                    "altText": f"{title} - Extensions cheveux Luxura"
                 }
-                
-                # 2. coverMedia - Fallback documenté par la communauté
-                draft_post["coverMedia"] = {
-                    "image": hero_image_uri,
-                    "displayed": True
-                }
-                
-                # 3. media.wixMedia.image - Format legacy qui marche parfois
-                draft_post["media"] = {
-                    "wixMedia": {
-                        "image": {
-                            "id": hero_image_uri
-                        }
-                    }
-                }
-                
-                logger.info(f"Including heroImage + coverMedia + media in draft: {hero_image_uri[:80]}...")
             
             payload = {"draftPost": draft_post}
             
@@ -650,7 +622,7 @@ async def create_wix_draft_post(
             if response.status_code in [200, 201]:
                 result = response.json()
                 draft_id = result.get('draftPost', {}).get('id')
-                logger.info(f"✅ Wix draft created with triple image protection: {draft_id}")
+                logger.info(f"✅ Wix draft created with embedded image: {draft_id}")
                 return result
             else:
                 logger.error(f"Wix draft creation failed: {response.status_code} - {response.text}")
@@ -678,11 +650,39 @@ async def publish_wix_draft(api_key: str, site_id: str, draft_id: str) -> bool:
         logger.error(f"Error publishing Wix draft: {e}")
         return False
 
-def html_to_ricos(html_content: str) -> Dict:
-    """Convertit le HTML en format Ricos (Wix rich content format)"""
+def html_to_ricos(html_content: str, hero_image_uri: str = None) -> Dict:
+    """
+    Convertit le HTML en format Ricos (Wix rich content format).
+    
+    Si hero_image_uri est fourni, l'image est insérée comme PREMIER élément
+    du contenu (contourne le bug heroImage de Wix).
+    """
     import re
+    import uuid
     
     nodes = []
+    
+    # NOUVEAU: Insérer l'image comme premier élément du corps
+    if hero_image_uri:
+        image_node = {
+            "type": "IMAGE",
+            "id": str(uuid.uuid4()),
+            "imageData": {
+                "containerData": {
+                    "width": {"size": "CONTENT"},
+                    "alignment": "CENTER"
+                },
+                "image": {
+                    "src": {
+                        "id": hero_image_uri
+                    },
+                    "width": 1200,
+                    "height": 630
+                },
+                "altText": "Extensions capillaires Luxura Distribution"
+            }
+        }
+        nodes.append(image_node)
     
     # Nettoyer le HTML
     content = html_content.strip()
@@ -736,8 +736,9 @@ def html_to_ricos(html_content: str) -> Dict:
                 "nodes": list_items
             })
     
-    # Si aucun node, créer un paragraphe avec le contenu brut
-    if not nodes:
+    # Si aucun node (sauf image), créer un paragraphe avec le contenu brut
+    text_nodes = [n for n in nodes if n.get("type") != "IMAGE"]
+    if not text_nodes:
         clean_text = re.sub(r'<[^>]+>', '\n', content).strip()
         for para in clean_text.split('\n\n'):
             if para.strip():
