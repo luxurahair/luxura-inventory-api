@@ -1132,19 +1132,19 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
             "nodes": [{
                 "type": "TEXT", 
                 "textData": {
-                    "text": "📍 Luxura Distribution - Votre expert en extensions capillaires au Québec",
+                    "text": "📍 Luxura Distribution - Importateur d'extensions capillaires haut de gamme au Québec",
                     "decorations": [{"type": "BOLD"}]
                 }
             }]
         })
         
-        # Hashtags
+        # Hashtags - SANS salon car on est un DISTRIBUTEUR
         nodes.append({
             "type": "PARAGRAPH",
             "nodes": [{
                 "type": "TEXT", 
                 "textData": {
-                    "text": "#LuxuraDistribution #ExtensionsCheveux #RallongesQuébec #BeautéMontréal #SalonProfessionnel"
+                    "text": "#LuxuraDistribution #ExtensionsCheveux #RallongesQuébec #BeautéMontréal #CheveuxLongs #ExtensionsHautDeGamme"
                 }
             }]
         })
