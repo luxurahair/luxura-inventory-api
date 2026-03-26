@@ -1,6 +1,6 @@
 # =====================================================
 # BLOG AUTOMATION SYSTEM - Luxura Distribution
-# Génération automatique + Publication Wix + Images libres
+# Génération automatique + Publication Wix + Images DALL-E
 # =====================================================
 
 import os
@@ -10,14 +10,28 @@ import httpx
 import asyncio
 import json
 import smtplib
+import base64
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from datetime import datetime, timezone
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Import du module de génération d'images
+try:
+    from image_generation import (
+        generate_blog_image_with_dalle,
+        generate_and_upload_blog_images,
+        upload_image_bytes_to_wix,
+        get_fallback_unsplash_image
+    )
+    DALLE_AVAILABLE = True
+except ImportError:
+    logger.warning("Image generation module not available, using Unsplash fallback")
+    DALLE_AVAILABLE = False
 
 # =====================================================
 # EMAIL CONFIGURATION
@@ -839,22 +853,37 @@ async def create_wix_draft_post(
     title: str,
     content: str,
     excerpt: str,
-    image_data: Optional[Dict] = None,  # Dict retourné par import_image_and_get_wix_uri
+    cover_image_data: Optional[Dict] = None,  # Image de couverture pour le feed
+    content_image_data: Optional[Dict] = None,  # 2ème image à insérer dans le contenu
     member_id: str = None
 ) -> Optional[Dict]:
     """
     Crée un brouillon de post sur Wix Blog v3 API.
     
-    VERSION 2026 CORRIGÉE:
-    - Utilise juste le file_id (pas wix:image://)
-    - Ajoute displayed: True et custom: True pour forcer l'affichage de la cover
+    VERSION 2026 avec DALL-E:
+    - cover_image_data: Image de couverture (s'affiche sur le feed/cards)
+    - content_image_data: 2ème image différente insérée au milieu de l'article
+    - displayed: True pour forcer l'affichage de la cover
     """
     try:
         async with httpx.AsyncClient(timeout=80) as client:
-            # Convertir le HTML en Ricos (SANS image dans le corps pour éviter le doublon)
-            rich_content = html_to_ricos(content, None, None)
+            # URLs statiques pour les images dans le contenu
+            cover_static_url = cover_image_data.get("static_url") if cover_image_data else None
+            content_static_url = content_image_data.get("static_url") if content_image_data else None
+            
+            # Convertir le HTML en Ricos avec les 2 images
+            rich_content = html_to_ricos(
+                content, 
+                None,  # hero_image_uri deprecated
+                cover_static_url,  # Image en haut du contenu
+                content_static_url  # 2ème image au milieu
+            )
             
             logger.info(f"Creating Wix draft post: {title}")
+            if cover_static_url:
+                logger.info(f"  - Cover image: {cover_static_url[:50]}...")
+            if content_static_url:
+                logger.info(f"  - Content image: {content_static_url[:50]}...")
             
             draft_post = {
                 "title": title,
@@ -868,26 +897,23 @@ async def create_wix_draft_post(
                 draft_post["memberId"] = member_id
             
             # FORMAT CORRIGÉ POUR IMAGE DE COUVERTURE
-            # - Utiliser juste le file_id (pas wix:image://)
-            # - Ajouter displayed: True pour activer l'affichage
-            # - Ajouter custom: True pour indiquer image personnalisée
-            if image_data and isinstance(image_data, dict):
-                file_id = image_data.get("file_id")
-                width = image_data.get("width", 1200)
-                height = image_data.get("height", 630)
+            if cover_image_data and isinstance(cover_image_data, dict):
+                file_id = cover_image_data.get("file_id")
+                width = cover_image_data.get("width", 1200)
+                height = cover_image_data.get("height", 630)
                 
                 if file_id:
                     logger.info(f"Adding cover image with displayed:True - file_id: {file_id[:50]}...")
                     draft_post["media"] = {
                         "wixMedia": {
                             "image": {
-                                "id": file_id,  # Juste le file_id, pas wix:image://
+                                "id": file_id,
                                 "width": width,
                                 "height": height
                             }
                         },
-                        "displayed": True,   # CRUCIAL: Active l'affichage de la cover
-                        "custom": True       # Indique image personnalisée
+                        "displayed": True,
+                        "custom": True
                     }
             
             payload = {"draftPost": draft_post}
@@ -935,37 +961,36 @@ async def publish_wix_draft(api_key: str, site_id: str, draft_id: str) -> bool:
         logger.error(f"Error publishing Wix draft: {e}")
         return False
 
-def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_url: str = None) -> Dict:
+def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_url: str = None, content_image_url: str = None) -> Dict:
     """
     Convertit le HTML en format Ricos (Wix rich content format).
     
-    Si static_image_url est fourni, l'image est insérée comme PREMIER élément
-    du contenu avec l'URL statique (plus fiable que wix:image://).
+    Args:
+        html_content: Le contenu HTML à convertir
+        hero_image_uri: URI Wix de l'image principale (deprecated)
+        static_image_url: URL statique de l'image de couverture (premier élément)
+        content_image_url: URL de la 2ème image à insérer au milieu du contenu
     """
     import re
     import uuid
     
     nodes = []
     
-    # Insérer l'image comme premier élément du corps
-    # Format Ricos correct: type "image" (minuscule) avec "attrs"
+    # Insérer l'image de couverture comme premier élément
     image_src = static_image_url or hero_image_uri
     if image_src:
         image_node = {
-            "type": "image",
-            "attrs": {
+            "type": "IMAGE",  # MAJUSCULE requis par Wix API
+            "imageData": {
                 "image": {
                     "src": {
                         "url": image_src
                     },
                     "width": 1200,
-                    "height": 630,
-                    "alt": "Extensions capillaires Luxura Distribution"
+                    "height": 630
                 },
-                "displayMode": "fullWidth",
-                "alignment": "center"
-            },
-            "content": []
+                "altText": "Extensions capillaires Luxura Distribution"
+            }
         }
         nodes.append(image_node)
     
@@ -1022,7 +1047,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
             })
     
     # Si aucun node (sauf image), créer un paragraphe avec le contenu brut
-    text_nodes = [n for n in nodes if n.get("type") != "IMAGE"]
+    text_nodes = [n for n in nodes if n.get("type") != "IMAGE" and n.get("type") != "image"]
     if not text_nodes:
         clean_text = re.sub(r'<[^>]+>', '\n', content).strip()
         for para in clean_text.split('\n\n'):
@@ -1031,6 +1056,28 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
                     "type": "PARAGRAPH",
                     "nodes": [{"type": "TEXT", "textData": {"text": para.strip()}}]
                 })
+    
+    # Insérer la 2ème image (content_image) AU MILIEU du contenu
+    if content_image_url and len(nodes) > 3:
+        # Trouver le point d'insertion (environ au milieu)
+        mid_point = len(nodes) // 2
+        
+        content_image_node = {
+            "type": "IMAGE",  # MAJUSCULE requis par Wix API
+            "imageData": {
+                "image": {
+                    "src": {
+                        "url": content_image_url
+                    },
+                    "width": 1200,
+                    "height": 630
+                },
+                "altText": "Extensions capillaires professionnelles"
+            }
+        }
+        
+        # Insérer au milieu
+        nodes.insert(mid_point, content_image_node)
     
     return {
         "nodes": nodes,
@@ -1327,33 +1374,84 @@ async def generate_daily_blogs(
         await db.blog_posts.insert_one(blog_post)
         
         # ============================================
-        # PUBLIER SUR WIX VIA REST API (avec retry sur images)
+        # PUBLIER SUR WIX AVEC IMAGES DALL-E UNIQUES
         # ============================================
         if publish_to_wix:
             category = topic_data.get("category", "general")
+            blog_title = blog_post['title']
             
-            logger.info(f"🚀 Publishing to Wix: {blog_post['title'][:50]}...")
+            logger.info(f"🚀 Publishing to Wix: {blog_title[:50]}...")
             
-            # Utiliser la nouvelle fonction avec retry automatique
             if wix_api_key and wix_site_id:
-                image_data = await import_image_with_retry(
-                    api_key=wix_api_key,
-                    site_id=wix_site_id,
-                    category=category,
-                    max_retries=3
-                )
+                cover_image_data = None
+                content_image_data = None
                 
-                if image_data:
-                    # Mettre à jour l'image dans blog_post avec l'URL qui a réussi
-                    blog_post["image"] = image_data.get("source_url", blog_post.get("image"))
+                # Option 1: Essayer DALL-E pour des images uniques
+                if DALLE_AVAILABLE:
+                    try:
+                        logger.info(f"🎨 Generating unique images with DALL-E for: {category}")
+                        
+                        # Générer image de couverture avec DALL-E
+                        cover_bytes = await generate_blog_image_with_dalle(category, "cover")
+                        if cover_bytes:
+                            cover_image_data = await upload_image_bytes_to_wix(
+                                api_key=wix_api_key,
+                                site_id=wix_site_id,
+                                image_bytes=cover_bytes,
+                                file_name=f"cover-dalle-{uuid.uuid4().hex[:8]}.png"
+                            )
+                        
+                        # Générer 2ème image différente pour le contenu
+                        content_bytes = await generate_blog_image_with_dalle(category, "content")
+                        if content_bytes:
+                            content_image_data = await upload_image_bytes_to_wix(
+                                api_key=wix_api_key,
+                                site_id=wix_site_id,
+                                image_bytes=content_bytes,
+                                file_name=f"content-dalle-{uuid.uuid4().hex[:8]}.png"
+                            )
+                        
+                        if cover_image_data:
+                            logger.info(f"✅ DALL-E cover image generated and uploaded")
+                        if content_image_data:
+                            logger.info(f"✅ DALL-E content image generated and uploaded")
+                            
+                    except Exception as e:
+                        logger.error(f"⚠️ DALL-E generation failed: {e}, falling back to Unsplash")
                 
+                # Option 2: Fallback vers Unsplash si DALL-E échoue
+                if not cover_image_data:
+                    logger.info(f"📷 Using Unsplash fallback for cover image")
+                    cover_image_data = await import_image_with_retry(
+                        api_key=wix_api_key,
+                        site_id=wix_site_id,
+                        category=category,
+                        max_retries=3
+                    )
+                
+                # Fallback pour l'image de contenu aussi
+                if not content_image_data:
+                    logger.info(f"📷 Using Unsplash fallback for content image")
+                    content_image_data = await import_image_with_retry(
+                        api_key=wix_api_key,
+                        site_id=wix_site_id,
+                        category=category,
+                        max_retries=2
+                    )
+                
+                # Mettre à jour l'image principale dans blog_post
+                if cover_image_data:
+                    blog_post["image"] = cover_image_data.get("static_url", blog_post.get("image"))
+                
+                # Créer le draft Wix avec les 2 images
                 wix_result = await create_wix_draft_post(
                     api_key=wix_api_key,
                     site_id=wix_site_id,
                     title=blog_post["title"],
                     content=blog_post["content"],
                     excerpt=blog_post["excerpt"],
-                    image_data=image_data,
+                    cover_image_data=cover_image_data,
+                    content_image_data=content_image_data,
                     member_id=wix_member_id
                 )
                 
@@ -1362,16 +1460,18 @@ async def generate_daily_blogs(
                     if draft_id:
                         published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
                         if published:
-                            logger.info(f"✅ Blog published successfully!")
+                            logger.info(f"✅ Blog published successfully with 2 unique images!")
                             await db.blog_posts.update_one(
                                 {"id": post_id},
                                 {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
                             )
                             blog_post["published_to_wix"] = True
                             
-                            # Ajouter l'URL Wix de l'image pour l'email
-                            if image_data:
-                                blog_post["wix_image_url"] = image_data.get("static_url", "")
+                            # Ajouter les URLs des images pour l'email
+                            if cover_image_data:
+                                blog_post["wix_image_url"] = cover_image_data.get("static_url", "")
+                            if content_image_data:
+                                blog_post["wix_content_image_url"] = content_image_data.get("static_url", "")
                 else:
                     logger.error(f"❌ Failed to create Wix draft")
         
@@ -1398,10 +1498,6 @@ async def generate_daily_blogs(
         blog_post.pop("_id", None)
         if isinstance(blog_post.get("created_at"), datetime):
             blog_post["created_at"] = blog_post["created_at"].isoformat()
-        
-        # Ajouter l'URL Wix de l'image pour l'email
-        if image_data:
-            blog_post["wix_image_url"] = image_data.get("static_url", "")
         
         results.append(blog_post)
         existing_titles.append(blog_post["title"].lower())
