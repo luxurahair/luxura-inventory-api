@@ -35,6 +35,32 @@ WIX_INSTANCE_ID = os.getenv("WIX_INSTANCE_ID", "")
 # Luxura API - pour utiliser l'OAuth existant
 LUXURA_RENDER_API = "https://luxura-inventory-api.onrender.com"
 
+# Variable pour tracker si l'API Luxura a été pingée
+luxura_api_awake = False
+
+async def ping_luxura_api():
+    """Ping l'API Luxura sur Render pour la réveiller (free tier dort après 15min d'inactivité)"""
+    global luxura_api_awake
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(f"{LUXURA_API_URL}/products?limit=1")
+            if response.status_code == 200:
+                luxura_api_awake = True
+                logger.info("✅ Luxura API is awake and responding")
+                return True
+            else:
+                logger.warning(f"⚠️ Luxura API responded with status {response.status_code}")
+                return False
+    except Exception as e:
+        logger.error(f"❌ Failed to ping Luxura API: {e}")
+        return False
+
+async def keep_luxura_awake():
+    """Background task to keep Luxura API awake"""
+    while True:
+        await ping_luxura_api()
+        await asyncio.sleep(300)  # Ping every 5 minutes
+
 # Create the main app with Swagger UI
 app = FastAPI(
     title="Luxura Distribution API",
@@ -44,6 +70,17 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json"
 )
+
+# Startup event - ping Luxura API to wake it up
+@app.on_event("startup")
+async def startup_event():
+    """Au démarrage, réveiller l'API Luxura et lancer le ping périodique"""
+    logger.info("🚀 Starting Luxura Distribution API...")
+    # Wake up Luxura API
+    await ping_luxura_api()
+    # Start background task to keep it awake
+    asyncio.create_task(keep_luxura_awake())
+    logger.info("✅ Background ping task started")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
