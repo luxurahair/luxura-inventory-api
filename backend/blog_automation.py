@@ -569,14 +569,16 @@ async def create_wix_draft_post(
     title: str,
     content: str,
     excerpt: str,
-    hero_image_uri: Optional[str] = None,  # NOUVEAU: URI Wix de l'image de couverture
+    hero_image_uri: Optional[str] = None,  # URI Wix de l'image de couverture
     member_id: str = None
 ) -> Optional[Dict]:
     """
     Crée un brouillon de post sur Wix Blog v3 API.
     
-    AMÉLIORATION 2026: L'image de couverture (heroImage) est maintenant incluse
-    directement à la création du draft pour un affichage fiable.
+    AMÉLIORATION 2026: 
+    - heroImage inclus directement à la création
+    - coverMedia ajouté en fallback (contourne bug d'affichage Wix)
+    - media.wixMedia.image en backup additionnel
     
     Args:
         api_key: Clé API Wix
@@ -591,31 +593,49 @@ async def create_wix_draft_post(
         Dict avec draftPost si succès, None sinon
     """
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=80) as client:
             # Convertir le contenu HTML en format Ricos (Wix rich content)
             rich_content = html_to_ricos(content)
             
             logger.info(f"Creating Wix draft post: {title}")
             
-            payload = {
-                "draftPost": {
-                    "title": title,
-                    "excerpt": excerpt,
-                    "richContent": rich_content,
-                    "language": "fr"
-                }
+            draft_post = {
+                "title": title,
+                "excerpt": excerpt,
+                "richContent": rich_content,
+                "language": "fr"
             }
             
             # Ajouter memberId (obligatoire pour apps tierces)
             if member_id:
-                payload["draftPost"]["memberId"] = member_id
+                draft_post["memberId"] = member_id
             
-            # NOUVEAU: Ajouter heroImage directement à la création (plus fiable)
+            # TRIPLE PROTECTION pour l'image de couverture (bug Wix 2024-2026)
             if hero_image_uri:
-                payload["draftPost"]["heroImage"] = {
-                    "id": hero_image_uri
+                # 1. heroImage - Format principal recommandé
+                draft_post["heroImage"] = {
+                    "id": hero_image_uri,
+                    "altText": f"{title} - Extensions cheveux Luxura Distribution"
                 }
-                logger.info(f"Including heroImage in draft creation: {hero_image_uri[:80]}...")
+                
+                # 2. coverMedia - Fallback documenté par la communauté
+                draft_post["coverMedia"] = {
+                    "image": hero_image_uri,
+                    "displayed": True
+                }
+                
+                # 3. media.wixMedia.image - Format legacy qui marche parfois
+                draft_post["media"] = {
+                    "wixMedia": {
+                        "image": {
+                            "id": hero_image_uri
+                        }
+                    }
+                }
+                
+                logger.info(f"Including heroImage + coverMedia + media in draft: {hero_image_uri[:80]}...")
+            
+            payload = {"draftPost": draft_post}
             
             response = await client.post(
                 "https://www.wixapis.com/blog/v3/draft-posts",
@@ -630,7 +650,7 @@ async def create_wix_draft_post(
             if response.status_code in [200, 201]:
                 result = response.json()
                 draft_id = result.get('draftPost', {}).get('id')
-                logger.info(f"✅ Wix draft created successfully with heroImage: {draft_id}")
+                logger.info(f"✅ Wix draft created with triple image protection: {draft_id}")
                 return result
             else:
                 logger.error(f"Wix draft creation failed: {response.status_code} - {response.text}")
