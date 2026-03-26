@@ -221,169 +221,361 @@ UNSPLASH_IMAGES = {
 }
 
 # =====================================================
-# SUJETS DE BLOG - Focus Halo, Genius, Tape, I-Tip
-# SEO optimisé Québec avec durée 12+ mois
+# SUJETS DE BLOG - STRATÉGIE SEO LOCALE QUÉBEC
+# Ciblage: Montréal, Lévis, Beauce, Saint-Georges, Sainte-Marie, Saint-Romuald
+# 4 catégories: Genius Weft, Tape-in, I-Tips, Halo
 # =====================================================
 
+# Villes ciblées avec leurs angles spécifiques
+CITIES_SEO = {
+    "montreal": {
+        "name": "Montréal",
+        "angle": "haut de gamme, tendance, transformation",
+        "suffix": "à Montréal"
+    },
+    "levis": {
+        "name": "Lévis",
+        "angle": "proximité, service professionnel local, entretien + installation",
+        "suffix": "à Lévis"
+    },
+    "beauce": {
+        "name": "Beauce",
+        "angle": "zone régionale forte, service de proximité, confiance, expertise, accessibilité",
+        "suffix": "en Beauce"
+    },
+    "sainte_marie": {
+        "name": "Sainte-Marie",
+        "angle": "proximité, naturel, entretien facile",
+        "suffix": "à Sainte-Marie"
+    },
+    "saint_georges": {
+        "name": "Saint-Georges",
+        "angle": "transformation, longueur, volume",
+        "suffix": "à Saint-Georges"
+    },
+    "saint_romuald": {
+        "name": "Saint-Romuald",
+        "angle": "local, pratique, service haut de gamme rive-sud",
+        "suffix": "à Saint-Romuald"
+    }
+}
+
 BLOG_TOPICS_EXTENDED = [
-    # === HALO EXTENSIONS ===
+    # =====================================================
+    # GENIUS WEFT - Pages piliers et locales
+    # Angle: trame ultra-fine, couture sur base perlée, confort supérieur
+    # =====================================================
+    
+    # Page pilier - Genius Weft
     {
-        "topic": "Extensions Halo : Volume instantané garanti 12 mois et plus au Québec",
-        "category": "halo",
-        "keywords": ["extensions halo Québec", "rallonges volume Montréal", "fil invisible cheveux", "extensions sans colle Canada"],
-        "focus_product": "Halo Everly"
+        "topic": "Qu'est-ce qu'une Genius Weft : Guide complet extensions trame invisible",
+        "category": "genius",
+        "keywords": ["genius weft c'est quoi", "trame invisible extensions", "genius weft Québec", "extensions trame ultra-fine"],
+        "focus_product": "Genius Vivian",
+        "content_type": "pillar",
+        "installation_steps": ["consultation + matching couleur/longueur", "création d'une rangée de microbilles", "mesure et coupe de la trame", "couture de la genius weft sur la rangée perlée", "fondu/blending et coupe de finition"]
     },
     {
-        "topic": "Halo vs Clip-in : Pourquoi le fil invisible conquiert les salons du Québec",
-        "category": "halo", 
-        "keywords": ["halo vs clip-in Québec", "extensions fil invisible Montréal", "rallonges capillaires comparatif"],
-        "focus_product": "Halo Everly"
+        "topic": "Installation Genius Weft étape par étape : Pose professionnelle complète",
+        "category": "genius",
+        "keywords": ["installation genius weft", "pose genius weft", "tutoriel genius weft", "étapes pose extensions trame"],
+        "focus_product": "Genius Vivian",
+        "content_type": "guide",
+        "installation_steps": ["consultation + matching couleur/longueur", "création d'une rangée de microbilles", "mesure et coupe de la trame", "couture de la genius weft sur la rangée perlée", "fondu/blending et coupe de finition"]
     },
     {
-        "topic": "Comment porter des extensions Halo : Guide complet salon Montréal",
-        "category": "halo",
-        "keywords": ["tutoriel halo extensions", "porter extensions Québec", "look naturel rallonges"],
-        "focus_product": "Halo Everly"
+        "topic": "Genius Weft vs trame cousue classique : Comparatif détaillé",
+        "category": "genius",
+        "keywords": ["genius weft vs hand-tied", "genius weft vs machine weft", "comparatif trames extensions", "différence genius weft"],
+        "focus_product": "Genius Vivian",
+        "content_type": "comparison"
     },
     {
-        "topic": "Extensions Halo pour cheveux fins : Solution professionnelle Québec",
-        "category": "halo",
-        "keywords": ["cheveux fins solution Québec", "halo volume Montréal", "extensions légères Canada"],
-        "focus_product": "Halo Everly"
-    },
-    {
-        "topic": "Acheter extensions Halo Québec : Guide complet prix et qualité",
-        "category": "halo",
-        "keywords": ["acheter extensions Québec", "prix halo Montréal", "rallonges qualité Canada"],
-        "focus_product": "Halo Everly"
+        "topic": "Entretien et repositionnement Genius Weft : Guide soins professionnels",
+        "category": "genius",
+        "keywords": ["entretien genius weft", "repositionnement extensions trame", "soins genius weft", "durée vie genius weft"],
+        "focus_product": "Genius Vivian",
+        "content_type": "maintenance"
     },
     
-    # === GENIUS WEFT ===
+    # Genius Weft - Pages locales
     {
-        "topic": "Genius Weft Québec : Trame invisible 0.78mm qui dure 12 mois et plus",
+        "topic": "Extensions Genius Weft à Montréal : Trame invisible haut de gamme",
         "category": "genius",
-        "keywords": ["genius weft Québec", "trame invisible Montréal", "extensions professionnelles Canada"],
-        "focus_product": "Genius Vivian"
+        "keywords": ["genius weft Montréal", "extensions trame Montréal", "pose genius weft Montréal", "salon extensions Montréal"],
+        "focus_product": "Genius Vivian",
+        "city": "montreal",
+        "content_type": "local"
     },
     {
-        "topic": "Salons Québec : Pourquoi adopter les extensions Genius Weft",
+        "topic": "Extensions Genius Weft à Lévis : Pose professionnelle rive-sud",
         "category": "genius",
-        "keywords": ["salon extensions Montréal", "genius weft professionnel", "fournisseur extensions Québec"],
-        "focus_product": "Genius Vivian"
+        "keywords": ["genius weft Lévis", "extensions Lévis", "pose extensions Lévis", "salon beauté Lévis"],
+        "focus_product": "Genius Vivian",
+        "city": "levis",
+        "content_type": "local"
     },
     {
-        "topic": "Genius Weft : Qualité professionnelle pour vos clientes Québec",
+        "topic": "Extensions Genius Weft en Beauce : Service de proximité haut de gamme",
         "category": "genius",
-        "keywords": ["qualité extensions Québec", "genius weft résultat", "extensions haut de gamme Canada"],
-        "focus_product": "Genius Vivian"
+        "keywords": ["genius weft Beauce", "extensions Beauce", "rallonges capillaires Beauce", "salon extensions Beauce"],
+        "focus_product": "Genius Vivian",
+        "city": "beauce",
+        "content_type": "local"
     },
     {
-        "topic": "Genius Weft vs Tape-in : Comparatif extensions salon Québec",
+        "topic": "Extensions Genius Weft à Saint-Georges : Volume et transformation",
         "category": "genius",
-        "keywords": ["genius vs tape Québec", "comparatif extensions Montréal", "meilleures extensions Canada"],
-        "focus_product": "Genius Vivian"
+        "keywords": ["genius weft Saint-Georges", "extensions Saint-Georges", "rallonges Saint-Georges", "salon beauté Saint-Georges"],
+        "focus_product": "Genius Vivian",
+        "city": "saint_georges",
+        "content_type": "local"
     },
     
-    # === TAPE-IN / BANDE ADHÉSIVE ===
+    # =====================================================
+    # TAPE-IN / BANDE ADHÉSIVE - Pages piliers et locales
+    # Angle: pose sandwich, adhésif médical, réutilisable 3-4 fois
+    # =====================================================
+    
+    # Page pilier - Tape-in
     {
-        "topic": "Extensions Tape-in Québec : Pose professionnelle garantie 12 mois et plus",
+        "topic": "Comment installer des extensions bande adhésive : Guide complet Tape-in",
         "category": "tape",
-        "keywords": ["tape-in extensions Québec", "bande adhésive Montréal", "rallonges sandwich Canada"],
-        "focus_product": "Tape Aurora"
+        "keywords": ["installer extensions tape-in", "pose bande adhésive", "tutoriel tape-in", "extensions sandwich"],
+        "focus_product": "Tape Aurora",
+        "content_type": "pillar",
+        "installation_steps": ["sectionner proprement les cheveux", "prendre une fine mèche", "poser un adhésif dessous", "poser un second adhésif dessus en sandwich", "presser et aligner", "répéter en gardant tension et espacement réguliers"]
     },
     {
-        "topic": "Durée extensions Tape-in : Plus de 12 mois avec bon entretien Québec",
+        "topic": "Extensions Tape-in : Durée, entretien et retrait professionnel",
         "category": "tape",
-        "keywords": ["durée tape-in Québec", "entretien tape Montréal", "extensions longue durée Canada"],
-        "focus_product": "Tape Aurora"
+        "keywords": ["durée tape-in", "entretien tape-in", "retrait extensions tape", "combien temps tape-in"],
+        "focus_product": "Tape Aurora",
+        "content_type": "guide"
     },
     {
-        "topic": "Tape-in vs Genius Weft : Comparatif extensions salon Montréal",
+        "topic": "Extensions Tape-in pour cheveux fins : Solution idéale volume discret",
         "category": "tape",
-        "keywords": ["tape vs genius Québec", "meilleures extensions salon", "comparatif rallonges"],
-        "focus_product": "Tape Aurora"
+        "keywords": ["tape-in cheveux fins", "extensions fines Québec", "volume cheveux fins", "tape-in discret"],
+        "focus_product": "Tape Aurora",
+        "content_type": "guide"
     },
     {
-        "topic": "Retrait extensions Tape-in : Guide professionnel Québec",
+        "topic": "Erreurs à éviter avec les extensions Tape-in : Conseils professionnels",
         "category": "tape",
-        "keywords": ["retrait tape Québec", "repositionner extensions Montréal", "entretien tape-in Canada"],
-        "focus_product": "Tape Aurora"
-    },
-    {
-        "topic": "Acheter extensions Tape-in Québec : Prix et qualité professionnelle",
-        "category": "tape",
-        "keywords": ["acheter tape-in Québec", "prix extensions Montréal", "tape-in professionnel Canada"],
-        "focus_product": "Tape Aurora"
+        "keywords": ["erreurs tape-in", "conseils tape-in", "problèmes extensions tape", "éviter erreurs extensions"],
+        "focus_product": "Tape Aurora",
+        "content_type": "guide"
     },
     
-    # === I-TIP / KÉRATINE ===
+    # Tape-in - Pages locales
     {
-        "topic": "Extensions I-Tip Kératine Québec : Résultat naturel garanti 12 mois et plus",
-        "category": "itip",
-        "keywords": ["i-tip extensions Québec", "kératine cheveux Montréal", "mèche par mèche Canada"],
-        "focus_product": "I-Tip Eleanor"
+        "topic": "Extensions bande adhésive à Montréal : Pose professionnelle Tape-in",
+        "category": "tape",
+        "keywords": ["tape-in Montréal", "bande adhésive Montréal", "extensions tape Montréal", "salon tape-in Montréal"],
+        "focus_product": "Tape Aurora",
+        "city": "montreal",
+        "content_type": "local"
     },
     {
-        "topic": "I-Tip vs Tape-in Québec : Quelle méthode pour un look naturel",
-        "category": "itip",
-        "keywords": ["i-tip vs tape Québec", "extensions naturelles Montréal", "kératine vs adhésive Canada"],
-        "focus_product": "I-Tip Eleanor"
+        "topic": "Extensions bande adhésive à Lévis : Service rapide et professionnel",
+        "category": "tape",
+        "keywords": ["tape-in Lévis", "extensions Lévis", "bande adhésive Lévis", "pose extensions Lévis"],
+        "focus_product": "Tape Aurora",
+        "city": "levis",
+        "content_type": "local"
     },
     {
-        "topic": "Extensions I-Tip : Qualité kératine italienne haut de gamme Québec",
-        "category": "itip",
-        "keywords": ["i-tip qualité Québec", "kératine italienne Montréal", "extensions premium Canada"],
-        "focus_product": "I-Tip Eleanor"
+        "topic": "Extensions bande adhésive à Saint-Romuald : Haut de gamme rive-sud",
+        "category": "tape",
+        "keywords": ["tape-in Saint-Romuald", "extensions Saint-Romuald", "bande adhésive rive-sud", "salon Saint-Romuald"],
+        "focus_product": "Tape Aurora",
+        "city": "saint_romuald",
+        "content_type": "local"
     },
     {
-        "topic": "Entretien I-Tip : Prolonger la durée de vie au-delà de 12 mois au Québec",
-        "category": "itip",
-        "keywords": ["entretien i-tip Québec", "durée extensions kératine", "soins extensions Montréal"],
-        "focus_product": "I-Tip Eleanor"
-    },
-    {
-        "topic": "Extensions I-Tip blondes : Conseils entretien couleurs claires Québec",
-        "category": "itip",
-        "keywords": ["extensions blondes Québec", "entretien blonde Montréal", "i-tip couleurs claires"],
-        "focus_product": "I-Tip Eleanor"
+        "topic": "Extensions bande adhésive à Sainte-Marie : Service de proximité",
+        "category": "tape",
+        "keywords": ["tape-in Sainte-Marie", "extensions Sainte-Marie", "bande adhésive Sainte-Marie", "salon Sainte-Marie"],
+        "focus_product": "Tape Aurora",
+        "city": "sainte_marie",
+        "content_type": "local"
     },
     
-    # === SUJETS GÉNÉRAUX SEO ===
+    # =====================================================
+    # I-TIPS - Pages piliers et locales
+    # Angle: mèche par mèche, anneaux/microbeads, rendu ultra-discret
+    # =====================================================
+    
+    # Page pilier - I-Tips
     {
-        "topic": "Tendances extensions cheveux 2025 Québec : Balayage, ombré et couleurs",
-        "category": "tendances",
-        "keywords": ["tendances extensions 2025 Québec", "couleurs cheveux Montréal", "balayage extensions Canada"],
-        "focus_product": None
+        "topic": "Guide complet I-Tips : Extensions kératine mèche par mèche",
+        "category": "itip",
+        "keywords": ["guide i-tip", "extensions kératine", "mèche par mèche", "i-tip c'est quoi"],
+        "focus_product": "I-Tip Eleanor",
+        "content_type": "pillar",
+        "installation_steps": ["consultation + partition de la tête", "prélever une petite mèche de cheveux naturels", "enfiler un anneau/microbead", "insérer la mèche I-Tip", "rapprocher de la racine", "serrer l'anneau", "répéter rangée par rangée"]
     },
     {
-        "topic": "Entretenir extensions cheveux : Guide professionnel Québec 12 mois et plus",
-        "category": "entretien",
-        "keywords": ["entretien extensions Québec", "soins extensions Montréal", "durée vie extensions Canada"],
-        "focus_product": None
+        "topic": "Pose I-Tip étape par étape : Installation professionnelle kératine",
+        "category": "itip",
+        "keywords": ["pose i-tip", "installation i-tip", "tutoriel i-tip", "étapes i-tip kératine"],
+        "focus_product": "I-Tip Eleanor",
+        "content_type": "guide",
+        "installation_steps": ["consultation + partition de la tête", "prélever une petite mèche de cheveux naturels", "enfiler un anneau/microbead", "insérer la mèche I-Tip", "rapprocher de la racine", "serrer l'anneau", "répéter rangée par rangée"]
     },
     {
-        "topic": "Devenir partenaire Luxura : Programme salon extensions Québec",
+        "topic": "I-Tips vs Tape vs Weft : Comparatif complet méthodes extensions",
+        "category": "itip",
+        "keywords": ["i-tip vs tape", "i-tip vs weft", "comparatif extensions", "quelle méthode choisir"],
+        "focus_product": "I-Tip Eleanor",
+        "content_type": "comparison"
+    },
+    {
+        "topic": "Entretien I-Tip et remontée : Quand et comment repositionner",
+        "category": "itip",
+        "keywords": ["entretien i-tip", "remontée extensions", "repositionner i-tip", "soins i-tip kératine"],
+        "focus_product": "I-Tip Eleanor",
+        "content_type": "maintenance"
+    },
+    
+    # I-Tips - Pages locales
+    {
+        "topic": "Extensions I-Tip à Montréal : Pose kératine ultra-naturelle",
+        "category": "itip",
+        "keywords": ["i-tip Montréal", "extensions kératine Montréal", "mèche par mèche Montréal", "salon i-tip Montréal"],
+        "focus_product": "I-Tip Eleanor",
+        "city": "montreal",
+        "content_type": "local"
+    },
+    {
+        "topic": "Extensions I-Tip à Lévis : Service personnalisé kératine",
+        "category": "itip",
+        "keywords": ["i-tip Lévis", "extensions Lévis", "kératine Lévis", "pose i-tip Lévis"],
+        "focus_product": "I-Tip Eleanor",
+        "city": "levis",
+        "content_type": "local"
+    },
+    {
+        "topic": "Extensions I-Tip en Beauce : Qualité professionnelle locale",
+        "category": "itip",
+        "keywords": ["i-tip Beauce", "extensions Beauce", "kératine Beauce", "salon extensions Beauce"],
+        "focus_product": "I-Tip Eleanor",
+        "city": "beauce",
+        "content_type": "local"
+    },
+    {
+        "topic": "Extensions I-Tip à Sainte-Marie : Résultat naturel garanti",
+        "category": "itip",
+        "keywords": ["i-tip Sainte-Marie", "extensions Sainte-Marie", "kératine Sainte-Marie", "salon Sainte-Marie"],
+        "focus_product": "I-Tip Eleanor",
+        "city": "sainte_marie",
+        "content_type": "local"
+    },
+    
+    # =====================================================
+    # HALO SUR FIL INVISIBLE - Pages piliers et locales
+    # Angle: sans attache directe, rapide, cheveux fins/sensibles
+    # =====================================================
+    
+    # Page pilier - Halo
+    {
+        "topic": "Comment poser un Halo sur fil invisible : Guide complet débutant",
+        "category": "halo",
+        "keywords": ["poser halo extensions", "fil invisible extensions", "tutoriel halo", "halo c'est quoi"],
+        "focus_product": "Halo Everly",
+        "content_type": "pillar",
+        "installation_steps": ["brosser les cheveux", "poser le halo sur la tête via le fil invisible", "sortir les cheveux naturels par-dessus avec un peigne", "fondre/blender", "ajuster le fil si besoin"]
+    },
+    {
+        "topic": "Halo vs Clip-in : Pourquoi le fil invisible est supérieur",
+        "category": "halo",
+        "keywords": ["halo vs clip-in", "comparatif halo clip", "fil invisible vs clips", "avantages halo"],
+        "focus_product": "Halo Everly",
+        "content_type": "comparison"
+    },
+    {
+        "topic": "Extensions Halo pour cheveux fins : La solution idéale sans dommage",
+        "category": "halo",
+        "keywords": ["halo cheveux fins", "extensions légères", "cheveux fins solution", "halo sans dommage"],
+        "focus_product": "Halo Everly",
+        "content_type": "guide"
+    },
+    {
+        "topic": "Entretien du Halo invisible : Conseils durabilité et soins",
+        "category": "halo",
+        "keywords": ["entretien halo", "soins halo extensions", "durée vie halo", "nettoyer halo"],
+        "focus_product": "Halo Everly",
+        "content_type": "maintenance"
+    },
+    {
+        "topic": "Erreurs de blending Halo à éviter : Conseils look naturel",
+        "category": "halo",
+        "keywords": ["erreurs halo", "blending halo", "halo naturel", "cacher fil invisible"],
+        "focus_product": "Halo Everly",
+        "content_type": "guide"
+    },
+    
+    # Halo - Pages locales
+    {
+        "topic": "Extensions Halo sur fil invisible à Montréal : Tendance et transformation",
+        "category": "halo",
+        "keywords": ["halo Montréal", "fil invisible Montréal", "extensions halo Montréal", "salon halo Montréal"],
+        "focus_product": "Halo Everly",
+        "city": "montreal",
+        "content_type": "local"
+    },
+    {
+        "topic": "Extensions Halo sur fil invisible à Saint-Georges : Volume instantané",
+        "category": "halo",
+        "keywords": ["halo Saint-Georges", "fil invisible Saint-Georges", "extensions Saint-Georges", "volume Saint-Georges"],
+        "focus_product": "Halo Everly",
+        "city": "saint_georges",
+        "content_type": "local"
+    },
+    {
+        "topic": "Extensions Halo sur fil invisible en Beauce : Solution rapide locale",
+        "category": "halo",
+        "keywords": ["halo Beauce", "fil invisible Beauce", "extensions Beauce", "salon Beauce"],
+        "focus_product": "Halo Everly",
+        "city": "beauce",
+        "content_type": "local"
+    },
+    {
+        "topic": "Extensions Halo sur fil invisible à Sainte-Marie : Naturel et facile",
+        "category": "halo",
+        "keywords": ["halo Sainte-Marie", "fil invisible Sainte-Marie", "extensions Sainte-Marie", "salon Sainte-Marie"],
+        "focus_product": "Halo Everly",
+        "city": "sainte_marie",
+        "content_type": "local"
+    },
+    
+    # =====================================================
+    # PAGES RÉGIONALES GÉNÉRALES
+    # =====================================================
+    {
+        "topic": "Extensions capillaires en Beauce : Guide complet toutes méthodes",
         "category": "general",
-        "keywords": ["partenaire salon Québec", "distributeur extensions Montréal", "grossiste cheveux Canada"],
-        "focus_product": None
+        "keywords": ["extensions Beauce", "rallonges capillaires Beauce", "salon extensions Beauce", "cheveux Beauce"],
+        "focus_product": None,
+        "city": "beauce",
+        "content_type": "regional"
     },
     {
-        "topic": "Extensions cheveux naturel Remy : Guide qualité Québec",
+        "topic": "Extensions cheveux à Saint-Romuald : Service haut de gamme rive-sud",
         "category": "general",
-        "keywords": ["extensions remy Québec", "cheveux naturels Montréal", "qualité extensions Canada"],
-        "focus_product": None
+        "keywords": ["extensions Saint-Romuald", "rallonges Saint-Romuald", "salon Saint-Romuald", "cheveux rive-sud"],
+        "focus_product": None,
+        "city": "saint_romuald",
+        "content_type": "regional"
     },
     {
-        "topic": "Meilleur salon extensions Montréal : Comment choisir",
+        "topic": "Extensions cheveux à Lévis : Toutes les méthodes disponibles",
         "category": "general",
-        "keywords": ["meilleur salon Montréal", "extensions professionnelles Québec", "salon beauté Canada"],
-        "focus_product": None
-    },
-    {
-        "topic": "Prix extensions cheveux Québec : Guide complet 2025",
-        "category": "general",
-        "keywords": ["prix extensions Québec", "coût rallonges Montréal", "tarif extensions Canada"],
-        "focus_product": None
+        "keywords": ["extensions Lévis", "rallonges Lévis", "salon extensions Lévis", "cheveux Lévis"],
+        "focus_product": None,
+        "city": "levis",
+        "content_type": "regional"
     },
 ]
 
@@ -1255,7 +1447,7 @@ async def generate_blog_with_ai(
     openai_key: str,
     existing_titles: List[str] = None
 ) -> Optional[Dict]:
-    """Génère un article de blog SEO optimisé avec OpenAI GPT-4"""
+    """Génère un article de blog SEO optimisé avec OpenAI GPT-4 - Version québécoise locale"""
     try:
         import openai
         
@@ -1265,62 +1457,164 @@ async def generate_blog_with_ai(
         category = topic_data["category"]
         keywords = topic_data["keywords"]
         focus_product = topic_data.get("focus_product")
+        content_type = topic_data.get("content_type", "general")
+        city = topic_data.get("city")
+        installation_steps = topic_data.get("installation_steps", [])
         
-        # System message optimisé SEO Québec
+        # Obtenir les infos de la ville si c'est un article local
+        city_info = CITIES_SEO.get(city, {}) if city else {}
+        city_name = city_info.get("name", "")
+        city_angle = city_info.get("angle", "")
+        city_suffix = city_info.get("suffix", "")
+        
+        # System message optimisé SEO Québec avec français québécois authentique
         system_message = f"""Tu es un expert SEO francophone spécialisé dans les extensions capillaires au Québec.
 Tu écris pour Luxura Distribution, le leader des extensions cheveux haut de gamme au Canada.
 
-STYLE:
-- Professionnel mais accessible
-- Informatif et engageant
-- Français québécois naturel
-- SEO optimisé avec mots-clés intégrés naturellement
+IDENTITÉ LUXURA DISTRIBUTION (TRÈS IMPORTANT):
+- Luxura Distribution est un IMPORTATEUR et DISTRIBUTEUR de produits d'extensions capillaires haut de gamme
+- Luxura n'est PAS un salon de coiffure
+- Luxura VEND aux salons professionnels (B2B) ET directement aux consommatrices en ligne (B2C)
+- Luxura n'offre PAS de formations ni de services de pose
+- NE JAMAIS utiliser le hashtag #SalonProfessionnel - utiliser #LuxuraDistribution
+
+STYLE FRANÇAIS QUÉBÉCOIS:
+- Utiliser un français québécois naturel et accessible
+- Expressions typiques: "on vous explique", "ben correct", "super pratique", "pas mal populaire"
+- Éviter le vouvoiement trop formel, préférer un ton chaleureux
+- Termes locaux: "magasinage", "rabais", "pogner", "c'est l'fun"
+- Adapter au contexte local québécois
 
 PRODUITS LUXURA (DURÉES DE VIE IMPORTANTES):
-- Genius Weft Vivian: Trame ultra-fine 0.78mm révolutionnaire, découpable, couture invisible. Durée: 12+ mois avec bon entretien.
-- Halo Everly: Fil invisible ajustable, volume instantané, aucune fixation permanente. Durée: 12+ mois avec bon entretien.
-- Tape Aurora: Bande adhésive médicale, pose sandwich, réutilisable 3-4 fois. Durée: 12+ mois avec bon entretien.
-- I-Tip Eleanor: Kératine italienne, fusion mèche par mèche, invisible. Durée: 12+ mois avec bon entretien.
+- Genius Weft Vivian: Trame ultra-fine 0.78mm, couture sur base perlée, découpable sans effilochage. Durée: 12+ mois.
+- Halo Everly: Fil invisible, volume instantané, parfait pour cheveux fins/sensibles. Durée: 12+ mois.
+- Tape Aurora: Bande adhésive médicale, pose sandwich, réutilisable 3-4 fois. Durée: 12+ mois.
+- I-Tip Eleanor: Kératine italienne, pose mèche par mèche avec anneaux/microbeads. Durée: 12+ mois.
+
+ÉTAPES D'INSTALLATION PAR CATÉGORIE:
+
+GENIUS WEFT:
+1. Consultation + matching couleur/longueur
+2. Création d'une rangée de microbilles
+3. Mesure et coupe de la trame
+4. Couture de la genius weft sur la rangée perlée
+5. Fondu/blending et coupe de finition
+
+TAPE-IN / BANDE ADHÉSIVE:
+1. Sectionner proprement les cheveux
+2. Prendre une fine mèche
+3. Poser un adhésif dessous
+4. Poser un second adhésif dessus en sandwich
+5. Presser et aligner
+6. Répéter en gardant tension et espacement réguliers
+
+I-TIPS:
+1. Consultation + partition de la tête
+2. Prélever une petite mèche de cheveux naturels
+3. Enfiler un anneau/microbead
+4. Insérer la mèche I-Tip
+5. Rapprocher de la racine
+6. Serrer l'anneau
+7. Répéter rangée par rangée
+
+HALO:
+1. Brosser les cheveux
+2. Poser le halo sur la tête via le fil invisible
+3. Sortir les cheveux naturels par-dessus avec un peigne
+4. Fondre/blender
+5. Ajuster le fil si besoin
+
+VILLES CIBLÉES QUÉBEC:
+- Montréal: haut de gamme, tendance, transformation
+- Lévis: proximité, service professionnel local
+- Beauce: zone régionale forte, confiance, accessibilité
+- Sainte-Marie: proximité, naturel, entretien facile
+- Saint-Georges: transformation, longueur, volume
+- Saint-Romuald: local, pratique, service haut de gamme rive-sud
 
 ⚠️ DURÉE DE VIE CRITIQUE:
 - Toutes les extensions Luxura durent PLUS DE 12 MOIS avec des soins appropriés
-- NE JAMAIS écrire "6 mois" - C'est TOUJOURS "12 mois et plus" ou "plus d'un an"
-- Les couleurs BLONDES nécessitent plus de soins car le procédé de décoloration fragilise les cheveux
+- NE JAMAIS écrire "6 mois" - C'est TOUJOURS "12 mois et plus"
+- Les couleurs BLONDES nécessitent plus de soins
 - Recommander des produits sans sulfate et sans alcool
-- Éviter la chaleur excessive
 
-MOTS-CLÉS SEO GOOGLE ADS À INTÉGRER:
-- extensions cheveux Québec / Montréal / Canada
-- rallonges capillaires professionnelles
-- pose extensions salon Québec
-- extensions naturelles Remy hair
-- rallonges cheveux prix Québec
-- extensions tape-in / genius weft / i-tip / halo
-- salon extensions Montréal
-- acheter extensions cheveux Canada
-- extensions cheveux longue durée
-- rallonges capillaires haut de gamme
-- extension cheveux femme Québec
-- beauté cheveux extensions
-
-LOCALISATION: Québec, Montréal, Laval, Longueuil, Sherbrooke, Trois-Rivières, Canada
+LOCALISATION: Québec, Montréal, Lévis, Beauce, Saint-Georges, Sainte-Marie, Saint-Romuald, Canada
 LANGUE: Français québécois UNIQUEMENT"""
 
         product_mention = f"\nMentionne particulièrement le produit: {focus_product}" if focus_product else ""
+        
+        # Instructions spécifiques selon le type de contenu
+        content_instructions = ""
+        if content_type == "pillar":
+            content_instructions = """
+CONTENU PILIER (PAGE PRINCIPALE):
+- Article de référence complet sur le sujet
+- Expliquer c'est quoi, pour qui, avantages
+- Inclure les étapes d'installation détaillées
+- Couvrir entretien et durabilité
+- Inclure une FAQ avec 3-4 questions fréquentes
+"""
+        elif content_type == "guide":
+            content_instructions = """
+GUIDE PRATIQUE:
+- Focus sur le "comment faire"
+- Étapes claires et numérotées
+- Conseils pratiques et erreurs à éviter
+- Ton accessible et pédagogique
+"""
+        elif content_type == "comparison":
+            content_instructions = """
+ARTICLE COMPARATIF:
+- Comparer objectivement les méthodes
+- Tableau ou liste des différences
+- Pour qui chaque méthode est idéale
+- Conclusion avec recommandation
+"""
+        elif content_type == "maintenance":
+            content_instructions = """
+ARTICLE ENTRETIEN:
+- Focus sur les soins et la durabilité
+- Produits recommandés (sans sulfate, sans alcool)
+- Fréquence d'entretien
+- Signes qu'il faut repositionner
+"""
+        elif content_type == "local":
+            content_instructions = f"""
+ARTICLE LOCAL - {city_name}:
+- Angle: {city_angle}
+- Adapter le contenu au contexte local
+- Mentionner la ville et les environs
+- Inclure "secteur desservi: {city_name} et environs"
+- Ton de proximité et confiance locale
+"""
+        
+        # Instructions pour les étapes d'installation
+        installation_instructions = ""
+        if installation_steps:
+            steps_text = "\n".join([f"{i+1}. {step}" for i, step in enumerate(installation_steps)])
+            installation_instructions = f"""
+ÉTAPES D'INSTALLATION À INCLURE:
+{steps_text}
+
+Intégrer ces étapes dans une section dédiée avec un H2 comme "Comment se fait l'installation ?" ou "Pose étape par étape"
+"""
         
         prompt = f"""Écris un article de blog SEO complet sur le sujet suivant:
 
 SUJET: {topic}
 CATÉGORIE: {category}
 MOTS-CLÉS À INTÉGRER: {', '.join(keywords)}
+TYPE DE CONTENU: {content_type}
 {product_mention}
+{content_instructions}
+{installation_instructions}
 
 STRUCTURE IMPORTANTE:
 1. Introduction engageante (100-150 mots) - SANS TITRE H1 car Wix l'affiche automatiquement
-2. Section 1 avec H2 + contenu détaillé
-3. Section 2 avec H2 + contenu détaillé
-4. Section 3 avec H2 + liste à puces des avantages
-5. Conclusion avec appel à l'action Luxura Distribution
+2. Section 1 avec H2 + contenu détaillé (c'est quoi / pour qui)
+3. Section 2 avec H2 + étapes d'installation si applicable
+4. Section 3 avec H2 + avantages / entretien
+5. Conclusion avec appel à l'action vers Luxura Distribution
 6. OBLIGATOIRE: Section "Découvrez nos collections" avec liens
 
 LIENS CATÉGORIES À INCLURE (OBLIGATOIRE dans la conclusion):
@@ -1335,13 +1629,12 @@ LIENS CATÉGORIES À INCLURE (OBLIGATOIRE dans la conclusion):
 
 CONSIGNES CRITIQUES:
 - 800-1200 mots total
-- NE PAS inclure de balise <h1> dans le contenu - Wix affiche le titre automatiquement
+- NE PAS inclure de balise <h1> dans le contenu
 - Commencer directement par un paragraphe <p> d'introduction
 - Intégrer chaque mot-clé 2-3 fois naturellement
 - Utiliser des balises HTML: <h2>, <h3>, <p>, <ul>, <li>, <strong>, <a>
-- Mentionner Luxura Distribution comme expert
-- Inclure des statistiques ou faits si pertinent
-- Ton professionnel mais chaleureux
+- Mentionner Luxura Distribution comme expert distributeur (PAS un salon)
+- Ton professionnel mais chaleureux, style québécois
 - INCLURE les liens vers les catégories dans la conclusion
 
 FORMAT JSON STRICT:
@@ -1350,12 +1643,13 @@ FORMAT JSON STRICT:
   "excerpt": "Résumé accrocheur de 150 caractères max",
   "content": "Contenu HTML SANS h1 - commencer par <p>introduction</p>... INCLURE liens catégories",
   "meta_description": "Description meta de 155 caractères max",
-  "tags": ["extensions cheveux Québec", "rallonges capillaires", "salon beauté Montréal", "tag-spécifique-au-sujet", "Luxura Distribution"],
-  "hashtags": "#LuxuraDistribution #ExtensionsCheveux #RallongesQuébec #BeautéMontréal #CheveuxLongs"
+  "tags": ["extensions cheveux Québec", "rallonges capillaires", "{category}", "Luxura Distribution", "tag-local-si-applicable"],
+  "hashtags": "#LuxuraDistribution #ExtensionsCheveux #RallongesQuébec #CheveuxLongs"
 }}
 
 RÈGLES TAGS SEO (TRÈS IMPORTANT):
 - TOUJOURS inclure "extensions cheveux Québec" ou "rallonges capillaires Québec"
+- NE JAMAIS utiliser #SalonProfessionnel (Luxura n'est pas un salon)
 - TOUJOURS inclure le nom du produit (Genius Vivian, Halo Everly, Tape Aurora, I-Tip Eleanor)
 - Ajouter des mots-clés locaux: Montréal, Québec, Canada
 - Ajouter des mots-clés beauté: salon, coiffure, cheveux longs, volume
