@@ -992,7 +992,11 @@ async def publish_wix_draft(api_key: str, site_id: str, draft_id: str) -> bool:
         logger.error(f"Error publishing Wix draft: {e}")
         return False
 
-def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_url: str = None, content_image_url: str = None) -> Dict:
+# URL du logo Luxura Distribution
+LUXURA_LOGO_URL = "https://static.wixstatic.com/media/f1b961_e8c5f3e0f0ff4c899c5cf99e2d0c8c4c~mv2.png"
+LUXURA_WEBSITE = "https://www.luxuradistribution.com"
+
+def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_url: str = None, content_image_url: str = None, add_logo: bool = True) -> Dict:
     """
     Convertit le HTML en format Ricos (Wix rich content format).
     
@@ -1001,6 +1005,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
         hero_image_uri: URI Wix de l'image principale (deprecated)
         static_image_url: URL statique de l'image de couverture (premier élément)
         content_image_url: URL de la 2ème image à insérer au milieu du contenu
+        add_logo: Ajouter le logo Luxura à la fin du contenu
     """
     import re
     import uuid
@@ -1109,6 +1114,40 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
         
         # Insérer au milieu
         nodes.insert(mid_point, content_image_node)
+    
+    # Ajouter la signature Luxura à la fin
+    if add_logo:
+        # Séparateur
+        nodes.append({
+            "type": "DIVIDER",
+            "dividerData": {
+                "lineStyle": "DOUBLE",
+                "width": "MEDIUM"
+            }
+        })
+        
+        # Signature Luxura
+        nodes.append({
+            "type": "PARAGRAPH",
+            "nodes": [{
+                "type": "TEXT", 
+                "textData": {
+                    "text": "📍 Luxura Distribution - Votre expert en extensions capillaires au Québec",
+                    "decorations": [{"type": "BOLD"}]
+                }
+            }]
+        })
+        
+        # Hashtags
+        nodes.append({
+            "type": "PARAGRAPH",
+            "nodes": [{
+                "type": "TEXT", 
+                "textData": {
+                    "text": "#LuxuraDistribution #ExtensionsCheveux #RallongesQuébec #BeautéMontréal #SalonProfessionnel"
+                }
+            }]
+        })
     
     return {
         "nodes": nodes,
@@ -1282,24 +1321,37 @@ STRUCTURE IMPORTANTE:
 3. Section 2 avec H2 + contenu détaillé
 4. Section 3 avec H2 + liste à puces des avantages
 5. Conclusion avec appel à l'action Luxura Distribution
+6. OBLIGATOIRE: Section "Découvrez nos collections" avec liens
+
+LIENS CATÉGORIES À INCLURE (OBLIGATOIRE dans la conclusion):
+<p><strong>Découvrez nos collections Luxura :</strong></p>
+<ul>
+<li><a href="https://www.luxuradistribution.com/genius-weft">Extensions Genius Weft</a></li>
+<li><a href="https://www.luxuradistribution.com/halo-extensions">Extensions Halo</a></li>
+<li><a href="https://www.luxuradistribution.com/tape-in-extensions">Extensions Tape-in</a></li>
+<li><a href="https://www.luxuradistribution.com/i-tip-extensions">Extensions I-Tip</a></li>
+<li><a href="https://www.luxuradistribution.com/boutique">Tous nos produits</a></li>
+</ul>
 
 CONSIGNES CRITIQUES:
 - 800-1200 mots total
 - NE PAS inclure de balise <h1> dans le contenu - Wix affiche le titre automatiquement
 - Commencer directement par un paragraphe <p> d'introduction
 - Intégrer chaque mot-clé 2-3 fois naturellement
-- Utiliser des balises HTML: <h2>, <h3>, <p>, <ul>, <li>, <strong>
+- Utiliser des balises HTML: <h2>, <h3>, <p>, <ul>, <li>, <strong>, <a>
 - Mentionner Luxura Distribution comme expert
 - Inclure des statistiques ou faits si pertinent
 - Ton professionnel mais chaleureux
+- INCLURE les liens vers les catégories dans la conclusion
 
 FORMAT JSON STRICT:
 {{
   "title": "Titre SEO optimisé (affiché par Wix automatiquement)",
   "excerpt": "Résumé accrocheur de 150 caractères max",
-  "content": "Contenu HTML SANS h1 - commencer par <p>introduction</p>",
+  "content": "Contenu HTML SANS h1 - commencer par <p>introduction</p>... INCLURE liens catégories",
   "meta_description": "Description meta de 155 caractères max",
-  "tags": ["extensions cheveux Québec", "rallonges capillaires", "salon beauté Montréal", "tag-spécifique-au-sujet", "Luxura Distribution"]
+  "tags": ["extensions cheveux Québec", "rallonges capillaires", "salon beauté Montréal", "tag-spécifique-au-sujet", "Luxura Distribution"],
+  "hashtags": "#LuxuraDistribution #ExtensionsCheveux #RallongesQuébec #BeautéMontréal #CheveuxLongs"
 }}
 
 RÈGLES TAGS SEO (TRÈS IMPORTANT):
@@ -1307,7 +1359,17 @@ RÈGLES TAGS SEO (TRÈS IMPORTANT):
 - TOUJOURS inclure le nom du produit (Genius Vivian, Halo Everly, Tape Aurora, I-Tip Eleanor)
 - Ajouter des mots-clés locaux: Montréal, Québec, Canada
 - Ajouter des mots-clés beauté: salon, coiffure, cheveux longs, volume
-- Minimum 5 tags, maximum 8 tags par article"""
+- Minimum 5 tags, maximum 8 tags par article
+
+HASHTAGS LUXURA (pour réseaux sociaux):
+- #LuxuraDistribution
+- #ExtensionsCheveux
+- #RallongesQuébec
+- #ExtensionsProfessionnelles
+- #BeautéMontréal
+- #CheveuxLongs
+- #SalonBeauté
+- #GeniusWeft / #HaloExtensions / #TapeIn / #ITipExtensions (selon le sujet)"""
 
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
