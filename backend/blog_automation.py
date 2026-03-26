@@ -222,136 +222,167 @@ UNSPLASH_IMAGES = {
 
 # =====================================================
 # SUJETS DE BLOG - Focus Halo, Genius, Tape, I-Tip
+# SEO optimisé Québec avec durée 12+ mois
 # =====================================================
 
 BLOG_TOPICS_EXTENDED = [
     # === HALO EXTENSIONS ===
     {
-        "topic": "Extensions Halo : La révolution du volume instantané sans engagement",
+        "topic": "Extensions Halo : Volume instantané garanti 12 mois et plus au Québec",
         "category": "halo",
-        "keywords": ["extensions halo Québec", "volume instantané", "fil invisible", "extensions sans colle"],
+        "keywords": ["extensions halo Québec", "rallonges volume Montréal", "fil invisible cheveux", "extensions sans colle Canada"],
         "focus_product": "Halo Everly"
     },
     {
-        "topic": "Halo vs autres extensions : Pourquoi le fil invisible conquiert le Québec",
+        "topic": "Halo vs Clip-in : Pourquoi le fil invisible conquiert les salons du Québec",
         "category": "halo", 
-        "keywords": ["halo vs clip-in", "extensions fil invisible", "comparatif extensions"],
+        "keywords": ["halo vs clip-in Québec", "extensions fil invisible Montréal", "rallonges capillaires comparatif"],
         "focus_product": "Halo Everly"
     },
     {
-        "topic": "Comment porter des extensions Halo pour un look naturel parfait",
+        "topic": "Comment porter des extensions Halo : Guide complet salon Montréal",
         "category": "halo",
-        "keywords": ["tutoriel halo", "porter extensions halo", "look naturel extensions"],
+        "keywords": ["tutoriel halo extensions", "porter extensions Québec", "look naturel rallonges"],
         "focus_product": "Halo Everly"
     },
     {
-        "topic": "Extensions Halo pour cheveux fins : La solution idéale au Québec",
+        "topic": "Extensions Halo pour cheveux fins : Solution professionnelle Québec",
         "category": "halo",
-        "keywords": ["cheveux fins solution", "halo cheveux fins", "volume cheveux fins"],
+        "keywords": ["cheveux fins solution Québec", "halo volume Montréal", "extensions légères Canada"],
+        "focus_product": "Halo Everly"
+    },
+    {
+        "topic": "Acheter extensions Halo Québec : Guide complet prix et qualité",
+        "category": "halo",
+        "keywords": ["acheter extensions Québec", "prix halo Montréal", "rallonges qualité Canada"],
         "focus_product": "Halo Everly"
     },
     
     # === GENIUS WEFT ===
     {
-        "topic": "Genius Weft : La technologie révolutionnaire de trame invisible 0.78mm",
+        "topic": "Genius Weft Québec : Trame invisible 0.78mm qui dure 12 mois et plus",
         "category": "genius",
-        "keywords": ["genius weft Québec", "trame invisible", "extensions professionnelles"],
+        "keywords": ["genius weft Québec", "trame invisible Montréal", "extensions professionnelles Canada"],
         "focus_product": "Genius Vivian"
     },
     {
-        "topic": "Pourquoi les salons du Québec adoptent les extensions Genius Weft",
+        "topic": "Salons Québec : Pourquoi adopter les extensions Genius Weft",
         "category": "genius",
-        "keywords": ["genius weft salon", "extensions salon professionnel", "fournisseur extensions"],
+        "keywords": ["salon extensions Montréal", "genius weft professionnel", "fournisseur extensions Québec"],
         "focus_product": "Genius Vivian"
     },
     {
-        "topic": "Installation Genius Weft : Guide complet pour professionnels",
+        "topic": "Installation Genius Weft : Formation professionnelle Québec",
         "category": "genius",
-        "keywords": ["installer genius weft", "technique couture invisible", "formation extensions"],
+        "keywords": ["formation extensions Québec", "technique couture invisible", "apprendre genius weft"],
         "focus_product": "Genius Vivian"
     },
     {
-        "topic": "Genius Weft vs Tape-in : Quelle technique choisir pour votre cliente ?",
+        "topic": "Genius Weft vs Tape-in : Comparatif extensions salon Québec",
         "category": "genius",
-        "keywords": ["genius vs tape", "comparatif extensions", "meilleure technique extensions"],
+        "keywords": ["genius vs tape Québec", "comparatif extensions Montréal", "meilleures extensions Canada"],
         "focus_product": "Genius Vivian"
     },
     
     # === TAPE-IN / BANDE ADHÉSIVE ===
     {
-        "topic": "Extensions Bande Adhésive Aurora : Application sandwich professionnelle",
+        "topic": "Extensions Tape-in Québec : Pose professionnelle garantie 12 mois et plus",
         "category": "tape",
-        "keywords": ["tape-in extensions", "bande adhésive cheveux", "extensions sandwich"],
+        "keywords": ["tape-in extensions Québec", "bande adhésive Montréal", "rallonges sandwich Canada"],
         "focus_product": "Tape Aurora"
     },
     {
-        "topic": "Combien de temps durent les extensions Tape-in ? Guide complet",
+        "topic": "Durée extensions Tape-in : Plus de 12 mois avec bon entretien Québec",
         "category": "tape",
-        "keywords": ["durée tape-in", "entretien tape extensions", "repose extensions"],
+        "keywords": ["durée tape-in Québec", "entretien tape Montréal", "extensions longue durée Canada"],
         "focus_product": "Tape Aurora"
     },
     {
-        "topic": "Tape-in vs Genius Weft : Le match des extensions professionnelles",
+        "topic": "Tape-in vs Genius Weft : Comparatif extensions salon Montréal",
         "category": "tape",
-        "keywords": ["tape vs genius", "meilleures extensions salon", "comparatif technique"],
+        "keywords": ["tape vs genius Québec", "meilleures extensions salon", "comparatif rallonges"],
         "focus_product": "Tape Aurora"
     },
     {
-        "topic": "Retrait et repositionnement des extensions Tape-in : Guide expert",
+        "topic": "Retrait extensions Tape-in : Guide professionnel Québec",
         "category": "tape",
-        "keywords": ["retrait tape extensions", "repositionner extensions", "entretien tape-in"],
+        "keywords": ["retrait tape Québec", "repositionner extensions Montréal", "entretien tape-in Canada"],
+        "focus_product": "Tape Aurora"
+    },
+    {
+        "topic": "Acheter extensions Tape-in Québec : Prix et qualité professionnelle",
+        "category": "tape",
+        "keywords": ["acheter tape-in Québec", "prix extensions Montréal", "tape-in professionnel Canada"],
         "focus_product": "Tape Aurora"
     },
     
     # === I-TIP / KÉRATINE ===
     {
-        "topic": "Extensions I-Tip kératine : La technique mèche par mèche ultime",
+        "topic": "Extensions I-Tip Kératine Québec : Résultat naturel garanti 12 mois et plus",
         "category": "itip",
-        "keywords": ["i-tip extensions", "kératine cheveux", "extensions mèche par mèche"],
+        "keywords": ["i-tip extensions Québec", "kératine cheveux Montréal", "mèche par mèche Canada"],
         "focus_product": "I-Tip Eleanor"
     },
     {
-        "topic": "I-Tip vs Tape-in : Quelle méthode pour un résultat naturel ?",
+        "topic": "I-Tip vs Tape-in Québec : Quelle méthode pour un look naturel",
         "category": "itip",
-        "keywords": ["i-tip vs tape", "extensions naturelles", "kératine vs adhésive"],
+        "keywords": ["i-tip vs tape Québec", "extensions naturelles Montréal", "kératine vs adhésive Canada"],
         "focus_product": "I-Tip Eleanor"
     },
     {
-        "topic": "Formation extensions I-Tip : Maîtriser la fusion kératine",
+        "topic": "Formation I-Tip Québec : Maîtriser la fusion kératine professionnelle",
         "category": "itip",
-        "keywords": ["formation i-tip", "technique kératine", "apprendre extensions"],
+        "keywords": ["formation i-tip Québec", "technique kératine Montréal", "apprendre extensions Canada"],
         "focus_product": "I-Tip Eleanor"
     },
     {
-        "topic": "Entretien extensions I-Tip : Prolonger la durée de vie au-delà de 12 mois",
+        "topic": "Entretien I-Tip : Prolonger la durée de vie au-delà de 12 mois au Québec",
         "category": "itip",
-        "keywords": ["entretien i-tip", "durée extensions kératine", "soins extensions"],
+        "keywords": ["entretien i-tip Québec", "durée extensions kératine", "soins extensions Montréal"],
+        "focus_product": "I-Tip Eleanor"
+    },
+    {
+        "topic": "Extensions I-Tip blondes : Conseils entretien couleurs claires Québec",
+        "category": "itip",
+        "keywords": ["extensions blondes Québec", "entretien blonde Montréal", "i-tip couleurs claires"],
         "focus_product": "I-Tip Eleanor"
     },
     
-    # === SUJETS GÉNÉRAUX ===
+    # === SUJETS GÉNÉRAUX SEO ===
     {
-        "topic": "Tendances extensions cheveux 2025 : Balayage, ombré et couleurs naturelles",
+        "topic": "Tendances extensions cheveux 2025 Québec : Balayage, ombré et couleurs",
         "category": "tendances",
-        "keywords": ["tendances extensions 2025", "couleurs cheveux tendance", "balayage extensions"],
+        "keywords": ["tendances extensions 2025 Québec", "couleurs cheveux Montréal", "balayage extensions Canada"],
         "focus_product": None
     },
     {
-        "topic": "Comment entretenir ses extensions cheveux : Guide professionnel complet",
+        "topic": "Entretenir extensions cheveux : Guide professionnel Québec 12 mois et plus",
         "category": "entretien",
-        "keywords": ["entretien extensions", "soins extensions cheveux", "durée vie extensions"],
+        "keywords": ["entretien extensions Québec", "soins extensions Montréal", "durée vie extensions Canada"],
         "focus_product": None
     },
     {
-        "topic": "Devenir partenaire Luxura : Programme salon extensions cheveux Québec",
+        "topic": "Devenir partenaire Luxura : Programme salon extensions Québec",
         "category": "general",
-        "keywords": ["partenaire salon extensions", "distributeur extensions Québec", "grossiste cheveux"],
+        "keywords": ["partenaire salon Québec", "distributeur extensions Montréal", "grossiste cheveux Canada"],
         "focus_product": None
     },
     {
-        "topic": "Extensions cheveux naturel vs synthétique : Le guide définitif",
+        "topic": "Extensions cheveux naturel Remy : Guide qualité Québec",
         "category": "general",
-        "keywords": ["extensions naturel vs synthétique", "cheveux remy", "qualité extensions"],
+        "keywords": ["extensions remy Québec", "cheveux naturels Montréal", "qualité extensions Canada"],
+        "focus_product": None
+    },
+    {
+        "topic": "Meilleur salon extensions Montréal : Comment choisir",
+        "category": "general",
+        "keywords": ["meilleur salon Montréal", "extensions professionnelles Québec", "salon beauté Canada"],
+        "focus_product": None
+    },
+    {
+        "topic": "Prix extensions cheveux Québec : Guide complet 2025",
+        "category": "general",
+        "keywords": ["prix extensions Québec", "coût rallonges Montréal", "tarif extensions Canada"],
         "focus_product": None
     },
 ]
@@ -1212,13 +1243,28 @@ PRODUITS LUXURA (DURÉES DE VIE IMPORTANTES):
 - Tape Aurora: Bande adhésive médicale, pose sandwich, réutilisable 3-4 fois. Durée: 12+ mois avec bon entretien.
 - I-Tip Eleanor: Kératine italienne, fusion mèche par mèche, invisible. Durée: 12+ mois avec bon entretien.
 
-CONSEILS ENTRETIEN IMPORTANTS:
-- Toutes les extensions Luxura peuvent durer PLUS DE 12 MOIS avec des soins appropriés
+⚠️ DURÉE DE VIE CRITIQUE:
+- Toutes les extensions Luxura durent PLUS DE 12 MOIS avec des soins appropriés
+- NE JAMAIS écrire "6 mois" - C'est TOUJOURS "12 mois et plus" ou "plus d'un an"
 - Les couleurs BLONDES nécessitent plus de soins car le procédé de décoloration fragilise les cheveux
 - Recommander des produits sans sulfate et sans alcool
 - Éviter la chaleur excessive
 
-LOCALISATION: Québec, Montréal, Canada
+MOTS-CLÉS SEO GOOGLE ADS À INTÉGRER:
+- extensions cheveux Québec / Montréal / Canada
+- rallonges capillaires professionnelles
+- pose extensions salon Québec
+- extensions naturelles Remy hair
+- rallonges cheveux prix Québec
+- extensions tape-in / genius weft / i-tip / halo
+- salon extensions Montréal
+- acheter extensions cheveux Canada
+- extensions cheveux longue durée
+- rallonges capillaires haut de gamme
+- extension cheveux femme Québec
+- beauté cheveux extensions
+
+LOCALISATION: Québec, Montréal, Laval, Longueuil, Sherbrooke, Trois-Rivières, Canada
 LANGUE: Français québécois UNIQUEMENT"""
 
         product_mention = f"\nMentionne particulièrement le produit: {focus_product}" if focus_product else ""
@@ -1253,8 +1299,15 @@ FORMAT JSON STRICT:
   "excerpt": "Résumé accrocheur de 150 caractères max",
   "content": "Contenu HTML SANS h1 - commencer par <p>introduction</p>",
   "meta_description": "Description meta de 155 caractères max",
-  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
-}}"""
+  "tags": ["extensions cheveux Québec", "rallonges capillaires", "salon beauté Montréal", "tag-spécifique-au-sujet", "Luxura Distribution"]
+}}
+
+RÈGLES TAGS SEO (TRÈS IMPORTANT):
+- TOUJOURS inclure "extensions cheveux Québec" ou "rallonges capillaires Québec"
+- TOUJOURS inclure le nom du produit (Genius Vivian, Halo Everly, Tape Aurora, I-Tip Eleanor)
+- Ajouter des mots-clés locaux: Montréal, Québec, Canada
+- Ajouter des mots-clés beauté: salon, coiffure, cheveux longs, volume
+- Minimum 5 tags, maximum 8 tags par article"""
 
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
