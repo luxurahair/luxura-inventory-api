@@ -8,6 +8,7 @@ import base64
 import uuid
 import httpx
 import logging
+import random
 from typing import Optional, Dict, Tuple
 from dotenv import load_dotenv
 
@@ -74,8 +75,33 @@ HAIR_COLORS = [
     "rich chestnut"
 ]
 
-# Index pour rotation des couleurs
+# Styles de pose pour varier les images
+POSE_STYLES = [
+    "looking away elegantly",
+    "facing camera with confident smile",
+    "profile view showing hair length",
+    "looking over shoulder",
+    "hair flowing in wind",
+    "hands touching hair softly",
+    "sitting elegantly in salon chair",
+    "standing with natural posture"
+]
+
+# Environnements pour varier les images
+ENVIRONMENTS = [
+    "modern minimalist studio",
+    "luxury salon interior",
+    "outdoor natural lighting",
+    "soft window light",
+    "professional photo studio",
+    "elegant bathroom setting",
+    "garden with soft bokeh"
+]
+
+# Index pour rotation des éléments
 _color_index = 0
+_pose_index = 0
+_env_index = 0
 
 
 def get_next_hair_color() -> str:
@@ -86,6 +112,22 @@ def get_next_hair_color() -> str:
     return color
 
 
+def get_next_pose() -> str:
+    """Retourne la prochaine pose pour varier les images."""
+    global _pose_index
+    pose = POSE_STYLES[_pose_index % len(POSE_STYLES)]
+    _pose_index += 1
+    return pose
+
+
+def get_next_environment() -> str:
+    """Retourne le prochain environnement pour varier les images."""
+    global _env_index
+    env = ENVIRONMENTS[_env_index % len(ENVIRONMENTS)]
+    _env_index += 1
+    return env
+
+
 async def generate_blog_image_with_dalle(
     category: str,
     image_type: str = "cover",  # "cover" ou "content"
@@ -93,6 +135,11 @@ async def generate_blog_image_with_dalle(
 ) -> Optional[bytes]:
     """
     Génère une image unique avec DALL-E pour un blog.
+    
+    Chaque image est différente grâce à la rotation de:
+    - Couleur de cheveux (12 options)
+    - Style de pose (8 options)
+    - Environnement (7 options)
     
     Args:
         category: Catégorie du blog (halo, genius, tape, etc.)
@@ -109,20 +156,27 @@ async def generate_blog_image_with_dalle(
     try:
         from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
         
-        # Obtenir le prompt approprié
+        # Obtenir des éléments variés pour chaque image
         hair_color = get_next_hair_color()
+        pose = get_next_pose()
+        environment = get_next_environment()
+        
+        # Générer un ID unique pour encore plus de variation
+        unique_seed = uuid.uuid4().hex[:6]
         
         if custom_prompt:
-            prompt = custom_prompt.format(hair_color=hair_color)
+            prompt = custom_prompt.format(hair_color=hair_color, pose=pose, environment=environment)
         else:
             prompts = IMAGE_PROMPTS.get(category, IMAGE_PROMPTS["general"])
             prompt_template = prompts.get(image_type, prompts["cover"])
-            prompt = prompt_template.format(hair_color=hair_color)
+            
+            # Créer un prompt enrichi avec tous les éléments de variation
+            prompt = f"{prompt_template.format(hair_color=hair_color)}, {pose}, {environment}, unique composition #{unique_seed}"
         
         # Ajouter des instructions de qualité
-        prompt += ". Ultra realistic, professional photography, 4K quality, soft natural lighting, no text or watermarks"
+        prompt += ". Ultra realistic, professional photography, 4K quality, soft natural lighting, no text or watermarks, unique artistic style"
         
-        logger.info(f"🎨 Generating DALL-E image: {prompt[:80]}...")
+        logger.info(f"🎨 Generating DALL-E image [{hair_color}, {pose[:20]}...]: {prompt[:60]}...")
         
         # Initialiser le générateur
         image_gen = OpenAIImageGeneration(api_key=EMERGENT_LLM_KEY)
