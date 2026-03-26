@@ -141,7 +141,8 @@ def get_next_hair_color() -> str:
 
 
 # =====================================================
-# CONSTRUCTEUR DE PROMPT INTELLIGENT - DISTRIBUTEUR
+# CONSTRUCTEUR DE PROMPT V3 - Style photographique
+# Plus efficace pour gpt-image-1 (2026)
 # =====================================================
 
 def build_smart_image_prompt(
@@ -153,231 +154,71 @@ def build_smart_image_prompt(
     hair_color: str = None
 ) -> str:
     """
-    Construit un prompt intelligent pour LUXURA DISTRIBUTION.
+    Construit un prompt intelligent V3 pour LUXURA DISTRIBUTION.
     
-    LUXURA = Importateur/Distributeur de produits haut de gamme
-    - Vend aux salons professionnels (B2B)
-    - Vend en ligne aux consommateurs (B2C)
-    - NE FAIT PAS de formation
-    
-    Focus: RÉSULTAT du produit, beauté, qualité premium
+    AMÉLIORATIONS V3 (2026):
+    - Style photographique fluide (pas de listes de règles)
+    - Règles strictes à la fin (moins de dilution)
+    - Termes techniques photo (lighting, DOF, composition)
+    - Meilleure détection du type d'article
     """
     title_lower = (blog_title or "").lower()
     keywords = keywords or []
     hair_color = hair_color or get_next_hair_color()
-    
-    # Récupérer les règles de la catégorie
     cat_rules = CATEGORY_VISUAL_RULES.get(category, CATEGORY_VISUAL_RULES["general"])
-    
-    # =====================================================
-    # DÉTECTION DU TYPE D'ARTICLE
-    # =====================================================
-    
-    is_guide = any(word in title_lower for word in ["guide", "comment", "tutoriel", "étapes", "méthode", "choisir"])
-    is_comparison = any(word in title_lower for word in ["vs", "versus", "comparatif", "comparaison", "différence"])
-    is_entretien = any(word in title_lower for word in ["entretien", "soins", "entretenir", "durée", "prolonger"])
-    is_tendances = any(word in title_lower for word in ["tendance", "2025", "mode", "style", "balayage", "ombré"])
-    is_achat = any(word in title_lower for word in ["acheter", "prix", "commander", "qualité", "meilleur"])
+
+    # Détection plus fine du type d'article
+    is_comparison = any(k in title_lower for k in ["vs", "versus", "comparatif", "comparaison", "différence"])
+    is_entretien = any(k in title_lower for k in ["entretien", "soins", "durée", "maintenu", "prolonger"])
+    is_tendances = any(k in title_lower for k in ["tendance", "2025", "2026", "mode", "style", "balayage"])
     is_halo = "halo" in title_lower
     is_genius = "genius" in title_lower or "weft" in title_lower
     is_tape = "tape" in title_lower or "adhésive" in title_lower or "bande" in title_lower
-    is_itip = "i-tip" in title_lower or "kératine" in title_lower or "itip" in title_lower
-    
-    # =====================================================
-    # CONSTRUCTION DU PROMPT - FOCUS RÉSULTAT/PRODUIT
-    # =====================================================
-    
+    is_itip = "i-tip" in title_lower or "itip" in title_lower or "kératine" in title_lower
+
+    # Prompt de base en style photographique (plus efficace que listes de règles)
+    base = f"""Professional luxury beauty photography, ultra-realistic 8K DSLR photograph of an elegant feminine woman in her late 20s to mid 30s, beautiful symmetrical face, soft natural makeup, confident and aspirational expression. She has extremely long, thick, voluminous {hair_color} hair extensions reaching her waist or lower back, flowing naturally with beautiful movement and healthy shine. The hair is the absolute hero of the image - luxurious, seamless blend, premium quality visible."""
+
+    # Adaptation selon le type d'article
     if is_comparison:
-        # Articles comparatifs - montrer les deux résultats
-        if image_type == "cover":
-            scene = f"""
-Stunning FEMININE WOMAN with VERY LONG flowing {hair_color} hair extensions reaching her waist.
-Gorgeous female model showing THE RESULT - beautiful long luxurious hair.
-Hair must be waist-length or longer, thick and voluminous.
-NO brushes, NO styling tools, NO salon scene.
-Bright professional lighting, horizontal 1200x630 cover image.
-"""
-        else:
-            scene = f"""
-Beautiful FEMININE WOMAN showing her VERY LONG {hair_color} hair extensions.
-Hair flowing down to waist or lower back, thick and luxurious.
-NO styling, NO brushing - just showing the beautiful long hair result.
-"""
-    
+        scene = "Side-by-side feel showing two different luxurious long hair results, elegant composition, clean bright studio background with soft gradient."
     elif is_entretien:
-        # Articles entretien - montrer le résultat de bons soins
-        if image_type == "cover":
-            scene = f"""
-Stunning FEMININE WOMAN with perfectly maintained VERY LONG {hair_color} hair extensions.
-Hair reaching waist or lower back, healthy, shiny, thick and voluminous.
-THE RESULT of proper care - beautiful long flowing hair.
-NO brushes, NO combs, NO styling tools in the image.
-Soft lighting, horizontal 1200x630, luxury lifestyle.
-"""
-        else:
-            scene = f"""
-Beautiful FEMININE WOMAN showing her VERY LONG healthy {hair_color} hair extensions.
-Hair flowing down past shoulders to waist, shiny and well-maintained.
-NO brushing scene - just the beautiful long hair result.
-"""
-    
+        scene = "Perfectly healthy, shiny and well-maintained very long hair, soft natural window light, fresh and vibrant look, hair glowing with health."
     elif is_tendances:
-        # Articles tendances - montrer les styles modernes
-        if image_type == "cover":
-            scene = f"""
-Fashion-forward FEMININE WOMAN with trendy VERY LONG {hair_color} hair extensions.
-Hair reaching waist or lower, modern 2025 style, balayage or ombre.
-THE RESULT - gorgeous long flowing trendy hair, not a styling scene.
-NO brushes, NO styling tools, NO salon.
-Horizontal 1200x630, stylish and aspirational.
-"""
-        else:
-            scene = f"""
-Beautiful FEMININE WOMAN with trendy VERY LONG {hair_color} hair extensions.
-Modern style, hair flowing down to waist, thick and voluminous.
-Fashion-forward beauty, Instagram-worthy long hair result.
-"""
-    
-    elif is_achat or is_guide:
-        # Articles achat/guide - montrer la qualité du produit
-        if image_type == "cover":
-            scene = f"""
-Confident FEMININE WOMAN showcasing gorgeous VERY LONG {hair_color} hair extensions.
-Hair reaching waist or lower back, thick, voluminous, luxurious.
-THE RESULT of premium extensions - beautiful long flowing hair.
-NO brushes, NO styling tools, NO salon scene.
-Clean bright background, horizontal 1200x630.
-"""
-        else:
-            scene = f"""
-Beautiful FEMININE WOMAN with VERY LONG {hair_color} hair extensions.
-Hair flowing down to waist, showing texture, shine and volume.
-The beautiful result of wearing quality extensions.
-"""
-    
+        scene = "Modern 2026 fashion-forward styling, trendy yet timeless, slight movement in the hair, high-fashion editorial feel, contemporary elegance."
     elif is_halo:
-        # Produit Halo - volume instantané, fil invisible
-        if image_type == "cover":
-            scene = f"""
-Glamorous FEMININE WOMAN with VERY LONG flowing {hair_color} Halo hair extensions.
-Hair reaching waist or hips, thick, voluminous, moving naturally.
-THE RESULT of Halo extensions - instant long beautiful hair.
-NO brushes, NO styling tools, NO salon scene.
-Aspirational lifestyle, horizontal 1200x630.
-"""
-        else:
-            scene = f"""
-Beautiful FEMININE WOMAN with VERY LONG {hair_color} Halo extensions.
-Hair flowing down past waist, showing volume and movement.
-The amazing result of wearing Halo extensions.
-"""
-    
+        scene = "Effortless volume and length with invisible support, natural fall of hair, soft glamour lighting, lifestyle luxury setting, instant transformation result."
     elif is_genius:
-        # Produit Genius Weft - trame ultra-fine
-        if image_type == "cover":
-            scene = f"""
-Sophisticated FEMININE WOMAN with VERY LONG sleek {hair_color} Genius Weft extensions.
-Hair reaching waist or lower back, thick, seamless, natural looking.
-THE RESULT of Genius Weft - beautiful long luxurious hair.
-NO brushes, NO styling tools, NO salon scene.
-Premium lighting, horizontal 1200x630.
-"""
-        else:
-            scene = f"""
-Beautiful FEMININE WOMAN with VERY LONG {hair_color} Genius Weft extensions.
-Hair flowing down to waist, showing seamless thin weft result.
-Gorgeous long hair extension result.
-"""
-    
+        scene = "Sleek and seamless weft result, ultra-natural long straight or gently waved hair, sophisticated premium aesthetic, thin invisible weft blending perfectly."
     elif is_tape:
-        # Produit Tape-in - résultat lisse
-        if image_type == "cover":
-            scene = f"""
-Elegant FEMININE WOMAN with smooth VERY LONG {hair_color} Tape-in hair extensions.
-Hair reaching waist or lower, sleek, thick, flowing naturally.
-THE RESULT of Tape-in extensions - gorgeous long smooth hair.
-NO brushes, NO styling tools, NO salon scene.
-Clean bright lighting, horizontal 1200x630.
-"""
-        else:
-            scene = f"""
-Beautiful FEMININE WOMAN with VERY LONG {hair_color} Tape-in extensions.
-Hair flowing down to waist, smooth and seamless blend.
-The beautiful result of wearing Tape-in extensions.
-"""
-    
+        scene = "Smooth, sleek and flat long hair with invisible application, polished professional result, seamless sandwich technique result."
     elif is_itip:
-        # Produit I-Tip - fusion naturelle
-        if image_type == "cover":
-            scene = f"""
-Natural-looking FEMININE WOMAN with VERY LONG {hair_color} I-Tip keratin extensions.
-Hair reaching waist or hips, ultra-natural blend, thick and flowing.
-THE RESULT of I-Tip extensions - gorgeous long natural-looking hair.
-NO brushes, NO styling tools, NO salon scene.
-Luxury lifestyle, horizontal 1200x630.
-"""
-        else:
-            scene = f"""
-Beautiful FEMININE WOMAN with VERY LONG {hair_color} I-Tip extensions.
-Hair flowing down past waist, individual strands blending naturally.
-The amazing result of wearing I-Tip extensions.
-"""
-    
+        scene = "Ultra-natural strand-by-strand blend, individual extensions completely invisible, realistic texture and movement, keratin fusion perfection."
     else:
-        # Articles généraux - résultat premium
-        if image_type == "cover":
-            scene = f"""
-Beautiful confident FEMININE WOMAN with VERY LONG luxurious {hair_color} hair extensions.
-Hair reaching waist or hips, thick, voluminous, healthy shine.
-THE RESULT of premium extensions - gorgeous long flowing hair.
-NO brushes, NO styling tools, NO salon scene.
-Aspirational lifestyle, horizontal 1200x630.
-"""
-        else:
-            scene = f"""
-Beautiful FEMININE WOMAN with VERY LONG {hair_color} hair extensions.
-Hair flowing down to waist, premium texture and shine.
-The stunning result of wearing quality hair extensions.
-"""
-    
-    # =====================================================
-    # AJOUT DU PRODUIT FOCUS
-    # =====================================================
-    
+        scene = "Aspirational luxury lifestyle, clean bright background, premium elegant composition, beautiful flowing hair showcasing extension quality."
+
+    # Composition technique selon le type d'image
+    if image_type == "cover":
+        technical = "Horizontal composition 1200x630, professional beauty photography, soft diffused lighting, shallow depth of field, cinematic color grading, e-commerce ready, no text, no watermark, highly detailed hair texture, premium magazine cover quality."
+    else:
+        technical = "Vertical or square-friendly composition, focus on hair details and texture, natural movement, 800x600 or similar, realistic skin and hair texture, close-up quality."
+
+    # Règles strictes en fin de prompt (plus efficace - les modèles lisent mieux les contraintes à la fin)
+    strict_rules = """
+CRITICAL REQUIREMENTS: Only one beautiful feminine woman, absolutely no men or masculine features, no short hair (minimum waist length hair required), no brushes or combs, no styling tools, no salon interior, no hair application process being shown, no visible weft edges unless seamless and natural, no text or watermarks in image. Must be photorealistic photography, not illustration or cartoon."""
+
     if focus_product:
-        scene += f"\nFeatured Luxura product: {focus_product}."
-    
-    # =====================================================
-    # AJOUT DES MOTS-CLÉS VISUELS
-    # =====================================================
-    
+        strict_rules += f" Subtly showcase the premium quality result of wearing {focus_product} extensions."
+
+    # Assemblage final
+    final_prompt = f"{base}\n\nScene: {scene}\n\n{technical}\n\n{strict_rules}"
+
+    # Ajout léger des mots-clés visuels (filtrés)
     if keywords:
-        visual_keywords = [k for k in keywords[:5] if not any(skip in k.lower() for skip in ['québec', 'montréal', 'canada', 'prix', 'acheter', 'salon'])]
-        if visual_keywords:
-            scene += f"\nVisual theme: {', '.join(visual_keywords)}."
-    
-    # =====================================================
-    # ASSEMBLAGE FINAL
-    # =====================================================
-    
-    must_have = ", ".join(cat_rules["must_have"][:3])
-    avoid = ", ".join(cat_rules["avoid"][:3])
-    
-    final_prompt = f"""
-{LUXURA_BASE_RULES}
+        visual_kw = [k for k in keywords[:4] if not any(bad in k.lower() for bad in ['québec', 'montréal', 'canada', 'prix', 'acheter', 'salon', 'professionnel'])]
+        if visual_kw:
+            final_prompt += f"\n\nVisual mood inspiration: {', '.join(visual_kw)}."
 
-SCENE DESCRIPTION:
-{scene.strip()}
-
-CATEGORY STYLE: {cat_rules['style']}
-MUST INCLUDE: {must_have}
-MUST AVOID: {avoid}
-
-TECHNICAL: Ultra realistic photography, 4K quality, soft natural lighting, 
-horizontal {1200 if image_type == 'cover' else 800}x{630 if image_type == 'cover' else 600} composition,
-no text, no watermark, professional beauty/product photography, e-commerce ready.
-"""
-    
     return final_prompt.strip()
 
 

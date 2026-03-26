@@ -199,6 +199,73 @@ UNSPLASH_IMAGES = {
 }
 
 # =====================================================
+# ANECDOTES LUXURA - EXPERTISE TERRAIN RÉELLE
+# Pour rendre le contenu plus humain et anti-IA
+# =====================================================
+
+LUXURA_ANECDOTES = {
+    "general": [
+        "Chez Luxura, on voit souvent des clientes qui hésitent entre plusieurs méthodes. On prend toujours le temps de toucher les cheveux naturels, d'évaluer l'épaisseur et la texture avant de recommander quoi que ce soit.",
+        "Après 5 ans d'importation directe, on a appris à reconnaître la qualité d'un lot de cheveux Remy dès qu'on le reçoit : la cuticule doit être intacte et alignée dans le même sens.",
+        "Nos salons partenaires nous le disent souvent : la constance entre les lots, c'est ce qui fait la différence. Une cliente qui revient veut exactement la même texture qu'avant.",
+        "Au Québec, le climat fait une vraie différence. L'humidité de l'été et le froid sec de l'hiver ne traitent pas les extensions de la même façon.",
+    ],
+    "genius": [
+        "La Genius Weft Vivian, c'est notre best-seller chez les coiffeuses qui font beaucoup de volume. La trame de 0.78mm est tellement fine qu'on la sent à peine sous les doigts.",
+        "Une coiffeuse de Lévis nous a dit : 'Depuis que je pose des Genius Weft, mes clientes reviennent systématiquement. Le confort est incomparable.'",
+        "Ce qu'on aime avec la Genius Weft, c'est qu'on peut la couper sans qu'elle s'effiloche. Ça permet un ajustement parfait à chaque tête.",
+        "On a testé plusieurs fournisseurs avant de choisir notre gamme Genius. La différence de qualité entre une trame machine standard et une vraie Genius, ça se voit et ça se sent.",
+    ],
+    "halo": [
+        "Le Halo Everly, c'est souvent le premier choix des clientes qui veulent essayer les extensions sans s'engager. On le recommande beaucoup aux débutantes.",
+        "Une cliente de Saint-Georges nous a écrit : 'J'ai porté mon Halo à mon mariage et personne n'a vu la différence avec mes vrais cheveux!'",
+        "Ce qu'on adore avec le Halo, c'est qu'il n'abîme pas les cheveux. Pour les femmes avec des cheveux fins ou fragilisés, c'est souvent la meilleure option.",
+        "Le fil invisible est ajustable, donc une fois qu'on a trouvé son réglage, ça tient parfaitement toute la journée. Même au vent!",
+    ],
+    "tape": [
+        "Les Tape Aurora, on les appelle nos 'extensions de tous les jours'. La pose sandwich est rapide et le résultat est vraiment plat.",
+        "Un salon partenaire de Montréal nous a partagé son astuce : il garde toujours 2-3 paquets de rechange pour les retouches. L'adhésif médical tient vraiment bien.",
+        "Ce qu'on remarque après 3-4 lavages avec nos Tape-in, c'est que la texture reste soyeuse. C'est là qu'on voit la qualité du cheveu Remy.",
+        "Pour le repositionnement, on recommande toujours de venir en salon. L'adhésif se retire facilement avec le bon solvant, mais il faut le tour de main.",
+    ],
+    "itip": [
+        "Les I-Tip Eleanor, c'est pour les clientes qui veulent un résultat ultra-naturel. La pose mèche par mèche prend plus de temps, mais le rendu est incroyable.",
+        "Notre kératine italienne fond parfaitement avec la chaleur de la pince. On a eu des retours de coiffeuses qui ont essayé d'autres marques et qui sont revenues chez nous pour la qualité de fusion.",
+        "Ce qu'on aime dire aux salons : 'Avec les I-Tip, vous pouvez vraiment personnaliser la densité.' Certaines clientes veulent juste du volume sur les côtés.",
+        "En hiver québécois, on conseille toujours de bien hydrater les pointes. Le froid sec peut assécher les extensions comme les cheveux naturels.",
+    ],
+    "entretien": [
+        "Notre conseil numéro un pour l'entretien : produits sans sulfate et sans alcool. On voit la différence de durée de vie entre les clientes qui suivent nos conseils et celles qui utilisent n'importe quoi.",
+        "Une erreur courante qu'on voit : brosser les extensions quand elles sont mouillées. Les cheveux Remy sont solides, mais il faut quand même les traiter avec respect.",
+        "Pour les blondes, on recommande un shampoing violet de temps en temps. Les extensions claires peuvent jaunir avec le temps, comme les cheveux naturels.",
+        "Le séchoir, c'est correct, mais toujours avec un protecteur thermique. Et jamais à chaleur maximale directement sur les points d'attache.",
+    ],
+    "pro": [
+        "Nos salons partenaires apprécient surtout la constance de nos lots. Quand une cliente commande une couleur, elle veut exactement la même teinte 6 mois plus tard.",
+        "On offre des prix de gros intéressants, mais ce qui fidélise vraiment les coiffeuses, c'est notre service. Livraison rapide, stock réel, et on répond toujours au téléphone.",
+        "Un conseil qu'on donne souvent aux nouveaux salons : commencez avec 3-4 couleurs populaires (brun naturel, blond miel, noir). C'est 80% de la demande.",
+        "Notre salle d'exposition à Saint-Georges permet aux coiffeuses de voir et toucher les produits avant de commander. Ça fait une vraie différence.",
+    ]
+}
+
+# Fonction pour obtenir une anecdote aléatoire
+def get_random_anecdote(category: str) -> str:
+    """Retourne une anecdote Luxura aléatoire pour la catégorie donnée."""
+    anecdotes = LUXURA_ANECDOTES.get(category, LUXURA_ANECDOTES["general"])
+    return random.choice(anecdotes)
+
+def get_luxura_recommendation(category: str) -> str:
+    """Retourne une recommandation Luxura basée sur la catégorie."""
+    recommendations = {
+        "genius": "Pour un résultat optimal avec la Genius Weft, on recommande un repositionnement tous les 2-3 mois. C'est ce qui permet d'atteindre les 12 mois et plus de durée de vie.",
+        "halo": "Notre Halo Everly est parfait pour les occasions spéciales ou pour tester les extensions. Aucun engagement, résultat instantané.",
+        "tape": "Les Tape Aurora peuvent être réutilisées 3-4 fois avec de nouveaux adhésifs. C'est un excellent rapport qualité-prix pour les clientes régulières.",
+        "itip": "Pour les I-Tip Eleanor, on conseille de prévoir 100-150 mèches pour un volume naturel, 150-200 pour une transformation plus visible.",
+        "general": "Peu importe la méthode choisie, la qualité du cheveu Remy fait toute la différence. C'est ce qui permet une durée de vie de 12 mois et plus avec un entretien approprié."
+    }
+    return recommendations.get(category, recommendations["general"])
+
+# =====================================================
 # SUJETS DE BLOG - STRATÉGIE SEO LOCALE QUÉBEC
 # Ciblage: Montréal, Lévis, Beauce, Saint-Georges, Sainte-Marie, Saint-Romuald
 # 4 catégories: Genius Weft, Tape-in, I-Tips, Halo
@@ -1577,6 +1644,10 @@ ARTICLE LOCAL - {city_name}:
 Intégrer ces étapes dans une section dédiée avec un H2 comme "Comment se fait l'installation ?" ou "Pose étape par étape"
 """
         
+        # Obtenir une anecdote et une recommandation Luxura pour rendre le contenu plus humain
+        luxura_anecdote = get_random_anecdote(category)
+        luxura_recommendation = get_luxura_recommendation(category)
+        
         prompt = f"""Écris un article de blog SEO complet sur le sujet suivant:
 
 SUJET: {topic}
@@ -1587,13 +1658,25 @@ TYPE DE CONTENU: {content_type}
 {content_instructions}
 {installation_instructions}
 
-STRUCTURE IMPORTANTE:
+STRUCTURE IMPORTANTE (ANTI-IA - Obligatoire):
 1. Introduction engageante (100-150 mots) - SANS TITRE H1 car Wix l'affiche automatiquement
 2. Section 1 avec H2 + contenu détaillé (c'est quoi / pour qui)
 3. Section 2 avec H2 + étapes d'installation si applicable
-4. Section 3 avec H2 + avantages / entretien
-5. Conclusion avec appel à l'action vers Luxura Distribution
-6. OBLIGATOIRE: Section "Découvrez nos collections" avec liens
+4. **OBLIGATOIRE - Section "Ce qu'on voit chez Luxura"** avec H2 incluant cette anecdote réelle:
+   "{luxura_anecdote}"
+5. Section 3 avec H2 + avantages / entretien
+6. **OBLIGATOIRE - Section "Luxura recommande"** avec H3 incluant ce conseil:
+   "{luxura_recommendation}"
+7. Conclusion avec appel à l'action vers Luxura Distribution
+8. OBLIGATOIRE: Section "Découvrez nos collections" avec liens
+
+STYLE ANTI-IA (TRÈS IMPORTANT):
+- Varier la longueur des phrases (courtes ET longues)
+- Utiliser des questions rhétoriques: "Tu te demandes si..." "Pourquoi c'est important?"
+- Inclure des contractions québécoises: "c'est pas mal", "ben oui", "ça l'fait"
+- Une anecdote ou observation concrète par section principale
+- Ton conversationnel et authentique, comme si tu parlais à une amie
+- Éviter les listes trop parfaites et les transitions génériques
 
 LIENS CATÉGORIES À INCLURE (OBLIGATOIRE dans la conclusion):
 <p><strong>Découvrez nos collections Luxura :</strong></p>
@@ -1606,20 +1689,21 @@ LIENS CATÉGORIES À INCLURE (OBLIGATOIRE dans la conclusion):
 </ul>
 
 CONSIGNES CRITIQUES:
-- 800-1200 mots total
+- 1200-1800 mots total (articles plus longs pour éviter la détection IA)
 - NE PAS inclure de balise <h1> dans le contenu
 - Commencer directement par un paragraphe <p> d'introduction
 - Intégrer chaque mot-clé 2-3 fois naturellement
 - Utiliser des balises HTML: <h2>, <h3>, <p>, <ul>, <li>, <strong>, <a>
 - Mentionner Luxura Distribution comme expert distributeur (PAS un salon)
-- Ton professionnel mais chaleureux, style québécois
+- Ton professionnel mais chaleureux, style québécois AUTHENTIQUE
 - INCLURE les liens vers les catégories dans la conclusion
+- INCLURE les sections "Ce qu'on voit chez Luxura" et "Luxura recommande"
 
 FORMAT JSON STRICT:
 {{
   "title": "Titre SEO optimisé (affiché par Wix automatiquement)",
   "excerpt": "Résumé accrocheur de 150 caractères max",
-  "content": "Contenu HTML SANS h1 - commencer par <p>introduction</p>... INCLURE liens catégories",
+  "content": "Contenu HTML SANS h1 - commencer par <p>introduction</p>... AVEC sections Luxura + liens catégories",
   "meta_description": "Description meta de 155 caractères max",
   "tags": ["extensions cheveux Québec", "rallonges capillaires", "{category}", "Luxura Distribution", "tag-local-si-applicable"],
   "hashtags": "#LuxuraDistribution #ExtensionsCheveux #RallongesQuébec #CheveuxLongs"
@@ -1760,6 +1844,8 @@ async def generate_daily_blogs(
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc),
             "auto_generated": True,
+            "needs_human_review": True,  # NOUVEAU: Flag pour relecture humaine obligatoire
+            "human_reviewed": False,      # NOUVEAU: Sera mis à True après relecture
             "published_to_wix": False,
             "published_to_facebook": False
         }
