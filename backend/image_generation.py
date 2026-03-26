@@ -20,66 +20,68 @@ logger = logging.getLogger(__name__)
 EMERGENT_LLM_KEY = os.getenv("EMERGENT_LLM_KEY")
 
 # =====================================================
-# RÈGLES BUSINESS LUXURA - OBLIGATOIRES
+# RÈGLES BUSINESS LUXURA - IMPORTATEUR/DISTRIBUTEUR
 # =====================================================
 
 LUXURA_BASE_RULES = """
-Professional luxury hair extension photography for Luxura Distribution Quebec Canada.
+Professional luxury hair extension product photography for Luxura Distribution Quebec Canada.
+LUXURA IS A HIGH-END IMPORTER AND DISTRIBUTOR - NOT A SALON.
+We sell premium hair extensions to professional salons (B2B) and directly to consumers online (B2C).
 
 MANDATORY REQUIREMENTS:
 - Long or mid-length hair ONLY (minimum shoulder length)
-- Visible hair extensions or visible premium salon result
-- Premium luxury salon environment
-- Elegant realistic woman (not cartoon, not mannequin unless training article)
-- French Canadian luxury beauty market aesthetic
-- Soft professional lighting
-- Clean composition
+- Beautiful woman showing the RESULT of wearing premium extensions
+- Luxury product photography aesthetic (e-commerce quality)
+- Elegant realistic woman (not cartoon, not mannequin)
+- Clean, bright, professional lighting
+- Premium lifestyle or product-focused composition
 
 STRICTLY FORBIDDEN:
 - Short hair (no pixie cut, no bob haircut, no ear-length hair)
-- Mannequin head unless explicitly training/formation article
+- Training scenes or classroom settings (we don't do training)
+- Salon work scenes with stylists applying extensions
+- Mannequin heads
 - Text or watermarks in image
 - Cartoon or illustration style
-- Multiple people unless article specifically requires it
 - Dark or moody lighting
 - Messy or unprofessional appearance
-- Fashion editorial without visible extensions
-- Abstract or artistic compositions
+- Technical application process shots
+
+FOCUS ON:
+- The RESULT: beautiful women with gorgeous long hair extensions
+- Product beauty: showcase the quality of the extensions
+- Lifestyle luxury: aspirational, premium, elegant
+- E-commerce ready: clean backgrounds, professional lighting
 """
 
 # =====================================================
-# RÈGLES VISUELLES PAR CATÉGORIE
+# RÈGLES VISUELLES PAR CATÉGORIE - DISTRIBUTEUR
 # =====================================================
 
 CATEGORY_VISUAL_RULES = {
     "genius": {
-        "must_have": ["long flowing hair", "seamless weft visible", "premium salon finish", "natural luxury result", "thin invisible weft"],
-        "avoid": ["short hair", "pixie", "bob", "fashion-only portrait", "clip-in visible"],
-        "style": "sophisticated professional salon result"
+        "must_have": ["long flowing hair result", "seamless weft visible", "premium product quality", "natural luxury result", "thin invisible weft"],
+        "avoid": ["salon application", "training", "short hair", "pixie", "bob"],
+        "style": "sophisticated luxury product result"
     },
     "halo": {
-        "must_have": ["very long hair", "natural blend", "soft glamour", "invisible wire look", "instant volume"],
-        "avoid": ["short hair", "technical salon tools visible", "application process"],
-        "style": "effortless glamour, ready-to-wear luxury"
+        "must_have": ["very long hair", "natural blend", "soft glamour", "invisible wire look", "instant volume result"],
+        "avoid": ["short hair", "application process", "salon tools"],
+        "style": "effortless glamour, luxury lifestyle"
     },
     "tape": {
-        "must_have": ["smooth sleek hair", "salon application implied", "adhesive bands technique", "sandwich method"],
-        "avoid": ["curly messy editorial", "visible tape edges poorly done"],
-        "style": "sleek professional salon finish"
+        "must_have": ["smooth sleek hair result", "premium quality", "natural look", "volume and length"],
+        "avoid": ["application process", "visible tape edges", "salon scene"],
+        "style": "sleek professional result"
     },
     "itip": {
-        "must_have": ["natural strand-by-strand result", "keratin fusion visible", "individual bonds", "seamless blend"],
-        "avoid": ["bulky bonds", "visible keratin tips poorly done"],
-        "style": "ultra-natural strand integration"
-    },
-    "formation": {
-        "must_have": ["trainer/educator", "real model with long hair", "education setting", "premium salon classroom", "demonstration"],
-        "avoid": ["plastic mannequin only", "short hair model", "runway fashion", "no context"],
-        "style": "professional education premium environment"
+        "must_have": ["natural strand-by-strand result", "seamless blend", "individual strands look natural"],
+        "avoid": ["application process", "visible bonds", "salon scene"],
+        "style": "ultra-natural premium result"
     },
     "entretien": {
-        "must_have": ["healthy shiny hair", "care routine implied", "premium products", "maintenance result"],
-        "avoid": ["damaged hair", "before photo only"],
+        "must_have": ["healthy shiny hair", "well-maintained extensions", "premium hair care products"],
+        "avoid": ["damaged hair", "salon scene"],
         "style": "healthy maintained luxury hair"
     },
     "tendances": {
@@ -88,8 +90,8 @@ CATEGORY_VISUAL_RULES = {
         "style": "contemporary fashion-forward beauty"
     },
     "general": {
-        "must_have": ["long beautiful hair", "premium result", "elegant woman", "salon quality"],
-        "avoid": ["short hair", "unprofessional"],
+        "must_have": ["long beautiful hair", "premium result", "elegant woman", "high-end quality"],
+        "avoid": ["short hair", "unprofessional", "salon work"],
         "style": "luxury hair extension result"
     }
 }
@@ -125,7 +127,7 @@ def get_next_hair_color() -> str:
 
 
 # =====================================================
-# CONSTRUCTEUR DE PROMPT INTELLIGENT
+# CONSTRUCTEUR DE PROMPT INTELLIGENT - DISTRIBUTEUR
 # =====================================================
 
 def build_smart_image_prompt(
@@ -137,10 +139,14 @@ def build_smart_image_prompt(
     hair_color: str = None
 ) -> str:
     """
-    Construit un prompt intelligent basé sur le TITRE du blog,
-    les MOTS-CLÉS et le PRODUIT focus.
+    Construit un prompt intelligent pour LUXURA DISTRIBUTION.
     
-    C'est la fonction clé qui résout le problème des images génériques.
+    LUXURA = Importateur/Distributeur de produits haut de gamme
+    - Vend aux salons professionnels (B2B)
+    - Vend en ligne aux consommateurs (B2C)
+    - NE FAIT PAS de formation
+    
+    Focus: RÉSULTAT du produit, beauté, qualité premium
     """
     title_lower = (blog_title or "").lower()
     keywords = keywords or []
@@ -150,208 +156,181 @@ def build_smart_image_prompt(
     cat_rules = CATEGORY_VISUAL_RULES.get(category, CATEGORY_VISUAL_RULES["general"])
     
     # =====================================================
-    # DÉTECTION DU TYPE D'ARTICLE BASÉ SUR LE TITRE
+    # DÉTECTION DU TYPE D'ARTICLE
     # =====================================================
     
-    is_formation = any(word in title_lower for word in ["formation", "training", "apprendre", "cours", "maîtriser", "technique"])
-    is_installation = any(word in title_lower for word in ["installation", "pose", "poser", "appliquer", "application"])
-    is_guide = any(word in title_lower for word in ["guide", "comment", "tutoriel", "étapes", "méthode"])
+    is_guide = any(word in title_lower for word in ["guide", "comment", "tutoriel", "étapes", "méthode", "choisir"])
     is_comparison = any(word in title_lower for word in ["vs", "versus", "comparatif", "comparaison", "différence"])
     is_entretien = any(word in title_lower for word in ["entretien", "soins", "entretenir", "durée", "prolonger"])
     is_tendances = any(word in title_lower for word in ["tendance", "2025", "mode", "style", "balayage", "ombré"])
-    is_salon = any(word in title_lower for word in ["salon", "professionnel", "coiffeur", "partenaire"])
+    is_achat = any(word in title_lower for word in ["acheter", "prix", "commander", "qualité", "meilleur"])
     is_halo = "halo" in title_lower
     is_genius = "genius" in title_lower or "weft" in title_lower
     is_tape = "tape" in title_lower or "adhésive" in title_lower or "bande" in title_lower
     is_itip = "i-tip" in title_lower or "kératine" in title_lower or "itip" in title_lower
     
     # =====================================================
-    # CONSTRUCTION DU PROMPT SELON LE CONTEXTE
+    # CONSTRUCTION DU PROMPT - FOCUS RÉSULTAT/PRODUIT
     # =====================================================
     
-    if is_formation or is_installation:
-        # Articles de formation / installation
-        product_name = "hair extensions"
-        if is_genius: product_name = "Genius Weft extensions"
-        elif is_tape: product_name = "Tape-in extensions"
-        elif is_itip: product_name = "I-Tip keratin extensions"
-        elif is_halo: product_name = "Halo extensions"
-        
+    if is_comparison:
+        # Articles comparatifs - montrer les deux résultats
         if image_type == "cover":
             scene = f"""
-Professional luxury salon training scene in Quebec Canada.
-Expert hair stylist educator demonstrating {product_name} installation technique
-on a real female model with long {hair_color} hair.
-Visible seamless extension result, premium salon classroom atmosphere,
-clean beauty composition, educational but luxurious setting.
-Horizontal 1200x630 cover image composition.
-Model facing camera or 3/4 angle, confident professional look.
+Beautiful split composition showing elegant woman with long {hair_color} hair extensions.
+Premium product comparison concept, luxury beauty photography.
+Clean e-commerce style, bright professional lighting.
+Horizontal 1200x630 cover image, aspirational luxury feel.
 """
         else:
             scene = f"""
-Close-up professional beauty photo of skilled hands installing {product_name}
-on a real model with long {hair_color} hair.
-Detailed technique demonstration, seamless blend visible,
-premium salon training environment, high detail realistic photography.
-"""
-    
-    elif is_comparison:
-        # Articles comparatifs (vs)
-        if image_type == "cover":
-            scene = f"""
-Split composition showing two elegant women with long {hair_color} hair,
-each demonstrating different hair extension techniques.
-Premium salon result comparison, both looking luxurious and natural.
-Clean professional beauty photography, horizontal 1200x630 format.
-"""
-        else:
-            scene = f"""
-Side-by-side detail of two different hair extension techniques
-on models with long {hair_color} hair.
-Professional comparison photography, visible difference in application method.
+Detail shot of premium hair extensions quality,
+showing the texture and shine of long {hair_color} hair.
+Product-focused beauty photography, e-commerce quality.
 """
     
     elif is_entretien:
-        # Articles entretien / soins
+        # Articles entretien - montrer le résultat de bons soins
         if image_type == "cover":
             scene = f"""
-Beautiful woman with long healthy {hair_color} hair extensions,
-showing the result of proper care and maintenance.
-Shiny, voluminous, well-maintained premium hair.
-Soft lighting, luxury beauty portrait, horizontal 1200x630.
-Optional: premium hair care products subtly visible.
+Stunning woman with perfectly maintained long {hair_color} hair extensions.
+Healthy, shiny, voluminous hair showing the result of proper care.
+Premium beauty portrait, soft lighting, luxury lifestyle.
+Horizontal 1200x630, clean background.
 """
         else:
             scene = f"""
-Close-up of healthy, shiny long {hair_color} hair extensions
-being gently brushed or cared for.
-Premium hair texture detail, professional care routine implied.
+Close-up of healthy, shiny long {hair_color} hair extensions.
+Premium hair texture detail showing quality maintenance result.
+Optional: luxury hair care products elegantly displayed.
 """
     
     elif is_tendances:
-        # Articles tendances
+        # Articles tendances - montrer les styles modernes
         if image_type == "cover":
             scene = f"""
-Fashion-forward woman with trendy long {hair_color} hair extensions,
-modern 2025 hairstyle, balayage or ombre effect if applicable.
+Fashion-forward woman with trendy long {hair_color} hair extensions.
+Modern 2025 hairstyle, balayage or ombre if applicable.
 Contemporary luxury beauty portrait, editorial quality.
-Horizontal 1200x630, stylish but professional.
+Horizontal 1200x630, stylish and aspirational.
 """
         else:
             scene = f"""
 Detail shot of trendy hair extension styling,
 modern texture and color technique on long {hair_color} hair.
-Fashion-forward beauty photography.
+Fashion-forward beauty photography, Instagram-worthy.
 """
     
-    elif is_salon:
-        # Articles salon / professionnel
+    elif is_achat or is_guide:
+        # Articles achat/guide - montrer la qualité du produit
         if image_type == "cover":
             scene = f"""
-Luxurious modern hair salon interior in Quebec,
-professional stylist with client showing beautiful long {hair_color} hair extensions result.
-Premium atmosphere, elegant decor, satisfied client.
-Horizontal 1200x630 professional photography.
+Elegant confident woman showcasing beautiful long {hair_color} hair extensions.
+Premium product result, luxury quality visible.
+E-commerce style photography, clean bright background.
+Horizontal 1200x630, professional product showcase.
 """
         else:
             scene = f"""
-Interior of premium hair extension salon,
-stylist working on client with long {hair_color} hair.
-Professional service environment, luxury atmosphere.
+Detail of premium hair extension quality,
+showing the texture, shine and natural look of long {hair_color} extensions.
+Product-focused photography, high-end e-commerce style.
 """
     
     elif is_halo:
-        # Articles Halo spécifiques
+        # Produit Halo - volume instantané, fil invisible
         if image_type == "cover":
             scene = f"""
-Glamorous woman with very long flowing {hair_color} Halo hair extensions,
-invisible wire perfectly hidden, instant volume and length.
+Glamorous woman with very long flowing {hair_color} Halo hair extensions.
+Invisible wire perfectly hidden, instant volume and length result.
 Effortless luxury beauty, soft glamour portrait.
-Natural movement in hair, horizontal 1200x630.
+Natural hair movement, horizontal 1200x630.
+Aspirational lifestyle, perfect hair moment.
 """
         else:
             scene = f"""
-Detail of Halo extension invisible wire blending seamlessly
-with long {hair_color} natural hair.
-Volume and length transformation, premium result.
+Detail of Halo extension result on long {hair_color} hair.
+Showing the seamless blend, volume and natural movement.
+Premium product photography, luxury quality visible.
 """
     
     elif is_genius:
-        # Articles Genius Weft spécifiques
+        # Produit Genius Weft - trame ultra-fine
         if image_type == "cover":
             scene = f"""
-Sophisticated woman with long sleek {hair_color} Genius Weft extensions,
-ultra-thin 0.78mm weft invisible at the scalp.
-Premium salon finish, natural luxury result.
-Professional portrait, horizontal 1200x630.
+Sophisticated woman with long sleek {hair_color} Genius Weft extensions.
+Ultra-thin 0.78mm weft result, invisible and natural.
+Premium luxury beauty portrait, professional lighting.
+Horizontal 1200x630, high-end product showcase.
 """
         else:
             scene = f"""
-Close-up of Genius Weft thin weft installation,
-seamless integration with long {hair_color} hair.
-Invisible couture technique detail.
+Close-up of Genius Weft extension result on long {hair_color} hair.
+Showing the thin seamless weft, natural integration.
+Premium product detail photography.
 """
     
     elif is_tape:
-        # Articles Tape-in spécifiques
+        # Produit Tape-in - résultat lisse
         if image_type == "cover":
             scene = f"""
-Elegant woman with smooth long {hair_color} Tape-in hair extensions,
-sleek professional salon finish, sandwich application result.
-Premium beauty portrait, horizontal 1200x630.
+Elegant woman with smooth long {hair_color} Tape-in hair extensions.
+Sleek professional result, premium quality visible.
+Luxury beauty portrait, clean bright lighting.
+Horizontal 1200x630, e-commerce ready.
 """
         else:
             scene = f"""
-Detail of Tape-in extension adhesive band application,
-seamless blend with long {hair_color} hair.
-Professional technique close-up.
+Detail of Tape-in extension result on long {hair_color} hair.
+Showing the smooth seamless blend, natural look.
+Premium product photography.
 """
     
     elif is_itip:
-        # Articles I-Tip spécifiques
+        # Produit I-Tip - fusion naturelle
         if image_type == "cover":
             scene = f"""
-Natural-looking woman with long {hair_color} I-Tip keratin extensions,
-strand-by-strand fusion result, ultra-natural blend.
+Natural-looking woman with long {hair_color} I-Tip keratin extensions.
+Strand-by-strand result, ultra-natural blend.
 Premium beauty portrait showing hair movement and texture.
-Horizontal 1200x630.
+Horizontal 1200x630, luxury lifestyle feel.
 """
         else:
             scene = f"""
-Close-up of I-Tip keratin fusion bonds,
-individual strands blending with long {hair_color} natural hair.
-Professional technique detail.
+Close-up of I-Tip extension result on long {hair_color} hair.
+Individual strands blending naturally, premium quality.
+Product detail photography.
 """
     
     else:
-        # Articles généraux
+        # Articles généraux - résultat premium
         if image_type == "cover":
             scene = f"""
-Beautiful confident woman with long luxurious {hair_color} hair extensions,
-premium salon quality finish, healthy shine and volume.
+Beautiful confident woman with long luxurious {hair_color} hair extensions.
+Premium quality result, healthy shine and volume.
 Elegant beauty portrait, soft professional lighting.
-Horizontal 1200x630 cover composition.
+Horizontal 1200x630 cover composition, aspirational lifestyle.
 """
         else:
             scene = f"""
-Detail shot of beautiful long {hair_color} hair extensions,
-premium texture and shine, professional result.
+Detail shot of beautiful long {hair_color} hair extensions.
+Premium texture and shine, professional quality result.
+Luxury product photography.
 """
     
     # =====================================================
-    # AJOUT DU PRODUIT FOCUS SI SPÉCIFIÉ
+    # AJOUT DU PRODUIT FOCUS
     # =====================================================
     
     if focus_product:
         scene += f"\nFeatured Luxura product: {focus_product}."
     
     # =====================================================
-    # AJOUT DES MOTS-CLÉS COMME THÈME VISUEL
+    # AJOUT DES MOTS-CLÉS VISUELS
     # =====================================================
     
     if keywords:
-        # Filtrer les mots-clés pertinents pour l'image
-        visual_keywords = [k for k in keywords[:5] if not any(skip in k.lower() for skip in ['québec', 'montréal', 'canada', 'prix', 'acheter'])]
+        visual_keywords = [k for k in keywords[:5] if not any(skip in k.lower() for skip in ['québec', 'montréal', 'canada', 'prix', 'acheter', 'salon'])]
         if visual_keywords:
             scene += f"\nVisual theme: {', '.join(visual_keywords)}."
     
@@ -359,7 +338,6 @@ premium texture and shine, professional result.
     # ASSEMBLAGE FINAL
     # =====================================================
     
-    # Ajouter les règles de la catégorie
     must_have = ", ".join(cat_rules["must_have"][:3])
     avoid = ", ".join(cat_rules["avoid"][:3])
     
@@ -375,7 +353,7 @@ MUST AVOID: {avoid}
 
 TECHNICAL: Ultra realistic photography, 4K quality, soft natural lighting, 
 horizontal {1200 if image_type == 'cover' else 800}x{630 if image_type == 'cover' else 600} composition,
-no text, no watermark, professional beauty photography.
+no text, no watermark, professional beauty/product photography, e-commerce ready.
 """
     
     return final_prompt.strip()

@@ -272,9 +272,9 @@ BLOG_TOPICS_EXTENDED = [
         "focus_product": "Genius Vivian"
     },
     {
-        "topic": "Installation Genius Weft : Formation professionnelle Québec",
+        "topic": "Genius Weft : Qualité professionnelle pour vos clientes Québec",
         "category": "genius",
-        "keywords": ["formation extensions Québec", "technique couture invisible", "apprendre genius weft"],
+        "keywords": ["qualité extensions Québec", "genius weft résultat", "extensions haut de gamme Canada"],
         "focus_product": "Genius Vivian"
     },
     {
@@ -330,9 +330,9 @@ BLOG_TOPICS_EXTENDED = [
         "focus_product": "I-Tip Eleanor"
     },
     {
-        "topic": "Formation I-Tip Québec : Maîtriser la fusion kératine professionnelle",
+        "topic": "Extensions I-Tip : Qualité kératine italienne haut de gamme Québec",
         "category": "itip",
-        "keywords": ["formation i-tip Québec", "technique kératine Montréal", "apprendre extensions Canada"],
+        "keywords": ["i-tip qualité Québec", "kératine italienne Montréal", "extensions premium Canada"],
         "focus_product": "I-Tip Eleanor"
     },
     {
