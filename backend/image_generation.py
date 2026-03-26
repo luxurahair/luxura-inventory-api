@@ -141,7 +141,7 @@ def get_next_hair_color() -> str:
 
 
 # =====================================================
-# CONSTRUCTEUR DE PROMPT V3 - Style photographique
+# CONSTRUCTEUR DE PROMPT V3 - Style Pinterest/Grok Optimisé
 # Plus efficace pour gpt-image-1 (2026)
 # =====================================================
 
@@ -156,70 +156,127 @@ def build_smart_image_prompt(
     """
     Construit un prompt intelligent V3 pour LUXURA DISTRIBUTION.
     
-    AMÉLIORATIONS V3 (2026):
-    - Style photographique fluide (pas de listes de règles)
-    - Règles strictes à la fin (moins de dilution)
-    - Termes techniques photo (lighting, DOF, composition)
-    - Meilleure détection du type d'article
+    AMÉLIORATIONS V3 (2026) - Style Grok/Pinterest:
+    - Prompts ultra-spécifiques pour cheveux TRÈS LONGS
+    - Processus de pose visible (pour tutoriels)
+    - Résultat final glamour (pour articles généraux)
+    - Anti-hommes renforcé en fin de prompt
     """
     title_lower = (blog_title or "").lower()
     keywords = keywords or []
     hair_color = hair_color or get_next_hair_color()
     cat_rules = CATEGORY_VISUAL_RULES.get(category, CATEGORY_VISUAL_RULES["general"])
 
-    # Détection plus fine du type d'article
+    # Détection du type d'article
     is_comparison = any(k in title_lower for k in ["vs", "versus", "comparatif", "comparaison", "différence"])
     is_entretien = any(k in title_lower for k in ["entretien", "soins", "durée", "maintenu", "prolonger"])
     is_tendances = any(k in title_lower for k in ["tendance", "2025", "2026", "mode", "style", "balayage"])
+    is_installation = any(k in title_lower for k in ["installation", "pose", "comment", "étape", "tutoriel", "guide"])
     is_halo = "halo" in title_lower
     is_genius = "genius" in title_lower or "weft" in title_lower
     is_tape = "tape" in title_lower or "adhésive" in title_lower or "bande" in title_lower
     is_itip = "i-tip" in title_lower or "itip" in title_lower or "kératine" in title_lower
 
-    # Prompt de base en style photographique (plus efficace que listes de règles)
-    base = f"""Professional luxury beauty photography, ultra-realistic 8K DSLR photograph of an elegant feminine woman in her late 20s to mid 30s, beautiful symmetrical face, soft natural makeup, confident and aspirational expression. She has extremely long, thick, voluminous {hair_color} hair extensions reaching her waist or lower back, flowing naturally with beautiful movement and healthy shine. The hair is the absolute hero of the image - luxurious, seamless blend, premium quality visible."""
+    # =====================================================
+    # PROMPTS PAR CATÉGORIE - Style Grok/Pinterest
+    # =====================================================
+    
+    if is_itip:
+        if is_installation or image_type == "content":
+            # I-TIP - Processus de pose
+            prompt = f"""Ultra realistic photograph of a beautiful woman getting professional I-Tip hair extensions installed in a luxury salon. Elegant feminine model with long {hair_color} hair, hairstylist applying keratin I-Tip extensions strand by strand using small microbeads close to the scalp.
 
-    # Adaptation selon le type d'article
-    if is_comparison:
-        scene = "Side-by-side feel showing two different luxurious long hair results, elegant composition, clean bright studio background with soft gradient."
-    elif is_entretien:
-        scene = "Perfectly healthy, shiny and well-maintained very long hair, soft natural window light, fresh and vibrant look, hair glowing with health."
-    elif is_tendances:
-        scene = "Modern 2026 fashion-forward styling, trendy yet timeless, slight movement in the hair, high-fashion editorial feel, contemporary elegance."
-    elif is_halo:
-        scene = "Effortless volume and length with invisible support, natural fall of hair, soft glamour lighting, lifestyle luxury setting, instant transformation result."
-    elif is_genius:
-        scene = "Sleek and seamless weft result, ultra-natural long straight or gently waved hair, sophisticated premium aesthetic, thin invisible weft blending perfectly."
+Show the beautiful transformation: very long, thick, voluminous waist-length hair extensions with perfect natural blend. Focus on the application moment and the luxurious final length.
+
+Soft natural lighting, clean modern salon with white and beige tones, photorealistic 8K hair details, elegant beauty photography, horizontal 1200x630 composition."""
+        else:
+            # I-TIP - Résultat final
+            prompt = f"""Beautiful elegant woman showing the final result after I-Tip keratin extensions, very long waist-length thick and shiny {hair_color} hair flowing naturally. Luxurious long hair reaching her waist or hips, healthy shine, realistic texture.
+
+Soft glamour lighting, luxurious hair texture, photorealistic, clean bright background, horizontal format 1200x630."""
+    
     elif is_tape:
-        scene = "Smooth, sleek and flat long hair with invisible application, polished professional result, seamless sandwich technique result."
-    elif is_itip:
-        scene = "Ultra-natural strand-by-strand blend, individual extensions completely invisible, realistic texture and movement, keratin fusion perfection."
-    else:
-        scene = "Aspirational luxury lifestyle, clean bright background, premium elegant composition, beautiful flowing hair showcasing extension quality."
+        if is_installation or image_type == "content":
+            # TAPE-IN - Processus de pose sandwich
+            prompt = f"""Ultra realistic photograph of a beautiful woman getting professional Tape-in hair extensions installed. Elegant feminine model with {hair_color} hair, showing the sandwich application technique with thin adhesive tape extensions being pressed together.
 
-    # Composition technique selon le type d'image
-    if image_type == "cover":
-        technical = "Horizontal composition 1200x630, professional beauty photography, soft diffused lighting, shallow depth of field, cinematic color grading, e-commerce ready, no text, no watermark, highly detailed hair texture, premium magazine cover quality."
-    else:
-        technical = "Vertical or square-friendly composition, focus on hair details and texture, natural movement, 800x600 or similar, realistic skin and hair texture, close-up quality."
+Very long, thick waist-length hair as the final result, smooth and sleek appearance. Focus on the thin seamless tape bonds and the beautiful long hair transformation.
 
-    # Règles strictes en fin de prompt (plus efficace - les modèles lisent mieux les contraintes à la fin)
+Bright modern salon, soft natural lighting, photorealistic 8K detail, horizontal 1200x630 composition."""
+        else:
+            # TAPE-IN - Résultat final
+            prompt = f"""Beautiful elegant woman with smooth sleek Tape-in hair extensions result, very long waist-length {hair_color} hair flowing naturally. Thick, voluminous, seamless blend, healthy shine.
+
+The hair must reach her waist or lower back, luxurious and natural-looking. Soft glamour lighting, clean background, photorealistic, horizontal 1200x630."""
+    
+    elif is_genius:
+        if is_installation or image_type == "content":
+            # GENIUS WEFT - Processus de couture
+            prompt = f"""Ultra realistic photograph of a beautiful woman getting Genius Weft extensions installed in a luxury salon. Elegant feminine model, showing the ultra-thin 0.78mm weft being sewn onto a beaded row near the scalp.
+
+Very long waist-length {hair_color} hair as the final result, seamless thin weft blending perfectly. Focus on the professional sewing technique and the luxurious long hair transformation.
+
+Clean modern salon, soft natural lighting, photorealistic 8K detail, horizontal 1200x630 composition."""
+        else:
+            # GENIUS WEFT - Résultat final
+            prompt = f"""Beautiful elegant woman with Genius Weft extensions result, very long waist-length {hair_color} hair, sleek and seamless. Ultra-thin invisible weft, thick voluminous hair reaching her waist or hips.
+
+Sophisticated luxury appearance, healthy shine, natural movement. Soft glamour lighting, clean background, photorealistic, horizontal 1200x630."""
+    
+    elif is_halo:
+        if is_installation or image_type == "content":
+            # HALO - Pose simple
+            prompt = f"""Ultra realistic photograph of a beautiful woman putting on a Halo wire hair extension. Elegant feminine model positioning the invisible wire on her head, showing the instant volume transformation.
+
+Very long waist-length {hair_color} hair flowing down, thick and voluminous. Focus on the ease of application and the dramatic long hair result.
+
+Bright lifestyle setting, soft natural lighting, photorealistic, horizontal 1200x630 composition."""
+        else:
+            # HALO - Résultat final
+            prompt = f"""Beautiful elegant woman wearing Halo wire extensions, very long waist-length {hair_color} hair with instant volume. Invisible wire hidden, thick voluminous hair reaching her waist or hips, natural movement.
+
+Effortless glamour, luxury lifestyle feel, healthy shine. Soft lighting, aspirational setting, photorealistic, horizontal 1200x630."""
+    
+    elif is_entretien:
+        # ENTRETIEN - Cheveux bien entretenus
+        prompt = f"""Beautiful elegant woman with perfectly maintained very long hair extensions, waist-length {hair_color} hair that is healthy, shiny and voluminous. The result of proper care - gorgeous flowing long hair.
+
+Showing the beautiful texture and shine of well-maintained extensions. Optional: luxury hair care products elegantly displayed.
+
+Soft natural lighting, clean bright background, photorealistic, horizontal 1200x630."""
+    
+    elif is_tendances:
+        # TENDANCES - Style moderne
+        prompt = f"""Fashion-forward beautiful woman with trendy very long {hair_color} hair extensions, waist-length modern styling with balayage or ombre effect. Contemporary 2026 hair trend, thick voluminous flowing hair.
+
+Editorial fashion photography feel, Instagram-worthy long hair result. Stylish and aspirational, horizontal 1200x630."""
+    
+    elif is_comparison:
+        # COMPARATIF - Résultat premium
+        prompt = f"""Beautiful elegant woman with very long luxurious {hair_color} hair extensions reaching her waist. Premium quality result showing thick, voluminous, healthy hair. Comparison-ready: perfect example of high-end extension result.
+
+Clean studio background, professional beauty photography, soft lighting, horizontal 1200x630."""
+    
+    else:
+        # GÉNÉRAL - Femme avec cheveux très longs style Pinterest
+        prompt = f"""Beautiful confident feminine woman with very long luxurious {hair_color} hair extensions reaching her waist or hips. Thick, voluminous, healthy shiny hair flowing naturally with beautiful movement.
+
+The hair is the absolute hero of the image - long, beautiful, flowing. Premium extension result, aspirational lifestyle feel.
+
+Soft glamour lighting, clean bright background, photorealistic 8K quality, horizontal 1200x630 composition."""
+
+    # =====================================================
+    # AJOUT DES RÈGLES STRICTES ANTI-HOMMES (FIN DU PROMPT)
+    # =====================================================
+    
     strict_rules = """
-CRITICAL REQUIREMENTS: Only one beautiful feminine woman, absolutely no men or masculine features, no short hair (minimum waist length hair required), no brushes or combs, no styling tools, no salon interior, no hair application process being shown, no visible weft edges unless seamless and natural, no text or watermarks in image. Must be photorealistic photography, not illustration or cartoon."""
+
+Strict rule: ONLY beautiful feminine woman, absolutely no male person or masculine features in the image. No men, no beards, no masculine jawlines. Hair must be very long (minimum waist length), no short hair, no pixie cut, no bob. No brushes, no combs, no styling tools. Photorealistic only, no cartoon, no illustration, no text, no watermark."""
 
     if focus_product:
-        strict_rules += f" Subtly showcase the premium quality result of wearing {focus_product} extensions."
+        strict_rules += f" Featured Luxura product: {focus_product}."
 
-    # Assemblage final
-    final_prompt = f"{base}\n\nScene: {scene}\n\n{technical}\n\n{strict_rules}"
-
-    # Ajout léger des mots-clés visuels (filtrés)
-    if keywords:
-        visual_kw = [k for k in keywords[:4] if not any(bad in k.lower() for bad in ['québec', 'montréal', 'canada', 'prix', 'acheter', 'salon', 'professionnel'])]
-        if visual_kw:
-            final_prompt += f"\n\nVisual mood inspiration: {', '.join(visual_kw)}."
-
-    return final_prompt.strip()
+    return prompt.strip() + strict_rules
 
 
 # =====================================================

@@ -1854,12 +1854,13 @@ async def generate_daily_blogs(
         await db.blog_posts.insert_one(blog_post)
         
         # ============================================
-        # PUBLIER SUR WIX AVEC IMAGES UNSPLASH VÉRIFIÉES
-        # DALL-E DÉSACTIVÉ - Problème de génération d'hommes
+        # PUBLIER SUR WIX AVEC IMAGES DALL-E (PROMPTS GROK V3)
         # ============================================
         if publish_to_wix:
             category = topic_data.get("category", "general")
             blog_title = blog_post['title']
+            blog_keywords = topic_data.get("keywords", [])
+            focus_product = topic_data.get("focus_product")
             
             logger.info(f"🚀 Publishing to Wix: {blog_title[:50]}...")
             
@@ -1867,17 +1868,61 @@ async def generate_daily_blogs(
                 cover_image_data = None
                 content_image_data = None
                 
-                # DALL-E DÉSACTIVÉ - Utiliser UNIQUEMENT Unsplash avec images vérifiées
-                # Raison: DALL-E génère des hommes malgré les instructions contraires
-                logger.info(f"📷 Using VERIFIED Unsplash images (DALL-E disabled)")
+                # RÉACTIVÉ: DALL-E avec prompts Grok V3 optimisés
+                if DALLE_AVAILABLE:
+                    try:
+                        logger.info(f"🎨 Generating images with DALL-E (Grok V3 prompts)")
+                        logger.info(f"   Title: {blog_title[:50]}...")
+                        logger.info(f"   Category: {category}, Product: {focus_product}")
+                        
+                        # Générer image de couverture avec prompts Grok
+                        cover_bytes = await generate_blog_image_with_dalle(
+                            category=category,
+                            blog_title=blog_title,
+                            keywords=blog_keywords,
+                            focus_product=focus_product,
+                            image_type="cover"
+                        )
+                        if cover_bytes:
+                            cover_image_data = await upload_image_bytes_to_wix(
+                                api_key=wix_api_key,
+                                site_id=wix_site_id,
+                                image_bytes=cover_bytes,
+                                file_name=f"cover-dalle-{uuid.uuid4().hex[:8]}.png"
+                            )
+                            if cover_image_data:
+                                logger.info(f"✅ DALL-E cover image uploaded")
+                        
+                        # Générer 2ème image pour le contenu
+                        content_bytes = await generate_blog_image_with_dalle(
+                            category=category,
+                            blog_title=blog_title,
+                            keywords=blog_keywords,
+                            focus_product=focus_product,
+                            image_type="content"
+                        )
+                        if content_bytes:
+                            content_image_data = await upload_image_bytes_to_wix(
+                                api_key=wix_api_key,
+                                site_id=wix_site_id,
+                                image_bytes=content_bytes,
+                                file_name=f"content-dalle-{uuid.uuid4().hex[:8]}.png"
+                            )
+                            if content_image_data:
+                                logger.info(f"✅ DALL-E content image uploaded")
+                                
+                    except Exception as e:
+                        logger.error(f"⚠️ DALL-E generation failed: {e}, falling back to Unsplash")
                 
-                # Image de couverture - Unsplash vérifiée
-                cover_image_data = await import_image_with_retry(
-                    api_key=wix_api_key,
-                    site_id=wix_site_id,
-                    category=category,
-                    max_retries=3
-                )
+                # Fallback vers Unsplash si DALL-E échoue
+                if not cover_image_data:
+                    logger.info(f"📷 Using Unsplash fallback for cover image")
+                    cover_image_data = await import_image_with_retry(
+                        api_key=wix_api_key,
+                        site_id=wix_site_id,
+                        category=category,
+                        max_retries=3
+                    )
                 
                 # Fallback pour l'image de contenu aussi
                 if not content_image_data:
