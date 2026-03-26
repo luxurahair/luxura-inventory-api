@@ -6,13 +6,15 @@
 import os
 import uuid
 import httpx
+import asyncio
 import logging
 import random
-import asyncio
+import io
 from typing import Optional, Dict, Tuple, List
 from dotenv import load_dotenv
 
 load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 EMERGENT_LLM_KEY = os.getenv("EMERGENT_LLM_KEY")
@@ -34,7 +36,7 @@ MANDATORY SCENE REQUIREMENTS:
 - Hair is flowing naturally, shiny, healthy and the absolute HERO of the image
 
 STRICTLY FORBIDDEN:
-- Only one woman alone (must be GROUP of 3-5 women), short hair on any woman, men, masculine features, brushes, combs, styling tools
+- Only one woman, short hair on any woman, men, masculine features, brushes, combs, styling tools
 - Hair shorter than waist length, bob, pixie, shoulder length
 - Text, watermark, cartoon, illustration style
 
@@ -49,24 +51,14 @@ FOCUS ON:
 # =====================================================
 
 HAIR_COLORS = [
-    "rich brunette",
-    "honey blonde", 
-    "dark chocolate brown",
-    "caramel balayage",
-    "platinum blonde",
-    "auburn copper",
-    "golden blonde highlights",
-    "ash brown",
-    "warm chestnut",
-    "ombre dark to caramel",
-    "cool toned brown",
-    "sun-kissed blonde"
+    "rich brunette", "honey blonde", "dark chocolate brown", "caramel balayage",
+    "platinum blonde", "auburn copper", "golden blonde highlights", "ash brown",
+    "warm chestnut", "ombre dark to caramel", "sun-kissed blonde"
 ]
 
 _color_index = 0
 
 def get_next_hair_color() -> str:
-    """Retourne la prochaine couleur de cheveux en rotation."""
     global _color_index
     color = HAIR_COLORS[_color_index % len(HAIR_COLORS)]
     _color_index += 1
@@ -77,51 +69,58 @@ def get_next_hair_color() -> str:
 # ANALYSE DU CONTENU DU BLOG POUR ADAPTER L'IMAGE
 # =====================================================
 
-def analyze_blog_content_for_image(blog_data: Dict) -> str:
-    """Analyse le contenu réel du blog et retourne un thème visuel adapté."""
+def analyze_blog_content_for_image(blog_data: Dict, image_type: str = "cover") -> str:
+    """Analyse le contenu réel du blog et retourne un thème visuel adapté"""
     content = (blog_data.get("content", "") + " " + blog_data.get("title", "")).lower()
     category = blog_data.get("category", "general")
     focus_product = blog_data.get("focus_product", "")
 
-    # Détection du contexte basé sur le contenu réel du blog
-    if any(word in content for word in ["soirée", "fille", "amies", "soiree", "girls night", "fête", "célébration"]):
-        scene = "chic girls night out around elegant dinner table with candles, champagne glasses and warm lighting"
-    elif any(word in content for word in ["installation", "pose", "étape", "tutoriel", "comment"]):
-        scene = "elegant modern luxury salon with group of glamorous women admiring and touching their stunning very long hair extensions"
-    elif any(word in content for word in ["entretien", "soins", "durée", "maintenir"]):
-        scene = "joyful elegant women at a chic brunch table laughing together, showing off their healthy, shiny, extremely long flowing hair"
-    elif any(word in content for word in ["halo", "wire", "fil"]):
-        scene = "group of glamorous women at an elegant cocktail party, one touching her gorgeous long flowing Halo wire extensions while friends admire"
-    elif any(word in content for word in ["genius", "weft", "trame"]):
-        scene = "elegant women having a sophisticated dinner party, all with stunning waist-length Genius Weft extensions, laughing and toasting"
-    elif any(word in content for word in ["tape", "adhésive", "bande"]):
-        scene = "glamorous girlfriends getting ready together in a luxurious dressing room, all with sleek long Tape-in extensions"
-    elif any(word in content for word in ["tendance", "2025", "2026", "mode", "style"]):
-        scene = "fashion-forward group of women at a trendy rooftop bar, showcasing modern long hair trends with their gorgeous extensions"
+    # COVER: Scène principale
+    if image_type == "cover":
+        if any(word in content for word in ["soirée", "fille", "amies", "soiree", "girls night", "table", "dîner"]):
+            scene = "chic girls night out around elegant dinner table with candles and wine glasses, 4 glamorous women laughing together"
+        elif any(word in content for word in ["installation", "pose", "étape", "tutoriel", "comment"]):
+            scene = "elegant modern luxury salon with group of 4 glamorous women admiring their stunning long hair extensions in mirrors"
+        elif any(word in content for word in ["entretien", "soins", "durée", "repositionnement"]):
+            scene = "joyful elegant women at a sophisticated brunch table showing off their healthy, shiny, very long flowing hair"
+        elif "genius" in content or "weft" in content or "trame" in content:
+            scene = "elegant sophisticated dinner party with 4 women toasting champagne, all with stunning waist-length Genius Weft hair extensions"
+        elif "tape" in content or "adhésive" in content:
+            scene = "glamorous girlfriends getting ready together in a luxurious dressing room, all with sleek long Tape-in extensions"
+        elif "halo" in content or "wire" in content:
+            scene = "group of glamorous women at an elegant cocktail party, one touching her gorgeous long flowing Halo extensions while friends admire"
+        elif "i-tip" in content or "itip" in content or "kératine" in content:
+            scene = "chic rooftop bar scene with 4 elegant women showing their natural-looking I-Tip keratin extensions"
+        else:
+            scene = "group of 4 elegant women having a lively chic soirée around a beautiful dinner table, laughing, toasting with champagne"
+    
+    # CONTENT: Scène intérieure différente (plus intime, focus cheveux)
     else:
-        scene = "group of 4 elegant women having a lively chic soirée around a beautiful dinner table, laughing, toasting with champagne, proudly showing their extremely long luxurious flowing hair extensions"
+        if any(word in content for word in ["installation", "pose", "étape", "tutoriel"]):
+            scene = "close-up of 3 glamorous women in a luxury salon, one touching another's beautiful long extensions with admiration"
+        elif any(word in content for word in ["entretien", "soins"]):
+            scene = "intimate scene of 3 elegant women at a spa day, comparing their long shiny healthy hair extensions"
+        elif "genius" in content or "weft" in content:
+            scene = "3 best friends at a fancy restaurant, one showing her friends the seamless blend of her Genius Weft extensions"
+        elif "tape" in content:
+            scene = "glamorous women in a chic bathroom getting ready for a night out, admiring their sleek Tape-in extensions"
+        elif "halo" in content:
+            scene = "cozy elegant living room with 3 women having wine, one demonstrating how easy her Halo wire extensions are"
+        else:
+            scene = "intimate moment between 3 elegant girlfriends admiring each other's beautiful very long flowing hair extensions"
 
-    product_mention = f"featuring {focus_product}" if focus_product else "featuring premium Luxura hair extensions"
-    return f"{scene} {product_mention} - warm, joyful and aspirational luxury atmosphere"
+    product_text = f"featuring {focus_product}" if focus_product else "featuring premium Luxura hair extensions"
+    return f"{scene}, {product_text} - warm, joyful and aspirational luxury atmosphere"
 
 
 # =====================================================
 # CONSTRUCTEUR DE PROMPT V3 - Soirée de filles chic
 # =====================================================
 
-def build_smart_image_prompt_v3(
-    blog_data: Dict,
-    image_type: str = "cover"
-) -> str:
-    """Prompt intelligent V3 qui analyse le blog complet pour générer des images contextuelles."""
-    theme = analyze_blog_content_for_image(blog_data)
+def build_smart_image_prompt_v3(blog_data: Dict, image_type: str = "cover") -> str:
+    """Prompt intelligent qui analyse le blog complet et génère des scènes DIFFÉRENTES pour cover vs content"""
+    theme = analyze_blog_content_for_image(blog_data, image_type)
     hair_color = get_next_hair_color()
-    
-    # Variations de scènes pour cover vs content
-    if image_type == "content":
-        scene_variation = "Focus on a closer view showing the beautiful hair texture and the joyful interaction between friends."
-    else:
-        scene_variation = "Wide elegant composition showing the full glamorous scene with all women visible."
 
     base_prompt = f"""
 {LUXURA_BASE_RULES}
@@ -129,37 +128,32 @@ def build_smart_image_prompt_v3(
 SCENE DESCRIPTION:
 {theme}
 
-{scene_variation}
+All women have extremely long, thick, voluminous {hair_color} hair extensions reaching their waist or hips. 
+Hair is flowing naturally with beautiful movement, healthy shine, and is the hero of the image.
 
-All 3 to 5 women have extremely long, thick, voluminous hair extensions in various shades including {hair_color}. 
-Hair reaches their waist or hips minimum, flowing naturally with beautiful movement, healthy shine, and is the absolute hero of the image.
-
-Atmosphere: joyful, friendly, elegant girls night, lots of genuine smiles and laughter, natural warm interaction between close friends.
+Atmosphere: joyful, friendly, elegant girls night, lots of smiles and laughter, natural interaction.
 
 Technical specifications:
 - Ultra realistic 8K luxury photography
-- Soft warm cinematic lighting with candles or ambient glow
-- Horizontal 1200x630 composition for blog cover
-- Photorealistic, extremely high detail on hair texture, skin and environment
-- Magazine editorial quality
+- Soft warm cinematic lighting
+- Horizontal 1200x630 composition
+- Photorealistic, high detail on hair texture and skin
 """
 
     strict_rules = """
-STRICT RULES (NEVER BREAK - CRITICAL):
-- MUST show 3 to 5 beautiful feminine women together (NOT just one woman alone)
-- Only beautiful feminine women, absolutely NO men, NO masculine features, NO beards
-- Hair on EVERY woman must be VERY LONG (minimum waist length, preferably hip length)
-- NO short hair, NO bob, NO shoulder length hair on ANY woman in the image
-- NO brushes, NO combs, NO styling tools visible anywhere
-- NO text, NO watermark, NO cartoon, NO illustration style
-- All women must look joyful, happy, elegant and glamorous
+STRICT RULES (NEVER BREAK):
+- Only beautiful feminine women, no men, no masculine features
+- Hair on EVERY woman must be very long (minimum waist length, preferably hip length)
+- No short hair, no bob, no shoulder length on any woman
+- No brushes, no combs, no styling tools visible
+- No text, no watermark, no cartoon, no illustration
 """
 
     return (base_prompt + strict_rules).strip()
 
 
 # =====================================================
-# GÉNÉRATION D'IMAGE AVEC DALL-E V3
+# GÉNÉRATION D'IMAGE AVEC DALL-E
 # =====================================================
 
 async def generate_blog_image_with_dalle(
@@ -170,11 +164,7 @@ async def generate_blog_image_with_dalle(
     image_type: str = "cover",
     blog_data: Dict = None
 ) -> Optional[bytes]:
-    """
-    Génère une image unique avec DALL-E basée sur le CONTENU COMPLET du blog.
-    
-    V3: Utilise le contenu réel du blog pour adapter les images au contexte.
-    """
+    """Génère une image unique avec DALL-E basée sur le contenu du blog"""
     if not EMERGENT_LLM_KEY:
         logger.error("EMERGENT_LLM_KEY not configured")
         return None
@@ -182,27 +172,23 @@ async def generate_blog_image_with_dalle(
     try:
         from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
 
-        # Construire blog_data si non fourni
         if blog_data is None:
             blog_data = {
-                "title": blog_title, 
-                "content": "", 
-                "category": category, 
+                "title": blog_title,
+                "content": "",
+                "category": category,
                 "focus_product": focus_product
             }
-        else:
-            # S'assurer que tous les champs existent
-            blog_data.setdefault("title", blog_title)
-            blog_data.setdefault("category", category)
-            blog_data.setdefault("focus_product", focus_product)
 
         prompt = build_smart_image_prompt_v3(blog_data, image_type)
+        
+        # Log le thème pour debug
+        theme = analyze_blog_content_for_image(blog_data, image_type)
+        logger.info(f"🎨 Generating [{image_type}] image for: {blog_title[:50]}...")
+        logger.info(f"   Theme: {theme[:80]}...")
 
-        logger.info(f"🎨 Generating V3 image [{image_type}] for: {blog_title[:60]}...")
-        logger.debug(f"Scene theme: {analyze_blog_content_for_image(blog_data)[:100]}...")
-        
         image_gen = OpenAIImageGeneration(api_key=EMERGENT_LLM_KEY)
-        
+
         images = await image_gen.generate_images(
             prompt=prompt,
             model="gpt-image-1",
@@ -210,7 +196,7 @@ async def generate_blog_image_with_dalle(
         )
 
         if images and len(images) > 0:
-            logger.info(f"✅ V3 Image generated successfully ({len(images[0])} bytes)")
+            logger.info(f"✅ [{image_type}] Image generated successfully ({len(images[0])} bytes)")
             return images[0]
         else:
             logger.error("No image returned from DALL-E")
@@ -224,7 +210,7 @@ async def generate_blog_image_with_dalle(
 
 
 # =====================================================
-# GÉNÉRATION ET UPLOAD DES 2 IMAGES V3
+# GÉNÉRATION ET UPLOAD DES 2 IMAGES
 # =====================================================
 
 async def generate_and_upload_blog_images(
@@ -236,27 +222,23 @@ async def generate_and_upload_blog_images(
     focus_product: str = None,
     blog_content: str = None
 ) -> Tuple[Optional[Dict], Optional[Dict]]:
-    """
-    Génère et upload les images de couverture ET de contenu pour un blog.
+    """Génère et upload les 2 images (cover + content) basées sur le contenu du blog"""
     
-    V3: Passe le CONTENU COMPLET du blog pour adapter les images.
-    """
-    cover_data = None
-    content_data = None
-    
-    # Construire le blog_data pour l'analyse
     blog_data_for_image = {
         "title": blog_title,
         "content": blog_content or "",
         "category": category,
         "focus_product": focus_product
     }
-    
-    logger.info(f"📸 V3 Generating lifestyle images for: {blog_title[:50]}...")
-    logger.info(f"   Category: {category}, Product: {focus_product}")
-    logger.info(f"   Content length: {len(blog_content or '')} chars")
-    
-    # 1. Générer l'image de couverture (style soirée de filles)
+
+    cover_data = None
+    content_data = None
+
+    logger.info(f"📸 Generating chic girls night lifestyle images for: {blog_title[:50]}...")
+    logger.info(f"   Blog content length: {len(blog_content or '')} chars")
+
+    # === IMAGE DE COUVERTURE ===
+    logger.info(f"🖼️ [1/2] Generating COVER image...")
     cover_bytes = await generate_blog_image_with_dalle(
         category=category,
         blog_title=blog_title,
@@ -265,18 +247,19 @@ async def generate_and_upload_blog_images(
         image_type="cover",
         blog_data=blog_data_for_image
     )
-    
+
     if cover_bytes:
         cover_data = await upload_image_bytes_to_wix(
             api_key=api_key,
             site_id=site_id,
             image_bytes=cover_bytes,
-            file_name=f"cover-v3-{uuid.uuid4().hex[:8]}.png"
+            file_name=f"cover-{uuid.uuid4().hex[:8]}.png"
         )
         if cover_data:
-            logger.info(f"   ✅ Cover uploaded: {cover_data.get('static_url', '')[:50]}...")
-    
-    # 2. Générer l'image de contenu (variante avec focus différent)
+            logger.info(f"   ✅ Cover uploaded: {cover_data.get('static_url', '')[:60]}...")
+
+    # === IMAGE DE CONTENU (DIFFÉRENTE) ===
+    logger.info(f"🖼️ [2/2] Generating CONTENT image (different scene)...")
     content_bytes = await generate_blog_image_with_dalle(
         category=category,
         blog_title=blog_title,
@@ -285,22 +268,22 @@ async def generate_and_upload_blog_images(
         image_type="content",
         blog_data=blog_data_for_image
     )
-    
+
     if content_bytes:
         content_data = await upload_image_bytes_to_wix(
             api_key=api_key,
             site_id=site_id,
             image_bytes=content_bytes,
-            file_name=f"content-v3-{uuid.uuid4().hex[:8]}.png"
+            file_name=f"content-{uuid.uuid4().hex[:8]}.png"
         )
         if content_data:
-            logger.info(f"   ✅ Content uploaded: {content_data.get('static_url', '')[:50]}...")
-    
+            logger.info(f"   ✅ Content uploaded: {content_data.get('static_url', '')[:60]}...")
+
     return cover_data, content_data
 
 
 # =====================================================
-# UPLOAD IMAGE VERS WIX MEDIA (via catbox.moe fallback)
+# UPLOAD IMAGE VERS WIX MEDIA
 # =====================================================
 
 async def upload_image_bytes_to_wix(
@@ -309,10 +292,7 @@ async def upload_image_bytes_to_wix(
     image_bytes: bytes,
     file_name: str
 ) -> Optional[Dict]:
-    """
-    Upload une image (bytes) vers Wix Media Manager.
-    Utilise catbox.moe comme hébergeur intermédiaire si nécessaire.
-    """
+    """Upload une image (bytes) vers Wix Media Manager via catbox.moe"""
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             # Méthode 1: Essayer l'upload direct Wix
@@ -346,7 +326,6 @@ async def upload_image_bytes_to_wix(
                     if upload_response.status_code in (200, 201):
                         file_id = upload_data.get("file", {}).get("id")
                         if file_id:
-                            # Attendre que le fichier soit prêt
                             for _ in range(30):
                                 check_response = await client.get(
                                     f"https://www.wixapis.com/site-media/v1/files/{file_id}",
@@ -364,6 +343,7 @@ async def upload_image_bytes_to_wix(
                                         return {
                                             "file_id": file_id,
                                             "static_url": static_url,
+                                            "wix_uri": f"wix:image://v1/{file_id}/{file_name}#originWidth=1200&originHeight=630",
                                             "width": 1200,
                                             "height": 630
                                         }
@@ -373,7 +353,6 @@ async def upload_image_bytes_to_wix(
             # Méthode 2: Fallback via catbox.moe
             logger.info(f"⬆️ Using catbox.moe fallback for {file_name}...")
             
-            import io
             files = {
                 'reqtype': (None, 'fileupload'),
                 'fileToUpload': (file_name, io.BytesIO(image_bytes), 'image/png')
@@ -408,26 +387,9 @@ async def upload_image_bytes_to_wix(
 
 
 # =====================================================
-# FALLBACK UNSPLASH - SOIRÉE DE FILLES CHIC
+# FALLBACK - Pas utilisé si DALL-E fonctionne
 # =====================================================
 
-FALLBACK_UNSPLASH_IMAGES = {
-    "general": [
-        # Images lifestyle soirée de filles (backup si DALL-E échoue)
-        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
-        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
-        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
-        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=1200&h=630&fit=crop",
-    ]
-}
-
-_fallback_index = 0
-
 def get_fallback_unsplash_image() -> str:
-    """Retourne une image de fallback style soirée de filles."""
-    global _fallback_index
-    images = FALLBACK_UNSPLASH_IMAGES["general"]
-    image = images[_fallback_index % len(images)]
-    _fallback_index += 1
-    return image
+    """Retourne une image de fallback (ne devrait pas être utilisé)"""
+    return "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&h=630&fit=crop"
