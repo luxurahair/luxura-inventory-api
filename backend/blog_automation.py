@@ -323,7 +323,7 @@ BLOG_TOPICS_EXTENDED = [
         "focus_product": "I-Tip Eleanor"
     },
     {
-        "topic": "Entretien extensions I-Tip : Prolonger la durée de vie jusqu'à 6 mois",
+        "topic": "Entretien extensions I-Tip : Prolonger la durée de vie au-delà de 12 mois",
         "category": "itip",
         "keywords": ["entretien i-tip", "durée extensions kératine", "soins extensions"],
         "focus_product": "I-Tip Eleanor"
@@ -1206,11 +1206,17 @@ STYLE:
 - Français québécois naturel
 - SEO optimisé avec mots-clés intégrés naturellement
 
-PRODUITS LUXURA:
-- Genius Weft Vivian: Trame ultra-fine 0.78mm révolutionnaire, découpable, couture invisible
-- Halo Everly: Fil invisible ajustable, volume instantané, aucune fixation permanente
-- Tape Aurora: Bande adhésive médicale, pose sandwich, réutilisable 3-4 fois
-- I-Tip Eleanor: Kératine italienne, fusion mèche par mèche, invisible
+PRODUITS LUXURA (DURÉES DE VIE IMPORTANTES):
+- Genius Weft Vivian: Trame ultra-fine 0.78mm révolutionnaire, découpable, couture invisible. Durée: 12+ mois avec bon entretien.
+- Halo Everly: Fil invisible ajustable, volume instantané, aucune fixation permanente. Durée: 12+ mois avec bon entretien.
+- Tape Aurora: Bande adhésive médicale, pose sandwich, réutilisable 3-4 fois. Durée: 12+ mois avec bon entretien.
+- I-Tip Eleanor: Kératine italienne, fusion mèche par mèche, invisible. Durée: 12+ mois avec bon entretien.
+
+CONSEILS ENTRETIEN IMPORTANTS:
+- Toutes les extensions Luxura peuvent durer PLUS DE 12 MOIS avec des soins appropriés
+- Les couleurs BLONDES nécessitent plus de soins car le procédé de décoloration fragilise les cheveux
+- Recommander des produits sans sulfate et sans alcool
+- Éviter la chaleur excessive
 
 LOCALISATION: Québec, Montréal, Canada
 LANGUE: Français québécois UNIQUEMENT"""

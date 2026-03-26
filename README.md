@@ -1,281 +1,272 @@
-# Luxura Distribution - Application Mobile
+# Luxura Distribution - Blog Automation System
 
-Application mobile e-commerce pour Luxura Distribution (extensions de cheveux professionnels).
+## 🎯 Vue d'ensemble
 
-## Architecture
+Système d'automatisation de blogs pour Luxura Distribution, le leader des extensions capillaires haut de gamme au Québec.
+
+### Fonctionnalités principales:
+- ✅ **Génération automatique** d'articles SEO avec OpenAI GPT-4
+- ✅ **Images uniques DALL-E** générées pour chaque article (cover + contenu)
+- ✅ **Publication automatique** sur Wix Blog
+- ✅ **Notification par email** après chaque génération
+- ✅ **CRON scheduling** pour publication 2x par jour
+- 🚧 **Publication Facebook** (en cours)
+
+---
+
+## 🏗️ Architecture
 
 ```
-├── /app/frontend/          # Application Expo (React Native)
-├── /app/backend/           # API FastAPI (proxy local)
-├── Render: luxura_inventory_api       # API principale
-├── Render: luxura_inventory_sync_cron # Cron synchronisation
-└── Supabase               # Base de données PostgreSQL
+/app/
+├── backend/
+│   ├── server.py              # API FastAPI principale (routes produits, blog, etc.)
+│   ├── blog_automation.py     # Système de génération automatique de blogs
+│   ├── image_generation.py    # Module de génération d'images DALL-E
+│   ├── cron_scheduler.py      # Planificateur CRON pour exécution automatique
+│   ├── .env                   # Variables d'environnement (API keys)
+│   └── requirements.txt       # Dépendances Python
+│
+├── frontend/
+│   ├── app/                   # Routes Expo Router
+│   │   ├── index.tsx          # Page d'accueil
+│   │   ├── category/          # Pages catégories
+│   │   └── product/           # Pages produits
+│   ├── components/            # Composants React Native
+│   └── package.json           # Dépendances JavaScript
+│
+└── README.md                  # Ce fichier
 ```
 
 ---
 
-## ⚠️ VARIABLES D'ENVIRONNEMENT COMPLÈTES
+## 🔄 Flux de génération de blog
 
-### 1. Backend Local (`/app/backend/.env`)
+```
+1. CRON Job déclenche generate_daily_blogs()
+         ↓
+2. Sélection d'un topic (rotation automatique)
+         ↓
+3. Génération du contenu avec OpenAI GPT-4
+         ↓
+4. Génération de 2 images uniques avec DALL-E
+   - Cover image (pour le feed du blog)
+   - Content image (insérée au milieu de l'article)
+         ↓
+5. Upload des images vers Wix Media Manager
+         ↓
+6. Création du draft Wix avec:
+   - media.wixMedia.image (cover)
+   - displayed: true
+   - richContent avec IMAGE nodes
+         ↓
+7. Publication du draft
+         ↓
+8. Envoi email de notification
+         ↓
+9. (Optionnel) Publication sur Facebook
+```
+
+---
+
+## 📁 Fichiers clés
+
+### `blog_automation.py`
+Module principal de génération de blogs.
+
+**Fonctions principales:**
+- `generate_daily_blogs()` - Point d'entrée principal
+- `generate_blog_with_ai()` - Génération du contenu avec GPT-4
+- `create_wix_draft_post()` - Création du brouillon Wix
+- `html_to_ricos()` - Conversion HTML → format Ricos (Wix)
+- `import_image_with_retry()` - Import d'images avec retry automatique
+
+**Configuration topics:**
+```python
+BLOG_TOPICS = [
+    {"topic": "...", "category": "halo", "keywords": [...], "focus_product": "Halo Everly"},
+    {"topic": "...", "category": "genius", "keywords": [...], "focus_product": "Genius Vivian"},
+    {"topic": "...", "category": "tape", "keywords": [...], "focus_product": "Tape Aurora"},
+    {"topic": "...", "category": "itip", "keywords": [...], "focus_product": "I-Tip Eleanor"},
+]
+```
+
+### `image_generation.py`
+Module de génération d'images avec DALL-E.
+
+**Fonctions principales:**
+- `generate_blog_image_with_dalle()` - Génère une image unique
+- `upload_image_bytes_to_wix()` - Upload vers Wix Media
+- `get_next_hair_color()` - Rotation des couleurs de cheveux
+
+**Prompts par catégorie:**
+- Cover: Portrait glamour avec cheveux longs
+- Content: Détail technique de la méthode d'extension
+
+### `cron_scheduler.py`
+Planificateur pour exécution automatique 2x par jour.
+
+---
+
+## 🔑 Variables d'environnement
 
 ```env
-# MongoDB Local
-MONGO_URL="mongodb://localhost:27017"
-DB_NAME="test_database"
+# OpenAI / Emergent LLM
+EMERGENT_LLM_KEY=sk-emergent-xxxxx
 
-# Emergent LLM Key
-EMERGENT_LLM_KEY=sk-emergent-c23DdEcC8C04049755
+# Wix API
+WIX_API_KEY=IST.xxxxx
+WIX_SITE_ID=xxxxx
 
-# ==================== WIX API ====================
-WIX_API_KEY=IST.eyJraWQiOiJQb3pIX2FDMiIsImFsZyI6IlJTMjU2In0.eyJkYXRhIjoie1wiaWRcIjpcIjYzNzc3NDkyLWMxYWUtNDdkZS1iYWJlLTQ1MDYzYTg4Y2Y5MFwiLFwiaWRlbnRpdHlcIjp7XCJ0eXBlXCI6XCJhcHBsaWNhdGlvblwiLFwiaWRcIjpcImRlOTc0ZTRjLTg0YTUtNDhmNy1hMzEwLWU5OGRlOWM4ZTFkNVwifSxcInRlbmFudFwiOntcInR5cGVcIjpcImFjY291bnRcIixcImlkXCI6XCJmMWI5NjFlZC04MmQ2LTRiMzgtOTY3Yi01NTdhMGMzNDUxNjVcIn19IiwiaWF0IjoxNzY0MzU4MjU1fQ.A0WDKrxYuUcCKdOkA9mT550__khyEbUxObTS3Mq87ZKW6UGPiwVuw-V3mylYq-W95-0yFkQueUirX1-yCDJDTQcnGB6AEnHDgF2Z3OnxZLg6dpKbCc3qOCCNTKYPXRpowdfEenrIDc0knGccjtc-iRBXjlMuFbMeu92mVv0gIk236ING73TP8nHcsc8z6aBK-YNyUs1qzg8N3EbVy3e3XNGgK1889X6-5Lj0t_dw2v68S2YZz412XZGhC4kOnoZWvh5WRytgZIkxsjsnY2r8y5BCZbPKuQoRYRQtlEJU4THceXhQZhmrsCiP9Nb8_xuv7_q3xzfXazFJ0g7RSe3ddw
-WIX_SITE_ID=6e62c946-d068-45c1-8f5f-7af998f0d7b3
-
-# ==================== WIX OAUTH ====================
-WIX_INSTANCE_ID=ab8a5a88-69a5-4348-ad2e-06017de46f57
-WIX_CLIENT_ID=1969322e-ef8d-4aa4-90e1-d6fd3eb994ff
-WIX_CLIENT_SECRET=58e2d7b7-5a8d-44dc-bd74-b9e0c37c58fc
-WIX_ACCOUNT_ID=f1b961ed-82d6-4b38-967b-557a0c345165
-WIX_OAUTH_SCOPES=SCOPE.DC-STORES-MEGA.MANAGE-STORES
-WIX_REDIRECT_URL=https://luxura-inventory-api.onrender.com/wix/oauth/callback
-
-# ==================== SECRETS ====================
-WIX_PUSH_SECRET=9f3c2b8a7d1e4c5b9a0d7e6f3b2c1a9f
-SEO_SECRET=9f3c2b8a7d1e4c5b9a0d7e6f3b2c1a9f
-
-# ==================== SUPABASE ====================
-DATABASE_URL=postgresql+psycopg://postgres.cpnwntahrkfpenjsqzsy:Lianagir20180921@aws-1-ca-central-1.pooler.supabase.com:5432/postgres?sslmode=require
-
-# ==================== EMAIL ====================
+# Email (Gmail SMTP)
 LUXURA_EMAIL=info@luxuradistribution.com
-LUXURA_APP_PASSWORD=zgvsfiajermjqpgh
+LUXURA_APP_PASSWORD=xxxxx
 
-# ==================== INVENTAIRE ====================
-LUXURA_SALON_ID=4
+# Facebook (optionnel)
+FB_ACCESS_TOKEN=xxxxx
+FB_PAGE_ID=xxxxx
 ```
 
 ---
 
-### 2. Render: `luxura_inventory_api` (API principale)
+## 🚀 Endpoints API
 
-URL: `https://luxura-inventory-api.onrender.com`
+### Blog
+```
+POST /api/blog/auto-generate
+Body: {"count": 2}
+Response: {"success": true, "posts": [...]}
+```
 
-```env
-# ==================== SUPABASE ====================
-DATABASE_URL=postgresql+psycopg://postgres.cpnwntahrkfpenjsqzsy:Lianagir20180921@aws-1-ca-central-1.pooler.supabase.com:5432/postgres?sslmode=require
-
-# ==================== CORS ====================
-CORS_ORIGINS=https://editor.wix.com,https://www.wix.com,https://static.parastorage.com,https://*.wixsite.com,https://*.wixstudio.io,https://*.wix.com
-
-# ==================== WIX API ====================
-WIX_API_KEY=IST.eyJraWQiOiJQb3pIX2FDMiIsImFsZyI6IlJTMjU2In0.eyJkYXRhIjoie1wiaWRcIjpcIjYzNzc3NDkyLWMxYWUtNDdkZS1iYWJlLTQ1MDYzYTg4Y2Y5MFwiLFwiaWRlbnRpdHlcIjp7XCJ0eXBlXCI6XCJhcHBsaWNhdGlvblwiLFwiaWRcIjpcImRlOTc0ZTRjLTg0YTUtNDhmNy1hMzEwLWU5OGRlOWM4ZTFkNVwifSxcInRlbmFudFwiOntcInR5cGVcIjpcImFjY291bnRcIixcImlkXCI6XCJmMWI5NjFlZC04MmQ2LTRiMzgtOTY3Yi01NTdhMGMzNDUxNjVcIn19IiwiaWF0IjoxNzY0MzU4MjU1fQ.A0WDKrxYuUcCKdOkA9mT550__khyEbUxObTS3Mq87ZKW6UGPiwVuw-V3mylYq-W95-0yFkQueUirX1-yCDJDTQcnGB6AEnHDgF2Z3OnxZLg6dpKbCc3qOCCNTKYPXRpowdfEenrIDc0knGccjtc-iRBXjlMuFbMeu92mVv0gIk236ING73TP8nHcsc8z6aBK-YNyUs1qzg8N3EbVy3e3XNGgK1889X6-5Lj0t_dw2v68S2YZz412XZGhC4kOnoZWvh5WRytgZIkxsjsnY2r8y5BCZbPKuQoRYRQtlEJU4THceXhQZhmrsCiP9Nb8_xuv7_q3xzfXazFJ0g7RSe3ddw
-WIX_SITE_ID=6e62c946-d068-45c1-8f5f-7af998f0d7b3
-WIX_ACCOUNT_ID=f1b961ed-82d6-4b38-967b-557a0c345165
-
-# ==================== WIX OAUTH ====================
-WIX_CLIENT_ID=1969322e-ef8d-4aa4-90e1-d6fd3eb994ff
-WIX_CLIENT_SECRET=58e2d7b7-5a8d-44dc-bd74-b9e0c37c58fc
-WIX_INSTANCE_ID=ab8a5a88-69a5-4348-ad2e-06017de46f57
-WIX_OAUTH_SCOPES=SCOPE.DC-STORES-MEGA.MANAGE-STORES
-WIX_REDIRECT_URL=https://luxura-inventory-api.onrender.com/wix/oauth/callback
-
-# ==================== SECRETS ====================
-WIX_PUSH_SECRET=9f3c2b8a7d1e4c5b9a0d7e6f3b2c1a9f
-SEO_SECRET=9f3c2b8a7d1e4c5b9a0d7e6f3b2c1a9f
-
-# ==================== INVENTAIRE ====================
-LUXURA_SALON_ID=4
+### Produits
+```
+GET /api/products?category=halo&limit=20
+GET /api/products/{id}
+GET /api/categories
 ```
 
 ---
 
-### 3. Render: `luxura_inventory_sync_cron` (Cron Job)
+## ⏰ CRON Schedule
 
-```env
-# ==================== SUPABASE ====================
-DATABASE_URL=postgresql+psycopg://postgres.cpnwntahrkfpenjsqzsy:Lianagir20180921@aws-1-ca-central-1.pooler.supabase.com:5432/postgres?sslmode=require
+Le système est configuré pour générer des blogs automatiquement:
 
-# ==================== PYTHON ====================
-PYTHON_VERSION=3.12.7
-PYTHONUNBUFFERED=1
+| Heure | Action |
+|-------|--------|
+| 08:00 | Génération de 2 blogs |
+| 16:00 | Génération de 2 blogs |
 
-# ==================== WIX API (différent de l'API principale) ====================
-WIX_API_KEY=IST.eyJraWQiOiJQb3pIX2FDMiIsImFsZyI6IlJTMjU2In0.eyJkYXRhIjoie1wiaWRcIjpcIjJjYjMzMjgzLTNlNTYtNDExOS04OGQ5LWU0YTQ0NjE4MDBkOFwiLFwiaWRlbnRpdHlcIjp7XCJ0eXBlXCI6XCJhcHBsaWNhdGlvblwiLFwiaWRcIjpcIjdkNjc2ZWM5LWZjMDAtNGI5NC1hMDUyLTEwNDNmODc4ZDQ4NlwifSxcInRlbmFudFwiOntcInR5cGVcIjpcImFjY291bnRcIixcImlkXCI6XCJmMWI5NjFlZC04MmQ2LTRiMzgtOTY3Yi01NTdhMGMzNDUxNjVcIn19IiwiaWF0IjoxNzY0MDIyMzEwfQ.OVzQv7PhALsLDcjHgTp9MCIeXMDrFfgPHKhRc2iNyRFUyJAbA3soVT_oT9WKlnvJJ8PdiYQ83MMR4pdxOpfMcBNMMSPRBfSfP4aBHhhKAuZe6JiFz_jKY2bGdku3WJszbtd4_Laj8Ij-0xpk5_udcP_JXxiUyckK2N3A625fbjOQjQ29-v0huXvabfGeSZTw1IHMS1qRt-bVST3N1pu7lQgwjm0-fbkEajkst5wrhwY4QtUFi7iVkPKCLJZPCYDi5qXBcmeMBH9pE745whHpdexDYVpe3glMGin1FHTziTJwP_Nyc7MBZERWFk-Vct3EXAvy3lNh-KTN0dFqiJ89GA
-WIX_SITE_ID=6e62c946-d068-45c1-8f5f-7af998f0d7b3
+**Total: 4 blogs/jour**
 
-# ==================== WIX OAUTH ====================
-WIX_CLIENT_ID=1969322e-ef8d-4aa4-90e1-d6fd3eb994ff
-WIX_CLIENT_SECRET=58e2d7b7-5a8d-44dc-bd74-b9e0c37c58fc
-WIX_INSTANCE_ID=ab8a5a88-69a5-4348-ad2e-06017de46f57
+---
 
-# ==================== SECRETS ====================
-WIX_PUSH_SECRET=9f3c2b8a7d1e4c5b9a0d7e6f3b2c1a9f
+## 📊 Informations Produits Luxura
+
+### Durées de vie (avec bon entretien)
+| Produit | Durée |
+|---------|-------|
+| Genius Weft Vivian | 12+ mois |
+| Halo Everly | 12+ mois |
+| Tape Aurora | 12+ mois |
+| I-Tip Eleanor | 12+ mois |
+
+### Conseils entretien
+- **Toutes les extensions**: Peuvent durer plus de 12 mois avec soins appropriés
+- **Couleurs blondes**: Nécessitent plus de soins (procédé de décoloration)
+- **Produits recommandés**: Sans sulfate, sans alcool
+- **Chaleur**: Éviter les outils chauffants excessifs
+
+---
+
+## 🖼️ Génération d'images DALL-E
+
+### Prompts optimisés par catégorie
+
+**Cover (image de couverture):**
+```
+Professional beauty photography of a glamorous woman with very long flowing 
+{hair_color} hair extensions, soft studio lighting, elegant pose, 
+hair salon quality result, high-end luxury feel
+```
+
+**Content (image dans l'article):**
+```
+Close-up detail shot of beautiful long {hair_color} hair with {technique} 
+extensions, showing natural blend, professional hair photography
+```
+
+### Couleurs de cheveux (rotation automatique)
+- blonde
+- brunette
+- dark brown
+- honey blonde
+- caramel highlights
+- auburn
+- platinum blonde
+- chocolate brown
+- golden blonde
+- ash brown
+- balayage ombre
+- rich chestnut
+
+---
+
+## 🐛 Résolution de problèmes
+
+### Image de couverture Wix ne s'affiche pas
+**Solution:** Utiliser le format avec `displayed: true` et `custom: true`:
+```python
+draft_post["media"] = {
+    "wixMedia": {
+        "image": {
+            "id": file_id,  # Juste le file_id, pas wix:image://
+            "width": 1200,
+            "height": 630
+        }
+    },
+    "displayed": True,
+    "custom": True
+}
+```
+
+### Format richContent pour images
+**Solution:** Utiliser `type: "IMAGE"` (majuscule) avec `imageData`:
+```python
+{
+    "type": "IMAGE",
+    "imageData": {
+        "image": {
+            "src": {"url": image_url},
+            "width": 1200,
+            "height": 630
+        },
+        "altText": "Description"
+    }
+}
 ```
 
 ---
 
-### 4. Frontend Expo (`/app/frontend/.env`)
+## 📧 Contact
 
-```env
-EXPO_PUBLIC_BACKEND_URL=/api
-```
-
----
-
-## Structure Base de Données (Supabase)
-
-**Connection:** `postgres.cpnwntahrkfpenjsqzsy` @ `aws-1-ca-central-1.pooler.supabase.com`
-
-### Tables principales
-
-| Table | Description |
-|-------|-------------|
-| `product` | Catalogue produits (wix_id, sku, name, price, options) |
-| `salon` | Points de stockage (id, name, code, is_active) |
-| `inventory_item` | Pivot salon×produit (salon_id, product_id, quantity) |
-| `sync_runs` | État des synchronisations Wix |
-
-### Logique Multi-Salons
-
-- **Salon ID 4** = Inventaire principal Wix (source de vérité)
-- Autres salons = Inventaire déduit/transféré
-
----
-
-## Catégories de Produits
-
-| Catégorie | Série | Type |
-|-----------|-------|------|
-| Genius | Vivian | Trame invisible ultra-fine 0.78mm |
-| Halo | Everly | Fil invisible ajustable |
-| Tape | Aurora | Bande adhésive médicale |
-| I-Tip | Eleanor | Fusion kératine mèche par mèche |
-| Ponytail | Victoria | Queue de cheval wrap-around |
-| Clip-In | Sophia | Extensions à clips amovibles |
-| Essentiels | Luxura | Outils et entretien |
-
----
-
-## Endpoints API
-
-### API Locale (Backend Emergent)
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/products` | Liste tous les produits |
-| `GET /api/products?category=halo` | Filtre par catégorie |
-| `GET /api/products/{id}` | Détails d'un produit + variantes |
-| `GET /api/categories` | Liste des catégories |
-| `GET /api/ping` | Health check |
-
-### API Render (luxura-inventory-api.onrender.com)
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /products` | Liste produits Supabase |
-| `GET /products/{id}` | Détails produit |
-| `GET /inventory/view` | Vue jointe produit + quantités |
-| `GET /inventory/export.xlsx` | Export Excel |
-| `GET /salons` | Liste des salons |
-| `POST /wix/sync` | Déclencher synchronisation |
-
----
-
-## Commandes
-
-```bash
-# Démarrer le backend
-sudo supervisorctl restart backend
-
-# Démarrer le frontend
-sudo supervisorctl restart expo
-
-# Voir les logs
-sudo supervisorctl tail -f backend
-sudo supervisorctl tail -f expo
-```
-
----
-
-## ⚠️ Notes Importantes
-
-- **NE PAS MODIFIER** les SKUs ou la base Wix/Supabase (nettoyage complet effectué)
-- **115 produits** synchronisés avec **229 variantes**
-- Toutes les variantes ont un SKU valide
-- L'inventaire du **Salon ID 4** est la source de vérité
-- **2 services Render** : API + Cron (clés WIX_API_KEY différentes!)
-
----
-
-## Contact
-
-Luxura Distribution - Extensions de cheveux professionnels
-Québec, Canada
-- Site: www.luxuradistribution.com
+**Luxura Distribution**
 - Email: info@luxuradistribution.com
+- Site: https://www.luxuradistribution.com
 
 ---
 
-## Fonctionnalités Automatisées
+## 📜 Changelog
 
-### 1. Système de Backlinks Automatiques
+### v2.0.0 (Mars 2026)
+- ✅ Génération d'images DALL-E uniques
+- ✅ 2 images par article (cover + content)
+- ✅ Fix du bug cover image Wix (displayed: true)
+- ✅ Rotation des couleurs de cheveux
+- ✅ Durées de vie corrigées (12+ mois)
 
-**Endpoint**: `POST /api/backlinks/run`
+### v1.5.0
+- ✅ Images Unsplash avec retry automatique
+- ✅ Email de notification
 
-Lance l'automatisation Playwright pour soumettre Luxura aux annuaires d'entreprises :
-- Soumission automatique aux directories
-- Capture d'écran de confirmation
-- Vérification des emails de confirmation
-
-**Variables requises**:
-```env
-LUXURA_EMAIL=info@luxuradistribution.com
-LUXURA_APP_PASSWORD=zgvsfiajermjqpgh  # Mot de passe d'application Gmail
-```
-
-**Status**: `GET /api/backlinks/status`
-
-### 2. Génération de Blog SEO avec IA
-
-**Endpoint**: `POST /api/blog/generate`
-
-Génère automatiquement un article de blog optimisé SEO en utilisant l'IA (Emergent LLM).
-
-**Variables requises**:
-```env
-EMERGENT_LLM_KEY=sk-emergent-c23DdEcC8C04049755
-```
-
-**Endpoints blog**:
-- `GET /api/blog` - Liste tous les articles
-- `GET /api/blog/{id}` - Article spécifique
-- `POST /api/blog/generate` - Générer nouvel article
-- `DELETE /api/blog/{id}` - Supprimer un article
-
-### 3. Publication automatique sur Wix (À CONFIGURER)
-
-Pour publier automatiquement les blogs sur Wix :
-
-1. **API Wix Blog** : Utiliser l'endpoint `/wix/seo/push_apply` sur l'API Render
-2. **Cron Job** : Configurer sur Render pour exécuter quotidiennement
-
-**Commande cron suggérée**:
-```bash
-# Tous les jours à 9h00
-0 9 * * * curl -X POST https://luxura-inventory-api.onrender.com/blog/generate
-```
-
-### 4. Vérification automatique des emails (Backlinks)
-
-**Endpoint**: `POST /api/backlinks/auto-verify`
-
-Vérifie automatiquement les emails de confirmation reçus pour les backlinks soumis.
-
----
-
-## Cron Jobs Recommandés
-
-| Tâche | Fréquence | Endpoint |
-|-------|-----------|----------|
-| Sync Wix → Supabase | Toutes les 6h | `/wix/sync` |
-| Génération Blog | Quotidien 9h | `/api/blog/generate` |
-| Vérification Backlinks | Quotidien 10h | `/api/backlinks/auto-verify` |
+### v1.0.0
+- ✅ Génération de blogs avec OpenAI
+- ✅ Publication sur Wix Blog

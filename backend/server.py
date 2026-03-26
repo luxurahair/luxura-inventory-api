@@ -71,16 +71,88 @@ app = FastAPI(
     openapi_url="/api/openapi.json"
 )
 
+# Variable globale pour le scheduler
+blog_scheduler = None
+
+async def scheduled_blog_generation():
+    """Génère des blogs automatiquement selon le CRON."""
+    try:
+        logger.info(f"🕐 CRON: Starting scheduled blog generation at {datetime.now(timezone.utc)}")
+        
+        # Importer ici pour éviter les imports circulaires
+        from blog_automation import generate_daily_blogs
+        
+        # Générer 2 blogs
+        results = await generate_daily_blogs(count=2, send_email=True)
+        
+        if results:
+            logger.info(f"✅ CRON: Generated {len(results)} blog(s)")
+            for blog in results:
+                logger.info(f"   - {blog.get('title', 'No title')[:50]}...")
+        else:
+            logger.warning("⚠️ CRON: No blogs generated")
+            
+    except Exception as e:
+        logger.error(f"❌ CRON: Error in scheduled blog generation: {e}")
+
 # Startup event - ping Luxura API to wake it up
 @app.on_event("startup")
 async def startup_event():
-    """Au démarrage, réveiller l'API Luxura et lancer le ping périodique"""
+    """Au démarrage, réveiller l'API Luxura et lancer le CRON"""
+    global blog_scheduler
+    
     logger.info("🚀 Starting Luxura Distribution API...")
+    
     # Wake up Luxura API
     await ping_luxura_api()
+    
     # Start background task to keep it awake
     asyncio.create_task(keep_luxura_awake())
     logger.info("✅ Background ping task started")
+    
+    # Configurer le CRON pour la génération de blogs (2x par jour)
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        
+        blog_scheduler = AsyncIOScheduler(timezone="America/Montreal")
+        
+        # Génération à 08:00 EST
+        blog_scheduler.add_job(
+            scheduled_blog_generation,
+            CronTrigger(hour=8, minute=0),
+            id="morning_blog_generation",
+            name="Morning Blog Generation (08:00 EST)"
+        )
+        
+        # Génération à 16:00 EST
+        blog_scheduler.add_job(
+            scheduled_blog_generation,
+            CronTrigger(hour=16, minute=0),
+            id="afternoon_blog_generation",
+            name="Afternoon Blog Generation (16:00 EST)"
+        )
+        
+        blog_scheduler.start()
+        logger.info("=" * 50)
+        logger.info("🕐 BLOG CRON SCHEDULER ACTIVE")
+        logger.info("   - 08:00 EST: Generate 2 blogs")
+        logger.info("   - 16:00 EST: Generate 2 blogs")
+        logger.info("   - Total: 4 blogs/day")
+        logger.info("=" * 50)
+        
+    except ImportError:
+        logger.warning("⚠️ APScheduler not installed - CRON disabled")
+    except Exception as e:
+        logger.error(f"❌ Failed to start blog scheduler: {e}")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Arrêter proprement le scheduler"""
+    global blog_scheduler
+    if blog_scheduler:
+        blog_scheduler.shutdown()
+        logger.info("🛑 Blog scheduler stopped")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
