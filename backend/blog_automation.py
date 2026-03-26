@@ -336,22 +336,23 @@ async def import_image_and_get_wix_uri(
             width = image_data.get("width") or 1200
             height = image_data.get("height") or 630
 
-            # Format wix:image:// (ne fonctionne pas bien)
+            # Format wix:image:// 
             wix_uri = f"wix:image://v1/{file_id}/{display_name}#originWidth={width}&originHeight={height}"
             
-            # Format URL statique avec ~mv2 (fonctionne mieux!)
-            static_url = f"https://static.wixstatic.com/media/{file_id}"
+            # Format le plus fiable pour heroImage (forum Wix 2025-2026)
+            # Le file_id contient déjà ~mv2.jpg dans son nom
+            static_url_mv2 = f"https://static.wixstatic.com/media/{file_id}"
             
             # Format avec dimensions explicites (évite w_NaN / h_NaN)
-            static_url_with_size = f"https://static.wixstatic.com/media/{file_id}/v1/fill/w_{width},h_{height},al_c,q_90/{display_name}"
+            static_url_full = f"https://static.wixstatic.com/media/{file_id}/v1/fill/w_{width},h_{height},al_c,q_90/{display_name}"
             
-            logger.info(f"✅ Image ready - Static URL: {static_url}")
+            logger.info(f"✅ Image ready - URL: {static_url_mv2}")
             logger.info(f"   Dimensions: {width}x{height}")
             
             return {
                 "wix_uri": wix_uri,
-                "static_url": static_url,
-                "static_url_full": static_url_with_size,
+                "static_url": static_url_mv2,      # Utilise celui-ci pour heroImage.id
+                "static_url_full": static_url_full,
                 "file_id": file_id,
                 "width": width,
                 "height": height,
@@ -627,25 +628,25 @@ async def create_wix_draft_post(
             if member_id:
                 draft_post["memberId"] = member_id
             
-            # Ajouter heroImage + coverMedia avec dimensions explicites
+            # Ajouter heroImage + coverMedia 
             if image_data and isinstance(image_data, dict):
-                static_url = image_data.get("static_url")
-                wix_uri = image_data.get("wix_uri")
+                wix_uri = image_data.get("wix_uri")  # Format wix:image://v1/...
+                static_url = image_data.get("static_url")  # URL pour reference
                 width = image_data.get("width", 1200)
                 height = image_data.get("height", 630)
                 
-                logger.info(f"Adding heroImage + coverMedia with dimensions {width}x{height}")
+                logger.info(f"Adding heroImage with wix_uri format")
+                logger.info(f"   Dimensions: {width}x{height}")
                 
-                # heroImage principal avec dimensions
+                # heroImage - utiliser wix_uri (seul format accepté par l'API)
                 draft_post["heroImage"] = {
                     "id": wix_uri,
-                    "url": static_url,
                     "width": width,
                     "height": height,
                     "altText": f"{title} - Luxura Distribution Québec"
                 }
                 
-                # coverMedia en fallback (recommandé par forum Wix)
+                # coverMedia en fallback
                 draft_post["coverMedia"] = {
                     "type": "IMAGE",
                     "image": {
