@@ -339,8 +339,11 @@ async def import_image_and_get_wix_uri(
             # Format wix:image:// (ne fonctionne pas bien)
             wix_uri = f"wix:image://v1/{file_id}/{display_name}#originWidth={width}&originHeight={height}"
             
-            # Format URL statique (fonctionne mieux!)
+            # Format URL statique avec ~mv2 (fonctionne mieux!)
             static_url = f"https://static.wixstatic.com/media/{file_id}"
+            
+            # Format avec dimensions explicites (évite w_NaN / h_NaN)
+            static_url_with_size = f"https://static.wixstatic.com/media/{file_id}/v1/fill/w_{width},h_{height},al_c,q_90/{display_name}"
             
             logger.info(f"✅ Image ready - Static URL: {static_url}")
             logger.info(f"   Dimensions: {width}x{height}")
@@ -348,6 +351,7 @@ async def import_image_and_get_wix_uri(
             return {
                 "wix_uri": wix_uri,
                 "static_url": static_url,
+                "static_url_full": static_url_with_size,
                 "file_id": file_id,
                 "width": width,
                 "height": height,
@@ -593,8 +597,10 @@ async def create_wix_draft_post(
     """
     Crée un brouillon de post sur Wix Blog v3 API.
     
-    STRATÉGIE 2026 - UTILISER L'URL STATIQUE:
-    Le format static.wixstatic.com fonctionne mieux que wix:image://
+    VERSION ROBUSTE 2026:
+    - heroImage avec dimensions explicites
+    - coverMedia en fallback
+    - Image dans richContent
     """
     try:
         async with httpx.AsyncClient(timeout=80) as client:
@@ -609,8 +615,6 @@ async def create_wix_draft_post(
             rich_content = html_to_ricos(content, hero_image_uri)
             
             logger.info(f"Creating Wix draft post: {title}")
-            if hero_image_uri:
-                logger.info(f"Image embedded in body + heroImage set")
             
             draft_post = {
                 "title": title,
@@ -623,11 +627,39 @@ async def create_wix_draft_post(
             if member_id:
                 draft_post["memberId"] = member_id
             
-            # Ajouter heroImage avec le format wix_uri
-            if hero_image_uri:
+            # Ajouter heroImage + coverMedia avec dimensions explicites
+            if image_data and isinstance(image_data, dict):
+                static_url = image_data.get("static_url")
+                wix_uri = image_data.get("wix_uri")
+                width = image_data.get("width", 1200)
+                height = image_data.get("height", 630)
+                
+                logger.info(f"Adding heroImage + coverMedia with dimensions {width}x{height}")
+                
+                # heroImage principal avec dimensions
+                draft_post["heroImage"] = {
+                    "id": wix_uri,
+                    "url": static_url,
+                    "width": width,
+                    "height": height,
+                    "altText": f"{title} - Luxura Distribution Québec"
+                }
+                
+                # coverMedia en fallback (recommandé par forum Wix)
+                draft_post["coverMedia"] = {
+                    "type": "IMAGE",
+                    "image": {
+                        "id": wix_uri,
+                        "width": width,
+                        "height": height,
+                        "altText": f"{title} - Luxura"
+                    }
+                }
+            elif hero_image_uri:
+                # Fallback simple si seulement l'URI string est fournie
                 draft_post["heroImage"] = {
                     "id": hero_image_uri,
-                    "altText": f"{title} - Extensions Luxura"
+                    "altText": f"{title} - Luxura"
                 }
             
             payload = {"draftPost": draft_post}
@@ -645,7 +677,7 @@ async def create_wix_draft_post(
             if response.status_code in [200, 201]:
                 result = response.json()
                 draft_id = result.get('draftPost', {}).get('id')
-                logger.info(f"✅ Wix draft created: {draft_id}")
+                logger.info(f"✅ Wix draft created with heroImage + coverMedia: {draft_id}")
                 return result
             else:
                 logger.error(f"Wix draft creation failed: {response.status_code} - {response.text}")
