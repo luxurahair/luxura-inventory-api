@@ -133,78 +133,104 @@ async def send_blog_images_email(blogs: List[Dict], recipient_email: str = None)
 
 # FORMAT OPEN GRAPH: 1200x630 px (ratio 1.91:1) pour Wix Blog Cover
 # =============================================================================
-# IMAGES LUXURA - UNIQUEMENT CHEVEUX LONGS, LUXUEUX ET VOLUMINEUX
-# Images représentant le résultat des extensions capillaires professionnelles
+# IMAGES LUXURA - STYLE SOIRÉE DE FILLES CHIC
+# Plusieurs femmes avec cheveux TRÈS LONGS (jusqu'à la taille)
+# Scènes sociales: autour d'une table, salon chic, champagne
 # =============================================================================
+
+# Images fournies par Luxura (style parfait - soirée de filles)
+LUXURA_CUSTOM_IMAGES = [
+    # Soirée chic - 4 femmes cheveux longs bruns
+    "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+    # Moment complicité - 3 femmes autour d'une table
+    "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+    # Soirée élégante - 4 femmes cheveux longs ondulés
+    "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
+]
+
+# Images de secours - Style similaire sur Unsplash (plusieurs femmes, cheveux longs, ambiance chic)
+UNSPLASH_LIFESTYLE_IMAGES = [
+    # Groupe de femmes élégantes - brunch/soirée
+    "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&h=630&fit=crop",  # Groupe amies riant
+    "https://images.unsplash.com/photo-1543807535-eceef0bc6599?w=1200&h=630&fit=crop",  # Femmes cheveux longs
+    "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&h=630&fit=crop",  # Groupe femmes table
+    "https://images.unsplash.com/photo-1571508601891-ca5e7a713859?w=1200&h=630&fit=crop",  # Salon coiffure chic
+    "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=1200&h=630&fit=crop",  # Femme cheveux très longs
+    "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Femme cheveux longs ondulés
+    "https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=1200&h=630&fit=crop",  # Groupe femmes élégantes
+    "https://images.unsplash.com/photo-1596178060671-7a80dc8059ea?w=1200&h=630&fit=crop",  # Femme cheveux longs bruns
+]
+
+# Images par catégorie - Utilise les images Luxura en priorité
 UNSPLASH_IMAGES = {
     "halo": [
-        # FEMMES avec cheveux TRÈS LONGS (style Pinterest/produit Luxura)
-        # Cheveux jusqu'à la taille ou plus - LONGS, LISSES, SOYEUX
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&h=630&fit=crop",  # Femme cheveux très longs
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",  # Femme cheveux longs lisses
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&h=630&fit=crop",  # Portrait cheveux longs
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",  # Cheveux longs bruns
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",  # Portrait élégant
-        "https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=1200&h=630&fit=crop",  # Femme cheveux longs naturels
+        # Images Luxura personnalisées (soirée de filles)
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
+        # Backup Unsplash lifestyle
+        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=1200&h=630&fit=crop",
     ],
     "genius": [
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&h=630&fit=crop",
+        # Images Luxura personnalisées
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+        # Backup
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1596178060671-7a80dc8059ea?w=1200&h=630&fit=crop",
     ],
     "tape": [
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&h=630&fit=crop",
+        # Images Luxura personnalisées
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
+        # Backup
+        "https://images.unsplash.com/photo-1543807535-eceef0bc6599?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=1200&h=630&fit=crop",
     ],
     "itip": [
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&h=630&fit=crop",
+        # Images Luxura personnalisées
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+        # Backup
+        "https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
     ],
     "entretien": [
-        "https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+        "https://images.unsplash.com/photo-1571508601891-ca5e7a713859?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1596178060671-7a80dc8059ea?w=1200&h=630&fit=crop",
     ],
     "tendances": [
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=1200&h=630&fit=crop",
     ],
     "salon": [
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=1200&h=630&fit=crop",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
+        "https://images.unsplash.com/photo-1571508601891-ca5e7a713859?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=1200&h=630&fit=crop",
     ],
     "formation": [
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+        "https://images.unsplash.com/photo-1571508601891-ca5e7a713859?w=1200&h=630&fit=crop",
     ],
     "general": [
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&h=630&fit=crop",
+        # Images Luxura en priorité
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
+        # Backups
+        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
     ]
 }
 
