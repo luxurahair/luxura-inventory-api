@@ -272,15 +272,19 @@ async def import_image_and_get_wix_uri(
     site_id: str,
     image_url: str,
     file_name: str = None
-) -> Optional[str]:
+) -> Optional[Dict]:
     """
-    Importe l'image et retourne directement l'URI Wix complète (format le plus fiable).
+    Importe l'image et retourne un dict avec plusieurs formats d'URL.
     
-    Cette fonction combine l'import + attente READY + construction de l'URI
-    pour une utilisation directe dans heroImage lors de la création du draft.
+    AMÉLIORATION: Retourne aussi l'URL statique (static.wixstatic.com)
+    qui fonctionne mieux pour heroImage que le format wix:image://
     
     Returns:
-        URI Wix au format: wix:image://v1/{fileId}/{filename}#originWidth={w}&originHeight={h}
+        Dict avec:
+        - wix_uri: format wix:image://v1/...
+        - static_url: format https://static.wixstatic.com/media/...
+        - file_id: ID du fichier Wix
+        - width, height: dimensions
     """
     if not file_name:
         file_name = f"blog-cover-{uuid.uuid4().hex[:8]}.jpg"
@@ -324,7 +328,7 @@ async def import_image_and_get_wix_uri(
                 logger.error("File never became READY")
                 return None
 
-            # Construire l'URI Wix (format le plus fiable)
+            # Extraire les informations
             display_name = file_desc.get("displayName", file_name)
             media = file_desc.get("media", {}) or {}
             image_wrapper = media.get("image", {}) if isinstance(media, dict) else {}
@@ -332,9 +336,23 @@ async def import_image_and_get_wix_uri(
             width = image_data.get("width") or 1200
             height = image_data.get("height") or 630
 
+            # Format wix:image:// (ne fonctionne pas bien)
             wix_uri = f"wix:image://v1/{file_id}/{display_name}#originWidth={width}&originHeight={height}"
-            logger.info(f"✅ Wix Image URI ready: {wix_uri[:100]}...")
-            return wix_uri
+            
+            # Format URL statique (fonctionne mieux!)
+            static_url = f"https://static.wixstatic.com/media/{file_id}"
+            
+            logger.info(f"✅ Image ready - Static URL: {static_url}")
+            logger.info(f"   Dimensions: {width}x{height}")
+            
+            return {
+                "wix_uri": wix_uri,
+                "static_url": static_url,
+                "file_id": file_id,
+                "width": width,
+                "height": height,
+                "display_name": display_name
+            }
 
     except Exception as e:
         logger.error(f"Error in import_image_and_get_wix_uri: {e}")
@@ -569,25 +587,30 @@ async def create_wix_draft_post(
     title: str,
     content: str,
     excerpt: str,
-    hero_image_uri: Optional[str] = None,  # URI Wix de l'image de couverture
+    image_data: Optional[Dict] = None,  # Dict retourné par import_image_and_get_wix_uri
     member_id: str = None
 ) -> Optional[Dict]:
     """
     Crée un brouillon de post sur Wix Blog v3 API.
     
-    STRATÉGIE 2026 - CONTOURNEMENT BUG HEROIMAGE:
-    L'image est insérée DANS LE CORPS de l'article (richContent)
-    comme premier élément visuel. Cela contourne complètement
-    le bug Wix où heroImage ne s'affiche pas sur desktop.
+    STRATÉGIE 2026 - UTILISER L'URL STATIQUE:
+    Le format static.wixstatic.com fonctionne mieux que wix:image://
     """
     try:
         async with httpx.AsyncClient(timeout=80) as client:
+            # Extraire l'URI depuis image_data
+            hero_image_uri = None
+            if image_data and isinstance(image_data, dict):
+                hero_image_uri = image_data.get("wix_uri")
+            elif image_data and isinstance(image_data, str):
+                hero_image_uri = image_data
+            
             # Convertir le HTML en Ricos AVEC l'image dans le corps
             rich_content = html_to_ricos(content, hero_image_uri)
             
             logger.info(f"Creating Wix draft post: {title}")
             if hero_image_uri:
-                logger.info(f"Image will be embedded in article body (bypassing heroImage bug)")
+                logger.info(f"Image embedded in body + heroImage set")
             
             draft_post = {
                 "title": title,
@@ -600,11 +623,11 @@ async def create_wix_draft_post(
             if member_id:
                 draft_post["memberId"] = member_id
             
-            # Garder heroImage aussi (au cas où ça marche un jour)
+            # Ajouter heroImage avec le format wix_uri
             if hero_image_uri:
                 draft_post["heroImage"] = {
                     "id": hero_image_uri,
-                    "altText": f"{title} - Extensions cheveux Luxura"
+                    "altText": f"{title} - Extensions Luxura"
                 }
             
             payload = {"draftPost": draft_post}
@@ -622,7 +645,7 @@ async def create_wix_draft_post(
             if response.status_code in [200, 201]:
                 result = response.json()
                 draft_id = result.get('draftPost', {}).get('id')
-                logger.info(f"✅ Wix draft created with embedded image: {draft_id}")
+                logger.info(f"✅ Wix draft created: {draft_id}")
                 return result
             else:
                 logger.error(f"Wix draft creation failed: {response.status_code} - {response.text}")
@@ -1045,33 +1068,33 @@ async def generate_daily_blogs(
         # NOUVEAU: heroImage inclus directement à la création du draft
         # ============================================
         if publish_to_wix and wix_api_key and wix_site_id:
-            # ÉTAPE 1: Importer l'image ET obtenir l'URI Wix AVANT de créer le draft
-            hero_image_uri = None
+            # ÉTAPE 1: Importer l'image ET obtenir les données Wix
+            image_data = None
             image_url = blog_post.get("image")
             
             if image_url:
                 logger.info(f"Step 1: Importing image and getting Wix URI...")
-                hero_image_uri = await import_image_and_get_wix_uri(
+                image_data = await import_image_and_get_wix_uri(
                     api_key=wix_api_key,
                     site_id=wix_site_id,
                     image_url=image_url,
                     file_name=f"luxura-cover-{uuid.uuid4().hex[:8]}.jpg"
                 )
                 
-                if hero_image_uri:
-                    logger.info(f"✅ Image ready: {hero_image_uri[:80]}...")
+                if image_data:
+                    logger.info(f"✅ Image ready: {image_data.get('static_url', '')}")
                 else:
                     logger.warning("⚠️ Image import failed, proceeding without cover")
             
-            # ÉTAPE 2: Créer le brouillon AVEC heroImage inclus
-            logger.info(f"Step 2: Creating draft with heroImage...")
+            # ÉTAPE 2: Créer le brouillon AVEC image
+            logger.info(f"Step 2: Creating draft...")
             wix_result = await create_wix_draft_post(
                 api_key=wix_api_key,
                 site_id=wix_site_id,
                 title=blog_post["title"],
                 content=blog_post["content"],
                 excerpt=blog_post["excerpt"],
-                hero_image_uri=hero_image_uri,  # NOUVEAU: inclus directement
+                image_data=image_data,  # Passer le dict complet
                 member_id=wix_member_id
             )
             
