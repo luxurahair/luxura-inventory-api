@@ -803,7 +803,9 @@ async def create_wix_draft_post(
     """
     Crée un brouillon de post sur Wix Blog v3 API.
     
-    VERSION 2026 - Utilise `media.wixMedia.image` (pas heroImage/coverMedia)
+    VERSION 2026 CORRIGÉE:
+    - Utilise juste le file_id (pas wix:image://)
+    - Ajoute displayed: True et custom: True pour forcer l'affichage de la cover
     """
     try:
         async with httpx.AsyncClient(timeout=80) as client:
@@ -823,17 +825,27 @@ async def create_wix_draft_post(
             if member_id:
                 draft_post["memberId"] = member_id
             
-            # Utiliser media.wixMedia.image (le bon champ selon Wix 2026)
+            # FORMAT CORRIGÉ POUR IMAGE DE COUVERTURE
+            # - Utiliser juste le file_id (pas wix:image://)
+            # - Ajouter displayed: True pour activer l'affichage
+            # - Ajouter custom: True pour indiquer image personnalisée
             if image_data and isinstance(image_data, dict):
-                wix_uri = image_data.get("wix_uri")
-                if wix_uri:
-                    logger.info(f"Adding media.wixMedia.image: {wix_uri[:60]}...")
+                file_id = image_data.get("file_id")
+                width = image_data.get("width", 1200)
+                height = image_data.get("height", 630)
+                
+                if file_id:
+                    logger.info(f"Adding cover image with displayed:True - file_id: {file_id[:50]}...")
                     draft_post["media"] = {
                         "wixMedia": {
                             "image": {
-                                "id": wix_uri
+                                "id": file_id,  # Juste le file_id, pas wix:image://
+                                "width": width,
+                                "height": height
                             }
-                        }
+                        },
+                        "displayed": True,   # CRUCIAL: Active l'affichage de la cover
+                        "custom": True       # Indique image personnalisée
                     }
             
             payload = {"draftPost": draft_post}
@@ -851,7 +863,9 @@ async def create_wix_draft_post(
             if response.status_code in [200, 201]:
                 result = response.json()
                 draft_id = result.get('draftPost', {}).get('id')
-                logger.info(f"✅ Wix draft created with media.wixMedia.image: {draft_id}")
+                draft_media = result.get('draftPost', {}).get('media', {})
+                displayed = draft_media.get('displayed', False)
+                logger.info(f"✅ Wix draft created: {draft_id} | displayed={displayed}")
                 return result
             else:
                 logger.error(f"Wix draft creation failed: {response.status_code} - {response.text}")
