@@ -1507,13 +1507,27 @@ async def generate_daily_blogs(
                 cover_image_data = None
                 content_image_data = None
                 
-                # Option 1: Essayer DALL-E pour des images uniques
+                # Option 1: Essayer DALL-E pour des images uniques CONTEXTUALISÉES
                 if DALLE_AVAILABLE:
                     try:
-                        logger.info(f"🎨 Generating unique images with DALL-E for: {category}")
+                        # Récupérer le contexte complet du blog
+                        blog_title = blog_post['title']
+                        blog_keywords = topic_data.get("keywords", [])
+                        focus_product = topic_data.get("focus_product")
                         
-                        # Générer image de couverture avec DALL-E
-                        cover_bytes = await generate_blog_image_with_dalle(category, "cover")
+                        logger.info(f"🎨 Generating CONTEXTUALIZED images with DALL-E")
+                        logger.info(f"   Title: {blog_title[:50]}...")
+                        logger.info(f"   Keywords: {blog_keywords[:3]}")
+                        logger.info(f"   Product: {focus_product}")
+                        
+                        # Générer image de couverture avec CONTEXTE COMPLET
+                        cover_bytes = await generate_blog_image_with_dalle(
+                            category=category,
+                            blog_title=blog_title,
+                            keywords=blog_keywords,
+                            focus_product=focus_product,
+                            image_type="cover"
+                        )
                         if cover_bytes:
                             cover_image_data = await upload_image_bytes_to_wix(
                                 api_key=wix_api_key,
@@ -1522,8 +1536,14 @@ async def generate_daily_blogs(
                                 file_name=f"cover-dalle-{uuid.uuid4().hex[:8]}.png"
                             )
                         
-                        # Générer 2ème image différente pour le contenu
-                        content_bytes = await generate_blog_image_with_dalle(category, "content")
+                        # Générer 2ème image différente pour le contenu avec CONTEXTE COMPLET
+                        content_bytes = await generate_blog_image_with_dalle(
+                            category=category,
+                            blog_title=blog_title,
+                            keywords=blog_keywords,
+                            focus_product=focus_product,
+                            image_type="content"
+                        )
                         if content_bytes:
                             content_image_data = await upload_image_bytes_to_wix(
                                 api_key=wix_api_key,
