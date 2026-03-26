@@ -235,6 +235,32 @@ def extract_color_size_for_inventory(name):
     size = f"{size_match.group(1)}-{size_match.group(2)}" if size_match else ""
     return color, size
 
+def extract_color_code_from_name(name: str) -> str:
+    """
+    Extract the color code from product name for deduplication.
+    Ex: 'Genius Vivian Caramel Doré #6' → '6'
+    Ex: 'Genius Vivian Golden Hour #6/24' → '6/24'
+    Ex: 'Genius Vivian Diamant Glacé #613/18A' → '613/18A'
+    """
+    if not name:
+        return ""
+    # Match color code after # (including complex codes like 6/6T24, 613/18A)
+    color_match = re.search(r'#([A-Za-z0-9/T]+)', name, re.IGNORECASE)
+    if color_match:
+        return color_match.group(1).upper()
+    return ""
+
+def get_dedup_key(category: str, color_code: str, name: str) -> str:
+    """
+    Generate a unique key for product deduplication.
+    Groups products by category + color code to eliminate duplicates.
+    """
+    if color_code:
+        return f"{category}|{color_code}"
+    # Fallback: use cleaned name for products without color codes
+    clean_name = name.split(' — ')[0].strip().lower()
+    return f"{category}|{clean_name}"
+
 def get_product_type_for_inventory(name, sku=""):
     """Determine product type from name or SKU for inventory matching"""
     name_lower = name.lower()
@@ -792,8 +818,9 @@ async def get_products(
                     if inv_sku:
                         inventory_by_sku[inv_sku.upper()] = inventory_by_sku.get(inv_sku.upper(), 0) + inv_qty
             
-            # Group products by handle
-            products_by_handle = {}
+            # NOUVEAU: Grouper par catégorie + code couleur pour éviter les doublons
+            # Au lieu de grouper par handle (qui cause des doublons), on groupe par couleur unique
+            products_by_dedup_key = {}
             
             # SKUs d'accessoires à exclure (pas des extensions capillaires)
             ACCESSORY_SKUS = {
@@ -842,20 +869,38 @@ async def get_products(
                     if search_lower not in name.lower() and search_lower not in (p.get('sku') or '').lower():
                         continue
                 
-                # Initialize handle group if needed
-                if handle not in products_by_handle:
-                    products_by_handle[handle] = {
+                # NOUVEAU: Extraire le code couleur et créer une clé de déduplication
+                color_code = extract_color_code_from_name(name)
+                dedup_key = get_dedup_key(product_category, color_code, name)
+                
+                # Initialize dedup group if needed
+                if dedup_key not in products_by_dedup_key:
+                    products_by_dedup_key[dedup_key] = {
                         'parent': None,
                         'variants': [],
                         'category': product_category,
+                        'color_code': color_code,
                         'any_in_stock': False,
-                        'total_quantity': 0
+                        'total_quantity': 0,
+                        'handles': set(),  # Track all handles for this color
+                        'best_handle': None  # The most specific handle for URLs
                     }
+                
+                # Track all handles for this product group
+                products_by_dedup_key[dedup_key]['handles'].add(handle)
+                
+                # Select the best handle (prefer genius/tape specific handles over generic ones)
+                current_best = products_by_dedup_key[dedup_key]['best_handle']
+                if current_best is None:
+                    products_by_dedup_key[dedup_key]['best_handle'] = handle
+                elif product_category in handle.lower() and product_category not in current_best.lower():
+                    # Prefer handles that contain the actual category name
+                    products_by_dedup_key[dedup_key]['best_handle'] = handle
                 
                 # Check if this is a variant or parent
                 if is_variant_record(p):
                     variant_info = extract_variant_info(p)
-                    products_by_handle[handle]['variants'].append(variant_info)
+                    products_by_dedup_key[dedup_key]['variants'].append(variant_info)
                     
                     # Get real quantity from inventory - try multiple methods
                     sku = p.get('sku', '').upper()
@@ -881,12 +926,12 @@ async def get_products(
                     
                     # Update stock totals from variants
                     if variant_info['is_in_stock'] or variant_qty > 0:
-                        products_by_handle[handle]['any_in_stock'] = True
-                    products_by_handle[handle]['total_quantity'] += variant_qty
+                        products_by_dedup_key[dedup_key]['any_in_stock'] = True
+                    products_by_dedup_key[dedup_key]['total_quantity'] += variant_qty
                 else:
-                    # This is a parent product
-                    if products_by_handle[handle]['parent'] is None:
-                        products_by_handle[handle]['parent'] = p
+                    # This is a parent product - only set if we don't have one yet
+                    if products_by_dedup_key[dedup_key]['parent'] is None:
+                        products_by_dedup_key[dedup_key]['parent'] = p
                         
                         # Get real quantity from inventory - try multiple methods
                         clean_name = name.split(' — ')[0].strip().lower()
@@ -900,25 +945,26 @@ async def get_products(
                             parent_qty = inventory_by_key.get(inv_key, 0)
                         
                         if parent_qty > 0:
-                            products_by_handle[handle]['total_quantity'] += parent_qty
-                            products_by_handle[handle]['any_in_stock'] = True
+                            products_by_dedup_key[dedup_key]['total_quantity'] += parent_qty
+                            products_by_dedup_key[dedup_key]['any_in_stock'] = True
                         elif p.get('is_in_stock', False):
-                            products_by_handle[handle]['any_in_stock'] = True
+                            products_by_dedup_key[dedup_key]['any_in_stock'] = True
             
-            # Build result
+            # Build result from deduplicated products
             result = []
-            for handle, data in products_by_handle.items():
+            for dedup_key, data in products_by_dedup_key.items():
                 parent = data['parent']
                 variants = data['variants']
-                category = data['category']
+                product_category = data['category']
+                color_code = data['color_code']
+                best_handle = data['best_handle']
                 
                 # If no parent, use first variant as base
                 if parent is None and variants:
                     # Find a variant to use as base info
-                    base_name = variants[0].get('longeur_raw', '')
                     for v in variants:
                         if v.get('sku'):
-                            parent = {'name': v.get('sku', '').split('-')[0] if v.get('sku') else handle}
+                            parent = {'name': v.get('sku', '').split('-')[0] if v.get('sku') else best_handle}
                             break
                 
                 if parent is None:
@@ -930,14 +976,14 @@ async def get_products(
                 
                 # TOUJOURS générer le nom de luxe depuis le handle pour TOUTES les catégories d'extensions
                 # Cela garantit que les noms sont cohérents et utilisent la nomenclature Luxura
-                if category in ['halo', 'genius', 'tape', 'i-tip', 'ponytail', 'clip-in']:
-                    clean_name = generate_product_name_from_handle(handle, category)
+                if product_category in ['halo', 'genius', 'tape', 'i-tip', 'ponytail', 'clip-in']:
+                    clean_name = generate_product_name_from_handle(best_handle, product_category)
                 
-                # Get image
-                image = get_product_image(handle, category)
+                # Get image - use best_handle and correct category
+                image = get_product_image(best_handle, product_category)
                 
-                # Build Wix URL
-                wix_url = f"https://www.luxuradistribution.com/product-page/{handle}" if handle else "https://www.luxuradistribution.com"
+                # Build Wix URL using the best handle
+                wix_url = f"https://www.luxuradistribution.com/product-page/{best_handle}" if best_handle else "https://www.luxuradistribution.com"
                 
                 # Filter by stock if specified
                 if in_stock is not None:
@@ -951,8 +997,16 @@ async def get_products(
                 if price == 0 and variants:
                     price = variants[0].get('price', 0)
                 
-                # Sort variants by length/weight
-                sorted_variants = sorted(variants, key=lambda v: (v.get('length', ''), v.get('weight', '')))
+                # Sort variants by length/weight and remove duplicates
+                seen_variants = set()
+                unique_variants = []
+                for v in variants:
+                    variant_key = f"{v.get('length', '')}|{v.get('weight', '')}"
+                    if variant_key not in seen_variants:
+                        seen_variants.add(variant_key)
+                        unique_variants.append(v)
+                
+                sorted_variants = sorted(unique_variants, key=lambda v: (v.get('length', ''), v.get('weight', '')))
                 
                 # Mapping des séries par catégorie
                 series_map = {
@@ -965,12 +1019,12 @@ async def get_products(
                 }
                 
                 product_data = {
-                    "id": parent.get('id') or hash(handle) % 100000,  # Generate ID from handle if missing
+                    "id": parent.get('id') or hash(dedup_key) % 100000,  # Generate ID from dedup_key if missing
                     "name": clean_name,
                     "price": price,
                     "description": clean_html(parent.get('description', '')),
-                    "category": category,
-                    "series": series_map.get(category, "Luxura"),
+                    "category": product_category,
+                    "series": series_map.get(product_category, "Luxura"),
                     "images": [image],
                     "in_stock": data['total_quantity'] > 0,  # Basé sur la quantité réelle, pas sur Wix
                     "is_in_stock": data['total_quantity'] > 0,
@@ -978,12 +1032,13 @@ async def get_products(
                     "quantity": data['total_quantity'],  # Add quantity field for compatibility
                     "sku": parent.get('sku'),
                     "wix_url": wix_url,
-                    "handle": handle,
-                    "variant_count": len(variants)
+                    "handle": best_handle,
+                    "color_code": color_code,  # NEW: Expose color code
+                    "variant_count": len(sorted_variants)
                 }
                 
                 # Include variant details if requested
-                if include_variants and variants:
+                if include_variants and sorted_variants:
                     product_data["variants"] = sorted_variants
                 
                 result.append(product_data)
