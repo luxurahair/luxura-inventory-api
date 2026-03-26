@@ -914,26 +914,24 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
     nodes = []
     
     # Insérer l'image comme premier élément du corps
-    # Utiliser l'URL statique si disponible (plus fiable)
+    # Format Ricos correct: type "image" (minuscule) avec "attrs"
     image_src = static_image_url or hero_image_uri
     if image_src:
         image_node = {
-            "type": "IMAGE",
-            "id": str(uuid.uuid4()),
-            "imageData": {
-                "containerData": {
-                    "width": {"size": "FULL_WIDTH"},
-                    "alignment": "CENTER"
-                },
+            "type": "image",
+            "attrs": {
                 "image": {
                     "src": {
                         "url": image_src
                     },
                     "width": 1200,
-                    "height": 630
+                    "height": 630,
+                    "alt": "Extensions capillaires Luxura Distribution"
                 },
-                "altText": "Extensions capillaires Luxura Distribution"
-            }
+                "displayMode": "fullWidth",
+                "alignment": "center"
+            },
+            "content": []
         }
         nodes.append(image_node)
     
