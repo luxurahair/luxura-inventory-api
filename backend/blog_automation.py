@@ -129,94 +129,72 @@ async def send_blog_images_email(blogs: List[Dict], recipient_email: str = None)
 # =============================================================================
 UNSPLASH_IMAGES = {
     "halo": [
-        # Femmes avec cheveux longs luxueux - idéal pour Halo extensions
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Cheveux longs brillants
-        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Blonde cheveux longs fluides
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Cheveux ondulés luxueux
-        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Cheveux extra longs brillants
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux soyeux volume
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Blonde cheveux parfaits
-        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Longs cheveux wavy
+        # PORTRAITS DE FEMMES avec cheveux longs - IDs Unsplash vérifiés
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Blonde portrait
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",  # Femme glamour
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=630&fit=crop",  # Portrait femme
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=630&fit=crop",  # Femme brune
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=630&fit=crop",  # Femme souriante
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",  # Portrait élégant
     ],
     "genius": [
-        # Cheveux longs parfaits - résultat Genius Weft
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux ultra longs lisses
-        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Volume cheveux longs
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Ondulations parfaites longues
-        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Cheveux blonds longs
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux soyeux
-        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Cheveux longs naturels
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Longs cheveux brillants
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=630&fit=crop",
     ],
     "tape": [
-        # Extensions Tape - résultat cheveux longs naturels
-        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Cheveux extra longs
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Cheveux ondulés glamour
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux lisses luxueux
-        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Cheveux longs blonds
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Volume soyeux
-        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Cheveux naturels longs
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Résultat brillant
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=630&fit=crop",
     ],
     "itip": [
-        # I-Tip - cheveux longs mèche par mèche
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux ultra longs
-        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Volume luxueux
-        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Blond parfait
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Ondulations longues
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux soyeux longs
-        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Résultat naturel
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Cheveux brillants
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=630&fit=crop",
     ],
     "entretien": [
-        # Entretien - beaux cheveux longs bien entretenus
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux soyeux parfaits
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Cheveux brillants
-        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Cheveux longs sains
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux luxueux
-        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Blond entretenu
-        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Cheveux naturels longs
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Résultat soins
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
     ],
     "tendances": [
-        # Tendances - looks avec cheveux longs
-        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Tendance cheveux longs
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Ondulations tendance
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Style cheveux longs
-        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Look blonde
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Tendance volume
-        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Style naturel long
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Cheveux glamour
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=630&fit=crop",
     ],
     "salon": [
-        # Salon - résultats cheveux longs après pose
-        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Résultat salon luxe
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux parfaits
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Finition salon
-        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Cliente satisfaite
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Résultat professionnel
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Transformation salon
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
     ],
     "formation": [
-        # Formation - résultats professionnels
-        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Résultat formation
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Technique pro
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Finition experte
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux parfaits
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Résultat master
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
     ],
     "general": [
-        # Général - beaux cheveux longs pour tout article
-        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Cheveux extra longs luxueux
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux lisses parfaits
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Ondulations glamour
-        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Blonde cheveux longs
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux soyeux volume
-        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Cheveux naturels longs
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Cheveux brillants longs
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Blond luxueux
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",  # Cheveux longs naturels
-        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",  # Modèle cheveux longs
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=630&fit=crop",
     ]
 }
 
@@ -1789,7 +1767,8 @@ async def generate_daily_blogs(
         await db.blog_posts.insert_one(blog_post)
         
         # ============================================
-        # PUBLIER SUR WIX AVEC IMAGES DALL-E UNIQUES
+        # PUBLIER SUR WIX AVEC IMAGES UNSPLASH VÉRIFIÉES
+        # DALL-E DÉSACTIVÉ - Problème de génération d'hommes
         # ============================================
         if publish_to_wix:
             category = topic_data.get("category", "general")
@@ -1801,68 +1780,17 @@ async def generate_daily_blogs(
                 cover_image_data = None
                 content_image_data = None
                 
-                # Option 1: Essayer DALL-E pour des images uniques CONTEXTUALISÉES
-                if DALLE_AVAILABLE:
-                    try:
-                        # Récupérer le contexte complet du blog
-                        blog_title = blog_post['title']
-                        blog_keywords = topic_data.get("keywords", [])
-                        focus_product = topic_data.get("focus_product")
-                        
-                        logger.info(f"🎨 Generating CONTEXTUALIZED images with DALL-E")
-                        logger.info(f"   Title: {blog_title[:50]}...")
-                        logger.info(f"   Keywords: {blog_keywords[:3]}")
-                        logger.info(f"   Product: {focus_product}")
-                        
-                        # Générer image de couverture avec CONTEXTE COMPLET
-                        cover_bytes = await generate_blog_image_with_dalle(
-                            category=category,
-                            blog_title=blog_title,
-                            keywords=blog_keywords,
-                            focus_product=focus_product,
-                            image_type="cover"
-                        )
-                        if cover_bytes:
-                            cover_image_data = await upload_image_bytes_to_wix(
-                                api_key=wix_api_key,
-                                site_id=wix_site_id,
-                                image_bytes=cover_bytes,
-                                file_name=f"cover-dalle-{uuid.uuid4().hex[:8]}.png"
-                            )
-                        
-                        # Générer 2ème image différente pour le contenu avec CONTEXTE COMPLET
-                        content_bytes = await generate_blog_image_with_dalle(
-                            category=category,
-                            blog_title=blog_title,
-                            keywords=blog_keywords,
-                            focus_product=focus_product,
-                            image_type="content"
-                        )
-                        if content_bytes:
-                            content_image_data = await upload_image_bytes_to_wix(
-                                api_key=wix_api_key,
-                                site_id=wix_site_id,
-                                image_bytes=content_bytes,
-                                file_name=f"content-dalle-{uuid.uuid4().hex[:8]}.png"
-                            )
-                        
-                        if cover_image_data:
-                            logger.info(f"✅ DALL-E cover image generated and uploaded")
-                        if content_image_data:
-                            logger.info(f"✅ DALL-E content image generated and uploaded")
-                            
-                    except Exception as e:
-                        logger.error(f"⚠️ DALL-E generation failed: {e}, falling back to Unsplash")
+                # DALL-E DÉSACTIVÉ - Utiliser UNIQUEMENT Unsplash avec images vérifiées
+                # Raison: DALL-E génère des hommes malgré les instructions contraires
+                logger.info(f"📷 Using VERIFIED Unsplash images (DALL-E disabled)")
                 
-                # Option 2: Fallback vers Unsplash si DALL-E échoue
-                if not cover_image_data:
-                    logger.info(f"📷 Using Unsplash fallback for cover image")
-                    cover_image_data = await import_image_with_retry(
-                        api_key=wix_api_key,
-                        site_id=wix_site_id,
-                        category=category,
-                        max_retries=3
-                    )
+                # Image de couverture - Unsplash vérifiée
+                cover_image_data = await import_image_with_retry(
+                    api_key=wix_api_key,
+                    site_id=wix_site_id,
+                    category=category,
+                    max_retries=3
+                )
                 
                 # Fallback pour l'image de contenu aussi
                 if not content_image_data:
