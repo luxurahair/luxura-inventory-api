@@ -357,7 +357,57 @@ def get_blog_image_by_category(category: str) -> str:
     return selected
 
 # =====================================================
-# WIX BLOG INTEGRATION
+# WIX VELO INTEGRATION (Contourne le bug heroImage)
+# =====================================================
+
+async def publish_blog_via_velo(
+    title: str,
+    excerpt: str,
+    content: str,
+    image_url: str,
+    member_id: str = None
+) -> Optional[Dict]:
+    """
+    Publie un blog via Wix Velo HTTP Function (plus fiable que REST API).
+    Endpoint: https://www.luxuradistribution.com/_functions/createBlog
+    """
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            payload = {
+                "title": title,
+                "excerpt": excerpt,
+                "content": content,
+                "imageUrl": image_url,
+                "memberId": member_id
+            }
+            
+            logger.info(f"📤 Publishing via Velo: {title[:50]}...")
+            
+            response = await client.post(
+                "https://www.luxuradistribution.com/_functions/createBlog",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("success"):
+                    logger.info(f"✅ Blog published via Velo! Draft ID: {result.get('draftId')}")
+                    return result
+                else:
+                    logger.error(f"❌ Velo error: {result.get('error')}")
+                    return None
+            else:
+                logger.error(f"❌ Velo HTTP error: {response.status_code} - {response.text}")
+                return None
+                
+    except Exception as e:
+        logger.error(f"❌ Error calling Velo: {e}")
+        return None
+
+
+# =====================================================
+# WIX BLOG INTEGRATION (REST API - Fallback)
 # =====================================================
 
 async def get_wix_member_id(api_key: str, site_id: str) -> Optional[str]:
@@ -1241,58 +1291,63 @@ async def generate_daily_blogs(
         await db.blog_posts.insert_one(blog_post)
         
         # ============================================
-        # PUBLIER SUR WIX (flux AMÉLIORÉ 2026)
-        # NOUVEAU: heroImage inclus directement à la création du draft
+        # PUBLIER SUR WIX VIA VELO (Solution au bug heroImage)
         # ============================================
-        if publish_to_wix and wix_api_key and wix_site_id:
-            # ÉTAPE 1: Importer l'image ET obtenir les données Wix
-            image_data = None
+        if publish_to_wix:
             image_url = blog_post.get("image")
             
-            if image_url:
-                logger.info(f"Step 1: Importing image and getting Wix URI...")
-                image_data = await import_image_and_get_wix_uri(
-                    api_key=wix_api_key,
-                    site_id=wix_site_id,
-                    image_url=image_url,
-                    file_name=f"luxura-cover-{uuid.uuid4().hex[:8]}.jpg"
-                )
-                
-                if image_data:
-                    logger.info(f"✅ Image ready: {image_data.get('static_url', '')}")
-                else:
-                    logger.warning("⚠️ Image import failed, proceeding without cover")
+            logger.info(f"🚀 Publishing via Wix Velo: {blog_post['title'][:50]}...")
             
-            # ÉTAPE 2: Créer le brouillon AVEC image
-            logger.info(f"Step 2: Creating draft...")
-            wix_result = await create_wix_draft_post(
-                api_key=wix_api_key,
-                site_id=wix_site_id,
+            velo_result = await publish_blog_via_velo(
                 title=blog_post["title"],
-                content=blog_post["content"],
                 excerpt=blog_post["excerpt"],
-                image_data=image_data,  # Passer le dict complet
+                content=blog_post["content"],
+                image_url=image_url,
                 member_id=wix_member_id
             )
             
-            if wix_result:
-                draft_id = wix_result.get("draftPost", {}).get("id")
-                
-                if draft_id:
-                    # ÉTAPE 3: Publier le brouillon
-                    logger.info(f"Step 3: Publishing draft {draft_id}")
-                    published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
-                    if published:
-                        logger.info(f"✅ Blog published successfully to Wix!")
-                        await db.blog_posts.update_one(
-                            {"id": post_id},
-                            {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
-                        )
-                        blog_post["published_to_wix"] = True
-                    else:
-                        logger.error(f"❌ Failed to publish draft {draft_id}")
+            if velo_result and velo_result.get("success"):
+                draft_id = velo_result.get("draftId")
+                logger.info(f"✅ Blog published via Velo! ID: {draft_id}")
+                await db.blog_posts.update_one(
+                    {"id": post_id},
+                    {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
+                )
+                blog_post["published_to_wix"] = True
             else:
-                logger.error("❌ Failed to create Wix draft")
+                logger.error(f"❌ Velo publish failed: {velo_result}")
+                # Fallback: essayer l'ancien système REST API
+                logger.info("⚠️ Trying REST API fallback...")
+                if wix_api_key and wix_site_id:
+                    image_data = None
+                    if image_url:
+                        image_data = await import_image_and_get_wix_uri(
+                            api_key=wix_api_key,
+                            site_id=wix_site_id,
+                            image_url=image_url,
+                            file_name=f"luxura-cover-{uuid.uuid4().hex[:8]}.jpg"
+                        )
+                    
+                    wix_result = await create_wix_draft_post(
+                        api_key=wix_api_key,
+                        site_id=wix_site_id,
+                        title=blog_post["title"],
+                        content=blog_post["content"],
+                        excerpt=blog_post["excerpt"],
+                        image_data=image_data,
+                        member_id=wix_member_id
+                    )
+                    
+                    if wix_result:
+                        draft_id = wix_result.get("draftPost", {}).get("id")
+                        if draft_id:
+                            published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
+                            if published:
+                                await db.blog_posts.update_one(
+                                    {"id": post_id},
+                                    {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
+                                )
+                                blog_post["published_to_wix"] = True
         
         # Publier sur Facebook si configuré
         if publish_to_facebook and fb_access_token and fb_page_id:
