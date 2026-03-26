@@ -267,6 +267,80 @@ async def get_wix_member_id(api_key: str, site_id: str) -> Optional[str]:
 # WIX MEDIA MANAGER - Import d'images
 # =====================================================
 
+async def import_image_and_get_wix_uri(
+    api_key: str,
+    site_id: str,
+    image_url: str,
+    file_name: str = None
+) -> Optional[str]:
+    """
+    Importe l'image et retourne directement l'URI Wix complète (format le plus fiable).
+    
+    Cette fonction combine l'import + attente READY + construction de l'URI
+    pour une utilisation directe dans heroImage lors de la création du draft.
+    
+    Returns:
+        URI Wix au format: wix:image://v1/{fileId}/{filename}#originWidth={w}&originHeight={h}
+    """
+    if not file_name:
+        file_name = f"blog-cover-{uuid.uuid4().hex[:8]}.jpg"
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            payload = {
+                "url": image_url,
+                "displayName": file_name,
+                "mediaType": "IMAGE",
+                "mimeType": "image/jpeg",
+                "filePath": f"/blog-covers/{file_name}"
+            }
+
+            logger.info(f"Importing image to Wix Media: {image_url[:60]}...")
+
+            response = await client.post(
+                "https://www.wixapis.com/site-media/v1/files/import",
+                headers={
+                    "Authorization": api_key,
+                    "wix-site-id": site_id,
+                    "Content-Type": "application/json"
+                },
+                json=payload
+            )
+
+            if response.status_code not in (200, 201):
+                logger.error(f"Import failed: {response.status_code} - {response.text}")
+                return None
+
+            data = response.json()
+            file_id = data.get("file", {}).get("id") or data.get("id")
+
+            if not file_id:
+                logger.error("No file ID returned from import")
+                return None
+
+            # Attendre que le fichier soit READY
+            file_desc = await wait_until_wix_file_ready(api_key, site_id, file_id, timeout_sec=90)
+            if not file_desc:
+                logger.error("File never became READY")
+                return None
+
+            # Construire l'URI Wix (format le plus fiable)
+            display_name = file_desc.get("displayName", file_name)
+            media = file_desc.get("media", {}) or {}
+            image_wrapper = media.get("image", {}) if isinstance(media, dict) else {}
+            image_data = image_wrapper.get("image", {}) if isinstance(image_wrapper, dict) else {}
+            width = image_data.get("width") or 1200
+            height = image_data.get("height") or 630
+
+            wix_uri = f"wix:image://v1/{file_id}/{display_name}#originWidth={width}&originHeight={height}"
+            logger.info(f"✅ Wix Image URI ready: {wix_uri[:100]}...")
+            return wix_uri
+
+    except Exception as e:
+        logger.error(f"Error in import_image_and_get_wix_uri: {e}")
+        return None
+
+
 async def import_image_to_wix_media(
     api_key: str,
     site_id: str,
@@ -495,13 +569,23 @@ async def create_wix_draft_post(
     title: str,
     content: str,
     excerpt: str,
+    hero_image_uri: Optional[str] = None,  # NOUVEAU: URI Wix de l'image de couverture
     member_id: str = None
 ) -> Optional[Dict]:
     """
-    Crée un brouillon de post sur Wix Blog v3 API (SANS image).
+    Crée un brouillon de post sur Wix Blog v3 API.
     
-    L'image doit être attachée séparément via attach_wix_image_to_draft()
-    après l'import dans Wix Media.
+    AMÉLIORATION 2026: L'image de couverture (heroImage) est maintenant incluse
+    directement à la création du draft pour un affichage fiable.
+    
+    Args:
+        api_key: Clé API Wix
+        site_id: ID du site Wix
+        title: Titre du post
+        content: Contenu HTML
+        excerpt: Extrait/résumé
+        hero_image_uri: URI Wix de l'image (format: wix:image://v1/...)
+        member_id: ID du membre (obligatoire pour apps tierces)
     
     Returns:
         Dict avec draftPost si succès, None sinon
@@ -526,6 +610,13 @@ async def create_wix_draft_post(
             if member_id:
                 payload["draftPost"]["memberId"] = member_id
             
+            # NOUVEAU: Ajouter heroImage directement à la création (plus fiable)
+            if hero_image_uri:
+                payload["draftPost"]["heroImage"] = {
+                    "id": hero_image_uri
+                }
+                logger.info(f"Including heroImage in draft creation: {hero_image_uri[:80]}...")
+            
             response = await client.post(
                 "https://www.wixapis.com/blog/v3/draft-posts",
                 headers={
@@ -539,7 +630,7 @@ async def create_wix_draft_post(
             if response.status_code in [200, 201]:
                 result = response.json()
                 draft_id = result.get('draftPost', {}).get('id')
-                logger.info(f"Wix draft created successfully: {draft_id}")
+                logger.info(f"✅ Wix draft created successfully with heroImage: {draft_id}")
                 return result
             else:
                 logger.error(f"Wix draft creation failed: {response.status_code} - {response.text}")
@@ -929,16 +1020,37 @@ async def generate_daily_blogs(
         await db.blog_posts.insert_one(blog_post)
         
         # ============================================
-        # PUBLIER SUR WIX (flux correct en 4 étapes)
+        # PUBLIER SUR WIX (flux AMÉLIORÉ 2026)
+        # NOUVEAU: heroImage inclus directement à la création du draft
         # ============================================
         if publish_to_wix and wix_api_key and wix_site_id:
-            # ÉTAPE 1: Créer le brouillon (sans image)
+            # ÉTAPE 1: Importer l'image ET obtenir l'URI Wix AVANT de créer le draft
+            hero_image_uri = None
+            image_url = blog_post.get("image")
+            
+            if image_url:
+                logger.info(f"Step 1: Importing image and getting Wix URI...")
+                hero_image_uri = await import_image_and_get_wix_uri(
+                    api_key=wix_api_key,
+                    site_id=wix_site_id,
+                    image_url=image_url,
+                    file_name=f"luxura-cover-{uuid.uuid4().hex[:8]}.jpg"
+                )
+                
+                if hero_image_uri:
+                    logger.info(f"✅ Image ready: {hero_image_uri[:80]}...")
+                else:
+                    logger.warning("⚠️ Image import failed, proceeding without cover")
+            
+            # ÉTAPE 2: Créer le brouillon AVEC heroImage inclus
+            logger.info(f"Step 2: Creating draft with heroImage...")
             wix_result = await create_wix_draft_post(
                 api_key=wix_api_key,
                 site_id=wix_site_id,
                 title=blog_post["title"],
                 content=blog_post["content"],
                 excerpt=blog_post["excerpt"],
+                hero_image_uri=hero_image_uri,  # NOUVEAU: inclus directement
                 member_id=wix_member_id
             )
             
@@ -946,56 +1058,20 @@ async def generate_daily_blogs(
                 draft_id = wix_result.get("draftPost", {}).get("id")
                 
                 if draft_id:
-                    # ÉTAPE 2: Importer l'image dans Wix Media
-                    image_url = blog_post.get("image")
-                    if image_url:
-                        logger.info(f"Step 2: Importing image to Wix Media for draft {draft_id}")
-                        imported = await import_image_to_wix_media(
-                            api_key=wix_api_key,
-                            site_id=wix_site_id,
-                            image_url=image_url,
-                            file_name=f"blog-{draft_id[:8]}-cover.jpg"
-                        )
-                        
-                        if imported:
-                            # Extraire l'ID du fichier Wix
-                            wix_file_id = imported.get("id") or imported.get("fileId")
-                            
-                            if wix_file_id:
-                                # ÉTAPE 2.5: ATTENDRE que le fichier soit READY (CRITIQUE!)
-                                logger.info(f"Step 2.5: Waiting for file {wix_file_id} to be READY...")
-                                file_desc = await wait_until_wix_file_ready(
-                                    api_key=wix_api_key,
-                                    site_id=wix_site_id,
-                                    file_id=wix_file_id,
-                                    timeout_sec=60
-                                )
-                                
-                                if file_desc:
-                                    # ÉTAPE 3: Construire la Wix image URI (pour logging)
-                                    wix_image_uri = build_wix_image_uri(file_desc)
-                                    logger.info(f"Step 3: Built Wix URI: {wix_image_uri[:60]}...")
-                                    
-                                    # ÉTAPE 4: Attacher l'image au brouillon via PATCH (avec l'objet complet)
-                                    logger.info(f"Step 4: Attaching image to draft")
-                                    await attach_wix_image_to_draft(
-                                        api_key=wix_api_key,
-                                        site_id=wix_site_id,
-                                        draft_id=draft_id,
-                                        file_desc=file_desc
-                                    )
-                                else:
-                                    logger.warning(f"File {wix_file_id} never became READY, publishing without cover")
-                    
-                    # ÉTAPE 5: Publier le brouillon
-                    logger.info(f"Step 5: Publishing draft {draft_id}")
+                    # ÉTAPE 3: Publier le brouillon
+                    logger.info(f"Step 3: Publishing draft {draft_id}")
                     published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
                     if published:
+                        logger.info(f"✅ Blog published successfully to Wix!")
                         await db.blog_posts.update_one(
                             {"id": post_id},
                             {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
                         )
                         blog_post["published_to_wix"] = True
+                    else:
+                        logger.error(f"❌ Failed to publish draft {draft_id}")
+            else:
+                logger.error("❌ Failed to create Wix draft")
         
         # Publier sur Facebook si configuré
         if publish_to_facebook and fb_access_token and fb_page_id:
