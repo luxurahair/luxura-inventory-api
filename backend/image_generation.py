@@ -28,15 +28,26 @@ Professional luxury hair extension product photography for Luxura Distribution Q
 LUXURA IS A HIGH-END IMPORTER AND DISTRIBUTOR - NOT A SALON.
 We sell premium hair extensions to professional salons (B2B) and directly to consumers online (B2C).
 
-MANDATORY REQUIREMENTS:
-- Long or mid-length hair ONLY (minimum shoulder length)
-- Beautiful woman showing the RESULT of wearing premium extensions
+CRITICAL SUBJECT REQUIREMENTS (ABSOLUTELY MANDATORY):
+- ONLY FEMALE SUBJECTS - beautiful feminine woman with elegant features
+- MUST be a woman, lady, female model - NEVER a man, male, masculine person
+- NEVER show any male person, man, masculine features, beard, or short masculine haircut
+- Long flowing feminine hair reaching at least past shoulders (minimum mid-back length)
+- Feminine elegant appearance, glamorous female beauty
+- Female model showcasing hair extensions result
+
+MANDATORY VISUAL REQUIREMENTS:
+- Long or very long hair ONLY (minimum shoulder length, preferably waist-length)
+- Beautiful FEMALE woman showing the RESULT of wearing premium extensions
 - Luxury product photography aesthetic (e-commerce quality)
-- Elegant realistic woman (not cartoon, not mannequin)
+- Elegant realistic WOMAN (not cartoon, not mannequin)
 - Clean, bright, professional lighting
 - Premium lifestyle or product-focused composition
+- Feminine beauty portrait style
 
-STRICTLY FORBIDDEN:
+STRICTLY FORBIDDEN (WILL BE REJECTED):
+- ANY MALE/MAN/MASCULINE PERSON - absolutely no men in the image
+- Beards, facial hair, masculine jawlines
 - Short hair (no pixie cut, no bob haircut, no ear-length hair)
 - Training scenes or classroom settings (we don't do training)
 - Salon work scenes with stylists applying extensions
@@ -48,10 +59,11 @@ STRICTLY FORBIDDEN:
 - Technical application process shots
 
 FOCUS ON:
-- The RESULT: beautiful women with gorgeous long hair extensions
-- Product beauty: showcase the quality of the extensions
-- Lifestyle luxury: aspirational, premium, elegant
+- The RESULT: beautiful WOMEN with gorgeous long flowing feminine hair extensions
+- Product beauty: showcase the quality of the extensions on a female model
+- Lifestyle luxury: aspirational, premium, elegant feminine beauty
 - E-commerce ready: clean backgrounds, professional lighting
+- Female empowerment through beautiful hair
 """
 
 # =====================================================
@@ -177,31 +189,32 @@ def build_smart_image_prompt(
         # Articles comparatifs - montrer les deux résultats
         if image_type == "cover":
             scene = f"""
-Beautiful split composition showing elegant woman with long {hair_color} hair extensions.
-Premium product comparison concept, luxury beauty photography.
-Clean e-commerce style, bright professional lighting.
-Horizontal 1200x630 cover image, aspirational luxury feel.
+Beautiful FEMININE WOMAN with long flowing {hair_color} hair extensions.
+Premium product comparison concept, luxury feminine beauty photography.
+Gorgeous female model, elegant lady, clean e-commerce style.
+Bright professional lighting, horizontal 1200x630 cover image.
+NO MEN - only beautiful women with long luxurious hair.
 """
         else:
             scene = f"""
-Detail shot of premium hair extensions quality,
-showing the texture and shine of long {hair_color} hair.
-Product-focused beauty photography, e-commerce quality.
+Beautiful FEMININE WOMAN detail shot showing premium hair extensions,
+gorgeous female model with long {hair_color} hair texture and shine.
+Product-focused feminine beauty photography, e-commerce quality.
 """
     
     elif is_entretien:
         # Articles entretien - montrer le résultat de bons soins
         if image_type == "cover":
             scene = f"""
-Stunning woman with perfectly maintained long {hair_color} hair extensions.
-Healthy, shiny, voluminous hair showing the result of proper care.
-Premium beauty portrait, soft lighting, luxury lifestyle.
-Horizontal 1200x630, clean background.
+Stunning beautiful FEMININE WOMAN with perfectly maintained long {hair_color} hair extensions.
+Gorgeous female model with healthy, shiny, voluminous flowing hair.
+Premium feminine beauty portrait, soft lighting, luxury lifestyle.
+Elegant lady, NO MEN, horizontal 1200x630, clean background.
 """
         else:
             scene = f"""
-Close-up of healthy, shiny long {hair_color} hair extensions.
-Premium hair texture detail showing quality maintenance result.
+Close-up of beautiful FEMININE WOMAN with healthy, shiny long {hair_color} hair extensions.
+Female model showing premium hair texture, quality maintenance result.
 Optional: luxury hair care products elegantly displayed.
 """
     
@@ -209,31 +222,31 @@ Optional: luxury hair care products elegantly displayed.
         # Articles tendances - montrer les styles modernes
         if image_type == "cover":
             scene = f"""
-Fashion-forward woman with trendy long {hair_color} hair extensions.
-Modern 2025 hairstyle, balayage or ombre if applicable.
-Contemporary luxury beauty portrait, editorial quality.
-Horizontal 1200x630, stylish and aspirational.
+Fashion-forward beautiful FEMININE WOMAN with trendy long {hair_color} hair extensions.
+Gorgeous female model, modern 2025 hairstyle, balayage or ombre if applicable.
+Contemporary luxury feminine beauty portrait, editorial quality.
+Elegant lady, NO MEN, horizontal 1200x630, stylish and aspirational.
 """
         else:
             scene = f"""
-Detail shot of trendy hair extension styling,
-modern texture and color technique on long {hair_color} hair.
-Fashion-forward beauty photography, Instagram-worthy.
+Detail shot of trendy hair extension styling on beautiful FEMALE model,
+modern texture and color technique on long {hair_color} feminine hair.
+Fashion-forward feminine beauty photography, Instagram-worthy.
 """
     
     elif is_achat or is_guide:
         # Articles achat/guide - montrer la qualité du produit
         if image_type == "cover":
             scene = f"""
-Elegant confident woman showcasing beautiful long {hair_color} hair extensions.
-Premium product result, luxury quality visible.
+Elegant confident beautiful FEMININE WOMAN showcasing gorgeous long {hair_color} hair extensions.
+Premium product result on female model, luxury quality visible.
 E-commerce style photography, clean bright background.
-Horizontal 1200x630, professional product showcase.
+Beautiful lady, NO MEN, horizontal 1200x630, professional product showcase.
 """
         else:
             scene = f"""
-Detail of premium hair extension quality,
-showing the texture, shine and natural look of long {hair_color} extensions.
+Detail of premium hair extension quality on FEMININE WOMAN,
+showing the texture, shine and natural look of long {hair_color} extensions on female model.
 Product-focused photography, high-end e-commerce style.
 """
     
@@ -241,32 +254,32 @@ Product-focused photography, high-end e-commerce style.
         # Produit Halo - volume instantané, fil invisible
         if image_type == "cover":
             scene = f"""
-Glamorous woman with very long flowing {hair_color} Halo hair extensions.
-Invisible wire perfectly hidden, instant volume and length result.
-Effortless luxury beauty, soft glamour portrait.
-Natural hair movement, horizontal 1200x630.
-Aspirational lifestyle, perfect hair moment.
+Glamorous beautiful FEMININE WOMAN with very long flowing {hair_color} Halo hair extensions.
+Gorgeous female model, invisible wire perfectly hidden, instant volume and length result.
+Effortless luxury feminine beauty, soft glamour portrait of elegant lady.
+Natural hair movement, NO MEN, horizontal 1200x630.
+Aspirational feminine lifestyle, perfect hair moment.
 """
         else:
             scene = f"""
-Detail of Halo extension result on long {hair_color} hair.
-Showing the seamless blend, volume and natural movement.
-Premium product photography, luxury quality visible.
+Detail of Halo extension result on beautiful FEMININE WOMAN with long {hair_color} hair.
+Showing the seamless blend, volume and natural movement on female model.
+Premium product photography, luxury feminine quality visible.
 """
     
     elif is_genius:
         # Produit Genius Weft - trame ultra-fine
         if image_type == "cover":
             scene = f"""
-Sophisticated woman with long sleek {hair_color} Genius Weft extensions.
-Ultra-thin 0.78mm weft result, invisible and natural.
-Premium luxury beauty portrait, professional lighting.
-Horizontal 1200x630, high-end product showcase.
+Sophisticated beautiful FEMININE WOMAN with long sleek {hair_color} Genius Weft extensions.
+Gorgeous female model, ultra-thin 0.78mm weft result, invisible and natural.
+Premium luxury feminine beauty portrait, professional lighting.
+Elegant lady, NO MEN, horizontal 1200x630, high-end product showcase.
 """
         else:
             scene = f"""
-Close-up of Genius Weft extension result on long {hair_color} hair.
-Showing the thin seamless weft, natural integration.
+Close-up of Genius Weft extension result on beautiful FEMININE WOMAN with long {hair_color} hair.
+Showing the thin seamless weft, natural integration on female model.
 Premium product detail photography.
 """
     
@@ -274,15 +287,15 @@ Premium product detail photography.
         # Produit Tape-in - résultat lisse
         if image_type == "cover":
             scene = f"""
-Elegant woman with smooth long {hair_color} Tape-in hair extensions.
-Sleek professional result, premium quality visible.
-Luxury beauty portrait, clean bright lighting.
-Horizontal 1200x630, e-commerce ready.
+Elegant beautiful FEMININE WOMAN with smooth long {hair_color} Tape-in hair extensions.
+Gorgeous female model, sleek professional result, premium quality visible.
+Luxury feminine beauty portrait, clean bright lighting.
+Beautiful lady, NO MEN, horizontal 1200x630, e-commerce ready.
 """
         else:
             scene = f"""
-Detail of Tape-in extension result on long {hair_color} hair.
-Showing the smooth seamless blend, natural look.
+Detail of Tape-in extension result on beautiful FEMININE WOMAN with long {hair_color} hair.
+Showing the smooth seamless blend on female model, natural look.
 Premium product photography.
 """
     
@@ -290,15 +303,15 @@ Premium product photography.
         # Produit I-Tip - fusion naturelle
         if image_type == "cover":
             scene = f"""
-Natural-looking woman with long {hair_color} I-Tip keratin extensions.
-Strand-by-strand result, ultra-natural blend.
-Premium beauty portrait showing hair movement and texture.
-Horizontal 1200x630, luxury lifestyle feel.
+Natural-looking beautiful FEMININE WOMAN with long {hair_color} I-Tip keratin extensions.
+Gorgeous female model, strand-by-strand result, ultra-natural blend.
+Premium feminine beauty portrait showing hair movement and texture.
+Elegant lady, NO MEN, horizontal 1200x630, luxury lifestyle feel.
 """
         else:
             scene = f"""
-Close-up of I-Tip extension result on long {hair_color} hair.
-Individual strands blending naturally, premium quality.
+Close-up of I-Tip extension result on beautiful FEMININE WOMAN with long {hair_color} hair.
+Individual strands blending naturally on female model, premium quality.
 Product detail photography.
 """
     
@@ -306,16 +319,16 @@ Product detail photography.
         # Articles généraux - résultat premium
         if image_type == "cover":
             scene = f"""
-Beautiful confident woman with long luxurious {hair_color} hair extensions.
-Premium quality result, healthy shine and volume.
-Elegant beauty portrait, soft professional lighting.
-Horizontal 1200x630 cover composition, aspirational lifestyle.
+Beautiful confident FEMININE WOMAN with long luxurious {hair_color} hair extensions.
+Gorgeous female model, premium quality result, healthy shine and volume.
+Elegant feminine beauty portrait, soft professional lighting.
+Beautiful lady, NO MEN, horizontal 1200x630 cover composition, aspirational lifestyle.
 """
         else:
             scene = f"""
-Detail shot of beautiful long {hair_color} hair extensions.
-Premium texture and shine, professional quality result.
-Luxury product photography.
+Detail shot of beautiful FEMININE WOMAN with long {hair_color} hair extensions.
+Premium texture and shine on female model, professional quality result.
+Luxury feminine product photography.
 """
     
     # =====================================================
