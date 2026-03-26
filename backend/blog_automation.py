@@ -1359,16 +1359,50 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
                         "nodes": [{"type": "TEXT", "textData": {"text": text}}]
                     })
         
-        # Listes non-ordonnées (ul)
+        # Listes non-ordonnées (ul) - AVEC SUPPORT DES LIENS HYPERTEXTES
         elif element.startswith('<ul'):
             list_items = []
             for li_match in re.finditer(r'<li[^>]*>(.*?)</li>', element, re.DOTALL):
-                text = re.sub(r'<[^>]+>', '', li_match.group(1)).strip()
-                if text:
+                li_content = li_match.group(1)
+                
+                # Vérifier s'il y a un lien dans le <li>
+                link_match = re.search(r'<a\s+href=["\']([^"\']+)["\'][^>]*>([^<]+)</a>', li_content)
+                
+                if link_match:
+                    # Créer un item de liste avec lien cliquable
+                    link_url = link_match.group(1)
+                    link_text = link_match.group(2).strip()
+                    
                     list_items.append({
                         "type": "LIST_ITEM",
-                        "nodes": [{"type": "PARAGRAPH", "nodes": [{"type": "TEXT", "textData": {"text": text}}]}]
+                        "nodes": [{
+                            "type": "PARAGRAPH", 
+                            "nodes": [{
+                                "type": "TEXT", 
+                                "textData": {
+                                    "text": link_text,
+                                    "decorations": [{
+                                        "type": "LINK",
+                                        "linkData": {
+                                            "link": {
+                                                "url": link_url,
+                                                "target": "_blank"
+                                            }
+                                        }
+                                    }]
+                                }
+                            }]
+                        }]
                     })
+                else:
+                    # Item de liste sans lien
+                    text = re.sub(r'<[^>]+>', '', li_content).strip()
+                    if text:
+                        list_items.append({
+                            "type": "LIST_ITEM",
+                            "nodes": [{"type": "PARAGRAPH", "nodes": [{"type": "TEXT", "textData": {"text": text}}]}]
+                        })
+            
             if list_items:
                 nodes.append({
                     "type": "BULLETED_LIST",
@@ -1434,7 +1468,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
         if not inserted:
             nodes.insert(mid_point, content_image_node)
     
-    # Ajouter la signature Luxura à la fin
+    # Ajouter la signature Luxura à la fin AVEC LOGO
     if add_logo:
         # Séparateur
         nodes.append({
@@ -1445,14 +1479,40 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
             }
         })
         
-        # Signature Luxura
+        # Logo Luxura (image du site)
+        nodes.append({
+            "type": "IMAGE",
+            "imageData": {
+                "image": {
+                    "src": {
+                        "url": "https://static.wixstatic.com/media/f1b961_1fecf0073c704b0f96f43d3dd3a17ccc~mv2.png"
+                    },
+                    "width": 200,
+                    "height": 80
+                },
+                "altText": "Logo Luxura Distribution - Extensions capillaires haut de gamme"
+            }
+        })
+        
+        # Signature Luxura avec lien
         nodes.append({
             "type": "PARAGRAPH",
             "nodes": [{
                 "type": "TEXT", 
                 "textData": {
-                    "text": "📍 Luxura Distribution - Importateur d'extensions capillaires haut de gamme au Québec",
-                    "decorations": [{"type": "BOLD"}]
+                    "text": "Luxura Distribution - Importateur d'extensions capillaires haut de gamme au Québec",
+                    "decorations": [
+                        {"type": "BOLD"},
+                        {
+                            "type": "LINK",
+                            "linkData": {
+                                "link": {
+                                    "url": "https://www.luxuradistribution.com",
+                                    "target": "_blank"
+                                }
+                            }
+                        }
+                    ]
                 }
             }]
         })
@@ -1917,13 +1977,12 @@ async def generate_daily_blogs(
         await db.blog_posts.insert_one(blog_post)
         
         # ============================================
-        # PUBLIER SUR WIX AVEC IMAGES DALL-E (PROMPTS GROK V3)
+        # PUBLIER SUR WIX - DALL-E DÉSACTIVÉ DÉFINITIVEMENT
+        # Utiliser UNIQUEMENT Unsplash vérifiées (femmes cheveux longs)
         # ============================================
         if publish_to_wix:
             category = topic_data.get("category", "general")
             blog_title = blog_post['title']
-            blog_keywords = topic_data.get("keywords", [])
-            focus_product = topic_data.get("focus_product")
             
             logger.info(f"🚀 Publishing to Wix: {blog_title[:50]}...")
             
@@ -1931,60 +1990,25 @@ async def generate_daily_blogs(
                 cover_image_data = None
                 content_image_data = None
                 
-                # RÉACTIVÉ: DALL-E avec prompts Grok V3 optimisés
-                if DALLE_AVAILABLE:
-                    try:
-                        logger.info(f"🎨 Generating images with DALL-E (Grok V3 prompts)")
-                        logger.info(f"   Title: {blog_title[:50]}...")
-                        logger.info(f"   Category: {category}, Product: {focus_product}")
-                        
-                        # Générer image de couverture avec prompts Grok
-                        cover_bytes = await generate_blog_image_with_dalle(
-                            category=category,
-                            blog_title=blog_title,
-                            keywords=blog_keywords,
-                            focus_product=focus_product,
-                            image_type="cover"
-                        )
-                        if cover_bytes:
-                            cover_image_data = await upload_image_bytes_to_wix(
-                                api_key=wix_api_key,
-                                site_id=wix_site_id,
-                                image_bytes=cover_bytes,
-                                file_name=f"cover-dalle-{uuid.uuid4().hex[:8]}.png"
-                            )
-                            if cover_image_data:
-                                logger.info(f"✅ DALL-E cover image uploaded")
-                        
-                        # Générer 2ème image pour le contenu
-                        content_bytes = await generate_blog_image_with_dalle(
-                            category=category,
-                            blog_title=blog_title,
-                            keywords=blog_keywords,
-                            focus_product=focus_product,
-                            image_type="content"
-                        )
-                        if content_bytes:
-                            content_image_data = await upload_image_bytes_to_wix(
-                                api_key=wix_api_key,
-                                site_id=wix_site_id,
-                                image_bytes=content_bytes,
-                                file_name=f"content-dalle-{uuid.uuid4().hex[:8]}.png"
-                            )
-                            if content_image_data:
-                                logger.info(f"✅ DALL-E content image uploaded")
-                                
-                    except Exception as e:
-                        logger.error(f"⚠️ DALL-E generation failed: {e}, falling back to Unsplash")
+                # DALL-E DÉSACTIVÉ DÉFINITIVEMENT - Génère des hommes malgré les instructions
+                # Utiliser UNIQUEMENT Unsplash avec images VÉRIFIÉES de femmes
+                logger.info(f"📷 Using VERIFIED Unsplash images ONLY (DALL-E disabled)")
                 
-                # Fallback vers Unsplash si DALL-E échoue
-                if not cover_image_data:
-                    logger.info(f"📷 Using Unsplash fallback for cover image")
-                    cover_image_data = await import_image_with_retry(
+                # Image de couverture - Unsplash vérifiée
+                cover_image_data = await import_image_with_retry(
+                    api_key=wix_api_key,
+                    site_id=wix_site_id,
+                    category=category,
+                    max_retries=3
+                )
+                
+                # Image de contenu - Unsplash vérifiée (différente)
+                if cover_image_data:
+                    content_image_data = await import_image_with_retry(
                         api_key=wix_api_key,
                         site_id=wix_site_id,
                         category=category,
-                        max_retries=3
+                        max_retries=2
                     )
                 
                 # Fallback pour l'image de contenu aussi
