@@ -798,15 +798,17 @@ async def create_wix_draft_post(
     """
     try:
         async with httpx.AsyncClient(timeout=80) as client:
-            # Extraire l'URI depuis image_data
+            # Extraire les URLs depuis image_data
             hero_image_uri = None
+            static_image_url = None
             if image_data and isinstance(image_data, dict):
                 hero_image_uri = image_data.get("wix_uri")
+                static_image_url = image_data.get("static_url")
             elif image_data and isinstance(image_data, str):
                 hero_image_uri = image_data
             
-            # Convertir le HTML en Ricos AVEC l'image dans le corps
-            rich_content = html_to_ricos(content, hero_image_uri)
+            # Convertir le HTML en Ricos AVEC l'image dans le corps (URL statique)
+            rich_content = html_to_ricos(content, hero_image_uri, static_image_url)
             
             logger.info(f"Creating Wix draft post: {title}")
             
@@ -899,31 +901,33 @@ async def publish_wix_draft(api_key: str, site_id: str, draft_id: str) -> bool:
         logger.error(f"Error publishing Wix draft: {e}")
         return False
 
-def html_to_ricos(html_content: str, hero_image_uri: str = None) -> Dict:
+def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_url: str = None) -> Dict:
     """
     Convertit le HTML en format Ricos (Wix rich content format).
     
-    Si hero_image_uri est fourni, l'image est insérée comme PREMIER élément
-    du contenu (contourne le bug heroImage de Wix).
+    Si static_image_url est fourni, l'image est insérée comme PREMIER élément
+    du contenu avec l'URL statique (plus fiable que wix:image://).
     """
     import re
     import uuid
     
     nodes = []
     
-    # NOUVEAU: Insérer l'image comme premier élément du corps
-    if hero_image_uri:
+    # Insérer l'image comme premier élément du corps
+    # Utiliser l'URL statique si disponible (plus fiable)
+    image_src = static_image_url or hero_image_uri
+    if image_src:
         image_node = {
             "type": "IMAGE",
             "id": str(uuid.uuid4()),
             "imageData": {
                 "containerData": {
-                    "width": {"size": "CONTENT"},
+                    "width": {"size": "FULL_WIDTH"},
                     "alignment": "CENTER"
                 },
                 "image": {
                     "src": {
-                        "id": hero_image_uri
+                        "url": image_src
                     },
                     "width": 1200,
                     "height": 630
