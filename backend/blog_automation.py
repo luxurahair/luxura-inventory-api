@@ -109,88 +109,100 @@ async def send_blog_images_email(blogs: List[Dict], recipient_email: str = None)
         return False
 
 # FORMAT OPEN GRAPH: 1200x630 px (ratio 1.91:1) pour Wix Blog Cover
-# NOUVELLES IMAGES - Plus variées et attrayantes!
+# =============================================================================
+# IMAGES LUXURA - UNIQUEMENT CHEVEUX LONGS, LUXUEUX ET VOLUMINEUX
+# Images représentant le résultat des extensions capillaires professionnelles
+# =============================================================================
 UNSPLASH_IMAGES = {
     "halo": [
-        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=1200&h=630&fit=crop",  # Portrait glamour
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Blonde élégante
-        "https://images.unsplash.com/photo-1512361436605-a484bdb34b5f?w=1200&h=630&fit=crop",  # Cheveux longs luxueux
-        "https://images.unsplash.com/photo-1554519934-e32b1629d9ee?w=1200&h=630&fit=crop",  # Femme cheveux brillants
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",  # Portrait moderne
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",  # Modèle cheveux parfaits
-        "https://images.unsplash.com/photo-1504703395950-b89145a5425b?w=1200&h=630&fit=crop",  # Style naturel
+        # Femmes avec cheveux longs luxueux - idéal pour Halo extensions
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Cheveux longs brillants
+        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Blonde cheveux longs fluides
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Cheveux ondulés luxueux
+        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Cheveux extra longs brillants
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux soyeux volume
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Blonde cheveux parfaits
+        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Longs cheveux wavy
     ],
     "genius": [
-        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=630&fit=crop",  # Portrait sophistiqué
-        "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=1200&h=630&fit=crop",  # Femme professionnelle élégante
-        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=630&fit=crop",  # Portrait naturel
-        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",  # Modèle cheveux lisses
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",  # Style décontracté chic
-        "https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=1200&h=630&fit=crop",  # Cheveux wavy luxueux
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&h=630&fit=crop",  # Portrait artistique
+        # Cheveux longs parfaits - résultat Genius Weft
+        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux ultra longs lisses
+        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Volume cheveux longs
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Ondulations parfaites longues
+        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Cheveux blonds longs
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux soyeux
+        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Cheveux longs naturels
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Longs cheveux brillants
     ],
     "tape": [
-        "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=1200&h=630&fit=crop",  # Salon haut de gamme
-        "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=1200&h=630&fit=crop",  # Application professionnelle
-        "https://images.unsplash.com/photo-1559599101-f09722fb4948?w=1200&h=630&fit=crop",  # Coiffeuse au travail
-        "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=1200&h=630&fit=crop",  # Détail cheveux parfaits
-        "https://images.unsplash.com/photo-1522338140262-f46f5913618a?w=1200&h=630&fit=crop",  # Salon moderne
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=630&fit=crop",  # Résultat brillant
-        "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=1200&h=630&fit=crop",  # Salon luxueux
+        # Extensions Tape - résultat cheveux longs naturels
+        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Cheveux extra longs
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Cheveux ondulés glamour
+        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux lisses luxueux
+        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Cheveux longs blonds
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Volume soyeux
+        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Cheveux naturels longs
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Résultat brillant
     ],
     "itip": [
-        "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?w=1200&h=630&fit=crop",  # Cheveux ondulés glamour
-        "https://images.unsplash.com/photo-1515121061221-2ce23ad81c5f?w=1200&h=630&fit=crop",  # Portrait cheveux longs
-        "https://images.unsplash.com/photo-1523264653568-d3d4032d1476?w=1200&h=630&fit=crop",  # Détail extension
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Salon professionnel
-        "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=1200&h=630&fit=crop",  # Femme confiante
-        "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=1200&h=630&fit=crop",  # Look business
-        "https://images.unsplash.com/photo-1557053910-d9eadeed1c58?w=1200&h=630&fit=crop",  # Style élégant
+        # I-Tip - cheveux longs mèche par mèche
+        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux ultra longs
+        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Volume luxueux
+        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Blond parfait
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Ondulations longues
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux soyeux longs
+        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Résultat naturel
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Cheveux brillants
     ],
     "entretien": [
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux soyeux
-        "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=1200&h=630&fit=crop",  # Cheveux naturels
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Produits soins
-        "https://images.unsplash.com/photo-1516914943479-89db7d9ae7f2?w=1200&h=630&fit=crop",  # Routine beauté
-        "https://images.unsplash.com/photo-1526947425960-945c6e72858f?w=1200&h=630&fit=crop",  # Produits capillaires
-        "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?w=1200&h=630&fit=crop",  # Soins cheveux
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Résultat soins
+        # Entretien - beaux cheveux longs bien entretenus
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux soyeux parfaits
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Cheveux brillants
+        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Cheveux longs sains
+        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux luxueux
+        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Blond entretenu
+        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Cheveux naturels longs
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Résultat soins
     ],
     "tendances": [
-        "https://images.unsplash.com/photo-1513201099705-a9746e1e201f?w=1200&h=630&fit=crop",  # Mode cheveux
-        "https://images.unsplash.com/photo-1520975916090-3105956dac38?w=1200&h=630&fit=crop",  # Style tendance
-        "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?w=1200&h=630&fit=crop",  # Look fashion
-        "https://images.unsplash.com/photo-1523264653568-d3d4032d1476?w=1200&h=630&fit=crop",  # Coiffure moderne
-        "https://images.unsplash.com/photo-1516914943479-89db7d9ae7f2?w=1200&h=630&fit=crop",  # Style 2025
-        "https://images.unsplash.com/photo-1496345875659-11f7dd282d1d?w=1200&h=630&fit=crop",  # Fashion hair
-        "https://images.unsplash.com/photo-1485893226355-9a1c32a0c81e?w=1200&h=630&fit=crop",  # Inspiration coiffure
+        # Tendances - looks avec cheveux longs
+        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Tendance cheveux longs
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Ondulations tendance
+        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Style cheveux longs
+        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Look blonde
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Tendance volume
+        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Style naturel long
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Cheveux glamour
     ],
     "salon": [
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=630&fit=crop",  # Salon élégant
-        "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=1200&h=630&fit=crop",  # Intérieur salon luxe
-        "https://images.unsplash.com/photo-1522338140262-f46f5913618a?w=1200&h=630&fit=crop",  # Espace coiffure moderne
-        "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=1200&h=630&fit=crop",  # Salon professionnel
-        "https://images.unsplash.com/photo-1633681122857-a31c5d11b107?w=1200&h=630&fit=crop",  # Salon contemporain
-        "https://images.unsplash.com/photo-1559599101-f09722fb4948?w=1200&h=630&fit=crop",  # Service client
+        # Salon - résultats cheveux longs après pose
+        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Résultat salon luxe
+        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux parfaits
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Finition salon
+        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Cliente satisfaite
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Résultat professionnel
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Transformation salon
     ],
     "formation": [
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Formation salon
-        "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=1200&h=630&fit=crop",  # Technique pose
-        "https://images.unsplash.com/photo-1559599101-f09722fb4948?w=1200&h=630&fit=crop",  # Apprentissage
-        "https://images.unsplash.com/photo-1522338140262-f46f5913618a?w=1200&h=630&fit=crop",  # Workshop
-        "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=1200&h=630&fit=crop",  # Formation pro
+        # Formation - résultats professionnels
+        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Résultat formation
+        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Technique pro
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Finition experte
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux parfaits
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Résultat master
     ],
     "general": [
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",  # Portrait stunning
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",  # Modèle cheveux
-        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=630&fit=crop",  # Portrait beauté
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",  # Style moderne
-        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",  # Cheveux parfaits
-        "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=1200&h=630&fit=crop",  # Femme élégante
-        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=630&fit=crop",  # Portrait naturel
-        "https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=1200&h=630&fit=crop",  # Cheveux wavy
-        "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?w=1200&h=630&fit=crop",  # Glamour
-        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=1200&h=630&fit=crop",  # Beauté naturelle
+        # Général - beaux cheveux longs pour tout article
+        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Cheveux extra longs luxueux
+        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux lisses parfaits
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Ondulations glamour
+        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",  # Blonde cheveux longs
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Cheveux soyeux volume
+        "https://images.unsplash.com/photo-1596178060810-72660fc43bd1?w=1200&h=630&fit=crop",  # Cheveux naturels longs
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Cheveux brillants longs
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Blond luxueux
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",  # Cheveux longs naturels
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",  # Modèle cheveux longs
     ]
 }
 
