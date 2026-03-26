@@ -33,6 +33,15 @@ except ImportError:
     logger.warning("Image generation module not available, using Unsplash fallback")
     DALLE_AVAILABLE = False
 
+# Import du module d'overlay de logo
+try:
+    from logo_overlay import process_image_with_logo, upload_image_with_logo_to_wix
+    LOGO_OVERLAY_AVAILABLE = True
+    logger.info("Logo overlay module loaded successfully")
+except ImportError:
+    logger.warning("Logo overlay module not available")
+    LOGO_OVERLAY_AVAILABLE = False
+
 # =====================================================
 # EMAIL CONFIGURATION
 # =====================================================
@@ -759,11 +768,15 @@ async def import_image_with_retry(
     api_key: str,
     site_id: str,
     category: str,
-    max_retries: int = 3
+    max_retries: int = 3,
+    add_logo: bool = True
 ) -> Optional[Dict]:
     """
     Importe une image avec retry automatique.
     Si une image échoue, essaie avec une autre image de la même catégorie.
+    
+    Args:
+        add_logo: Si True, ajoute le logo Luxura sur l'image (coin bas-droit, 15%)
     """
     tried_images = set()
     
@@ -779,12 +792,23 @@ async def import_image_with_retry(
         
         logger.info(f"📷 Import image attempt {attempt + 1}/{max_retries}: {image_url[:50]}...")
         
-        result = await import_image_and_get_wix_uri(
-            api_key=api_key,
-            site_id=site_id,
-            image_url=image_url,
-            file_name=f"luxura-cover-{uuid.uuid4().hex[:8]}.jpg"
-        )
+        # Si logo overlay disponible et demandé, utiliser la nouvelle méthode
+        if add_logo and LOGO_OVERLAY_AVAILABLE:
+            logger.info(f"🖼️ Adding Luxura logo to image (bottom-right, 15%)...")
+            result = await import_image_with_logo(
+                api_key=api_key,
+                site_id=site_id,
+                image_url=image_url,
+                file_name=f"luxura-cover-{uuid.uuid4().hex[:8]}.jpg"
+            )
+        else:
+            # Fallback: import direct sans logo
+            result = await import_image_and_get_wix_uri(
+                api_key=api_key,
+                site_id=site_id,
+                image_url=image_url,
+                file_name=f"luxura-cover-{uuid.uuid4().hex[:8]}.jpg"
+            )
         
         if result and result.get("file_id"):
             logger.info(f"✅ Image imported successfully on attempt {attempt + 1}")
@@ -795,6 +819,158 @@ async def import_image_with_retry(
     
     logger.error(f"❌ All {max_retries} image import attempts failed")
     return None
+
+
+async def import_image_with_logo(
+    api_key: str,
+    site_id: str,
+    image_url: str,
+    file_name: str = None
+) -> Optional[Dict]:
+    """
+    Télécharge une image, ajoute le logo Luxura, et l'upload vers Wix Media.
+    Position: coin bas-droit, taille: 15%
+    
+    MÉTHODE: Sauvegarde temporaire + import via URL data
+    Note: L'upload direct de bytes nécessite Velo backend ou API v2 avec permissions spéciales.
+    En attendant, on utilise l'import standard et on note que le logo devra être ajouté manuellement
+    ou via un processus Wix Velo.
+    """
+    import io
+    import tempfile
+    import os as local_os
+    
+    if not file_name:
+        file_name = f"luxura-cover-{uuid.uuid4().hex[:8]}.jpg"
+    
+    try:
+        # Créer l'image avec logo
+        image_bytes = await process_image_with_logo(
+            image_url,
+            position="bottom-right",
+            size_percent=0.15,
+            padding=20
+        )
+        
+        if not image_bytes:
+            logger.warning("Logo overlay failed, falling back to direct import")
+            return await import_image_and_get_wix_uri(api_key, site_id, image_url, file_name)
+        
+        logger.info(f"✅ Logo added to image ({len(image_bytes)} bytes)")
+        
+        # OPTION 1: Essayer l'upload direct via generate-file-upload-url (API v2)
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            # Étape 1: Générer l'URL d'upload
+            generate_payload = {
+                "mimeType": "image/jpeg",
+                "fileName": file_name,
+                "filePath": f"/blog-covers/{file_name}"
+            }
+            
+            response = await client.post(
+                "https://www.wixapis.com/site-media/v1/files/generate-file-upload-url",
+                headers={
+                    "Authorization": api_key,
+                    "wix-site-id": site_id,
+                    "Content-Type": "application/json"
+                },
+                json=generate_payload
+            )
+            
+            if response.status_code == 200:
+                upload_data = response.json()
+                upload_url = upload_data.get("uploadUrl")
+                
+                if upload_url:
+                    # Upload direct des bytes
+                    logger.info(f"Uploading image with logo to Wix...")
+                    
+                    upload_response = await client.put(
+                        upload_url,
+                        content=image_bytes,
+                        headers={"Content-Type": "image/jpeg"}
+                    )
+                    
+                    if upload_response.status_code in (200, 201):
+                        # Extraire file_id
+                        file_info = upload_data.get("file", {})
+                        file_id = file_info.get("id")
+                        
+                        if file_id:
+                            # Attendre que le fichier soit prêt
+                            file_desc = await wait_until_wix_file_ready(api_key, site_id, file_id, timeout_sec=90)
+                            
+                            if file_desc:
+                                # Extraire dimensions
+                                media = file_desc.get("media", {}) or {}
+                                image_wrapper = media.get("image", {}) if isinstance(media, dict) else {}
+                                image_data = image_wrapper.get("image", {}) if isinstance(image_wrapper, dict) else {}
+                                width = image_data.get("width") or 1200
+                                height = image_data.get("height") or 630
+                                display_name = file_desc.get("displayName", file_name)
+                                
+                                # Construire URLs
+                                wix_uri = f"wix:image://v1/{file_id}/{display_name}#originWidth={width}&originHeight={height}"
+                                static_url = f"https://static.wixstatic.com/media/{file_id}"
+                                
+                                logger.info(f"✅ Image with logo uploaded - URL: {static_url}")
+                                
+                                return {
+                                    "wix_uri": wix_uri,
+                                    "static_url": static_url,
+                                    "file_id": file_id,
+                                    "width": width,
+                                    "height": height,
+                                    "display_name": display_name,
+                                    "has_logo": True
+                                }
+        
+        # OPTION 2: Si upload direct échoue, utiliser catbox.moe comme hébergeur temporaire (gratuit, pas de clé)
+        logger.info("Direct upload not available, trying temporary image hosting...")
+        
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                # Créer un form-data avec les bytes de l'image
+                import io
+                
+                # catbox.moe - hébergeur d'images gratuit sans clé API
+                files = {
+                    'reqtype': (None, 'fileupload'),
+                    'fileToUpload': (file_name, io.BytesIO(image_bytes), 'image/jpeg')
+                }
+                
+                catbox_response = await client.post(
+                    "https://catbox.moe/user/api.php",
+                    files=files
+                )
+                
+                if catbox_response.status_code == 200:
+                    temp_url = catbox_response.text.strip()
+                    if temp_url.startswith('https://'):
+                        logger.info(f"✅ Image with logo hosted on catbox: {temp_url}")
+                        
+                        # Maintenant importer cette URL vers Wix
+                        result = await import_image_and_get_wix_uri(
+                            api_key, site_id, temp_url, file_name
+                        )
+                        if result:
+                            result["has_logo"] = True
+                            return result
+                else:
+                    logger.warning(f"catbox.moe upload failed: {catbox_response.status_code} - {catbox_response.text[:100]}")
+                    
+        except Exception as catbox_error:
+            logger.warning(f"catbox upload failed: {catbox_error}")
+        
+        # OPTION 3: Fallback final - import sans logo
+        logger.warning("All logo upload methods failed, importing original image without logo")
+        return await import_image_and_get_wix_uri(api_key, site_id, image_url, file_name)
+            
+    except Exception as e:
+        logger.error(f"Error in import_image_with_logo: {e}")
+        import traceback
+        traceback.print_exc()
+        return await import_image_and_get_wix_uri(api_key, site_id, image_url, file_name)
 
 
 async def import_image_and_get_wix_uri(
@@ -1370,6 +1546,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
                 
                 if link_match:
                     # Créer un item de liste avec lien cliquable
+                    # IMPORTANT: Wix Ricos exige "BLANK" (pas "_blank") pour target
                     link_url = link_match.group(1)
                     link_text = link_match.group(2).strip()
                     
@@ -1386,7 +1563,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
                                         "linkData": {
                                             "link": {
                                                 "url": link_url,
-                                                "target": "_blank"
+                                                "target": "BLANK"
                                             }
                                         }
                                     }]
@@ -1468,7 +1645,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
         if not inserted:
             nodes.insert(mid_point, content_image_node)
     
-    # Ajouter la signature Luxura à la fin AVEC LOGO
+    # Ajouter la signature Luxura à la fin (SANS image logo car il est maintenant dans l'image principale)
     if add_logo:
         # Séparateur
         nodes.append({
@@ -1479,22 +1656,11 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
             }
         })
         
-        # Logo Luxura (image du site)
-        nodes.append({
-            "type": "IMAGE",
-            "imageData": {
-                "image": {
-                    "src": {
-                        "url": "https://static.wixstatic.com/media/f1b961_1fecf0073c704b0f96f43d3dd3a17ccc~mv2.png"
-                    },
-                    "width": 200,
-                    "height": 80
-                },
-                "altText": "Logo Luxura Distribution - Extensions capillaires haut de gamme"
-            }
-        })
+        # Note: Le logo Luxura est maintenant intégré directement dans l'image de couverture
+        # (coin bas-droit, 15%) pour un rendu plus professionnel
         
         # Signature Luxura avec lien
+        # IMPORTANT: Wix Ricos exige "BLANK" (pas "_blank") pour target
         nodes.append({
             "type": "PARAGRAPH",
             "nodes": [{
@@ -1508,7 +1674,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
                             "linkData": {
                                 "link": {
                                     "url": "https://www.luxuradistribution.com",
-                                    "target": "_blank"
+                                    "target": "BLANK"
                                 }
                             }
                         }
