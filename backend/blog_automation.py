@@ -472,6 +472,48 @@ async def get_wix_member_id(api_key: str, site_id: str) -> Optional[str]:
 # WIX MEDIA MANAGER - Import d'images
 # =====================================================
 
+async def import_image_with_retry(
+    api_key: str,
+    site_id: str,
+    category: str,
+    max_retries: int = 3
+) -> Optional[Dict]:
+    """
+    Importe une image avec retry automatique.
+    Si une image échoue, essaie avec une autre image de la même catégorie.
+    """
+    tried_images = set()
+    
+    for attempt in range(max_retries):
+        # Sélectionner une image pas encore essayée
+        image_url = get_blog_image_by_category(category)
+        
+        # Éviter les doublons
+        while image_url in tried_images and len(tried_images) < len(UNSPLASH_IMAGES.get(category, UNSPLASH_IMAGES["general"])):
+            image_url = get_blog_image_by_category(category)
+        
+        tried_images.add(image_url)
+        
+        logger.info(f"📷 Import image attempt {attempt + 1}/{max_retries}: {image_url[:50]}...")
+        
+        result = await import_image_and_get_wix_uri(
+            api_key=api_key,
+            site_id=site_id,
+            image_url=image_url,
+            file_name=f"luxura-cover-{uuid.uuid4().hex[:8]}.jpg"
+        )
+        
+        if result and result.get("file_id"):
+            logger.info(f"✅ Image imported successfully on attempt {attempt + 1}")
+            result["source_url"] = image_url  # Garder l'URL source
+            return result
+        
+        logger.warning(f"⚠️ Image import failed, trying another image...")
+    
+    logger.error(f"❌ All {max_retries} image import attempts failed")
+    return None
+
+
 async def import_image_and_get_wix_uri(
     api_key: str,
     site_id: str,
@@ -1285,63 +1327,53 @@ async def generate_daily_blogs(
         await db.blog_posts.insert_one(blog_post)
         
         # ============================================
-        # PUBLIER SUR WIX VIA VELO (Solution au bug heroImage)
+        # PUBLIER SUR WIX VIA REST API (avec retry sur images)
         # ============================================
         if publish_to_wix:
-            image_url = blog_post.get("image")
+            category = topic_data.get("category", "general")
             
-            logger.info(f"🚀 Publishing via Wix Velo: {blog_post['title'][:50]}...")
+            logger.info(f"🚀 Publishing to Wix: {blog_post['title'][:50]}...")
             
-            velo_result = await publish_blog_via_velo(
-                title=blog_post["title"],
-                excerpt=blog_post["excerpt"],
-                content=blog_post["content"],
-                image_url=image_url,
-                member_id=wix_member_id
-            )
-            
-            if velo_result and velo_result.get("success"):
-                draft_id = velo_result.get("draftId")
-                logger.info(f"✅ Blog published via Velo! ID: {draft_id}")
-                await db.blog_posts.update_one(
-                    {"id": post_id},
-                    {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
+            # Utiliser la nouvelle fonction avec retry automatique
+            if wix_api_key and wix_site_id:
+                image_data = await import_image_with_retry(
+                    api_key=wix_api_key,
+                    site_id=wix_site_id,
+                    category=category,
+                    max_retries=3
                 )
-                blog_post["published_to_wix"] = True
-            else:
-                logger.error(f"❌ Velo publish failed: {velo_result}")
-                # Fallback: essayer l'ancien système REST API
-                logger.info("⚠️ Trying REST API fallback...")
-                if wix_api_key and wix_site_id:
-                    image_data = None
-                    if image_url:
-                        image_data = await import_image_and_get_wix_uri(
-                            api_key=wix_api_key,
-                            site_id=wix_site_id,
-                            image_url=image_url,
-                            file_name=f"luxura-cover-{uuid.uuid4().hex[:8]}.jpg"
-                        )
-                    
-                    wix_result = await create_wix_draft_post(
-                        api_key=wix_api_key,
-                        site_id=wix_site_id,
-                        title=blog_post["title"],
-                        content=blog_post["content"],
-                        excerpt=blog_post["excerpt"],
-                        image_data=image_data,
-                        member_id=wix_member_id
-                    )
-                    
-                    if wix_result:
-                        draft_id = wix_result.get("draftPost", {}).get("id")
-                        if draft_id:
-                            published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
-                            if published:
-                                await db.blog_posts.update_one(
-                                    {"id": post_id},
-                                    {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
-                                )
-                                blog_post["published_to_wix"] = True
+                
+                if image_data:
+                    # Mettre à jour l'image dans blog_post avec l'URL qui a réussi
+                    blog_post["image"] = image_data.get("source_url", blog_post.get("image"))
+                
+                wix_result = await create_wix_draft_post(
+                    api_key=wix_api_key,
+                    site_id=wix_site_id,
+                    title=blog_post["title"],
+                    content=blog_post["content"],
+                    excerpt=blog_post["excerpt"],
+                    image_data=image_data,
+                    member_id=wix_member_id
+                )
+                
+                if wix_result:
+                    draft_id = wix_result.get("draftPost", {}).get("id")
+                    if draft_id:
+                        published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
+                        if published:
+                            logger.info(f"✅ Blog published successfully!")
+                            await db.blog_posts.update_one(
+                                {"id": post_id},
+                                {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
+                            )
+                            blog_post["published_to_wix"] = True
+                            
+                            # Ajouter l'URL Wix de l'image pour l'email
+                            if image_data:
+                                blog_post["wix_image_url"] = image_data.get("static_url", "")
+                else:
+                    logger.error(f"❌ Failed to create Wix draft")
         
         # Publier sur Facebook si configuré
         if publish_to_facebook and fb_access_token and fb_page_id:
