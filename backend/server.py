@@ -465,19 +465,34 @@ COLOR_CODE_IMAGES = {
 }
 
 # Images spécifiques par catégorie (pour les produits qui ont des photos distinctes)
+# MISE À JOUR: Images corrigées depuis le site Wix officiel luxuradistribution.com/genius
 CATEGORY_SPECIFIC_IMAGES = {
     "genius": {
-        "1": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",
-        "dc": "https://static.wixstatic.com/media/f1b961_58c11630ff1349728c47e56190218422~mv2.png",
-        "cacao": "https://static.wixstatic.com/media/f1b961_11271a5d5d91485883888a201592829c~mv2.jpg",
-        "2": "https://static.wixstatic.com/media/f1b961_2596437db6134f7bbdc1c5b2d72907fd~mv2.jpg",
-        "3": "https://static.wixstatic.com/media/f1b961_47ff485b2f674fdc9245cc856004cd46~mv2.png",
-        "6": "https://static.wixstatic.com/media/f1b961_5769d9b826004a6f91eb9112dc140cfb~mv2.png",
-        "60a": "https://static.wixstatic.com/media/f1b961_c3168b50e6d9464db8365cdef0b16557~mv2.png",
-        "18/22": "https://static.wixstatic.com/media/f1b961_b7d3eb648bf443cb8d30e3e23fa62ad8~mv2.png",
-        "6/24": "https://static.wixstatic.com/media/f1b961_387bbe6d47cd4217a7b0157f398d9a63~mv2.png",
-        "613/18a": "https://static.wixstatic.com/media/f1b961_c15e5a01c6024a1699cb92a2be325f8f~mv2.png",
-        "cb": "https://static.wixstatic.com/media/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png",
+        "1": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",  # Onyx Noir
+        "1b": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",  # Noir Soie (pas de Genius 1B sur le site, utilise #1)
+        "dc": "https://static.wixstatic.com/media/f1b961_58c11630ff1349728c47e56190218422~mv2.png",  # Chocolat Profond
+        "cacao": "https://static.wixstatic.com/media/f1b961_11271a5d5d91485883888a201592829c~mv2.jpg",  # Cacao Velours
+        "2": "https://static.wixstatic.com/media/f1b961_2596437db6134f7bbdc1c5b2d72907fd~mv2.jpg",  # Espresso Intense
+        "3": "https://static.wixstatic.com/media/f1b961_47ff485b2f674fdc9245cc856004cd46~mv2.png",  # Châtaigne Douce
+        "3/3t24": "https://static.wixstatic.com/media/f1b961_f7c08b4eeb9d454aa0da2db110ab359d~mv2.png",  # Châtaigne Lumière - CORRIGÉ
+        "6": "https://static.wixstatic.com/media/f1b961_5769d9b826004a6f91eb9112dc140cfb~mv2.png",  # Caramel Doré
+        "6/24": "https://static.wixstatic.com/media/f1b961_387bbe6d47cd4217a7b0157f398d9a63~mv2.png",  # Golden Hour
+        "6/6t24": "https://static.wixstatic.com/media/f1b961_b1da0ecc4ce04c86955047f5f172a44c~mv2.png",  # Caramel Soleil - CORRIGÉ
+        "60a": "https://static.wixstatic.com/media/f1b961_c3168b50e6d9464db8365cdef0b16557~mv2.png",  # Platine Pur
+        "18/22": "https://static.wixstatic.com/media/f1b961_b7d3eb648bf443cb8d30e3e23fa62ad8~mv2.png",  # Champagne Doré
+        "613/18a": "https://static.wixstatic.com/media/f1b961_c15e5a01c6024a1699cb92a2be325f8f~mv2.png",  # Diamant Glacé
+        "cb": "https://static.wixstatic.com/media/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png",  # Miel Sauvage Ombré
+        "db": "https://static.wixstatic.com/media/f1b961_b049d0356ab04230a0291ddadc1dfbe8~mv2.png",  # Nuit Mystère - CORRIGÉ
+        "hps": "https://static.wixstatic.com/media/f1b961_46c106d70c154c34918e15ad23452fc4~mv2.png",  # Cendré Étoilé - CORRIGÉ
+        "pha": "https://static.wixstatic.com/media/f1b961_54514ba920d34aed9aa1f10c62f1759a~mv2.jpg",  # Cendré Céleste
+        "ivory": "https://static.wixstatic.com/media/f1b961_2dbcedc5036044b69e1ba01c58cc93d4~mv2.jpg",  # Ivoire Précieux
+        "cinnamon": "https://static.wixstatic.com/media/f1b961_23960136c3df4e84852f5dde15475d17~mv2.jpg",  # Cannelle Épicée
+        "foochow": "https://static.wixstatic.com/media/f1b961_28d930f0f9924b229beb3be484bc1fbd~mv2.jpg",  # Cachemire Oriental
+        "chengtu": "https://static.wixstatic.com/media/f1b961_e440aecc44e44c69b0d56dad273a95e9~mv2.jpg",  # Soie d'Orient
+        "5at60": "https://static.wixstatic.com/media/f1b961_9f8115b4f7614340b0dc9aeba39bd699~mv2.jpg",  # Aurore Glaciale
+        "5atp18b62": "https://static.wixstatic.com/media/f1b961_0e7cf48e1d59418bbf1b562c21494176~mv2.jpg",  # Aurore Boréale
+        "2btp18/1006": "https://static.wixstatic.com/media/f1b961_75316de55cf441ecb82211cbc8d91010~mv2.jpg",  # Espresso Lumière
+        "t14/p14/24": "https://static.wixstatic.com/media/f1b961_9c2192c6fa5f4458913d46ea8a8f9dae~mv2.jpg",  # Venise Dorée
     },
     "tape": {
         "1": "https://static.wixstatic.com/media/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png",
@@ -556,7 +571,7 @@ def format_wix_image_url(base_url: str, size: int = 400) -> str:
         # Add parameters
         return f"{base_url}/v1/fill/w_{size},h_{size},al_c,q_80/{base_url.split('/')[-1]}"
 
-def get_product_image(handle: str, category: str) -> str:
+def get_product_image(handle: str, category: str, color_code: str = None) -> str:
     """
     Get product image based on color code and category.
     
@@ -564,25 +579,34 @@ def get_product_image(handle: str, category: str) -> str:
     1. Image spécifique à la catégorie + code couleur (CATEGORY_SPECIFIC_IMAGES)
     2. Image par code couleur universel (COLOR_CODE_IMAGES)
     3. Image par défaut de la catégorie (CATEGORY_DEFAULT_IMAGES)
+    
+    Args:
+        handle: Le handle Wix du produit
+        category: La catégorie du produit (genius, tape, etc.)
+        color_code: Le code couleur optionnel (ex: "6", "HPS", "3/3T24")
     """
-    if not handle:
+    if not handle and not color_code:
         return format_wix_image_url(CATEGORY_DEFAULT_IMAGES.get(category, CATEGORY_DEFAULT_IMAGES["genius"]))
     
-    # Extraire le code couleur du handle
-    color_code = extract_color_code_from_handle(handle)
+    # Utiliser le code couleur fourni ou l'extraire du handle
+    if not color_code:
+        color_code = extract_color_code_from_handle(handle)
     
-    if color_code:
+    # Normaliser le code couleur (minuscules pour la recherche)
+    color_code_lower = color_code.lower() if color_code else ""
+    
+    if color_code_lower:
         # 1. Chercher d'abord dans les images spécifiques à la catégorie
         if category in CATEGORY_SPECIFIC_IMAGES:
             cat_images = CATEGORY_SPECIFIC_IMAGES[category]
-            if color_code in cat_images:
-                return format_wix_image_url(cat_images[color_code])
+            if color_code_lower in cat_images:
+                return format_wix_image_url(cat_images[color_code_lower])
             if "default" in cat_images:
                 return format_wix_image_url(cat_images["default"])
         
         # 2. Chercher dans le mapping universel par code couleur
-        if color_code in COLOR_CODE_IMAGES:
-            return format_wix_image_url(COLOR_CODE_IMAGES[color_code])
+        if color_code_lower in COLOR_CODE_IMAGES:
+            return format_wix_image_url(COLOR_CODE_IMAGES[color_code_lower])
     
     # 3. Fallback: image par défaut de la catégorie
     return format_wix_image_url(CATEGORY_DEFAULT_IMAGES.get(category, CATEGORY_DEFAULT_IMAGES["genius"]))
@@ -979,8 +1003,8 @@ async def get_products(
                 if product_category in ['halo', 'genius', 'tape', 'i-tip', 'ponytail', 'clip-in']:
                     clean_name = generate_product_name_from_handle(best_handle, product_category)
                 
-                # Get image - use best_handle and correct category
-                image = get_product_image(best_handle, product_category)
+                # Get image - use color_code for accurate image mapping
+                image = get_product_image(best_handle, product_category, color_code)
                 
                 # Build Wix URL using the best handle
                 wix_url = f"https://www.luxuradistribution.com/product-page/{best_handle}" if best_handle else "https://www.luxuradistribution.com"
