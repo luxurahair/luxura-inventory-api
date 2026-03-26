@@ -1236,7 +1236,12 @@ LUXURA_WEBSITE = "https://www.luxuradistribution.com"
 
 def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_url: str = None, content_image_url: str = None, add_logo: bool = True) -> Dict:
     """
-    Convertit le HTML en format Ricos (Wix rich content format).
+    Convertit le HTML en format Ricos (Wix rich content format) - VERSION AMÉLIORÉE.
+    
+    AMÉLIORATIONS V3:
+    - Support des blockquotes pour les témoignages
+    - Meilleur placement des images
+    - Parsing séquentiel pour conserver l'ordre du contenu
     
     Args:
         html_content: Le contenu HTML à convertir
@@ -1254,7 +1259,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
     image_src = static_image_url or hero_image_uri
     if image_src:
         image_node = {
-            "type": "IMAGE",  # MAJUSCULE requis par Wix API
+            "type": "IMAGE",
             "imageData": {
                 "image": {
                     "src": {
@@ -1263,7 +1268,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
                     "width": 1200,
                     "height": 630
                 },
-                "altText": "Extensions capillaires Luxura Distribution"
+                "altText": "Extensions capillaires Luxura Distribution - Cheveux longs et naturels"
             }
         }
         nodes.append(image_node)
@@ -1271,57 +1276,123 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
     # Nettoyer le HTML
     content = html_content.strip()
     
-    # Parser les balises principales
-    # H1
-    for match in re.finditer(r'<h1[^>]*>(.*?)</h1>', content, re.DOTALL):
-        nodes.append({
-            "type": "HEADING",
-            "headingData": {"level": 1},
-            "nodes": [{"type": "TEXT", "textData": {"text": match.group(1).strip()}}]
-        })
+    # =====================================================
+    # PARSING SÉQUENTIEL pour conserver l'ordre du contenu
+    # =====================================================
     
-    # H2
-    for match in re.finditer(r'<h2[^>]*>(.*?)</h2>', content, re.DOTALL):
-        nodes.append({
-            "type": "HEADING",
-            "headingData": {"level": 2},
-            "nodes": [{"type": "TEXT", "textData": {"text": match.group(1).strip()}}]
-        })
+    # Regex pour trouver tous les éléments avec leur position
+    pattern = r'(<h1[^>]*>.*?</h1>|<h2[^>]*>.*?</h2>|<h3[^>]*>.*?</h3>|<p[^>]*>.*?</p>|<ul[^>]*>.*?</ul>|<ol[^>]*>.*?</ol>|<blockquote[^>]*>.*?</blockquote>)'
     
-    # H3
-    for match in re.finditer(r'<h3[^>]*>(.*?)</h3>', content, re.DOTALL):
-        nodes.append({
-            "type": "HEADING", 
-            "headingData": {"level": 3},
-            "nodes": [{"type": "TEXT", "textData": {"text": match.group(1).strip()}}]
-        })
+    elements = re.findall(pattern, content, re.DOTALL)
     
-    # Paragraphes
-    for match in re.finditer(r'<p[^>]*>(.*?)</p>', content, re.DOTALL):
-        text = re.sub(r'<[^>]+>', '', match.group(1)).strip()
-        if text:
-            nodes.append({
-                "type": "PARAGRAPH",
-                "nodes": [{"type": "TEXT", "textData": {"text": text}}]
-            })
-    
-    # Listes
-    for ul_match in re.finditer(r'<ul[^>]*>(.*?)</ul>', content, re.DOTALL):
-        list_items = []
-        for li_match in re.finditer(r'<li[^>]*>(.*?)</li>', ul_match.group(1), re.DOTALL):
-            text = re.sub(r'<[^>]+>', '', li_match.group(1)).strip()
-            list_items.append({
-                "type": "LIST_ITEM",
-                "nodes": [{"type": "PARAGRAPH", "nodes": [{"type": "TEXT", "textData": {"text": text}}]}]
-            })
-        if list_items:
-            nodes.append({
-                "type": "BULLETED_LIST",
-                "nodes": list_items
-            })
+    for i, element in enumerate(elements):
+        # H1
+        if element.startswith('<h1'):
+            text = re.sub(r'<[^>]+>', '', element).strip()
+            if text:
+                nodes.append({
+                    "type": "HEADING",
+                    "headingData": {"level": 1},
+                    "nodes": [{"type": "TEXT", "textData": {"text": text}}]
+                })
+        
+        # H2
+        elif element.startswith('<h2'):
+            text = re.sub(r'<[^>]+>', '', element).strip()
+            if text:
+                nodes.append({
+                    "type": "HEADING",
+                    "headingData": {"level": 2},
+                    "nodes": [{"type": "TEXT", "textData": {"text": text}}]
+                })
+        
+        # H3
+        elif element.startswith('<h3'):
+            text = re.sub(r'<[^>]+>', '', element).strip()
+            if text:
+                nodes.append({
+                    "type": "HEADING", 
+                    "headingData": {"level": 3},
+                    "nodes": [{"type": "TEXT", "textData": {"text": text}}]
+                })
+        
+        # BLOCKQUOTE - Pour les témoignages
+        elif element.startswith('<blockquote'):
+            text = re.sub(r'<[^>]+>', '', element).strip()
+            if text:
+                # Wix utilise le type BLOCKQUOTE pour les citations
+                nodes.append({
+                    "type": "BLOCKQUOTE",
+                    "nodes": [{
+                        "type": "PARAGRAPH",
+                        "nodes": [{
+                            "type": "TEXT", 
+                            "textData": {
+                                "text": f"« {text} »",
+                                "decorations": [{"type": "ITALIC"}]
+                            }
+                        }]
+                    }]
+                })
+        
+        # Paragraphes
+        elif element.startswith('<p'):
+            text = re.sub(r'<[^>]+>', '', element).strip()
+            if text:
+                # Vérifier si c'est un texte en gras
+                has_strong = '<strong>' in element or '<b>' in element
+                
+                if has_strong:
+                    nodes.append({
+                        "type": "PARAGRAPH",
+                        "nodes": [{
+                            "type": "TEXT", 
+                            "textData": {
+                                "text": text,
+                                "decorations": [{"type": "BOLD"}]
+                            }
+                        }]
+                    })
+                else:
+                    nodes.append({
+                        "type": "PARAGRAPH",
+                        "nodes": [{"type": "TEXT", "textData": {"text": text}}]
+                    })
+        
+        # Listes non-ordonnées (ul)
+        elif element.startswith('<ul'):
+            list_items = []
+            for li_match in re.finditer(r'<li[^>]*>(.*?)</li>', element, re.DOTALL):
+                text = re.sub(r'<[^>]+>', '', li_match.group(1)).strip()
+                if text:
+                    list_items.append({
+                        "type": "LIST_ITEM",
+                        "nodes": [{"type": "PARAGRAPH", "nodes": [{"type": "TEXT", "textData": {"text": text}}]}]
+                    })
+            if list_items:
+                nodes.append({
+                    "type": "BULLETED_LIST",
+                    "nodes": list_items
+                })
+        
+        # Listes ordonnées (ol)
+        elif element.startswith('<ol'):
+            list_items = []
+            for li_match in re.finditer(r'<li[^>]*>(.*?)</li>', element, re.DOTALL):
+                text = re.sub(r'<[^>]+>', '', li_match.group(1)).strip()
+                if text:
+                    list_items.append({
+                        "type": "LIST_ITEM",
+                        "nodes": [{"type": "PARAGRAPH", "nodes": [{"type": "TEXT", "textData": {"text": text}}]}]
+                    })
+            if list_items:
+                nodes.append({
+                    "type": "ORDERED_LIST",
+                    "nodes": list_items
+                })
     
     # Si aucun node (sauf image), créer un paragraphe avec le contenu brut
-    text_nodes = [n for n in nodes if n.get("type") != "IMAGE" and n.get("type") != "image"]
+    text_nodes = [n for n in nodes if n.get("type") != "IMAGE"]
     if not text_nodes:
         clean_text = re.sub(r'<[^>]+>', '\n', content).strip()
         for para in clean_text.split('\n\n'):
@@ -1331,13 +1402,15 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
                     "nodes": [{"type": "TEXT", "textData": {"text": para.strip()}}]
                 })
     
-    # Insérer la 2ème image (content_image) AU MILIEU du contenu
-    if content_image_url and len(nodes) > 3:
-        # Trouver le point d'insertion (environ au milieu)
-        mid_point = len(nodes) // 2
+    # =====================================================
+    # INSÉRER LA 2ÈME IMAGE AU MILIEU DU CONTENU
+    # =====================================================
+    if content_image_url and len(nodes) > 4:
+        # Trouver le point d'insertion idéal (après environ 40% du contenu)
+        mid_point = max(3, len(nodes) // 3)
         
         content_image_node = {
-            "type": "IMAGE",  # MAJUSCULE requis par Wix API
+            "type": "IMAGE",
             "imageData": {
                 "image": {
                     "src": {
@@ -1346,12 +1419,20 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
                     "width": 1200,
                     "height": 630
                 },
-                "altText": "Extensions capillaires professionnelles"
+                "altText": "Extensions capillaires professionnelles - Résultat naturel"
             }
         }
         
-        # Insérer au milieu
-        nodes.insert(mid_point, content_image_node)
+        # Insérer après un H2 si possible pour une meilleure mise en page
+        inserted = False
+        for idx in range(mid_point, min(mid_point + 5, len(nodes))):
+            if nodes[idx].get("type") == "HEADING":
+                nodes.insert(idx + 1, content_image_node)
+                inserted = True
+                break
+        
+        if not inserted:
+            nodes.insert(mid_point, content_image_node)
     
     # Ajouter la signature Luxura à la fin
     if add_logo:
@@ -1661,23 +1742,24 @@ TYPE DE CONTENU: {content_type}
 
 STRUCTURE IMPORTANTE (ANTI-IA - Obligatoire):
 1. Introduction engageante (100-150 mots) - SANS TITRE H1 car Wix l'affiche automatiquement
-2. Section 1 avec H2 + contenu détaillé (c'est quoi / pour qui)
-3. Section 2 avec H2 + étapes d'installation si applicable
-4. **OBLIGATOIRE - Section "Ce qu'on voit chez Luxura"** avec H2 incluant cette anecdote réelle:
-   "{luxura_anecdote}"
-5. Section 3 avec H2 + avantages / entretien
-6. **OBLIGATOIRE - Section "Luxura recommande"** avec H3 incluant ce conseil:
+2. Section "Pour qui c'est fait ?" avec H2 + contenu détaillé
+3. Section "Comment installer..." avec H2 + étapes numérotées (<ol>)
+4. **OBLIGATOIRE - Témoignage en BLOCKQUOTE** - Utilise cette citation:
+   <blockquote>{luxura_anecdote}</blockquote>
+5. Section "Avantages" avec H2 + liste à puces (<ul>)
+6. Section "Entretien" avec H2 + conseils pratiques
+7. **OBLIGATOIRE - Section "Luxura recommande"** avec H3:
    "{luxura_recommendation}"
-7. Conclusion avec appel à l'action vers Luxura Distribution
-8. OBLIGATOIRE: Section "Découvrez nos collections" avec liens
+8. Conclusion avec CTA vers Luxura Distribution
+9. OBLIGATOIRE: Section "Découvrez nos collections" avec liens
 
 STYLE ANTI-IA (TRÈS IMPORTANT):
 - Varier la longueur des phrases (courtes ET longues)
-- Utiliser des questions rhétoriques: "Tu te demandes si..." "Pourquoi c'est important?"
-- Inclure des contractions québécoises: "c'est pas mal", "ben oui", "ça l'fait"
-- Une anecdote ou observation concrète par section principale
-- Ton conversationnel et authentique, comme si tu parlais à une amie
+- Questions rhétoriques: "Tu te demandes si..." "Pourquoi c'est important?"
+- Contractions québécoises: "c'est pas mal", "ben correct", "ça l'fait vraiment"
+- Ton conversationnel et authentique, comme si tu parlais à une cliente
 - Éviter les listes trop parfaites et les transitions génériques
+- UTILISER <blockquote> pour le témoignage
 
 LIENS CATÉGORIES À INCLURE (OBLIGATOIRE dans la conclusion):
 <p><strong>Découvrez nos collections Luxura :</strong></p>
@@ -1690,52 +1772,33 @@ LIENS CATÉGORIES À INCLURE (OBLIGATOIRE dans la conclusion):
 </ul>
 
 CONSIGNES CRITIQUES:
-- 1200-1800 mots total (articles plus longs pour éviter la détection IA)
-- NE PAS inclure de balise <h1> dans le contenu
-- Commencer directement par un paragraphe <p> d'introduction
+- 1200-1800 mots total
+- NE PAS inclure de balise <h1>
+- Commencer par <p>introduction</p>
 - Intégrer chaque mot-clé 2-3 fois naturellement
-- Utiliser des balises HTML: <h2>, <h3>, <p>, <ul>, <li>, <strong>, <a>
-- Mentionner Luxura Distribution comme expert distributeur (PAS un salon)
-- Ton professionnel mais chaleureux, style québécois AUTHENTIQUE
-- INCLURE les liens vers les catégories dans la conclusion
-- INCLURE les sections "Ce qu'on voit chez Luxura" et "Luxura recommande"
+- Utiliser: <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <a>, <blockquote>
+- Luxura = distributeur (PAS un salon)
+- Ton québécois AUTHENTIQUE
+- INCLURE <blockquote> pour le témoignage
 
 FORMAT JSON STRICT:
 {{
-  "title": "Titre SEO optimisé (affiché par Wix automatiquement)",
-  "excerpt": "Résumé accrocheur de 150 caractères max",
-  "content": "Contenu HTML SANS h1 - commencer par <p>introduction</p>... AVEC sections Luxura + liens catégories",
+  "title": "Titre SEO optimisé",
+  "excerpt": "Résumé accrocheur de 140 caractères max",
+  "content": "Contenu HTML avec <blockquote> pour témoignage",
   "meta_description": "Description meta de 155 caractères max",
-  "tags": ["extensions cheveux Québec", "rallonges capillaires", "{category}", "Luxura Distribution", "tag-local-si-applicable"],
-  "hashtags": "#LuxuraDistribution #ExtensionsCheveux #RallongesQuébec #CheveuxLongs"
-}}
-
-RÈGLES TAGS SEO (TRÈS IMPORTANT):
-- TOUJOURS inclure "extensions cheveux Québec" ou "rallonges capillaires Québec"
-- NE JAMAIS utiliser #SalonProfessionnel (Luxura n'est pas un salon)
-- TOUJOURS inclure le nom du produit (Genius Vivian, Halo Everly, Tape Aurora, I-Tip Eleanor)
-- Ajouter des mots-clés locaux: Montréal, Québec, Canada
-- Ajouter des mots-clés beauté: salon, coiffure, cheveux longs, volume
-- Minimum 5 tags, maximum 8 tags par article
-
-HASHTAGS LUXURA (pour réseaux sociaux):
-- #LuxuraDistribution
-- #ExtensionsCheveux
-- #RallongesQuébec
-- #ExtensionsProfessionnelles
-- #BeautéMontréal
-- #CheveuxLongs
-- #SalonBeauté
-- #GeniusWeft / #HaloExtensions / #TapeIn / #ITipExtensions (selon le sujet)"""
+  "tags": ["extensions cheveux Québec", "rallonges capillaires", "{category}", "Luxura Distribution"],
+  "hashtags": "#LuxuraDistribution #ExtensionsCheveux #RallongesQuébec"
+}}"""
 
         response = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.7,
-            max_tokens=3000
+            temperature=0.75,
+            max_tokens=4000
         )
         
         response_text = response.choices[0].message.content.strip()
