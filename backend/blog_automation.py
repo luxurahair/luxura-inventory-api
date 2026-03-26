@@ -2175,6 +2175,8 @@ async def generate_daily_blogs(
         if publish_to_wix:
             category = topic_data.get("category", "general")
             blog_title = blog_post['title']
+            blog_content = blog_post['content']
+            focus_product = topic_data.get("focus_product", "")
             
             logger.info(f"🚀 Publishing to Wix: {blog_title[:50]}...")
             
@@ -2182,30 +2184,42 @@ async def generate_daily_blogs(
                 cover_image_data = None
                 content_image_data = None
                 
-                # DALL-E DÉSACTIVÉ DÉFINITIVEMENT - Génère des hommes malgré les instructions
-                # Utiliser UNIQUEMENT Unsplash avec images VÉRIFIÉES de femmes
-                logger.info(f"📷 Using VERIFIED Unsplash images ONLY (DALL-E disabled)")
+                # ============================================
+                # V3: DALL-E RÉACTIVÉ - STYLE SOIRÉE DE FILLES
+                # Génère les images APRÈS le contenu du blog
+                # ============================================
+                if DALLE_AVAILABLE:
+                    logger.info(f"🎨 V3: Generating lifestyle images based on ACTUAL blog content...")
+                    logger.info(f"   Style: Soirée de filles chic, 3-5 femmes, cheveux très longs")
+                    
+                    try:
+                        cover_image_data, content_image_data = await generate_and_upload_blog_images(
+                            api_key=wix_api_key,
+                            site_id=wix_site_id,
+                            category=category,
+                            blog_title=blog_title,
+                            keywords=blog_post.get("tags", []),
+                            focus_product=focus_product,
+                            blog_content=blog_content  # V3: Passe le contenu complet
+                        )
+                    except Exception as dalle_error:
+                        logger.warning(f"⚠️ DALL-E V3 generation failed: {dalle_error}")
+                        cover_image_data = None
+                        content_image_data = None
                 
-                # Image de couverture - Unsplash vérifiée
-                cover_image_data = await import_image_with_retry(
-                    api_key=wix_api_key,
-                    site_id=wix_site_id,
-                    category=category,
-                    max_retries=3
-                )
-                
-                # Image de contenu - Unsplash vérifiée (différente)
-                if cover_image_data:
-                    content_image_data = await import_image_with_retry(
+                # FALLBACK: Si DALL-E échoue, utiliser Unsplash "soirée de filles"
+                if not cover_image_data:
+                    logger.info(f"📷 Fallback: Using lifestyle Unsplash images (soirée de filles)")
+                    
+                    cover_image_data = await import_image_with_retry(
                         api_key=wix_api_key,
                         site_id=wix_site_id,
                         category=category,
-                        max_retries=2
+                        max_retries=3
                     )
                 
-                # Fallback pour l'image de contenu aussi
+                # Image de contenu si pas générée par DALL-E
                 if not content_image_data:
-                    logger.info(f"📷 Using Unsplash fallback for content image")
                     content_image_data = await import_image_with_retry(
                         api_key=wix_api_key,
                         site_id=wix_site_id,
