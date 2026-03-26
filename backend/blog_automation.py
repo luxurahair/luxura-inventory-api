@@ -9,6 +9,10 @@ import uuid
 import httpx
 import asyncio
 import json
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from datetime import datetime, timezone
 from typing import Optional, List, Dict
 import logging
@@ -16,8 +20,93 @@ import logging
 logger = logging.getLogger(__name__)
 
 # =====================================================
-# UNSPLASH FREE IMAGES - Catégorisées par sujet
+# EMAIL CONFIGURATION
 # =====================================================
+
+LUXURA_EMAIL = os.getenv("LUXURA_EMAIL", "info@luxuradistribution.com")
+LUXURA_APP_PASSWORD = os.getenv("LUXURA_APP_PASSWORD")
+
+
+async def send_blog_images_email(blogs: List[Dict], recipient_email: str = None):
+    """
+    Envoie un email avec les images des blogs générés.
+    
+    Args:
+        blogs: Liste des blogs générés (avec 'title', 'image', 'wix_image_url')
+        recipient_email: Email de destination (par défaut LUXURA_EMAIL)
+    """
+    if not LUXURA_APP_PASSWORD:
+        logger.warning("LUXURA_APP_PASSWORD non configuré, email non envoyé")
+        return False
+    
+    recipient = recipient_email or LUXURA_EMAIL
+    
+    try:
+        # Créer le message
+        msg = MIMEMultipart('related')
+        msg['Subject'] = f"📸 Images Blog Luxura - {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+        msg['From'] = LUXURA_EMAIL
+        msg['To'] = recipient
+        
+        # Corps HTML avec les images
+        html_content = """
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                .blog-card { margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
+                .blog-title { color: #333; font-size: 18px; margin-bottom: 10px; }
+                .blog-image { max-width: 600px; width: 100%; border-radius: 4px; }
+                .image-urls { font-size: 12px; color: #666; margin-top: 10px; }
+                a { color: #C9A66B; }
+            </style>
+        </head>
+        <body>
+            <h1>🌟 Blogs Luxura Générés</h1>
+            <p>Voici les images des blogs générés automatiquement :</p>
+        """
+        
+        for i, blog in enumerate(blogs):
+            title = blog.get('title', 'Sans titre')
+            unsplash_url = blog.get('image', '')
+            wix_url = blog.get('wix_image_url', '')
+            
+            html_content += f"""
+            <div class="blog-card">
+                <h2 class="blog-title">{i+1}. {title}</h2>
+                <p><strong>Image Unsplash :</strong></p>
+                <img src="{unsplash_url}" class="blog-image" alt="{title}">
+                <div class="image-urls">
+                    <p>🔗 <strong>Unsplash:</strong> <a href="{unsplash_url}">{unsplash_url[:80]}...</a></p>
+                    <p>📁 <strong>Wix Media:</strong> <a href="{wix_url}">{wix_url[:80]}...</a></p>
+                </div>
+            </div>
+            """
+        
+        html_content += """
+            <hr>
+            <p style="color: #666; font-size: 12px;">
+                Généré automatiquement par Luxura Blog Automation<br>
+                Pour ajouter l'image de couverture manuellement sur Wix :<br>
+                Dashboard → Blog → Article → Settings → Featured Image
+            </p>
+        </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(html_content, 'html'))
+        
+        # Envoyer via Gmail SMTP
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(LUXURA_EMAIL, LUXURA_APP_PASSWORD)
+            server.send_message(msg)
+        
+        logger.info(f"✅ Email envoyé à {recipient} avec {len(blogs)} images")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Erreur envoi email: {e}")
+        return False
 
 # FORMAT OPEN GRAPH: 1200x630 px (ratio 1.91:1) pour Wix Blog Cover
 UNSPLASH_IMAGES = {
@@ -1029,7 +1118,8 @@ async def generate_daily_blogs(
     count: int = 2,
     fb_access_token: str = None,
     fb_page_id: str = None,
-    publish_to_facebook: bool = False
+    publish_to_facebook: bool = False,
+    send_email: bool = True  # NOUVEAU: Envoyer email avec images
 ) -> List[Dict]:
     """Génère automatiquement les blogs quotidiens avec OpenAI"""
     results = []
@@ -1174,7 +1264,15 @@ async def generate_daily_blogs(
         if isinstance(blog_post.get("created_at"), datetime):
             blog_post["created_at"] = blog_post["created_at"].isoformat()
         
+        # Ajouter l'URL Wix de l'image pour l'email
+        if image_data:
+            blog_post["wix_image_url"] = image_data.get("static_url", "")
+        
         results.append(blog_post)
         existing_titles.append(blog_post["title"].lower())
+    
+    # Envoyer email avec les images après génération
+    if results and send_email:
+        await send_blog_images_email(results)
     
     return results
