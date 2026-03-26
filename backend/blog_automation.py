@@ -791,24 +791,12 @@ async def create_wix_draft_post(
     """
     Crée un brouillon de post sur Wix Blog v3 API.
     
-    VERSION ROBUSTE 2026:
-    - heroImage avec dimensions explicites
-    - coverMedia en fallback
-    - Image dans richContent
+    VERSION 2026 - Utilise `media.wixMedia.image` (pas heroImage/coverMedia)
     """
     try:
         async with httpx.AsyncClient(timeout=80) as client:
-            # Extraire les URLs depuis image_data
-            hero_image_uri = None
-            static_image_url = None
-            if image_data and isinstance(image_data, dict):
-                hero_image_uri = image_data.get("wix_uri")
-                static_image_url = image_data.get("static_url")
-            elif image_data and isinstance(image_data, str):
-                hero_image_uri = image_data
-            
-            # Convertir le HTML en Ricos AVEC l'image dans le corps (URL statique)
-            rich_content = html_to_ricos(content, hero_image_uri, static_image_url)
+            # Convertir le HTML en Ricos (SANS image dans le corps pour éviter le doublon)
+            rich_content = html_to_ricos(content, None, None)
             
             logger.info(f"Creating Wix draft post: {title}")
             
@@ -823,40 +811,18 @@ async def create_wix_draft_post(
             if member_id:
                 draft_post["memberId"] = member_id
             
-            # Ajouter heroImage + coverMedia 
+            # Utiliser media.wixMedia.image (le bon champ selon Wix 2026)
             if image_data and isinstance(image_data, dict):
-                wix_uri = image_data.get("wix_uri")  # Format wix:image://v1/...
-                static_url = image_data.get("static_url")  # URL pour reference
-                width = image_data.get("width", 1200)
-                height = image_data.get("height", 630)
-                
-                logger.info(f"Adding heroImage with wix_uri format")
-                logger.info(f"   Dimensions: {width}x{height}")
-                
-                # heroImage - utiliser wix_uri (seul format accepté par l'API)
-                draft_post["heroImage"] = {
-                    "id": wix_uri,
-                    "width": width,
-                    "height": height,
-                    "altText": f"{title} - Luxura Distribution Québec"
-                }
-                
-                # coverMedia en fallback
-                draft_post["coverMedia"] = {
-                    "type": "IMAGE",
-                    "image": {
-                        "id": wix_uri,
-                        "width": width,
-                        "height": height,
-                        "altText": f"{title} - Luxura"
+                wix_uri = image_data.get("wix_uri")
+                if wix_uri:
+                    logger.info(f"Adding media.wixMedia.image: {wix_uri[:60]}...")
+                    draft_post["media"] = {
+                        "wixMedia": {
+                            "image": {
+                                "id": wix_uri
+                            }
+                        }
                     }
-                }
-            elif hero_image_uri:
-                # Fallback simple si seulement l'URI string est fournie
-                draft_post["heroImage"] = {
-                    "id": hero_image_uri,
-                    "altText": f"{title} - Luxura"
-                }
             
             payload = {"draftPost": draft_post}
             
@@ -873,7 +839,7 @@ async def create_wix_draft_post(
             if response.status_code in [200, 201]:
                 result = response.json()
                 draft_id = result.get('draftPost', {}).get('id')
-                logger.info(f"✅ Wix draft created with heroImage + coverMedia: {draft_id}")
+                logger.info(f"✅ Wix draft created with media.wixMedia.image: {draft_id}")
                 return result
             else:
                 logger.error(f"Wix draft creation failed: {response.status_code} - {response.text}")
