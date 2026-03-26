@@ -19,55 +19,56 @@ logger = logging.getLogger(__name__)
 # UNSPLASH FREE IMAGES - Catégorisées par sujet
 # =====================================================
 
+# FORMAT OPEN GRAPH: 1200x630 px (ratio 1.91:1) pour Wix Blog Cover
 UNSPLASH_IMAGES = {
     "halo": [
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800",  # Femme cheveux longs
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800",  # Salon coiffure
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800",  # Cheveux brillants
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800",  # Femme blonde
-        "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=800",  # Cheveux wavy
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Femme cheveux longs
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Salon coiffure
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=630&fit=crop",  # Cheveux brillants
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Femme blonde
+        "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=1200&h=630&fit=crop",  # Cheveux wavy
     ],
     "genius": [
-        "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=800",  # Cheveux parfaits
-        "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800",  # Femme professionnelle
-        "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800",  # Salon luxe
-        "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?w=800",  # Extensions visibles
-        "https://images.unsplash.com/photo-1559599101-f09722fb4948?w=800",  # Coiffeuse travail
+        "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=1200&h=630&fit=crop",  # Cheveux parfaits
+        "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=1200&h=630&fit=crop",  # Femme professionnelle
+        "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=1200&h=630&fit=crop",  # Salon luxe
+        "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?w=1200&h=630&fit=crop",  # Extensions visibles
+        "https://images.unsplash.com/photo-1559599101-f09722fb4948?w=1200&h=630&fit=crop",  # Coiffeuse travail
     ],
     "tape": [
-        "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=800",  # Pose extensions
-        "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800",  # Salon coiffure
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800",  # Application
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800",  # Résultat
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800",  # Outils salon
+        "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=1200&h=630&fit=crop",  # Pose extensions
+        "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=1200&h=630&fit=crop",  # Salon coiffure
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=630&fit=crop",  # Application
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",  # Résultat
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Outils salon
     ],
     "itip": [
-        "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=800",  # Détail cheveux
-        "https://images.unsplash.com/photo-1559599101-f09722fb4948?w=800",  # Application pro
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800",  # Salon
-        "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=800",  # Cheveux naturels
-        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=800",  # Portrait femme
+        "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=1200&h=630&fit=crop",  # Détail cheveux
+        "https://images.unsplash.com/photo-1559599101-f09722fb4948?w=1200&h=630&fit=crop",  # Application pro
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Salon
+        "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=1200&h=630&fit=crop",  # Cheveux naturels
+        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=1200&h=630&fit=crop",  # Portrait femme
     ],
     "entretien": [
-        "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=800",  # Brossage
-        "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=800",  # Soins
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800",  # Cheveux sains
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800",  # Brillance
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800",  # Produits
+        "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=1200&h=630&fit=crop",  # Brossage
+        "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=1200&h=630&fit=crop",  # Soins
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Cheveux sains
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=630&fit=crop",  # Brillance
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Produits
     ],
     "tendances": [
-        "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=800",  # Style moderne
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800",  # Blonde tendance
-        "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800",  # Look pro
-        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=800",  # Style 2025
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800",  # Salon tendance
+        "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=1200&h=630&fit=crop",  # Style moderne
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Blonde tendance
+        "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=1200&h=630&fit=crop",  # Look pro
+        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=1200&h=630&fit=crop",  # Style 2025
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Salon tendance
     ],
     "general": [
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800",
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800",
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800",
-        "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=800",
-        "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800",
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=1200&h=630&fit=crop",
     ]
 }
 
