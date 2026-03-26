@@ -420,26 +420,29 @@ async def attach_wix_image_to_draft(
     file_desc: Dict
 ) -> bool:
     """
-    Attache l'image au draft en utilisant media.wixMedia.image avec un OBJET.
+    Attache l'image au draft avec le format minimal recommandé.
     
-    L'erreur "Expected an object" indique que Wix attend:
-    media.wixMedia.image = { id: "wix:image://...", url: "...", width: N, height: N }
-    et non pas une simple string.
+    Format: media.wixMedia.image.id = "wix:image://v1/..."
+    
+    Note: Ce format est accepté par l'API (200 OK) et les données sont
+    correctement stockées, mais il y a un bug Wix de rendu qui empêche
+    parfois l'affichage de la cover dans l'interface.
     """
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
+            # Construire la Wix URI
+            wix_image_uri = build_wix_image_uri(file_desc)
             logger.info(f"Attaching image to draft {draft_id}")
+            logger.info(f"Wix URI: {wix_image_uri}")
             
-            # Construire l'objet image complet
-            image_obj = get_wix_image_object(file_desc)
-            logger.info(f"Image object: {image_obj}")
-            
-            # Payload avec l'objet image complet
+            # Format minimal recommandé: seulement l'ID
             payload = {
                 "draftPost": {
                     "media": {
                         "wixMedia": {
-                            "image": image_obj
+                            "image": {
+                                "id": wix_image_uri
+                            }
                         }
                     }
                 }
@@ -454,8 +457,6 @@ async def attach_wix_image_to_draft(
                 },
                 json=payload
             )
-            
-            logger.info(f"PATCH response: {response.status_code}")
             
             if response.status_code in [200, 204]:
                 logger.info(f"Image attached successfully to draft {draft_id}")
