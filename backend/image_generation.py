@@ -632,16 +632,17 @@ async def upload_image_bytes_to_wix(
 
 
 # =====================================================
-# FALLBACK UNSPLASH (au cas où DALL-E échoue)
+# FALLBACK UNSPLASH - FEMMES AVEC CHEVEUX TRÈS LONGS UNIQUEMENT
 # =====================================================
 
 FALLBACK_UNSPLASH_IMAGES = {
     "general": [
-        "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=630&fit=crop",
+        # Femmes avec cheveux TRÈS LONGS - PAS de salon, PAS de brushing
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Femme cheveux longs
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=630&fit=crop",  # Femme cheveux longs glamour
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=630&fit=crop",  # Portrait femme cheveux longs
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=630&fit=crop",  # Femme cheveux bruns longs
+        "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=1200&h=630&fit=crop",  # Portrait femme élégante
     ]
 }
 
