@@ -1327,15 +1327,17 @@ async def create_wix_draft_post(
     cover_image_data: Optional[Dict] = None,  # Image de couverture pour le feed
     detail_image_data: Optional[Dict] = None,  # Image technique (début du contenu)
     result_image_data: Optional[Dict] = None,  # Image glamour (milieu du contenu)
+    video_url: str = None,  # URL de la vidéo générée
     member_id: str = None
 ) -> Optional[Dict]:
     """
     Crée un brouillon de post sur Wix Blog v3 API.
     
-    VERSION V9 avec 3 images:
+    VERSION V11 avec 3 images + vidéo:
     - cover_image_data: Image de couverture (s'affiche sur le feed/cards)
     - detail_image_data: Image technique close-up (insérée au début du contenu)
     - result_image_data: Image glamour (insérée au milieu du contenu)
+    - video_url: URL de la vidéo MP4 (insérée avant la signature)
     - displayed: True pour forcer l'affichage de la cover
     """
     try:
@@ -1345,19 +1347,22 @@ async def create_wix_draft_post(
             detail_static_url = detail_image_data.get("static_url") if detail_image_data else None
             result_static_url = result_image_data.get("static_url") if result_image_data else None
             
-            # Convertir le HTML en Ricos avec les 3 images DANS le contenu
+            # Convertir le HTML en Ricos avec les 3 images + vidéo
             rich_content = html_to_ricos(
                 content, 
                 None,  # hero_image_uri deprecated
                 cover_static_url,   # Image 1: Cover au début (installation)
                 detail_static_url,  # Image 2: Detail à 1/3 (close-up technique)
-                result_static_url   # Image 3: Result à 2/3 (glamour)
+                result_static_url,  # Image 3: Result à 2/3 (glamour)
+                video_url           # Vidéo avant la signature
             )
             
             logger.info(f"Creating Wix draft post: {title}")
             logger.info(f"  - Image 1 (cover/installation): {cover_static_url[:50] if cover_static_url else 'None'}...")
             logger.info(f"  - Image 2 (detail/close-up): {detail_static_url[:50] if detail_static_url else 'None'}...")
             logger.info(f"  - Image 3 (result/glamour): {result_static_url[:50] if result_static_url else 'None'}...")
+            if video_url:
+                logger.info(f"  - Video: {video_url[:50]}...")
             
             draft_post = {
                 "title": title,
@@ -1439,14 +1444,15 @@ async def publish_wix_draft(api_key: str, site_id: str, draft_id: str) -> bool:
 LUXURA_LOGO_URL = "https://static.wixstatic.com/media/f1b961_e8c5f3e0f0ff4c899c5cf99e2d0c8c4c~mv2.png"
 LUXURA_WEBSITE = "https://www.luxuradistribution.com"
 
-def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str = None, image2_url: str = None, image3_url: str = None, add_logo: bool = True) -> Dict:
+def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str = None, image2_url: str = None, image3_url: str = None, video_url: str = None, add_logo: bool = True) -> Dict:
     """
-    Convertit le HTML en format Ricos (Wix rich content format) - VERSION V10.
+    Convertit le HTML en format Ricos (Wix rich content format) - VERSION V11.
     
-    V10: Support de 3 images distinctes avec IDs uniques pour éviter les problèmes de lightbox
+    V11: Support de 3 images + 1 vidéo
     - image1_url: Première image (début du contenu) - Installation technique
     - image2_url: Deuxième image (1/3 du contenu) - Close-up technique
     - image3_url: Troisième image (2/3 du contenu) - Résultat glamour
+    - video_url: URL de la vidéo (ajoutée avant la dernière image)
     
     Args:
         html_content: Le contenu HTML à convertir
@@ -1454,6 +1460,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
         image1_url: URL de la première image (début)
         image2_url: URL de la deuxième image (1/3)
         image3_url: URL de la troisième image (2/3)
+        video_url: URL de la vidéo MP4 (optionnel)
         add_logo: Ajouter le logo Luxura à la fin du contenu
     """
     import re
@@ -1711,6 +1718,35 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
         
         if not inserted and insert_point_3 < len(nodes):
             nodes.insert(insert_point_3, image3_node)
+    
+    # =====================================================
+    # VIDÉO: Ajoutée avant la signature Luxura
+    # =====================================================
+    if video_url:
+        # Titre avant la vidéo
+        nodes.append({
+            "type": "HEADING",
+            "headingData": {"level": 2},
+            "nodes": [{
+                "type": "TEXT",
+                "textData": {"text": "Voir le résultat en vidéo"}
+            }]
+        })
+        
+        # Vidéo embed
+        nodes.append({
+            "type": "VIDEO",
+            "id": f"vid_{uuid.uuid4().hex[:8]}",
+            "videoData": {
+                "video": {
+                    "src": {
+                        "url": video_url
+                    }
+                },
+                "title": "Extensions Luxura - Transformation",
+                "thumbnail": image3_url if image3_url else image1_url
+            }
+        })
     
     # Ajouter la signature Luxura à la fin (SANS image logo car il est maintenant dans l'image principale)
     if add_logo:
@@ -2352,7 +2388,7 @@ async def generate_daily_blogs(
                 except Exception as video_error:
                     logger.warning(f"⚠️ Video generation failed (non-blocking): {video_error}")
                 
-                # Créer le draft Wix avec les 3 images V9
+                # Créer le draft Wix avec les 3 images + vidéo V11
                 wix_result = await create_wix_draft_post(
                     api_key=wix_api_key,
                     site_id=wix_site_id,
@@ -2362,6 +2398,7 @@ async def generate_daily_blogs(
                     cover_image_data=cover_image_data,      # Feed/Card cover
                     detail_image_data=detail_image_data,    # Technique close-up (début contenu)
                     result_image_data=result_image_data,    # Glamour (milieu contenu)
+                    video_url=video_url,                    # Vidéo (avant signature)
                     member_id=wix_member_id
                 )
                 

@@ -53,26 +53,27 @@ def generate_video_brief(blog_data: Dict[str, Any]) -> Dict[str, Any]:
     category = blog_data.get("category", "general")
     
     # Détecter le mode vidéo
+    # IMPORTANT: On montre le RÉSULTAT, pas l'installation (trop difficile pour l'IA)
     if "halo" in text or "fil invisible" in text or category == "halo":
         mode = "installation_halo"
-        # Prompt TRÈS PRÉCIS pour éviter les erreurs
-        scene = f"Beautiful woman standing in front of mirror, gently placing a halo hair extension on TOP of her head like a headband. The invisible wire sits on the CROWN of her head, NOT on forehead. Her natural hair falls naturally OVER the halo extension, blending seamlessly. She is facing the mirror, NOT turning around."
-        motion = "smooth gentle placement on top of head, natural hair falling over the extension, confident smile in mirror"
+        # Montrer le RÉSULTAT glamour, pas la pose technique
+        scene = f"Stunning woman with extremely long flowing hair gently moving in soft breeze. She touches her beautiful voluminous hair with confidence. Cinematic beauty shot, golden hour lighting, elegant lifestyle moment."
+        motion = "gentle hair flow in breeze, soft natural movement, confident hair touch"
         
     elif "i-tip" in text or "microbille" in text or category == "itip":
         mode = "installation_itip"
-        scene = f"Professional salon scene, stylist carefully working on client's very long beautiful hair, precise technique"
-        motion = "steady hands, careful movement, professional atmosphere"
+        scene = f"Beautiful woman showing off her gorgeous very long thick hair after professional i-tip extension installation. She runs her fingers through her luxurious hair. Salon mirror visible, satisfied smile."
+        motion = "fingers running through long hair, natural shine, confident reveal"
         
     elif "tape" in text or "sandwich" in text or category == "tape":
         mode = "installation_tape"
-        scene = f"Salon scene showing tape-in extension application on woman with long hair, clean professional work"
-        motion = "smooth application, professional technique"
+        scene = f"Elegant woman with stunning long silky hair after tape-in extensions. Natural hair movement, premium salon result, she admires her transformation in mirror."
+        motion = "silky hair movement, mirror admiration, gentle head turn"
         
     elif "genius" in text or "weft" in text or category == "genius":
         mode = "installation_genius"
-        scene = f"Professional salon, stylist sewing genius weft onto beaded row, client with very long beautiful hair"
-        motion = "precise sewing motion, professional salon atmosphere"
+        scene = f"Sophisticated woman showcasing her incredible long thick hair after genius weft installation. Cinematic beauty shot, she touches her voluminous hair with amazement."
+        motion = "voluminous hair flow, amazed expression, luxurious texture showcase"
         
     else:
         mode = "lifestyle_result"
