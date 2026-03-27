@@ -1,7 +1,9 @@
-# real_stock_images.py
+# real_stock_images.py - V8
 """
 Banque d'images RÉELLES (stock photos) pour les articles techniques
 Ces images montrent de VRAIES techniques d'installation, pas des images IA
+
+V8: Ajout du mode installation_halo_wire
 """
 
 # =====================================================
@@ -46,48 +48,73 @@ LUXURA_LIFESTYLE_IMAGES = [
     "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
 ]
 
+# Images spécifiques Halo - pose facile à la maison
+REAL_HALO_HOME_IMAGES = [
+    # Femmes se préparant / devant miroir - représente la pose facile à la maison
+    "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=1200&h=630&fit=crop",
+    "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
+    "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&h=630&fit=crop",
+]
+
 # =====================================================
-# MAPPING PAR TYPE D'ARTICLE
+# MAPPING PAR TYPE D'ARTICLE - V8 avec installation_halo_wire
 # =====================================================
 
 IMAGES_BY_MODE = {
-    # Installations techniques - utiliser images salon réelles
+    # === INSTALLATIONS TECHNIQUES ===
+    
+    # HALO - pose simple à la maison, fil invisible, pas de salon nécessaire
+    "installation_halo_wire": {
+        "cover": REAL_HALO_HOME_IMAGES + REAL_LONG_HAIR_WOMEN[:3],
+        "content": REAL_HAIR_CLOSEUP,
+        "description": "Halo - fil invisible qui se pose sans salon, pose ultra-simple"
+    },
+    # Ancien nom pour compatibilité
     "installation_halo": {
-        "cover": REAL_SALON_IMAGES,
+        "cover": REAL_HALO_HOME_IMAGES + REAL_LONG_HAIR_WOMEN[:3],
         "content": REAL_HAIR_CLOSEUP,
         "description": "Halo - fil invisible qui se pose sans salon"
     },
+    
+    # TAPE-IN - méthode sandwich en salon
     "installation_tape_sandwich": {
         "cover": REAL_SALON_IMAGES,
         "content": REAL_HAIR_CLOSEUP,
         "description": "Tape-in - méthode sandwich avec bandes adhésives"
     },
+    
+    # GENIUS WEFT - couture sur rangée perlée
     "installation_genius_sewn": {
         "cover": REAL_SALON_IMAGES,
         "content": REAL_HAIR_CLOSEUP,
-        "description": "Genius Weft - cousu sur rangée perlée"
+        "description": "Genius Weft - cousu sur rangée perlée (beaded row)"
     },
+    
+    # I-TIP - microbilles avec pince
     "installation_itip_bead": {
         "cover": REAL_SALON_IMAGES,
         "content": REAL_HAIR_CLOSEUP,
-        "description": "I-Tip - microbilles avec pince"
+        "description": "I-Tip - microbilles avec pince, mèche par mèche"
     },
+    
+    # Installation générique
     "installation_pro": {
         "cover": REAL_SALON_IMAGES,
         "content": REAL_HAIR_CLOSEUP,
-        "description": "Installation générique"
+        "description": "Installation professionnelle générique"
     },
     
-    # Résultats et lifestyle - utiliser images de femmes avec cheveux longs
+    # === RÉSULTATS ET LIFESTYLE ===
+    
     "result_natural": {
         "cover": REAL_LONG_HAIR_WOMEN,
         "content": REAL_HAIR_CLOSEUP,
-        "description": "Résultat naturel"
+        "description": "Résultat naturel - cheveux longs"
     },
     "result_maintenance": {
         "cover": REAL_LONG_HAIR_WOMEN,
         "content": REAL_HAIR_CLOSEUP,
-        "description": "Entretien"
+        "description": "Entretien - soins"
     },
     "editorial_lifestyle": {
         "cover": LUXURA_LIFESTYLE_IMAGES + REAL_LONG_HAIR_WOMEN,
