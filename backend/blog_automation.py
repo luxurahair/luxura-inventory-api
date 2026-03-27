@@ -2140,9 +2140,17 @@ async def generate_daily_blogs(
     fb_access_token: str = None,
     fb_page_id: str = None,
     publish_to_facebook: bool = False,
-    send_email: bool = True  # NOUVEAU: Envoyer email avec images
+    send_email: bool = True,
+    force_category: str = None,
+    custom_topic: str = None
 ) -> List[Dict]:
-    """Génère automatiquement les blogs quotidiens avec OpenAI"""
+    """
+    Génère automatiquement les blogs quotidiens avec OpenAI.
+    
+    Args:
+        force_category: Forcer une catégorie (halo, itip, tape, genius)
+        custom_topic: Sujet personnalisé à utiliser
+    """
     results = []
     
     # Récupérer le member ID pour Wix si on veut publier
@@ -2156,28 +2164,55 @@ async def generate_daily_blogs(
     existing_posts = await db.blog_posts.find({}, {"title": 1}).to_list(1000)
     existing_titles = [p.get("title", "").lower() for p in existing_posts]
     
-    # Sélectionner des sujets non couverts
-    available_topics = [
-        t for t in BLOG_TOPICS_EXTENDED 
-        if t["topic"].lower() not in existing_titles
-    ]
+    # Si un sujet personnalisé est fourni, l'utiliser directement
+    if custom_topic:
+        category = force_category or "halo"
+        selected_topics = [{
+            "topic": custom_topic,
+            "category": category,
+            "keywords": [category, "extensions cheveux", "Luxura Distribution"],
+            "focus_product": f"Extensions {category.title()} Luxura"
+        }]
+        count = 1
+        logger.info(f"📝 Using custom topic: {custom_topic}")
     
-    # Si tous les sujets sont couverts, réutiliser avec rotation
-    if len(available_topics) < count:
-        # Ajouter des variations aux sujets existants
-        available_topics = BLOG_TOPICS_EXTENDED.copy()
-        random.shuffle(available_topics)
+    # Si une catégorie est forcée, filtrer les topics
+    elif force_category:
+        available_topics = [
+            t for t in BLOG_TOPICS_EXTENDED 
+            if t["category"].lower() == force_category.lower()
+            and t["topic"].lower() not in existing_titles
+        ]
+        if not available_topics:
+            # Prendre tous les topics de cette catégorie si aucun nouveau
+            available_topics = [t for t in BLOG_TOPICS_EXTENDED if t["category"].lower() == force_category.lower()]
+            random.shuffle(available_topics)
+        
+        selected_topics = available_topics[:count]
+        logger.info(f"📝 Forced category: {force_category} - Found {len(selected_topics)} topics")
     
-    # Sélectionner les sujets pour aujourd'hui (diversifier les catégories)
-    categories_used = []
-    selected_topics = []
-    
-    for topic in available_topics:
-        if len(selected_topics) >= count:
-            break
-        if topic["category"] not in categories_used or len(categories_used) >= 4:
-            selected_topics.append(topic)
-            categories_used.append(topic["category"])
+    else:
+        # Sélection normale - sujets non couverts
+        available_topics = [
+            t for t in BLOG_TOPICS_EXTENDED 
+            if t["topic"].lower() not in existing_titles
+        ]
+        
+        # Si tous les sujets sont couverts, réutiliser avec rotation
+        if len(available_topics) < count:
+            available_topics = BLOG_TOPICS_EXTENDED.copy()
+            random.shuffle(available_topics)
+        
+        # Sélectionner les sujets pour aujourd'hui (diversifier les catégories)
+        categories_used = []
+        selected_topics = []
+        
+        for topic in available_topics:
+            if len(selected_topics) >= count:
+                break
+            if topic["category"] not in categories_used or len(categories_used) >= 4:
+                selected_topics.append(topic)
+                categories_used.append(topic["category"])
     
     # Générer chaque blog
     for topic_data in selected_topics:

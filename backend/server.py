@@ -2131,19 +2131,19 @@ async def delete_blog_post(post_id: str):
 async def auto_generate_daily_blogs(
     count: int = 2,
     publish_to_wix: bool = True,
-    publish_to_facebook: bool = False
+    publish_to_facebook: bool = False,
+    category: str = None,
+    custom_topic: str = None
 ):
     """
-    Génère automatiquement des blogs SEO (2 par défaut) et les publie sur Wix et/ou Facebook.
-    
-    Focus: Halo, Genius, Tape-in, I-Tip
-    Images: Unsplash libres de droits
-    Publication: Automatique sur Wix Blog et Facebook
+    Génère automatiquement des blogs SEO et les publie sur Wix et/ou Facebook.
     
     Args:
         count: Nombre de blogs à générer (défaut: 2)
         publish_to_wix: Publier sur Wix Blog (défaut: True)
         publish_to_facebook: Publier sur Facebook Page (défaut: False)
+        category: Forcer une catégorie spécifique (halo, itip, tape, genius)
+        custom_topic: Sujet personnalisé (optionnel)
     """
     try:
         from blog_automation import generate_daily_blogs, BLOG_TOPICS_EXTENDED
@@ -2166,7 +2166,9 @@ async def auto_generate_daily_blogs(
             count=count,
             fb_access_token=fb_access_token,
             fb_page_id=fb_page_id,
-            publish_to_facebook=publish_to_facebook
+            publish_to_facebook=publish_to_facebook,
+            force_category=category,
+            custom_topic=custom_topic
         )
         
         return {
