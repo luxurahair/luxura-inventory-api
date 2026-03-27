@@ -2328,6 +2328,30 @@ async def generate_daily_blogs(
                 if cover_image_data:
                     blog_post["image"] = cover_image_data.get("static_url", blog_post.get("image"))
                 
+                # =====================================================
+                # GÉNÉRATION VIDÉO (optionnelle - nécessite RUNWAY_API_KEY)
+                # =====================================================
+                video_url = None
+                try:
+                    from services.video_brief_generator import generate_video_brief, should_generate_video
+                    from services.video_generator import generate_short_video, RUNWAY_ENABLED
+                    
+                    if RUNWAY_ENABLED and cover_image_data:
+                        video_brief = generate_video_brief(blog_data_for_images)
+                        if should_generate_video(video_brief):
+                            logger.info(f"🎥 Generating video for: {blog_post['title'][:40]}...")
+                            video_url = await generate_short_video(
+                                video_brief=video_brief,
+                                image_url=cover_image_data.get("static_url")
+                            )
+                            if video_url:
+                                blog_post["video_url"] = video_url
+                                logger.info(f"✅ Video generated: {video_url[:60]}...")
+                except ImportError:
+                    logger.info("🎥 Video generation not available (services not configured)")
+                except Exception as video_error:
+                    logger.warning(f"⚠️ Video generation failed (non-blocking): {video_error}")
+                
                 # Créer le draft Wix avec les 3 images V9
                 wix_result = await create_wix_draft_post(
                     api_key=wix_api_key,
