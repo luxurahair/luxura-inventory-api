@@ -1325,36 +1325,38 @@ async def create_wix_draft_post(
     content: str,
     excerpt: str,
     cover_image_data: Optional[Dict] = None,  # Image de couverture pour le feed
-    content_image_data: Optional[Dict] = None,  # 2ème image à insérer dans le contenu
+    detail_image_data: Optional[Dict] = None,  # Image technique (début du contenu)
+    result_image_data: Optional[Dict] = None,  # Image glamour (milieu du contenu)
     member_id: str = None
 ) -> Optional[Dict]:
     """
     Crée un brouillon de post sur Wix Blog v3 API.
     
-    VERSION 2026 avec DALL-E:
+    VERSION V9 avec 3 images:
     - cover_image_data: Image de couverture (s'affiche sur le feed/cards)
-    - content_image_data: 2ème image différente insérée au milieu de l'article
+    - detail_image_data: Image technique close-up (insérée au début du contenu)
+    - result_image_data: Image glamour (insérée au milieu du contenu)
     - displayed: True pour forcer l'affichage de la cover
     """
     try:
         async with httpx.AsyncClient(timeout=80) as client:
             # URLs statiques pour les images dans le contenu
-            cover_static_url = cover_image_data.get("static_url") if cover_image_data else None
-            content_static_url = content_image_data.get("static_url") if content_image_data else None
+            detail_static_url = detail_image_data.get("static_url") if detail_image_data else None
+            result_static_url = result_image_data.get("static_url") if result_image_data else None
             
-            # Convertir le HTML en Ricos avec les 2 images
+            # Convertir le HTML en Ricos avec les 2 images DANS le contenu
             rich_content = html_to_ricos(
                 content, 
                 None,  # hero_image_uri deprecated
-                cover_static_url,  # Image en haut du contenu
-                content_static_url  # 2ème image au milieu
+                detail_static_url,  # Image technique au début du contenu
+                result_static_url   # Image glamour au milieu du contenu
             )
             
             logger.info(f"Creating Wix draft post: {title}")
-            if cover_static_url:
-                logger.info(f"  - Cover image: {cover_static_url[:50]}...")
-            if content_static_url:
-                logger.info(f"  - Content image: {content_static_url[:50]}...")
+            if detail_static_url:
+                logger.info(f"  - Detail image (in content): {detail_static_url[:50]}...")
+            if result_static_url:
+                logger.info(f"  - Result image (in content): {result_static_url[:50]}...")
             
             draft_post = {
                 "title": title,
@@ -1367,14 +1369,14 @@ async def create_wix_draft_post(
             if member_id:
                 draft_post["memberId"] = member_id
             
-            # FORMAT CORRIGÉ POUR IMAGE DE COUVERTURE
+            # FORMAT CORRIGÉ POUR IMAGE DE COUVERTURE (affichée sur le feed)
             if cover_image_data and isinstance(cover_image_data, dict):
                 file_id = cover_image_data.get("file_id")
                 width = cover_image_data.get("width", 1200)
                 height = cover_image_data.get("height", 630)
                 
                 if file_id:
-                    logger.info(f"Adding cover image with displayed:True - file_id: {file_id[:50]}...")
+                    logger.info(f"  - Cover image (feed): file_id: {file_id[:50]}...")
                     draft_post["media"] = {
                         "wixMedia": {
                             "image": {
@@ -2212,14 +2214,13 @@ async def generate_daily_blogs(
                             blog_content=blog_content,
                             blog_data=blog_data_for_images  # V9: Passe tout le blog
                         )
-                        # V9: Utilise le résultat glamour comme image de contenu visible
-                        content_image_data = result_image_data if result_image_data else detail_image_data
                     except Exception as dalle_error:
                         logger.warning(f"⚠️ DALL-E V9 generation failed: {dalle_error}")
                         import traceback
                         traceback.print_exc()
                         cover_image_data = None
-                        content_image_data = None
+                        detail_image_data = None
+                        result_image_data = None
                 
                 # FALLBACK: Si DALL-E échoue, utiliser Unsplash
                 if not cover_image_data:
@@ -2232,9 +2233,17 @@ async def generate_daily_blogs(
                         max_retries=3
                     )
                 
-                # Image de contenu si pas générée par DALL-E
-                if not content_image_data:
-                    content_image_data = await import_image_with_retry(
+                # Fallback pour detail et result
+                if not detail_image_data:
+                    detail_image_data = await import_image_with_retry(
+                        api_key=wix_api_key,
+                        site_id=wix_site_id,
+                        category=category,
+                        max_retries=2
+                    )
+                
+                if not result_image_data:
+                    result_image_data = await import_image_with_retry(
                         api_key=wix_api_key,
                         site_id=wix_site_id,
                         category=category,
@@ -2245,15 +2254,16 @@ async def generate_daily_blogs(
                 if cover_image_data:
                     blog_post["image"] = cover_image_data.get("static_url", blog_post.get("image"))
                 
-                # Créer le draft Wix avec les 2 images
+                # Créer le draft Wix avec les 3 images V9
                 wix_result = await create_wix_draft_post(
                     api_key=wix_api_key,
                     site_id=wix_site_id,
                     title=blog_post["title"],
                     content=blog_post["content"],
                     excerpt=blog_post["excerpt"],
-                    cover_image_data=cover_image_data,
-                    content_image_data=content_image_data,
+                    cover_image_data=cover_image_data,      # Feed/Card cover
+                    detail_image_data=detail_image_data,    # Technique close-up (début contenu)
+                    result_image_data=result_image_data,    # Glamour (milieu contenu)
                     member_id=wix_member_id
                 )
                 
@@ -2269,11 +2279,13 @@ async def generate_daily_blogs(
                             )
                             blog_post["published_to_wix"] = True
                             
-                            # Ajouter les URLs des images pour l'email
+                            # V9: Ajouter les URLs des 3 images pour l'email
                             if cover_image_data:
                                 blog_post["wix_image_url"] = cover_image_data.get("static_url", "")
-                            if content_image_data:
-                                blog_post["wix_content_image_url"] = content_image_data.get("static_url", "")
+                            if detail_image_data:
+                                blog_post["wix_detail_image_url"] = detail_image_data.get("static_url", "")
+                            if result_image_data:
+                                blog_post["wix_result_image_url"] = result_image_data.get("static_url", "")
                 else:
                     logger.error(f"❌ Failed to create Wix draft")
         
