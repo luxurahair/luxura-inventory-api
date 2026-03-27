@@ -2202,7 +2202,7 @@ async def generate_daily_blogs(
                     }
                     
                     try:
-                        cover_image_data, content_image_data = await generate_and_upload_blog_images(
+                        cover_image_data, detail_image_data, result_image_data = await generate_and_upload_blog_images(
                             api_key=wix_api_key,
                             site_id=wix_site_id,
                             category=category,
@@ -2210,10 +2210,12 @@ async def generate_daily_blogs(
                             keywords=blog_post.get("tags", []),
                             focus_product=focus_product,
                             blog_content=blog_content,
-                            blog_data=blog_data_for_images  # V4: Passe tout le blog
+                            blog_data=blog_data_for_images  # V9: Passe tout le blog
                         )
+                        # V9: Utilise le résultat glamour comme image de contenu visible
+                        content_image_data = result_image_data if result_image_data else detail_image_data
                     except Exception as dalle_error:
-                        logger.warning(f"⚠️ DALL-E V4 generation failed: {dalle_error}")
+                        logger.warning(f"⚠️ DALL-E V9 generation failed: {dalle_error}")
                         import traceback
                         traceback.print_exc()
                         cover_image_data = None
@@ -2260,7 +2262,7 @@ async def generate_daily_blogs(
                     if draft_id:
                         published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
                         if published:
-                            logger.info(f"✅ Blog published successfully with 2 unique images!")
+                            logger.info(f"✅ Blog published successfully with 3 unique images!")
                             await db.blog_posts.update_one(
                                 {"id": post_id},
                                 {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}

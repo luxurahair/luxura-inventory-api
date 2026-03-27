@@ -41,8 +41,17 @@ def should_use_real_images(mode: str) -> bool:
 
 def build_prompt_from_brief(brief: Dict, image_type: str = "cover") -> str:
     """V9: Extrait le prompt du brief - utilise directement la scène technique ou lifestyle"""
-    section = brief["cover"] if image_type == "cover" else brief["content"]
-    prompt = section['scene']
+    # Chercher la section correspondante au type d'image
+    if image_type == "result" and "result" in brief:
+        section = brief["result"]
+    elif image_type == "detail" and "detail" in brief:
+        section = brief["detail"]
+    elif image_type == "content" and "content" in brief:
+        section = brief["content"]
+    else:
+        section = brief.get("cover", brief.get("content", {}))
+    
+    prompt = section.get('scene', '')
     
     # Log le prompt pour debug
     logger.info(f"   📝 Prompt V9 ({image_type}): {prompt[:100]}...")
@@ -229,12 +238,13 @@ async def generate_and_upload_blog_images(
     focus_product: str = None,
     blog_content: str = None,
     blog_data: Dict = None
-) -> Tuple[Optional[Dict], Optional[Dict]]:
+) -> Tuple[Optional[Dict], Optional[Dict], Optional[Dict]]:
     """
-    V7: Génère et upload les 2 images basées sur le mode détecté.
+    V9: Génère et upload les 3 images basées sur le mode détecté.
     
-    - Installations → Images stock RÉELLES
-    - Lifestyle/Résultats → DALL-E avec règles strictes
+    1. Cover - Vue d'ensemble de l'installation (technique salon)
+    2. Detail - Close-up technique extrême
+    3. Result - Résultat final glamour (femmes cheveux longs)
     """
     
     # Construire blog_data si non fourni
@@ -252,12 +262,13 @@ async def generate_and_upload_blog_images(
         blog_data.setdefault("focus_product", focus_product)
 
     cover_data = None
-    content_data = None
+    detail_data = None
+    result_data = None
 
-    logger.info(f"📸 V7 Smart Image Generation: {blog_title[:50]}...")
+    logger.info(f"📸 V9 Smart Image Generation (3 images): {blog_title[:50]}...")
 
-    # === IMAGE DE COUVERTURE ===
-    logger.info(f"🖼️ [1/2] Getting COVER image...")
+    # === IMAGE 1: COUVERTURE (technique/installation) ===
+    logger.info(f"🖼️ [1/3] Getting COVER image (installation technique)...")
     cover_bytes = await get_image_for_blog(
         category=category,
         blog_title=blog_title,
@@ -271,32 +282,53 @@ async def generate_and_upload_blog_images(
             api_key=api_key,
             site_id=site_id,
             image_bytes=cover_bytes,
-            file_name=f"cover-v7-{uuid.uuid4().hex[:8]}.png"
+            file_name=f"cover-v9-{uuid.uuid4().hex[:8]}.png"
         )
         if cover_data:
             logger.info(f"   ✅ Cover uploaded: {cover_data.get('static_url', '')[:60]}...")
 
-    # === IMAGE DE CONTENU ===
-    logger.info(f"🖼️ [2/2] Getting CONTENT image...")
-    content_bytes = await get_image_for_blog(
+    # === IMAGE 2: DETAIL (close-up technique) ===
+    logger.info(f"🖼️ [2/3] Getting DETAIL image (close-up technique)...")
+    detail_bytes = await get_image_for_blog(
         category=category,
         blog_title=blog_title,
         blog_data=blog_data,
-        image_type="content",
+        image_type="detail",
         add_logo=True
     )
 
-    if content_bytes:
-        content_data = await upload_image_bytes_to_wix(
+    if detail_bytes:
+        detail_data = await upload_image_bytes_to_wix(
             api_key=api_key,
             site_id=site_id,
-            image_bytes=content_bytes,
-            file_name=f"content-v7-{uuid.uuid4().hex[:8]}.png"
+            image_bytes=detail_bytes,
+            file_name=f"detail-v9-{uuid.uuid4().hex[:8]}.png"
         )
-        if content_data:
-            logger.info(f"   ✅ Content uploaded: {content_data.get('static_url', '')[:60]}...")
+        if detail_data:
+            logger.info(f"   ✅ Detail uploaded: {detail_data.get('static_url', '')[:60]}...")
 
-    return cover_data, content_data
+    # === IMAGE 3: RESULT (glamour final) ===
+    logger.info(f"🖼️ [3/3] Getting RESULT image (glamour final)...")
+    result_bytes = await get_image_for_blog(
+        category=category,
+        blog_title=blog_title,
+        blog_data=blog_data,
+        image_type="result",
+        add_logo=True
+    )
+
+    if result_bytes:
+        result_data = await upload_image_bytes_to_wix(
+            api_key=api_key,
+            site_id=site_id,
+            image_bytes=result_bytes,
+            file_name=f"result-v9-{uuid.uuid4().hex[:8]}.png"
+        )
+        if result_data:
+            logger.info(f"   ✅ Result uploaded: {result_data.get('static_url', '')[:60]}...")
+
+    logger.info(f"📸 V9 Image generation complete: cover={bool(cover_data)}, detail={bool(detail_data)}, result={bool(result_data)}")
+    return cover_data, detail_data, result_data
 
 
 async def upload_image_bytes_to_wix(
