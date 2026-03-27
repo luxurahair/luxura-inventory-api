@@ -1,6 +1,6 @@
 # image_generation.py
-# Version V4 - Utilise le brief généré par image_brief_generator.py
-# Architecture propre: le brief décide QUOI montrer, ce module génère l'image
+# Version V7 - IMAGES RÉELLES pour installations, DALL-E pour lifestyle/résultats
+# Architecture: Brief → Détecte mode → Stock réel OU DALL-E selon le type
 
 import os
 import uuid
@@ -21,17 +21,103 @@ EMERGENT_LLM_KEY = os.getenv("EMERGENT_LLM_KEY")
 from image_brief_generator import generate_image_brief
 
 # Import du module logo overlay
-from logo_overlay import get_luxura_logo, add_logo_to_image
+from logo_overlay import get_luxura_logo, add_logo_to_image, process_image_with_logo
+
+# Import des images stock réelles
+from real_stock_images import get_real_image_for_mode, IMAGES_BY_MODE
+
+
+def should_use_real_images(mode: str) -> bool:
+    """
+    Détermine si on doit utiliser des images réelles (stock) ou DALL-E.
+    
+    IMAGES RÉELLES pour: installations techniques (on ne peut pas faker ça)
+    DALL-E pour: résultats, lifestyle, beauté (peut générer des femmes avec cheveux longs)
+    """
+    # Installations = TOUJOURS images réelles
+    if mode.startswith("installation_"):
+        return True
+    
+    # Entretien et résultats = DALL-E peut générer
+    return False
 
 
 def build_prompt_from_brief(brief: Dict, image_type: str = "cover") -> str:
-    """V6: Construit le prompt avec règles STRICTES anti-hommes"""
+    """V7: Construit le prompt avec règles STRICTES anti-hommes"""
     section = brief["cover"] if image_type == "cover" else brief["content"]
-    
-    # Le prompt contient déjà les règles absolues
     prompt = section['scene']
-    
     return prompt
+
+
+async def get_image_for_blog(
+    category: str,
+    blog_title: str,
+    blog_data: Dict = None,
+    image_type: str = "cover",
+    add_logo: bool = True
+) -> Optional[bytes]:
+    """
+    V7: Fonction principale qui décide entre images réelles ou DALL-E.
+    
+    - Installations → Images stock réelles
+    - Lifestyle/Résultats → DALL-E avec règles strictes
+    """
+    if blog_data is None:
+        blog_data = {"title": blog_title, "content": "", "category": category}
+    
+    # Générer le brief pour détecter le mode
+    brief = generate_image_brief(blog_data)
+    mode = brief["visual_mode"]
+    
+    logger.info(f"🎯 V7 Mode: {mode} | Type: {image_type} | Title: {blog_title[:40]}...")
+    
+    # Décider: images réelles ou DALL-E?
+    if should_use_real_images(mode):
+        logger.info(f"📷 Using REAL stock image (installation technique)")
+        return await get_real_stock_image_with_logo(mode, image_type, add_logo)
+    else:
+        logger.info(f"🎨 Using DALL-E generation (lifestyle/result)")
+        return await generate_blog_image_with_dalle(
+            category=category,
+            blog_title=blog_title,
+            blog_data=blog_data,
+            image_type=image_type,
+            add_logo=add_logo
+        )
+
+
+async def get_real_stock_image_with_logo(
+    mode: str, 
+    image_type: str = "cover",
+    add_logo: bool = True
+) -> Optional[bytes]:
+    """
+    Télécharge une vraie image stock et ajoute le logo Luxura.
+    """
+    try:
+        # Obtenir l'URL de l'image réelle
+        image_url = get_real_image_for_mode(mode, image_type)
+        logger.info(f"   Stock image URL: {image_url[:60]}...")
+        
+        # Télécharger l'image
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(image_url)
+            if response.status_code != 200:
+                logger.error(f"Failed to download stock image: {response.status_code}")
+                return None
+            
+            image_bytes = response.content
+            logger.info(f"   Downloaded: {len(image_bytes)} bytes")
+        
+        # Ajouter le logo si demandé
+        if add_logo:
+            image_bytes = await add_logo_watermark(image_bytes)
+        
+        return image_bytes
+        
+    except Exception as e:
+        logger.error(f"Error getting real stock image: {e}")
+        return None
 
 
 async def generate_blog_image_with_dalle(
@@ -137,8 +223,10 @@ async def generate_and_upload_blog_images(
     blog_data: Dict = None
 ) -> Tuple[Optional[Dict], Optional[Dict]]:
     """
-    Génère et upload les 2 images (cover + content) basées sur le brief intelligent.
-    Le brief analyse le contenu et décide du style approprié.
+    V7: Génère et upload les 2 images basées sur le mode détecté.
+    
+    - Installations → Images stock RÉELLES
+    - Lifestyle/Résultats → DALL-E avec règles strictes
     """
     
     # Construire blog_data si non fourni
@@ -150,7 +238,6 @@ async def generate_and_upload_blog_images(
             "focus_product": focus_product
         }
     else:
-        # S'assurer que tous les champs sont présents
         blog_data.setdefault("title", blog_title)
         blog_data.setdefault("content", blog_content or "")
         blog_data.setdefault("category", category)
@@ -159,16 +246,16 @@ async def generate_and_upload_blog_images(
     cover_data = None
     content_data = None
 
-    logger.info(f"📸 Smart Image Generation for: {blog_title[:50]}...")
-    logger.info(f"   Content length: {len(blog_data.get('content', ''))} chars")
+    logger.info(f"📸 V7 Smart Image Generation: {blog_title[:50]}...")
 
     # === IMAGE DE COUVERTURE ===
-    logger.info(f"🖼️ [1/2] Generating COVER image...")
-    cover_bytes = await generate_blog_image_with_dalle(
+    logger.info(f"🖼️ [1/2] Getting COVER image...")
+    cover_bytes = await get_image_for_blog(
         category=category,
         blog_title=blog_title,
         blog_data=blog_data,
-        image_type="cover"
+        image_type="cover",
+        add_logo=True
     )
 
     if cover_bytes:
@@ -176,18 +263,19 @@ async def generate_and_upload_blog_images(
             api_key=api_key,
             site_id=site_id,
             image_bytes=cover_bytes,
-            file_name=f"cover-v4-{uuid.uuid4().hex[:8]}.png"
+            file_name=f"cover-v7-{uuid.uuid4().hex[:8]}.png"
         )
         if cover_data:
             logger.info(f"   ✅ Cover uploaded: {cover_data.get('static_url', '')[:60]}...")
 
-    # === IMAGE DE CONTENU (scène différente) ===
-    logger.info(f"🖼️ [2/2] Generating CONTENT image...")
-    content_bytes = await generate_blog_image_with_dalle(
+    # === IMAGE DE CONTENU ===
+    logger.info(f"🖼️ [2/2] Getting CONTENT image...")
+    content_bytes = await get_image_for_blog(
         category=category,
         blog_title=blog_title,
         blog_data=blog_data,
-        image_type="content"
+        image_type="content",
+        add_logo=True
     )
 
     if content_bytes:
@@ -195,7 +283,7 @@ async def generate_and_upload_blog_images(
             api_key=api_key,
             site_id=site_id,
             image_bytes=content_bytes,
-            file_name=f"content-v4-{uuid.uuid4().hex[:8]}.png"
+            file_name=f"content-v7-{uuid.uuid4().hex[:8]}.png"
         )
         if content_data:
             logger.info(f"   ✅ Content uploaded: {content_data.get('static_url', '')[:60]}...")
