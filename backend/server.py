@@ -2181,6 +2181,262 @@ async def auto_generate_daily_blogs(
         logger.error(f"Error in auto-generate blogs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@api_router.get("/blog/wix-posts")
+async def list_wix_blog_posts(limit: int = 50):
+    """Liste les blogs publiés sur Wix"""
+    try:
+        wix_api_key = os.getenv("WIX_API_KEY")
+        wix_site_id = os.getenv("WIX_SITE_ID")
+        
+        if not wix_api_key or not wix_site_id:
+            raise HTTPException(status_code=500, detail="WIX_API_KEY ou WIX_SITE_ID non configuré")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{WIX_API_BASE}/blog/v3/posts/query",
+                headers={
+                    "Authorization": wix_api_key,
+                    "wix-site-id": wix_site_id,
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "paging": {"limit": limit},
+                    "sort": [{"fieldName": "firstPublishedDate", "order": "DESC"}]
+                }
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=f"Wix API error: {response.text}")
+            
+            data = response.json()
+            posts = data.get("posts", [])
+            
+            return {
+                "total": len(posts),
+                "posts": [
+                    {
+                        "id": p.get("id"),
+                        "title": p.get("title"),
+                        "excerpt": p.get("excerpt", "")[:100],
+                        "url": p.get("url"),
+                        "coverMedia": p.get("media", {}).get("wixMedia", {}).get("image", {}).get("url"),
+                        "firstPublishedDate": p.get("firstPublishedDate"),
+                        "slug": p.get("slug")
+                    }
+                    for p in posts
+                ]
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing Wix posts: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/blog/regenerate-images/{wix_post_id}")
+async def regenerate_blog_images(wix_post_id: str, background_tasks: BackgroundTasks):
+    """
+    Régénère les images d'un blog Wix existant avec le système V5 (images techniques réalistes).
+    Met à jour le blog sur Wix avec les nouvelles images.
+    """
+    try:
+        from blog_automation import (
+            create_wix_draft_post, 
+            publish_wix_draft,
+            html_to_ricos
+        )
+        from image_generation import generate_and_upload_blog_images
+        from image_brief_generator import generate_image_brief
+        
+        wix_api_key = os.getenv("WIX_API_KEY")
+        wix_site_id = os.getenv("WIX_SITE_ID")
+        
+        if not wix_api_key or not wix_site_id:
+            raise HTTPException(status_code=500, detail="WIX_API_KEY ou WIX_SITE_ID non configuré")
+        
+        # 1. Récupérer le blog existant sur Wix
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{WIX_API_BASE}/blog/v3/posts/{wix_post_id}",
+                headers={
+                    "Authorization": wix_api_key,
+                    "wix-site-id": wix_site_id
+                }
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=404, detail=f"Blog non trouvé sur Wix: {response.text}")
+            
+            wix_post = response.json().get("post", {})
+        
+        title = wix_post.get("title", "")
+        content_text = wix_post.get("excerpt", "") + " " + title
+        
+        # Détecter la catégorie depuis le contenu
+        category = "general"
+        content_lower = content_text.lower()
+        if "genius" in content_lower or "weft" in content_lower:
+            category = "genius"
+        elif "tape" in content_lower or "adhésif" in content_lower:
+            category = "tape"
+        elif "i-tip" in content_lower or "itip" in content_lower or "kératine" in content_lower:
+            category = "itip"
+        elif "halo" in content_lower:
+            category = "halo"
+        
+        # 2. Générer le brief et les nouvelles images V5
+        blog_data = {
+            "title": title,
+            "content": content_text,
+            "excerpt": wix_post.get("excerpt", ""),
+            "category": category
+        }
+        
+        brief = generate_image_brief(blog_data)
+        logger.info(f"🎨 Regenerating images for: {title[:50]}... (Mode: {brief['visual_mode']})")
+        
+        cover_data, content_data = await generate_and_upload_blog_images(
+            api_key=wix_api_key,
+            site_id=wix_site_id,
+            category=category,
+            blog_title=title,
+            blog_data=blog_data
+        )
+        
+        if not cover_data:
+            raise HTTPException(status_code=500, detail="Échec de génération des images")
+        
+        # 3. Note: Wix API ne permet pas de mettre à jour les images d'un post publié directement
+        # On retourne les nouvelles URLs pour mise à jour manuelle ou via Velo
+        
+        return {
+            "success": True,
+            "message": f"Images régénérées pour: {title[:50]}...",
+            "wix_post_id": wix_post_id,
+            "brief_mode": brief["visual_mode"],
+            "is_technical": brief.get("is_technical", False),
+            "new_images": {
+                "cover": cover_data.get("static_url") if cover_data else None,
+                "content": content_data.get("static_url") if content_data else None
+            },
+            "note": "Les images ont été uploadées sur Wix Media. Pour mettre à jour le blog, utilisez l'éditeur Wix ou l'API Velo."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error regenerating images: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/blog/regenerate-all-images")
+async def regenerate_all_blog_images(limit: int = 10):
+    """
+    Régénère les images de tous les blogs récents avec le système V5.
+    Retourne les nouvelles URLs d'images.
+    """
+    try:
+        from image_generation import generate_and_upload_blog_images
+        from image_brief_generator import generate_image_brief
+        
+        wix_api_key = os.getenv("WIX_API_KEY")
+        wix_site_id = os.getenv("WIX_SITE_ID")
+        
+        if not wix_api_key or not wix_site_id:
+            raise HTTPException(status_code=500, detail="WIX_API_KEY ou WIX_SITE_ID non configuré")
+        
+        # 1. Lister les blogs Wix
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{WIX_API_BASE}/blog/v3/posts/query",
+                headers={
+                    "Authorization": wix_api_key,
+                    "wix-site-id": wix_site_id,
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "paging": {"limit": limit},
+                    "sort": [{"fieldName": "firstPublishedDate", "order": "DESC"}]
+                }
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=f"Wix API error")
+            
+            posts = response.json().get("posts", [])
+        
+        results = []
+        
+        for post in posts:
+            try:
+                title = post.get("title", "")
+                content_text = post.get("excerpt", "") + " " + title
+                
+                # Détecter catégorie
+                category = "general"
+                content_lower = content_text.lower()
+                if "genius" in content_lower or "weft" in content_lower:
+                    category = "genius"
+                elif "tape" in content_lower or "adhésif" in content_lower:
+                    category = "tape"
+                elif "i-tip" in content_lower or "itip" in content_lower:
+                    category = "itip"
+                elif "halo" in content_lower:
+                    category = "halo"
+                
+                blog_data = {
+                    "title": title,
+                    "content": content_text,
+                    "category": category
+                }
+                
+                brief = generate_image_brief(blog_data)
+                logger.info(f"🎨 [{len(results)+1}/{len(posts)}] Regenerating: {title[:40]}... (Mode: {brief['visual_mode']})")
+                
+                cover_data, content_data = await generate_and_upload_blog_images(
+                    api_key=wix_api_key,
+                    site_id=wix_site_id,
+                    category=category,
+                    blog_title=title,
+                    blog_data=blog_data
+                )
+                
+                results.append({
+                    "wix_post_id": post.get("id"),
+                    "title": title[:50],
+                    "mode": brief["visual_mode"],
+                    "success": cover_data is not None,
+                    "new_cover_url": cover_data.get("static_url") if cover_data else None,
+                    "new_content_url": content_data.get("static_url") if content_data else None
+                })
+                
+            except Exception as post_error:
+                logger.error(f"Error processing post {post.get('id')}: {post_error}")
+                results.append({
+                    "wix_post_id": post.get("id"),
+                    "title": post.get("title", "")[:50],
+                    "success": False,
+                    "error": str(post_error)
+                })
+        
+        return {
+            "success": True,
+            "total_processed": len(results),
+            "successful": sum(1 for r in results if r.get("success")),
+            "results": results,
+            "note": "Les images ont été uploadées sur Wix Media. Mettez à jour les blogs manuellement dans l'éditeur Wix."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in regenerate-all: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.get("/blog/topics")
 async def get_blog_topics():
     """Liste tous les sujets de blog disponibles par catégorie"""
