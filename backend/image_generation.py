@@ -104,7 +104,7 @@ async def generate_blog_image_with_dalle(
 
 
 async def add_logo_watermark(image_bytes: bytes) -> bytes:
-    """Ajoute le logo Luxura en watermark sur l'image (coin bas-droit, 15%)"""
+    """Ajoute le logo Luxura en watermark sur l'image (coin bas-droit, 30% - visible en miniature)"""
     try:
         # Ouvrir l'image générée
         base_image = Image.open(io.BytesIO(image_bytes))
@@ -116,13 +116,13 @@ async def add_logo_watermark(image_bytes: bytes) -> bytes:
             logger.warning("Logo not available, returning original image")
             return image_bytes
         
-        # Ajouter le logo
+        # Ajouter le logo - 30% pour être visible même en miniature
         result_image = add_logo_to_image(
             base_image=base_image,
             logo=logo,
             position="bottom-right",
-            size_percent=0.15,
-            padding=20
+            size_percent=0.30,  # 30% pour visibilité en miniature
+            padding=10
         )
         
         # Convertir en bytes PNG
@@ -130,11 +130,13 @@ async def add_logo_watermark(image_bytes: bytes) -> bytes:
         result_image.save(output, format='PNG', quality=95)
         result_bytes = output.getvalue()
         
-        logger.info(f"✅ Logo watermark added ({len(result_bytes)} bytes)")
+        logger.info(f"✅ Logo watermark added (30% size) ({len(result_bytes)} bytes)")
         return result_bytes
         
     except Exception as e:
         logger.error(f"Error adding logo watermark: {e}")
+        import traceback
+        traceback.print_exc()
         return image_bytes  # Retourner l'image originale en cas d'erreur
 
 
