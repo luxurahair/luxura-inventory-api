@@ -9,6 +9,7 @@ import asyncio
 import logging
 import io
 from typing import Optional, Dict, Tuple, List
+from PIL import Image
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,6 +19,9 @@ EMERGENT_LLM_KEY = os.getenv("EMERGENT_LLM_KEY")
 
 # Import du brief generator
 from image_brief_generator import generate_image_brief
+
+# Import du module logo overlay
+from logo_overlay import get_luxura_logo, add_logo_to_image
 
 
 def build_prompt_from_brief(brief: Dict, image_type: str = "cover") -> str:
@@ -48,9 +52,10 @@ async def generate_blog_image_with_dalle(
     category: str,
     blog_title: str,
     blog_data: Dict = None,
-    image_type: str = "cover"
+    image_type: str = "cover",
+    add_logo: bool = True
 ) -> Optional[bytes]:
-    """Génère une image en utilisant le brief intelligent"""
+    """Génère une image en utilisant le brief intelligent + ajoute le logo Luxura"""
     if not EMERGENT_LLM_KEY:
         logger.error("EMERGENT_LLM_KEY not configured")
         return None
@@ -78,8 +83,15 @@ async def generate_blog_image_with_dalle(
         )
 
         if images and len(images) > 0:
-            logger.info(f"✅ [{image_type}] Image generated ({len(images[0])} bytes)")
-            return images[0]
+            image_bytes = images[0]
+            logger.info(f"✅ [{image_type}] Image generated ({len(image_bytes)} bytes)")
+            
+            # 3. Ajouter le logo Luxura si demandé
+            if add_logo and brief.get("logo_overlay", True):
+                logger.info(f"🏷️ Adding Luxura logo watermark (bottom-right, 15%)...")
+                image_bytes = await add_logo_watermark(image_bytes)
+            
+            return image_bytes
 
         logger.error("No image returned from DALL-E")
         return None
@@ -89,6 +101,41 @@ async def generate_blog_image_with_dalle(
         import traceback
         traceback.print_exc()
         return None
+
+
+async def add_logo_watermark(image_bytes: bytes) -> bytes:
+    """Ajoute le logo Luxura en watermark sur l'image (coin bas-droit, 15%)"""
+    try:
+        # Ouvrir l'image générée
+        base_image = Image.open(io.BytesIO(image_bytes))
+        
+        # Récupérer le logo
+        logo = await get_luxura_logo()
+        
+        if logo is None:
+            logger.warning("Logo not available, returning original image")
+            return image_bytes
+        
+        # Ajouter le logo
+        result_image = add_logo_to_image(
+            base_image=base_image,
+            logo=logo,
+            position="bottom-right",
+            size_percent=0.15,
+            padding=20
+        )
+        
+        # Convertir en bytes PNG
+        output = io.BytesIO()
+        result_image.save(output, format='PNG', quality=95)
+        result_bytes = output.getvalue()
+        
+        logger.info(f"✅ Logo watermark added ({len(result_bytes)} bytes)")
+        return result_bytes
+        
+    except Exception as e:
+        logger.error(f"Error adding logo watermark: {e}")
+        return image_bytes  # Retourner l'image originale en cas d'erreur
 
 
 async def generate_and_upload_blog_images(
