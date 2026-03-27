@@ -2185,12 +2185,21 @@ async def generate_daily_blogs(
                 content_image_data = None
                 
                 # ============================================
-                # V3: DALL-E RÉACTIVÉ - STYLE SOIRÉE DE FILLES
-                # Génère les images APRÈS le contenu du blog
+                # V4: ARCHITECTURE INTELLIGENTE
+                # Brief Generator analyse le contenu et décide du style
                 # ============================================
                 if DALLE_AVAILABLE:
-                    logger.info(f"🎨 V3: Generating lifestyle images based on ACTUAL blog content...")
-                    logger.info(f"   Style: Soirée de filles chic, 3-5 femmes, cheveux très longs")
+                    logger.info(f"🎨 V4: Smart image generation based on blog content analysis...")
+                    
+                    # Construire blog_data complet pour le brief generator
+                    blog_data_for_images = {
+                        "title": blog_title,
+                        "content": blog_content,
+                        "excerpt": blog_post.get("excerpt", ""),
+                        "category": category,
+                        "focus_product": focus_product,
+                        "tags": blog_post.get("tags", [])
+                    }
                     
                     try:
                         cover_image_data, content_image_data = await generate_and_upload_blog_images(
@@ -2200,16 +2209,19 @@ async def generate_daily_blogs(
                             blog_title=blog_title,
                             keywords=blog_post.get("tags", []),
                             focus_product=focus_product,
-                            blog_content=blog_content  # V3: Passe le contenu complet
+                            blog_content=blog_content,
+                            blog_data=blog_data_for_images  # V4: Passe tout le blog
                         )
                     except Exception as dalle_error:
-                        logger.warning(f"⚠️ DALL-E V3 generation failed: {dalle_error}")
+                        logger.warning(f"⚠️ DALL-E V4 generation failed: {dalle_error}")
+                        import traceback
+                        traceback.print_exc()
                         cover_image_data = None
                         content_image_data = None
                 
-                # FALLBACK: Si DALL-E échoue, utiliser Unsplash "soirée de filles"
+                # FALLBACK: Si DALL-E échoue, utiliser Unsplash
                 if not cover_image_data:
-                    logger.info(f"📷 Fallback: Using lifestyle Unsplash images (soirée de filles)")
+                    logger.info(f"📷 Fallback: Using Unsplash images")
                     
                     cover_image_data = await import_image_with_retry(
                         api_key=wix_api_key,

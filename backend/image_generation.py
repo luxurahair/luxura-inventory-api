@@ -1,170 +1,56 @@
-# =====================================================
-# IMAGE GENERATION MODULE V3 - Luxura Distribution
-# Génération APRÈS le blog + analyse du contenu + style soirée de filles chic
-# =====================================================
+# image_generation.py
+# Version V4 - Utilise le brief généré par image_brief_generator.py
+# Architecture propre: le brief décide QUOI montrer, ce module génère l'image
 
 import os
 import uuid
 import httpx
 import asyncio
 import logging
-import random
 import io
 from typing import Optional, Dict, Tuple, List
 from dotenv import load_dotenv
 
 load_dotenv()
-
 logger = logging.getLogger(__name__)
 
 EMERGENT_LLM_KEY = os.getenv("EMERGENT_LLM_KEY")
 
-# =====================================================
-# RÈGLES BUSINESS LUXURA + STYLE SOIRÉE DE FILLES CHIC
-# =====================================================
-
-LUXURA_BASE_RULES = """
-Professional luxury lifestyle photography for Luxura Distribution Quebec Canada.
-LUXURA IS A HIGH-END IMPORTER AND DISTRIBUTOR - NOT A SALON.
-
-MANDATORY SCENE REQUIREMENTS:
-- Group of 3 to 5 beautiful elegant feminine women (late 20s to mid 30s)
-- Joyful, lively, friendly girls night out or chic soirée atmosphere
-- Smiles, laughter, complicity, natural interaction between friends
-- Scene ideas: elegant dinner table with candles and wine glasses, chic evening soirée, or luxurious modern salon
-- ALL women have EXTREMELY LONG, thick, voluminous, luxurious hair extensions reaching waist or hips
-- Hair is flowing naturally, shiny, healthy and the absolute HERO of the image
-
-STRICTLY FORBIDDEN:
-- Only one woman, short hair on any woman, men, masculine features, brushes, combs, styling tools
-- Hair shorter than waist length, bob, pixie, shoulder length
-- Text, watermark, cartoon, illustration style
-
-FOCUS ON:
-- Joyful energy, elegance, confidence and friendship
-- Very long, beautiful, flowing hair extensions as the main visual element
-- Aspirational luxury lifestyle photography
-"""
-
-# =====================================================
-# COULEURS DE CHEVEUX (rotation)
-# =====================================================
-
-HAIR_COLORS = [
-    "rich brunette", "honey blonde", "dark chocolate brown", "caramel balayage",
-    "platinum blonde", "auburn copper", "golden blonde highlights", "ash brown",
-    "warm chestnut", "ombre dark to caramel", "sun-kissed blonde"
-]
-
-_color_index = 0
-
-def get_next_hair_color() -> str:
-    global _color_index
-    color = HAIR_COLORS[_color_index % len(HAIR_COLORS)]
-    _color_index += 1
-    return color
+# Import du brief generator
+from image_brief_generator import generate_image_brief
 
 
-# =====================================================
-# ANALYSE DU CONTENU DU BLOG POUR ADAPTER L'IMAGE
-# =====================================================
-
-def analyze_blog_content_for_image(blog_data: Dict, image_type: str = "cover") -> str:
-    """Analyse le contenu réel du blog et retourne un thème visuel adapté"""
-    content = (blog_data.get("content", "") + " " + blog_data.get("title", "")).lower()
-    category = blog_data.get("category", "general")
-    focus_product = blog_data.get("focus_product", "")
-
-    # COVER: Scène principale
-    if image_type == "cover":
-        if any(word in content for word in ["soirée", "fille", "amies", "soiree", "girls night", "table", "dîner"]):
-            scene = "chic girls night out around elegant dinner table with candles and wine glasses, 4 glamorous women laughing together"
-        elif any(word in content for word in ["installation", "pose", "étape", "tutoriel", "comment"]):
-            scene = "elegant modern luxury salon with group of 4 glamorous women admiring their stunning long hair extensions in mirrors"
-        elif any(word in content for word in ["entretien", "soins", "durée", "repositionnement"]):
-            scene = "joyful elegant women at a sophisticated brunch table showing off their healthy, shiny, very long flowing hair"
-        elif "genius" in content or "weft" in content or "trame" in content:
-            scene = "elegant sophisticated dinner party with 4 women toasting champagne, all with stunning waist-length Genius Weft hair extensions"
-        elif "tape" in content or "adhésive" in content:
-            scene = "glamorous girlfriends getting ready together in a luxurious dressing room, all with sleek long Tape-in extensions"
-        elif "halo" in content or "wire" in content:
-            scene = "group of glamorous women at an elegant cocktail party, one touching her gorgeous long flowing Halo extensions while friends admire"
-        elif "i-tip" in content or "itip" in content or "kératine" in content:
-            scene = "chic rooftop bar scene with 4 elegant women showing their natural-looking I-Tip keratin extensions"
-        else:
-            scene = "group of 4 elegant women having a lively chic soirée around a beautiful dinner table, laughing, toasting with champagne"
+def build_prompt_from_brief(brief: Dict, image_type: str = "cover") -> str:
+    """Construit le prompt final à partir du brief visuel"""
+    section = brief["cover"] if image_type == "cover" else brief["content"]
     
-    # CONTENT: Scène intérieure différente (plus intime, focus cheveux)
-    else:
-        if any(word in content for word in ["installation", "pose", "étape", "tutoriel"]):
-            scene = "close-up of 3 glamorous women in a luxury salon, one touching another's beautiful long extensions with admiration"
-        elif any(word in content for word in ["entretien", "soins"]):
-            scene = "intimate scene of 3 elegant women at a spa day, comparing their long shiny healthy hair extensions"
-        elif "genius" in content or "weft" in content:
-            scene = "3 best friends at a fancy restaurant, one showing her friends the seamless blend of her Genius Weft extensions"
-        elif "tape" in content:
-            scene = "glamorous women in a chic bathroom getting ready for a night out, admiring their sleek Tape-in extensions"
-        elif "halo" in content:
-            scene = "cozy elegant living room with 3 women having wine, one demonstrating how easy her Halo wire extensions are"
-        else:
-            scene = "intimate moment between 3 elegant girlfriends admiring each other's beautiful very long flowing hair extensions"
+    return f"""
+Professional luxury beauty photography for Luxura Distribution Quebec.
 
-    product_text = f"featuring {focus_product}" if focus_product else "featuring premium Luxura hair extensions"
-    return f"{scene}, {product_text} - warm, joyful and aspirational luxury atmosphere"
+Scene: {section['scene']}
 
+Style: {section['style']}
+Focus: {section['focus']}
+Hair rule: {brief.get('hair_length_rule', 'very long waist-length or longer hair')}
 
-# =====================================================
-# CONSTRUCTEUR DE PROMPT V3 - Soirée de filles chic
-# =====================================================
-
-def build_smart_image_prompt_v3(blog_data: Dict, image_type: str = "cover") -> str:
-    """Prompt intelligent qui analyse le blog complet et génère des scènes DIFFÉRENTES pour cover vs content"""
-    theme = analyze_blog_content_for_image(blog_data, image_type)
-    hair_color = get_next_hair_color()
-
-    base_prompt = f"""
-{LUXURA_BASE_RULES}
-
-SCENE DESCRIPTION:
-{theme}
-
-All women have extremely long, thick, voluminous {hair_color} hair extensions reaching their waist or hips. 
-Hair is flowing naturally with beautiful movement, healthy shine, and is the hero of the image.
-
-Atmosphere: joyful, friendly, elegant girls night, lots of smiles and laughter, natural interaction.
-
-Technical specifications:
-- Ultra realistic 8K luxury photography
+Technical:
+- Ultra realistic 8K photography
 - Soft warm cinematic lighting
-- Horizontal 1200x630 composition
-- Photorealistic, high detail on hair texture and skin
-"""
+- Horizontal 1200x630 for cover
+- Photorealistic, high detail on hair texture
 
-    strict_rules = """
-STRICT RULES (NEVER BREAK):
-- Only beautiful feminine women, no men, no masculine features
-- Hair on EVERY woman must be very long (minimum waist length, preferably hip length)
-- No short hair, no bob, no shoulder length on any woman
-- No brushes, no combs, no styling tools visible
-- No text, no watermark, no cartoon, no illustration
-"""
+Avoid: {', '.join(section.get('avoid', []))}
+No text. No watermark. No men. No short hair anywhere.
+""".strip()
 
-    return (base_prompt + strict_rules).strip()
-
-
-# =====================================================
-# GÉNÉRATION D'IMAGE AVEC DALL-E
-# =====================================================
 
 async def generate_blog_image_with_dalle(
     category: str,
     blog_title: str,
-    keywords: List[str] = None,
-    focus_product: str = None,
-    image_type: str = "cover",
-    blog_data: Dict = None
+    blog_data: Dict = None,
+    image_type: str = "cover"
 ) -> Optional[bytes]:
-    """Génère une image unique avec DALL-E basée sur le contenu du blog"""
+    """Génère une image en utilisant le brief intelligent"""
     if not EMERGENT_LLM_KEY:
         logger.error("EMERGENT_LLM_KEY not configured")
         return None
@@ -173,19 +59,15 @@ async def generate_blog_image_with_dalle(
         from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
 
         if blog_data is None:
-            blog_data = {
-                "title": blog_title,
-                "content": "",
-                "category": category,
-                "focus_product": focus_product
-            }
+            blog_data = {"title": blog_title, "content": "", "category": category}
 
-        prompt = build_smart_image_prompt_v3(blog_data, image_type)
-        
-        # Log le thème pour debug
-        theme = analyze_blog_content_for_image(blog_data, image_type)
-        logger.info(f"🎨 Generating [{image_type}] image for: {blog_title[:50]}...")
-        logger.info(f"   Theme: {theme[:80]}...")
+        # 1. Générer le brief visuel intelligent
+        brief = generate_image_brief(blog_data)
+
+        # 2. Construire le prompt à partir du brief
+        prompt = build_prompt_from_brief(brief, image_type)
+
+        logger.info(f"🎨 Generating [{image_type}] - Mode: {brief['visual_mode']} for: {blog_title[:50]}...")
 
         image_gen = OpenAIImageGeneration(api_key=EMERGENT_LLM_KEY)
 
@@ -196,22 +78,18 @@ async def generate_blog_image_with_dalle(
         )
 
         if images and len(images) > 0:
-            logger.info(f"✅ [{image_type}] Image generated successfully ({len(images[0])} bytes)")
+            logger.info(f"✅ [{image_type}] Image generated ({len(images[0])} bytes)")
             return images[0]
-        else:
-            logger.error("No image returned from DALL-E")
-            return None
+
+        logger.error("No image returned from DALL-E")
+        return None
 
     except Exception as e:
-        logger.error(f"❌ Error generating DALL-E image: {e}")
+        logger.error(f"❌ Error generating image: {e}")
         import traceback
         traceback.print_exc()
         return None
 
-
-# =====================================================
-# GÉNÉRATION ET UPLOAD DES 2 IMAGES
-# =====================================================
 
 async def generate_and_upload_blog_images(
     api_key: str,
@@ -220,32 +98,42 @@ async def generate_and_upload_blog_images(
     blog_title: str,
     keywords: List[str] = None,
     focus_product: str = None,
-    blog_content: str = None
+    blog_content: str = None,
+    blog_data: Dict = None
 ) -> Tuple[Optional[Dict], Optional[Dict]]:
-    """Génère et upload les 2 images (cover + content) basées sur le contenu du blog"""
+    """
+    Génère et upload les 2 images (cover + content) basées sur le brief intelligent.
+    Le brief analyse le contenu et décide du style approprié.
+    """
     
-    blog_data_for_image = {
-        "title": blog_title,
-        "content": blog_content or "",
-        "category": category,
-        "focus_product": focus_product
-    }
+    # Construire blog_data si non fourni
+    if blog_data is None:
+        blog_data = {
+            "title": blog_title,
+            "content": blog_content or "",
+            "category": category,
+            "focus_product": focus_product
+        }
+    else:
+        # S'assurer que tous les champs sont présents
+        blog_data.setdefault("title", blog_title)
+        blog_data.setdefault("content", blog_content or "")
+        blog_data.setdefault("category", category)
+        blog_data.setdefault("focus_product", focus_product)
 
     cover_data = None
     content_data = None
 
-    logger.info(f"📸 Generating chic girls night lifestyle images for: {blog_title[:50]}...")
-    logger.info(f"   Blog content length: {len(blog_content or '')} chars")
+    logger.info(f"📸 Smart Image Generation for: {blog_title[:50]}...")
+    logger.info(f"   Content length: {len(blog_data.get('content', ''))} chars")
 
     # === IMAGE DE COUVERTURE ===
     logger.info(f"🖼️ [1/2] Generating COVER image...")
     cover_bytes = await generate_blog_image_with_dalle(
         category=category,
         blog_title=blog_title,
-        keywords=keywords,
-        focus_product=focus_product,
-        image_type="cover",
-        blog_data=blog_data_for_image
+        blog_data=blog_data,
+        image_type="cover"
     )
 
     if cover_bytes:
@@ -253,20 +141,18 @@ async def generate_and_upload_blog_images(
             api_key=api_key,
             site_id=site_id,
             image_bytes=cover_bytes,
-            file_name=f"cover-{uuid.uuid4().hex[:8]}.png"
+            file_name=f"cover-v4-{uuid.uuid4().hex[:8]}.png"
         )
         if cover_data:
             logger.info(f"   ✅ Cover uploaded: {cover_data.get('static_url', '')[:60]}...")
 
-    # === IMAGE DE CONTENU (DIFFÉRENTE) ===
-    logger.info(f"🖼️ [2/2] Generating CONTENT image (different scene)...")
+    # === IMAGE DE CONTENU (scène différente) ===
+    logger.info(f"🖼️ [2/2] Generating CONTENT image...")
     content_bytes = await generate_blog_image_with_dalle(
         category=category,
         blog_title=blog_title,
-        keywords=keywords,
-        focus_product=focus_product,
-        image_type="content",
-        blog_data=blog_data_for_image
+        blog_data=blog_data,
+        image_type="content"
     )
 
     if content_bytes:
@@ -274,7 +160,7 @@ async def generate_and_upload_blog_images(
             api_key=api_key,
             site_id=site_id,
             image_bytes=content_bytes,
-            file_name=f"content-{uuid.uuid4().hex[:8]}.png"
+            file_name=f"content-v4-{uuid.uuid4().hex[:8]}.png"
         )
         if content_data:
             logger.info(f"   ✅ Content uploaded: {content_data.get('static_url', '')[:60]}...")
@@ -282,17 +168,13 @@ async def generate_and_upload_blog_images(
     return cover_data, content_data
 
 
-# =====================================================
-# UPLOAD IMAGE VERS WIX MEDIA
-# =====================================================
-
 async def upload_image_bytes_to_wix(
     api_key: str,
     site_id: str,
     image_bytes: bytes,
     file_name: str
 ) -> Optional[Dict]:
-    """Upload une image (bytes) vers Wix Media Manager via catbox.moe"""
+    """Upload une image (bytes) vers Wix Media Manager via catbox.moe fallback"""
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             # Méthode 1: Essayer l'upload direct Wix
@@ -386,10 +268,7 @@ async def upload_image_bytes_to_wix(
         return None
 
 
-# =====================================================
-# FALLBACK - Pas utilisé si DALL-E fonctionne
-# =====================================================
-
+# Fallback (ne devrait pas être utilisé si DALL-E fonctionne)
 def get_fallback_unsplash_image() -> str:
-    """Retourne une image de fallback (ne devrait pas être utilisé)"""
+    """Retourne une image de fallback"""
     return "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&h=630&fit=crop"
