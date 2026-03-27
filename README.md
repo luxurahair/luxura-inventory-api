@@ -60,8 +60,10 @@ WIX_API_KEY=votre_clé_wix
 WIX_SITE_ID=votre_site_id_wix
 WIX_MEMBER_ID=votre_member_id_wix
 
-# FAL.AI (vidéo) - NOUVEAU
-FAL_KEY=a8f07b61-abfd-4c67-abee-74d73d5eab23:8df1878aa9e6475bc399f71c432abb59
+# FAL.AI (vidéo) - Supporte les deux noms
+FAL_KEY=votre_clé_fal_ai
+# OU
+FLA_AI_API_KEY=votre_clé_fal_ai
 
 # Email (optionnel)
 EMAIL_HOST=smtp.gmail.com

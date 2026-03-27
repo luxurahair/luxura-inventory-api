@@ -16,7 +16,8 @@ from typing import Dict, Optional
 logger = logging.getLogger(__name__)
 
 # Configuration FAL.AI
-FAL_KEY = os.getenv("FAL_KEY")
+# Supporte les deux noms de variable: FAL_KEY et FLA_AI_API_KEY
+FAL_KEY = os.getenv("FAL_KEY") or os.getenv("FLA_AI_API_KEY")
 FAL_ENABLED = bool(FAL_KEY)
 
 if FAL_ENABLED:
