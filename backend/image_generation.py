@@ -29,23 +29,24 @@ from real_stock_images import get_real_image_for_mode, IMAGES_BY_MODE
 
 def should_use_real_images(mode: str) -> bool:
     """
-    Détermine si on doit utiliser des images réelles (stock) ou DALL-E.
+    V9: Détermine si on doit utiliser des images réelles (stock) ou DALL-E.
     
-    IMAGES RÉELLES pour: installations techniques (on ne peut pas faker ça)
-    DALL-E pour: résultats, lifestyle, beauté (peut générer des femmes avec cheveux longs)
+    MAINTENANT: On utilise DALL-E pour TOUT avec les prompts techniques stricts V9.
+    Les images stock ne sont utilisées qu'en fallback si DALL-E échoue.
     """
-    # Installations = TOUJOURS images réelles
-    if mode.startswith("installation_"):
-        return True
-    
-    # Entretien et résultats = DALL-E peut générer
+    # V9: On utilise DALL-E pour tout maintenant avec les prompts V9 stricts
+    # Le brief V9 génère des prompts techniques très précis
     return False
 
 
 def build_prompt_from_brief(brief: Dict, image_type: str = "cover") -> str:
-    """V7: Construit le prompt avec règles STRICTES anti-hommes"""
+    """V9: Extrait le prompt du brief - utilise directement la scène technique ou lifestyle"""
     section = brief["cover"] if image_type == "cover" else brief["content"]
     prompt = section['scene']
+    
+    # Log le prompt pour debug
+    logger.info(f"   📝 Prompt V9 ({image_type}): {prompt[:100]}...")
+    
     return prompt
 
 
@@ -57,33 +58,40 @@ async def get_image_for_blog(
     add_logo: bool = True
 ) -> Optional[bytes]:
     """
-    V7: Fonction principale qui décide entre images réelles ou DALL-E.
+    V9: Fonction principale qui génère les images avec les prompts techniques stricts.
     
-    - Installations → Images stock réelles
-    - Lifestyle/Résultats → DALL-E avec règles strictes
+    TOUTES les images sont maintenant générées par DALL-E avec les prompts V9:
+    - Installations → Prompts techniques stricts (règles verrouillées par catégorie)
+    - Lifestyle/Résultats → Prompts de résultat ou lifestyle
+    
+    Le fallback vers images stock n'est utilisé qu'en cas d'échec DALL-E.
     """
     if blog_data is None:
         blog_data = {"title": blog_title, "content": "", "category": category}
     
-    # Générer le brief pour détecter le mode
+    # Générer le brief V9 avec les règles techniques
     brief = generate_image_brief(blog_data)
     mode = brief["visual_mode"]
+    is_technical = brief.get("is_technical", False)
     
-    logger.info(f"🎯 V7 Mode: {mode} | Type: {image_type} | Title: {blog_title[:40]}...")
+    logger.info(f"🎯 V9 Mode: {mode} | Technical: {is_technical} | Type: {image_type} | Title: {blog_title[:40]}...")
     
-    # Décider: images réelles ou DALL-E?
-    if should_use_real_images(mode):
-        logger.info(f"📷 Using REAL stock image (installation technique)")
+    # V9: Utiliser DALL-E avec les prompts stricts pour tout
+    logger.info(f"🎨 Using DALL-E V9 (strict technical prompts)")
+    image_bytes = await generate_blog_image_with_dalle(
+        category=category,
+        blog_title=blog_title,
+        blog_data=blog_data,
+        image_type=image_type,
+        add_logo=add_logo
+    )
+    
+    # Fallback vers images stock si DALL-E échoue
+    if image_bytes is None and is_technical:
+        logger.warning(f"⚠️ DALL-E failed, falling back to stock images")
         return await get_real_stock_image_with_logo(mode, image_type, add_logo)
-    else:
-        logger.info(f"🎨 Using DALL-E generation (lifestyle/result)")
-        return await generate_blog_image_with_dalle(
-            category=category,
-            blog_title=blog_title,
-            blog_data=blog_data,
-            image_type=image_type,
-            add_logo=add_logo
-        )
+    
+    return image_bytes
 
 
 async def get_real_stock_image_with_logo(
