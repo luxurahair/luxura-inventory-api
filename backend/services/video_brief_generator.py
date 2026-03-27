@@ -55,8 +55,9 @@ def generate_video_brief(blog_data: Dict[str, Any]) -> Dict[str, Any]:
     # Détecter le mode vidéo
     if "halo" in text or "fil invisible" in text or category == "halo":
         mode = "installation_halo"
-        scene = f"Woman with very long flowing hair gently placing invisible wire halo extension on her head at home, natural movement, elegant transformation"
-        motion = "smooth hair flow, natural head movement, glamorous reveal"
+        # Prompt TRÈS PRÉCIS pour éviter les erreurs
+        scene = f"Beautiful woman standing in front of mirror, gently placing a halo hair extension on TOP of her head like a headband. The invisible wire sits on the CROWN of her head, NOT on forehead. Her natural hair falls naturally OVER the halo extension, blending seamlessly. She is facing the mirror, NOT turning around."
+        motion = "smooth gentle placement on top of head, natural hair falling over the extension, confident smile in mirror"
         
     elif "i-tip" in text or "microbille" in text or category == "itip":
         mode = "installation_itip"
