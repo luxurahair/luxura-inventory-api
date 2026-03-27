@@ -61,7 +61,13 @@ async def generate_short_video(
         
         logger.info(f"🎥 Generating video with FAL.AI/Kling...")
         logger.info(f"   Source image: {image_url[:60]}...")
-        logger.info(f"   Duration: {video_brief.get('duration_seconds', 5)}s")
+        
+        # FAL.AI/Kling ne supporte que 5 ou 10 secondes
+        duration = video_brief.get("duration_seconds", 5)
+        if duration not in (5, 10):
+            duration = 5
+        
+        logger.info(f"   Duration: {duration}s")
         
         async with httpx.AsyncClient(timeout=300.0) as client:
             # Appel à FAL.AI - Kling Image-to-Video
@@ -75,7 +81,7 @@ async def generate_short_video(
                     "prompt": prompt,
                     "negative_prompt": negative_prompt,
                     "image_url": image_url,
-                    "duration": str(video_brief.get("duration_seconds", 5)),
+                    "duration": str(duration),  # "5" ou "10" uniquement
                     "aspect_ratio": video_brief.get("aspect_ratio", "16:9")
                 }
             )

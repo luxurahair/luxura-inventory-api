@@ -29,12 +29,65 @@ VIDEO_MODES = {
 def should_generate_video(video_brief: Dict) -> bool:
     """
     Détermine si une vidéo doit être générée pour ce brief.
-    Pour l'instant, on génère uniquement pour les installations.
+    Pour l'instant, on génère pour les installations et lifestyle.
     """
     mode = video_brief.get("video_mode", "none")
     
-    # Activer uniquement pour les installations techniques pour l'instant
-    return mode.startswith("installation_")
+    # Activer pour les installations et lifestyle
+    return mode.startswith("installation_") or mode in ("lifestyle_result", "editorial_lifestyle", "result_natural")
+
+
+def generate_video_brief(blog_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Génère un brief vidéo basé sur le contenu du blog.
+    
+    FAL.AI/Kling supporte uniquement 5 ou 10 secondes.
+    """
+    text = " ".join([
+        str(blog_data.get("title", "")),
+        str(blog_data.get("excerpt", "")),
+        str(blog_data.get("content", ""))[:500]
+    ]).lower()
+    
+    product = blog_data.get("focus_product", "extensions Luxura")
+    category = blog_data.get("category", "general")
+    
+    # Détecter le mode vidéo
+    if "halo" in text or "fil invisible" in text or category == "halo":
+        mode = "installation_halo"
+        scene = f"Woman with very long flowing hair gently placing invisible wire halo extension on her head at home, natural movement, elegant transformation"
+        motion = "smooth hair flow, natural head movement, glamorous reveal"
+        
+    elif "i-tip" in text or "microbille" in text or category == "itip":
+        mode = "installation_itip"
+        scene = f"Professional salon scene, stylist carefully working on client's very long beautiful hair, precise technique"
+        motion = "steady hands, careful movement, professional atmosphere"
+        
+    elif "tape" in text or "sandwich" in text or category == "tape":
+        mode = "installation_tape"
+        scene = f"Salon scene showing tape-in extension application on woman with long hair, clean professional work"
+        motion = "smooth application, professional technique"
+        
+    elif "genius" in text or "weft" in text or category == "genius":
+        mode = "installation_genius"
+        scene = f"Professional salon, stylist sewing genius weft onto beaded row, client with very long beautiful hair"
+        motion = "precise sewing motion, professional salon atmosphere"
+        
+    else:
+        mode = "lifestyle_result"
+        scene = f"Beautiful woman with extremely long flowing {product} hair, natural movement, glamorous lifestyle moment"
+        motion = "natural hair flow, confident movement, cinematic beauty"
+
+    return {
+        "video_mode": mode,
+        "duration_seconds": 5,  # FAL.AI/Kling: seulement 5 ou 10 secondes
+        "aspect_ratio": "16:9",
+        "scene": scene,
+        "motion": motion,
+        "style": "cinematic realistic beauty video, natural lighting, premium hair quality",
+        "use_image_to_video": True,
+        "is_technical": mode.startswith("installation_")
+    }
 
 
 def generate_video_brief(blog_data: Dict[str, Any]) -> Dict[str, Any]:
