@@ -71,8 +71,9 @@ async def remove_products_from_collection(collection_id: str, product_ids: List[
         return True
         
     async with httpx.AsyncClient(timeout=60) as client:
-        response = await client.delete(
-            f"https://www.wixapis.com/stores/v1/collections/{collection_id}/productIds",
+        # Wix API utilise POST avec action remove pour retirer des produits
+        response = await client.post(
+            f"https://www.wixapis.com/stores/v1/collections/{collection_id}/productIds/delete",
             headers=HEADERS,
             json={"productIds": product_ids}
         )
@@ -81,8 +82,38 @@ async def remove_products_from_collection(collection_id: str, product_ids: List[
             print(f"   ✅ {len(product_ids)} produits retirés de la collection")
             return True
         else:
-            print(f"   ❌ Erreur retrait: {response.status_code} - {response.text[:200]}")
-            return False
+            # Essayer avec une autre méthode
+            print(f"   ⚠️ Méthode 1 échouée ({response.status_code}), essai méthode 2...")
+            
+            # Méthode alternative: mettre à jour le produit pour retirer la collection
+            success_count = 0
+            for pid in product_ids:
+                try:
+                    # Récupérer le produit
+                    get_resp = await client.get(
+                        f"https://www.wixapis.com/stores/v1/products/{pid}",
+                        headers=HEADERS
+                    )
+                    if get_resp.status_code == 200:
+                        product = get_resp.json().get("product", {})
+                        current_cols = product.get("collectionIds", [])
+                        
+                        # Retirer la collection
+                        new_cols = [c for c in current_cols if c != collection_id]
+                        
+                        # Mettre à jour
+                        update_resp = await client.patch(
+                            f"https://www.wixapis.com/stores/v1/products/{pid}",
+                            headers=HEADERS,
+                            json={"product": {"collectionIds": new_cols}}
+                        )
+                        if update_resp.status_code == 200:
+                            success_count += 1
+                except Exception as e:
+                    print(f"   ⚠️ Erreur pour {pid}: {e}")
+            
+            print(f"   ✅ {success_count}/{len(product_ids)} produits retirés (méthode 2)")
+            return success_count > 0
 
 
 async def fix_clips_collection(products: List[Dict], dry_run: bool = True):
