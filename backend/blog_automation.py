@@ -2329,14 +2329,14 @@ async def generate_daily_blogs(
                     blog_post["image"] = cover_image_data.get("static_url", blog_post.get("image"))
                 
                 # =====================================================
-                # GÉNÉRATION VIDÉO (optionnelle - nécessite RUNWAY_API_KEY)
+                # GÉNÉRATION VIDÉO avec FAL.AI/Kling (optionnel)
                 # =====================================================
                 video_url = None
                 try:
                     from services.video_brief_generator import generate_video_brief, should_generate_video
-                    from services.video_generator import generate_short_video, RUNWAY_ENABLED
+                    from services.video_generator import generate_short_video, FAL_ENABLED
                     
-                    if RUNWAY_ENABLED and cover_image_data:
+                    if FAL_ENABLED and cover_image_data:
                         video_brief = generate_video_brief(blog_data_for_images)
                         if should_generate_video(video_brief):
                             logger.info(f"🎥 Generating video for: {blog_post['title'][:40]}...")

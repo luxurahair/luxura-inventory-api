@@ -1,20 +1,28 @@
 # services/video_generator.py
 """
-Génération de vidéos courtes avec Runway Gen-3
-Version V1 - Structure de base (MOCK pour l'instant)
+Génération de vidéos courtes avec FAL.AI (Kling 2.0)
+Version V2 - FAL.AI Integration
 
-Note: Nécessite RUNWAY_API_KEY dans .env pour fonctionner réellement
+FAL.AI donne accès à Kling 2.0 qui est aussi bon que Runway Gen-3
+Prix: ~$0.10 par vidéo de 5 secondes
 """
 
 import os
 import logging
 import asyncio
+import httpx
 from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-RUNWAY_API_KEY = os.getenv("RUNWAY_API_KEY")
-RUNWAY_ENABLED = bool(RUNWAY_API_KEY)
+# Configuration FAL.AI
+FAL_KEY = os.getenv("FAL_KEY")
+FAL_ENABLED = bool(FAL_KEY)
+
+if FAL_ENABLED:
+    logger.info("✅ FAL.AI video generation enabled")
+else:
+    logger.info("⚠️ FAL.AI not configured (FAL_KEY missing)")
 
 
 async def generate_short_video(
@@ -22,78 +30,80 @@ async def generate_short_video(
     image_url: Optional[str] = None
 ) -> Optional[str]:
     """
-    Génère une vidéo courte avec Runway Gen-3 Alpha Turbo.
+    Génère une vidéo courte avec FAL.AI (Kling 2.0).
     
     Args:
         video_brief: Brief de la vidéo (scene, motion, duration, etc.)
-        image_url: URL de l'image source pour image-to-video (optionnel)
+        image_url: URL de l'image source pour image-to-video
     
     Returns:
         URL de la vidéo générée ou None si échec
     """
-    if not RUNWAY_ENABLED:
-        logger.info("🎥 Video generation skipped (RUNWAY_API_KEY not configured)")
+    if not FAL_ENABLED:
+        logger.info("🎥 Video generation skipped (FAL_KEY not configured)")
+        return None
+    
+    if not image_url:
+        logger.warning("🎥 Video generation skipped (no source image)")
         return None
     
     try:
-        import httpx
-        
-        # Construire le prompt
+        # Construire le prompt pour la vidéo
         scene = video_brief.get("scene", "")
-        motion = video_brief.get("motion", "")
-        style = video_brief.get("style", "")
-        safety = video_brief.get("safety_rules", "")
+        motion = video_brief.get("motion", "Beautiful woman with very long flowing hair")
         
-        prompt = f"{scene} {motion}. {style}. {safety}"
+        # Prompt optimisé pour Kling
+        prompt = f"{scene}. {motion}. Cinematic quality, smooth camera movement, natural hair flow, professional lighting."
         
-        logger.info(f"🎥 Generating video: {video_brief.get('video_mode')}")
-        logger.info(f"   Duration: {video_brief.get('duration_seconds')}s")
-        logger.info(f"   Aspect: {video_brief.get('aspect_ratio')}")
+        # Règles de sécurité
+        negative_prompt = "short hair, bob cut, men, masculine, cartoon, animation, text, watermark, low quality"
         
-        # Payload Runway Gen-3
-        payload = {
-            "prompt": prompt,
-            "duration": video_brief.get("duration_seconds", 10),
-            "aspect_ratio": video_brief.get("aspect_ratio", "9:16"),
-            "model": "gen-3-alpha-turbo"
-        }
-        
-        # Ajouter l'image source si disponible (image-to-video)
-        if image_url and video_brief.get("use_image_to_video", True):
-            payload["image_url"] = image_url
-            logger.info(f"   Using image-to-video with: {image_url[:60]}...")
+        logger.info(f"🎥 Generating video with FAL.AI/Kling...")
+        logger.info(f"   Source image: {image_url[:60]}...")
+        logger.info(f"   Duration: {video_brief.get('duration_seconds', 5)}s")
         
         async with httpx.AsyncClient(timeout=300.0) as client:
-            # Lancer la génération
+            # Appel à FAL.AI - Kling Image-to-Video
             response = await client.post(
-                "https://api.runwayml.com/v1/generations",
+                "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
                 headers={
-                    "Authorization": f"Bearer {RUNWAY_API_KEY}",
+                    "Authorization": f"Key {FAL_KEY}",
                     "Content-Type": "application/json"
                 },
-                json=payload
+                json={
+                    "prompt": prompt,
+                    "negative_prompt": negative_prompt,
+                    "image_url": image_url,
+                    "duration": str(video_brief.get("duration_seconds", 5)),
+                    "aspect_ratio": video_brief.get("aspect_ratio", "16:9")
+                }
             )
             
-            if response.status_code not in (200, 201):
-                logger.error(f"Runway API error: {response.status_code} - {response.text}")
+            if response.status_code not in (200, 201, 202):
+                logger.error(f"FAL.AI error: {response.status_code} - {response.text}")
                 return None
             
             result = response.json()
-            job_id = result.get("id")
             
-            if not job_id:
-                logger.error("No job ID returned from Runway")
+            # FAL.AI utilise un système de queue
+            request_id = result.get("request_id")
+            if not request_id:
+                # Résultat direct
+                video_url = result.get("video", {}).get("url")
+                if video_url:
+                    logger.info(f"✅ Video generated: {video_url[:60]}...")
+                    return video_url
                 return None
             
-            logger.info(f"   Job started: {job_id}")
+            logger.info(f"   Queue ID: {request_id}")
             
-            # Polling pour attendre le résultat (max ~3.5 minutes)
-            for attempt in range(42):
+            # Polling pour attendre le résultat
+            for attempt in range(60):  # Max 5 minutes
                 await asyncio.sleep(5)
                 
                 status_response = await client.get(
-                    f"https://api.runwayml.com/v1/generations/{job_id}",
-                    headers={"Authorization": f"Bearer {RUNWAY_API_KEY}"}
+                    f"https://queue.fal.run/fal-ai/kling-video/requests/{request_id}/status",
+                    headers={"Authorization": f"Key {FAL_KEY}"}
                 )
                 
                 if status_response.status_code != 200:
@@ -102,21 +112,27 @@ async def generate_short_video(
                 status_data = status_response.json()
                 status = status_data.get("status")
                 
-                if status == "SUCCEEDED":
-                    video_url = status_data.get("output", {}).get("video_url")
-                    if video_url:
-                        logger.info(f"✅ Video generated: {video_url[:60]}...")
-                        return video_url
-                    else:
-                        logger.error("Video succeeded but no URL returned")
-                        return None
+                if status == "COMPLETED":
+                    # Récupérer le résultat
+                    result_response = await client.get(
+                        f"https://queue.fal.run/fal-ai/kling-video/requests/{request_id}",
+                        headers={"Authorization": f"Key {FAL_KEY}"}
+                    )
+                    
+                    if result_response.status_code == 200:
+                        final_result = result_response.json()
+                        video_url = final_result.get("video", {}).get("url")
+                        if video_url:
+                            logger.info(f"✅ Video generated: {video_url[:60]}...")
+                            return video_url
+                    return None
                 
                 elif status == "FAILED":
                     error = status_data.get("error", "Unknown error")
                     logger.error(f"Video generation failed: {error}")
                     return None
                 
-                elif status in ("PENDING", "PROCESSING"):
+                elif status in ("IN_QUEUE", "IN_PROGRESS"):
                     if attempt % 6 == 0:  # Log every 30 seconds
                         logger.info(f"   Still processing... ({attempt * 5}s)")
                     continue
@@ -124,9 +140,6 @@ async def generate_short_video(
             logger.error("Video generation timed out")
             return None
             
-    except ImportError:
-        logger.error("httpx not available for video generation")
-        return None
     except Exception as e:
         logger.error(f"Video generation error: {e}")
         import traceback
@@ -134,17 +147,40 @@ async def generate_short_video(
         return None
 
 
-async def upload_video_to_wix(
-    api_key: str,
-    site_id: str,
-    video_url: str,
-    file_name: str = "luxura-video.mp4"
-) -> Optional[Dict]:
+async def generate_text_to_video(
+    prompt: str,
+    duration: int = 5,
+    aspect_ratio: str = "16:9"
+) -> Optional[str]:
     """
-    Upload une vidéo vers Wix Media Manager.
+    Génère une vidéo à partir d'un prompt texte uniquement (sans image source).
+    """
+    if not FAL_ENABLED:
+        return None
     
-    Note: À implémenter si nécessaire pour l'intégration blog.
-    """
-    # TODO: Implémenter l'upload vidéo vers Wix si nécessaire
-    logger.info(f"📹 Video upload to Wix: {video_url[:50]}...")
-    return {"video_url": video_url}
+    try:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            response = await client.post(
+                "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/text-to-video",
+                headers={
+                    "Authorization": f"Key {FAL_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "prompt": prompt,
+                    "negative_prompt": "short hair, men, cartoon, low quality",
+                    "duration": str(duration),
+                    "aspect_ratio": aspect_ratio
+                }
+            )
+            
+            if response.status_code not in (200, 201, 202):
+                return None
+            
+            result = response.json()
+            video_url = result.get("video", {}).get("url")
+            return video_url
+            
+    except Exception as e:
+        logger.error(f"Text-to-video error: {e}")
+        return None
