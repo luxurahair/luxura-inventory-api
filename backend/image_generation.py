@@ -25,51 +25,13 @@ from logo_overlay import get_luxura_logo, add_logo_to_image
 
 
 def build_prompt_from_brief(brief: Dict, image_type: str = "cover") -> str:
-    """Construit le prompt final à partir du brief visuel - V5 avec prompts techniques"""
+    """V6: Construit le prompt avec règles STRICTES anti-hommes"""
     section = brief["cover"] if image_type == "cover" else brief["content"]
-    is_technical = brief.get("is_technical", False)
     
-    # Pour les images techniques d'installation, on utilise un prompt très différent
-    if is_technical:
-        prompt = f"""
-{section['scene']}
-
-Style: {section['style']}
-Focus: {section['focus']}
-
-CRITICAL REQUIREMENTS FOR TECHNICAL PHOTO:
-- This must look like a REAL professional salon documentation photo
-- Show actual hands performing the technique
-- Include real tools: pliers, needles, combs, sectioning clips
-- Natural salon lighting, not studio glamour lighting
-- The woman's hair should be sectioned and clipped professionally
-- Focus on the TECHNIQUE being performed, not on beauty/glamour
-
-Avoid: {', '.join(section.get('avoid', []))}
-No text baked in image. No watermark. No cartoon or illustration style.
-"""
-    else:
-        # Pour les images lifestyle/résultat
-        prompt = f"""
-Professional luxury beauty photography for Luxura Distribution Quebec.
-
-Scene: {section['scene']}
-
-Style: {section['style']}
-Focus: {section['focus']}
-Hair rule: {brief.get('hair_length_rule', 'very long waist-length or longer hair')}
-
-Technical:
-- Ultra realistic 8K photography
-- Soft warm cinematic lighting
-- Horizontal 1200x630 for cover
-- Photorealistic, high detail on hair texture
-
-Avoid: {', '.join(section.get('avoid', []))}
-No text. No watermark. No men. No short hair anywhere.
-"""
+    # Le prompt contient déjà les règles absolues
+    prompt = section['scene']
     
-    return prompt.strip()
+    return prompt
 
 
 async def generate_blog_image_with_dalle(

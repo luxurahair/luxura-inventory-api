@@ -1,9 +1,7 @@
 # image_brief_generator.py
 """
-Module responsable de créer un brief visuel intelligent à partir du contenu du blog.
-Il décide QUOI montrer avant que l'image ne soit générée.
-
-V5 - Prompts techniques RÉALISTES pour installations
+Module V6 - Brief visuel intelligent
+RÈGLES STRICTES: Jamais d'hommes, cheveux TRÈS longs uniquement
 """
 
 import logging
@@ -22,157 +20,260 @@ def _detect_visual_mode(blog_data: Dict[str, Any]) -> str:
     
     category = str(blog_data.get("category", "")).lower()
 
-    # TAPE-IN d'abord (priorité car plus commun)
-    if category == "tape" or any(k in text for k in ["tape-in", "tape in", "tapein", "adhésif", "adhesif", "sandwich", "bande adhésive", "bande adhesive"]):
-        if any(k in text for k in ["installation", "pose", "étape", "comment", "poser", "coller"]):
-            return "installation_tape_sandwich"
+    # =====================================================
+    # DÉTECTION PAR CATÉGORIE D'ABORD (plus fiable)
+    # =====================================================
     
-    # GENIUS WEFT - Technique de couture
-    if category == "genius" or any(k in text for k in ["genius", "weft", "trame"]):
-        if any(k in text for k in ["couture", "cousue", "coudre", "rangée perlée", "beaded row", "sew-in", "cousu", "installation", "pose"]):
-            return "installation_genius_sewn"
+    # GENIUS WEFT - Couture (CHECK FIRST car plus commun)
+    if category == "genius" or any(k in text for k in ["genius", "weft", "vivian", "trame cousue"]):
+        if any(k in text for k in ["couture", "cousue", "installation", "pose", "rangée perlée", "beaded", "étape"]):
+            return "installation_genius"
+        if any(k in text for k in ["entretien", "repositionnement", "soins"]):
+            return "maintenance"
+        return "result_genius"
     
-    # I-TIP - Technique micro-billes
-    if category == "itip" or any(k in text for k in ["i-tip", "itip", "i tip", "kératine", "keratin"]):
-        if any(k in text for k in ["microbille", "micro-bille", "micro bille", "pince", "clamp", "installation", "pose"]):
-            return "installation_itip_bead"
+    # TAPE-IN - Bandes adhésives
+    if category == "tape" or any(k in text for k in ["tape-in", "tape in", "tapein", "aurora", "adhésif", "adhesif", "bande adhésive"]):
+        if any(k in text for k in ["installation", "pose", "étape", "comment", "poser", "sandwich"]):
+            return "installation_tape"
+        if any(k in text for k in ["entretien", "repositionnement", "soins"]):
+            return "maintenance"
+        return "result_tape"
     
-    # Articles techniques généraux (installation, pose, étapes) - sans catégorie spécifique
-    if any(k in text for k in ["installation", "pose", "étape", "tutoriel", "comment installer", "poser"]):
-        return "installation_pro"
+    # I-TIP - Kératine/Microbilles
+    if category == "itip" or any(k in text for k in ["i-tip", "itip", "i tip", "kératine", "keratin", "mèche par mèche", "microbille"]):
+        if any(k in text for k in ["installation", "pose", "pince", "clamp"]):
+            return "installation_itip"
+        if any(k in text for k in ["entretien", "repositionnement", "soins"]):
+            return "maintenance"
+        return "result_itip"
+    
+    # HALO - Fil invisible (CHECK LAST car moins technique)
+    if category == "halo" or any(k in text for k in ["halo", "fil invisible", "wire", "everly"]):
+        if any(k in text for k in ["pose", "installation", "comment", "guide", "débutant"]):
+            return "installation_halo"
+        return "result_halo"
+    
+    # Comparatifs
+    if any(k in text for k in ["vs", "versus", "comparatif", "comparaison", "différence"]):
+        return "comparison"
+    
+    # Entretien général
+    if any(k in text for k in ["entretien", "soins", "durée", "repositionnement", "shampoing"]):
+        return "maintenance"
 
-    # Articles d'entretien / soins / durée
-    if any(k in text for k in ["entretien", "soins", "durée", "repositionnement", "brosse", "shampoing", "sans sulfate"]):
-        return "result_maintenance"
-
-    # Articles lifestyle / soirée / look
-    if any(k in text for k in ["soirée", "fille", "amies", "soiree", "girls night", "table", "dîner", "élégant", "glamour"]):
-        return "editorial_lifestyle"
-
-    # Par défaut : résultat naturel
-    return "result_natural"
+    # Par défaut : résultat beauté
+    return "beauty_result"
 
 
 def generate_image_brief(blog_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Génère un brief visuel structuré basé sur le contenu réel du blog.
-    V5: Prompts techniques ULTRA-RÉALISTES pour les installations.
+    V6: Génère un brief STRICT - JAMAIS d'hommes, toujours cheveux très longs
     """
     mode = _detect_visual_mode(blog_data)
     category = blog_data.get("category", "general")
     product = blog_data.get("focus_product", "extensions capillaires")
+    title = blog_data.get("title", "")
 
-    logger.info(f"📋 Brief Generator V5 - Mode détecté: {mode} pour catégorie: {category}")
+    logger.info(f"📋 Brief V6 - Mode: {mode} | Catégorie: {category}")
 
     # =====================================================
-    # PROMPTS TECHNIQUES RÉALISTES - BASÉS SUR LA VRAIE TECHNIQUE
+    # RÈGLE ABSOLUE - À AJOUTER À TOUS LES PROMPTS
+    # =====================================================
+    ABSOLUTE_RULES = """
+ABSOLUTE MANDATORY RULES (CRITICAL - NEVER BREAK):
+- ONLY WOMEN - absolutely NO men, NO masculine features, NO beards, NO male bodies
+- ONLY VERY LONG HAIR - minimum waist length, preferably hip length on EVERY woman
+- NO short hair, NO bob cuts, NO shoulder-length hair on ANY person
+- NO groups with mixed genders - women ONLY
+- If showing a group: 2-4 WOMEN ONLY, all with very long feminine hair
+"""
+
+    # =====================================================
+    # PROMPTS PAR MODE
     # =====================================================
     
-    if mode == "installation_genius_sewn":
-        # Genius Weft - Technique de couture sur rangée perlée
-        cover_scene = """
-REAL professional salon photo of Genius Weft hair extension installation.
-Close-up of stylist's hands sewing a thin weft onto a beaded row track.
-Visible elements: silicone-lined beads forming a horizontal row, needle and thread, 
-ultra-thin genius weft being sewn through the beads, clean sectioned hair.
-Professional lighting in a modern salon. Hair is sectioned with clips.
-Documentary style, educational, showing the REAL technique step-by-step.
-This is a TECHNICAL photo, not a glamour shot.
+    if mode == "installation_halo":
+        cover_scene = f"""
+Professional beauty photography of ONE elegant woman putting on a Halo wire hair extension.
+She is adjusting the invisible wire on top of her head, her natural hair covering the wire.
+The Halo extension adds instant length - her hair now reaches her waist.
+Soft natural lighting, clean background, focus on the simplicity of the technique.
+{ABSOLUTE_RULES}
 """
-        content_scene = """
-Close-up detail shot of beaded row technique for Genius Weft.
-Showing: small silicone-lined microbeads clamped on natural hair forming a track,
-the genius weft positioned ready to be sewn, stylist fingers holding the weft.
-Clean, precise, professional salon environment. Natural lighting.
-Focus on the TECHNIQUE and the invisible blending at the root area.
-Educational photo showing how the beads secure without glue or heat.
+        content_scene = f"""
+Close-up of hands adjusting the invisible wire of a Halo extension on a woman's head.
+Showing how the wire sits hidden under the natural hair at the crown.
+The extensions blend seamlessly, creating instant waist-length hair.
+{ABSOLUTE_RULES}
 """
 
-    elif mode == "installation_itip_bead":
-        # I-Tip - Technique micro-billes avec pince
-        cover_scene = """
-REAL professional close-up of I-Tip keratin micro bead hair extension installation.
-Stylist hands using specialized clamping pliers to flatten a silicone-lined microbead.
-Visible: loop tool, individual I-tip strand with keratin tip inserted in bead,
-natural hair threaded through bead, pliers compressing the bead flat.
+    elif mode == "result_halo":
+        cover_scene = f"""
+Stunning portrait of ONE beautiful woman with gorgeous waist-length hair thanks to Halo extensions.
+Natural, flowing, healthy-looking very long hair with beautiful movement.
+Elegant feminine setting, soft warm lighting, aspirational beauty photography.
+Focus on the natural result and the beautiful long hair.
+{ABSOLUTE_RULES}
+"""
+        content_scene = f"""
+Close-up beauty shot showing the texture and shine of very long Halo extension hair.
+Natural movement, healthy shine, seamless blending with natural hair.
+Professional beauty photography style.
+{ABSOLUTE_RULES}
+"""
+
+    elif mode == "installation_tape":
+        cover_scene = f"""
+Professional salon photo: close-up of stylist hands installing Tape-in extensions.
+Visible: two thin tape wefts being pressed together with natural hair sandwiched between.
+The adhesive strips visible, clean horizontal section of hair.
+Professional technique, educational style photography.
+Focus on the sandwich method technique.
+{ABSOLUTE_RULES}
+"""
+        content_scene = f"""
+Extreme close-up of Tape-in sandwich technique.
+One tape weft positioned under a thin hair section, second weft on top.
+Showing the adhesive tape about to bond, creating a secure attachment.
+Technical documentation style, professional lighting.
+{ABSOLUTE_RULES}
+"""
+
+    elif mode == "result_tape":
+        cover_scene = f"""
+Beautiful woman showing off her very long, voluminous hair achieved with Tape-in extensions.
+Hair reaches her waist, natural movement, healthy shine.
+Elegant setting, soft lighting, aspirational beauty result.
+Focus on the natural, seamless look of the extensions.
+{ABSOLUTE_RULES}
+"""
+        content_scene = f"""
+Close-up of the seamless blend where Tape-in extensions meet natural hair.
+Showing the invisible attachment, natural volume, healthy texture.
+Very long waist-length hair with beautiful shine.
+{ABSOLUTE_RULES}
+"""
+
+    elif mode == "installation_genius":
+        cover_scene = f"""
+Professional salon photo: stylist sewing a Genius Weft onto a beaded row.
+Close-up of hands with needle and thread, sewing the ultra-thin weft.
+Visible: silicone-lined beads forming a horizontal track, sectioned hair with clips.
+Educational technical photography showing the real sewing technique.
+{ABSOLUTE_RULES}
+"""
+        content_scene = f"""
+Extreme close-up of Genius Weft attachment.
+The thin weft being sewn through microbeads, thread visible.
+Professional precision, clean technique on sectioned hair.
+Technical documentation style.
+{ABSOLUTE_RULES}
+"""
+
+    elif mode == "result_genius":
+        cover_scene = f"""
+Stunning woman with incredibly long, thick, voluminous hair from Genius Weft extensions.
+Hair flows past her waist, natural movement, luxurious volume.
+Elegant feminine setting, premium beauty photography.
+{ABSOLUTE_RULES}
+"""
+        content_scene = f"""
+Close-up showing the flat, seamless lie of Genius Weft extensions at the root.
+Very long, thick hair with natural movement and healthy shine.
+Focus on the invisible attachment and natural blending.
+{ABSOLUTE_RULES}
+"""
+
+    elif mode == "installation_itip":
+        cover_scene = f"""
+Professional close-up: stylist using pliers to clamp a microbead for I-Tip extension.
+Visible: silicone microbead, individual I-tip strand with keratin tip, clamping pliers.
+Strand-by-strand technique, educational documentation style.
 Clean sectioned hair, professional salon lighting.
-Documentary/educational style showing the ACTUAL strand-by-strand technique.
-NOT a glamour photo - this is technical installation documentation.
+{ABSOLUTE_RULES}
 """
-        content_scene = """
-Extreme close-up of micro bead installation for I-Tip extensions.
-Detail showing: one small silicone microbead positioned 1/4 inch from scalp,
-I-tip keratin strand aligned inside the bead next to natural hair,
-pliers about to clamp. Clean, precise work on sectioned hair.
-This shows the REAL mechanical clamping technique without heat or glue.
-Professional educational photography style.
+        content_scene = f"""
+Extreme close-up of I-Tip microbead attachment.
+The small bead being clamped flat, keratin strand secured next to natural hair.
+Technical precision, showing the actual mechanical bond.
+{ABSOLUTE_RULES}
 """
 
-    elif mode == "installation_tape_sandwich":
-        # Tape-in - Technique sandwich adhésif
-        cover_scene = """
-REAL professional photo of Tape-in hair extension installation using sandwich method.
-Stylist hands pressing two tape wefts together with natural hair in between.
-Visible: thin adhesive tape strips on extensions, clean horizontal hair section,
-two wefts being sandwiched together, fingers pressing firmly.
-Professional salon with good lighting. Hair sectioned with rat-tail comb visible.
-Documentary style showing the ACTUAL tape sandwich technique step-by-step.
-Educational photo, not a glamour shot.
+    elif mode == "result_itip":
+        cover_scene = f"""
+Beautiful woman with incredibly natural-looking very long hair from I-Tip extensions.
+Individual strands create the most natural movement, hair reaches her hips.
+Soft lighting, elegant setting, premium beauty result.
+{ABSOLUTE_RULES}
 """
-        content_scene = """
-Close-up detail of tape-in sandwich method.
-Showing: one tape weft positioned under a thin section of natural hair,
-second tape weft aligned on top ready to press down,
-the adhesive tape visible on both wefts about to bond.
-Clean, precise technique in professional salon.
-Focus on how the natural hair is sandwiched between two adhesive strips.
-Technical/educational photography style.
+        content_scene = f"""
+Close-up showing the natural fall and movement of I-Tip extended hair.
+Individual strands blend perfectly, very long flowing hair.
+Focus on the realistic, natural appearance.
+{ABSOLUTE_RULES}
 """
 
-    elif mode == "installation_pro":
-        # Installation générique professionnelle
-        cover_scene = f"Professional salon close-up of {product} installation technique. Stylist hands working on sectioned hair, showing precise placement and technique. Clean, well-lit salon environment. Educational documentation style, NOT a glamour photo. Focus on the technical process."
-        content_scene = f"Detail shot of {product} installation showing the attachment method. Close-up of the technique being performed by professional hands. Clean sectioned hair, professional lighting. Technical documentation style."
+    elif mode == "comparison":
+        cover_scene = f"""
+Professional beauty image: ONE elegant woman with stunning very long waist-length hair.
+Clean, simple composition suitable for a comparison article.
+Premium beauty photography, soft lighting, focus on hair quality.
+{ABSOLUTE_RULES}
+"""
+        content_scene = f"""
+Side view of a woman showing her very long, voluminous hair.
+Clean background, professional lighting, focus on length and volume.
+Suitable for demonstrating extension results.
+{ABSOLUTE_RULES}
+"""
 
-    elif mode == "editorial_lifestyle":
-        # Lifestyle - Soirée de filles chic
-        cover_scene = "Group of 4 to 5 elegant women at a chic girls night dinner party. Laughing, toasting with champagne, warm candlelight ambiance. ALL women have extremely long, thick, voluminous hair extensions reaching waist or hips. Joyful, glamorous, aspirational lifestyle photography."
-        content_scene = "Intimate moment between elegant girlfriends admiring each other's beautiful very long flowing hair. Warm, feminine atmosphere. Close-up showing hair texture and natural movement."
+    elif mode == "maintenance":
+        cover_scene = f"""
+Elegant woman gently brushing her very long extension hair with a soft brush.
+Showing proper care technique, hair reaching past her waist.
+Soft natural lighting, clean feminine setting.
+{ABSOLUTE_RULES}
+"""
+        content_scene = f"""
+Close-up of healthy, shiny, well-maintained very long extension hair.
+Focus on texture, shine, and healthy appearance after proper care.
+{ABSOLUTE_RULES}
+"""
 
-    elif mode == "result_maintenance":
-        # Entretien / Résultats
-        cover_scene = f"Beautiful woman showing off healthy, shiny, very long hair after proper maintenance of {product}. Natural lighting, elegant setting. Focus on hair quality, shine and movement. Premium beauty photography."
-        content_scene = f"Close-up on the texture and shine of well-maintained {product}. Showing healthy, flowing very long hair. Soft natural lighting emphasizing the quality and luster."
-
-    else:  # result_natural
-        # Résultat naturel par défaut
-        cover_scene = f"Elegant woman with beautiful, natural-looking very long voluminous hair thanks to {product}. Realistic result, premium lighting, sophisticated setting. Focus on natural blending and hair quality."
-        content_scene = f"Close-up showing natural movement and quality of very long hair with {product}. Soft lighting, focus on texture and seamless blending with natural hair."
+    else:  # beauty_result
+        cover_scene = f"""
+Stunning portrait of ONE beautiful woman with gorgeous very long flowing hair.
+Hair reaches her waist or hips, natural movement, healthy shine.
+Premium beauty photography, soft warm lighting, elegant feminine setting.
+Aspirational, luxurious, natural result.
+{ABSOLUTE_RULES}
+"""
+        content_scene = f"""
+Close-up beauty shot of very long, healthy, shiny hair.
+Natural texture, beautiful movement, premium quality.
+Professional beauty photography style.
+{ABSOLUTE_RULES}
+"""
 
     brief = {
         "brand": "Luxura Distribution",
         "category": category,
         "product": product,
         "visual_mode": mode,
+        "title": title,
         "cover": {
             "scene": cover_scene.strip(),
-            "style": "professional photography, realistic, high detail" if "installation" in mode else "luxury beauty lifestyle photography, soft warm lighting",
-            "focus": "technical accuracy and real technique" if "installation" in mode else "hair quality, natural result",
-            "avoid": ["fake looking", "cartoon", "illustration", "text in image", "watermark", "men", "short hair", "unrealistic anatomy", "overly glamorous if technical"]
+            "absolute_rules": ABSOLUTE_RULES.strip()
         },
         "content": {
             "scene": content_scene.strip(),
-            "style": "close-up documentary style" if "installation" in mode else "editorial beauty shot",
-            "focus": "technical detail and precision" if "installation" in mode else "hair texture and movement",
-            "avoid": ["fake", "cartoon", "text", "watermark", "short hair"]
+            "absolute_rules": ABSOLUTE_RULES.strip()
         },
-        "logo_overlay": True,
-        "hair_length_rule": "very long hair (waist to hip length) on any woman shown in result photos",
         "is_technical": "installation" in mode
     }
 
-    logger.info(f"   Mode: {mode}")
+    logger.info(f"   Title: {title[:50]}...")
     logger.info(f"   Technical: {brief.get('is_technical', False)}")
-    logger.info(f"   Cover: {cover_scene[:80].strip()}...")
 
     return brief
