@@ -1340,23 +1340,24 @@ async def create_wix_draft_post(
     """
     try:
         async with httpx.AsyncClient(timeout=80) as client:
-            # URLs statiques pour les images dans le contenu
+            # URLs statiques pour les 3 images dans le contenu
+            cover_static_url = cover_image_data.get("static_url") if cover_image_data else None
             detail_static_url = detail_image_data.get("static_url") if detail_image_data else None
             result_static_url = result_image_data.get("static_url") if result_image_data else None
             
-            # Convertir le HTML en Ricos avec les 2 images DANS le contenu
+            # Convertir le HTML en Ricos avec les 3 images DANS le contenu
             rich_content = html_to_ricos(
                 content, 
                 None,  # hero_image_uri deprecated
-                detail_static_url,  # Image technique au début du contenu
-                result_static_url   # Image glamour au milieu du contenu
+                cover_static_url,   # Image 1: Cover au début (installation)
+                detail_static_url,  # Image 2: Detail à 1/3 (close-up technique)
+                result_static_url   # Image 3: Result à 2/3 (glamour)
             )
             
             logger.info(f"Creating Wix draft post: {title}")
-            if detail_static_url:
-                logger.info(f"  - Detail image (in content): {detail_static_url[:50]}...")
-            if result_static_url:
-                logger.info(f"  - Result image (in content): {result_static_url[:50]}...")
+            logger.info(f"  - Image 1 (cover/installation): {cover_static_url[:50] if cover_static_url else 'None'}...")
+            logger.info(f"  - Image 2 (detail/close-up): {detail_static_url[:50] if detail_static_url else 'None'}...")
+            logger.info(f"  - Image 3 (result/glamour): {result_static_url[:50] if result_static_url else 'None'}...")
             
             draft_post = {
                 "title": title,
@@ -1438,20 +1439,21 @@ async def publish_wix_draft(api_key: str, site_id: str, draft_id: str) -> bool:
 LUXURA_LOGO_URL = "https://static.wixstatic.com/media/f1b961_e8c5f3e0f0ff4c899c5cf99e2d0c8c4c~mv2.png"
 LUXURA_WEBSITE = "https://www.luxuradistribution.com"
 
-def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_url: str = None, content_image_url: str = None, add_logo: bool = True) -> Dict:
+def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str = None, image2_url: str = None, image3_url: str = None, add_logo: bool = True) -> Dict:
     """
-    Convertit le HTML en format Ricos (Wix rich content format) - VERSION AMÉLIORÉE.
+    Convertit le HTML en format Ricos (Wix rich content format) - VERSION V9.
     
-    AMÉLIORATIONS V3:
-    - Support des blockquotes pour les témoignages
-    - Meilleur placement des images
-    - Parsing séquentiel pour conserver l'ordre du contenu
+    V9: Support de 3 images distinctes dans le contenu:
+    - image1_url: Première image (début du contenu) - Installation technique
+    - image2_url: Deuxième image (1/3 du contenu) - Close-up technique
+    - image3_url: Troisième image (2/3 du contenu) - Résultat glamour
     
     Args:
         html_content: Le contenu HTML à convertir
         hero_image_uri: URI Wix de l'image principale (deprecated)
-        static_image_url: URL statique de l'image de couverture (premier élément)
-        content_image_url: URL de la 2ème image à insérer au milieu du contenu
+        image1_url: URL de la première image (début)
+        image2_url: URL de la deuxième image (1/3)
+        image3_url: URL de la troisième image (2/3)
         add_logo: Ajouter le logo Luxura à la fin du contenu
     """
     import re
@@ -1459,23 +1461,21 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
     
     nodes = []
     
-    # Insérer l'image de couverture comme premier élément
-    image_src = static_image_url or hero_image_uri
-    if image_src:
-        image_node = {
+    # =====================================================
+    # IMAGE 1: Au début du contenu (technique installation)
+    # =====================================================
+    if image1_url:
+        nodes.append({
             "type": "IMAGE",
             "imageData": {
                 "image": {
-                    "src": {
-                        "url": image_src
-                    },
+                    "src": {"url": image1_url},
                     "width": 1200,
                     "height": 630
                 },
-                "altText": "Extensions capillaires Luxura Distribution - Cheveux longs et naturels"
+                "altText": "Extensions capillaires Luxura Distribution - Technique d'installation professionnelle"
             }
-        }
-        nodes.append(image_node)
+        })
     
     # Nettoyer le HTML
     content = html_content.strip()
@@ -1642,36 +1642,65 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, static_image_ur
                 })
     
     # =====================================================
-    # INSÉRER LA 2ÈME IMAGE AU MILIEU DU CONTENU
+    # INSÉRER LES IMAGES 2 ET 3 À DES POSITIONS STRATÉGIQUES
     # =====================================================
-    if content_image_url and len(nodes) > 4:
-        # Trouver le point d'insertion idéal (après environ 40% du contenu)
-        mid_point = max(3, len(nodes) // 3)
+    
+    # Calculer les points d'insertion
+    text_nodes_count = len([n for n in nodes if n.get("type") != "IMAGE"])
+    
+    # IMAGE 2: À environ 1/3 du contenu (close-up technique)
+    if image2_url and text_nodes_count > 3:
+        insert_point_2 = max(3, len(nodes) // 3)
         
-        content_image_node = {
+        image2_node = {
             "type": "IMAGE",
             "imageData": {
                 "image": {
-                    "src": {
-                        "url": content_image_url
-                    },
+                    "src": {"url": image2_url},
                     "width": 1200,
                     "height": 630
                 },
-                "altText": "Extensions capillaires professionnelles - Résultat naturel"
+                "altText": "Extensions capillaires - Détail technique close-up"
             }
         }
         
-        # Insérer après un H2 si possible pour une meilleure mise en page
+        # Insérer après un H2 si possible
         inserted = False
-        for idx in range(mid_point, min(mid_point + 5, len(nodes))):
-            if nodes[idx].get("type") == "HEADING":
-                nodes.insert(idx + 1, content_image_node)
+        for idx in range(insert_point_2, min(insert_point_2 + 5, len(nodes))):
+            if idx < len(nodes) and nodes[idx].get("type") == "HEADING":
+                nodes.insert(idx + 1, image2_node)
                 inserted = True
                 break
         
         if not inserted:
-            nodes.insert(mid_point, content_image_node)
+            nodes.insert(insert_point_2, image2_node)
+    
+    # IMAGE 3: À environ 2/3 du contenu (résultat glamour)
+    if image3_url and text_nodes_count > 6:
+        insert_point_3 = max(6, (len(nodes) * 2) // 3)
+        
+        image3_node = {
+            "type": "IMAGE",
+            "imageData": {
+                "image": {
+                    "src": {"url": image3_url},
+                    "width": 1200,
+                    "height": 630
+                },
+                "altText": "Extensions capillaires - Résultat final luxueux"
+            }
+        }
+        
+        # Insérer après un H2 si possible
+        inserted = False
+        for idx in range(insert_point_3, min(insert_point_3 + 5, len(nodes))):
+            if idx < len(nodes) and nodes[idx].get("type") == "HEADING":
+                nodes.insert(idx + 1, image3_node)
+                inserted = True
+                break
+        
+        if not inserted and insert_point_3 < len(nodes):
+            nodes.insert(insert_point_3, image3_node)
     
     # Ajouter la signature Luxura à la fin (SANS image logo car il est maintenant dans l'image principale)
     if add_logo:
