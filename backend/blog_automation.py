@@ -1441,9 +1441,9 @@ LUXURA_WEBSITE = "https://www.luxuradistribution.com"
 
 def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str = None, image2_url: str = None, image3_url: str = None, add_logo: bool = True) -> Dict:
     """
-    Convertit le HTML en format Ricos (Wix rich content format) - VERSION V9.
+    Convertit le HTML en format Ricos (Wix rich content format) - VERSION V10.
     
-    V9: Support de 3 images distinctes dans le contenu:
+    V10: Support de 3 images distinctes avec IDs uniques pour éviter les problèmes de lightbox
     - image1_url: Première image (début du contenu) - Installation technique
     - image2_url: Deuxième image (1/3 du contenu) - Close-up technique
     - image3_url: Troisième image (2/3 du contenu) - Résultat glamour
@@ -1463,17 +1463,21 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
     
     # =====================================================
     # IMAGE 1: Au début du contenu (technique installation)
+    # Chaque image a un ID unique pour éviter les problèmes de galerie
     # =====================================================
     if image1_url:
         nodes.append({
             "type": "IMAGE",
+            "id": f"img1_{uuid.uuid4().hex[:8]}",
             "imageData": {
                 "image": {
                     "src": {"url": image1_url},
                     "width": 1200,
                     "height": 630
                 },
-                "altText": "Extensions capillaires Luxura Distribution - Technique d'installation professionnelle"
+                "altText": "Extensions capillaires Luxura - Installation professionnelle",
+                "disableExpand": False,
+                "disableDownload": True
             }
         })
     
@@ -1654,13 +1658,16 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
         
         image2_node = {
             "type": "IMAGE",
+            "id": f"img2_{uuid.uuid4().hex[:8]}",
             "imageData": {
                 "image": {
                     "src": {"url": image2_url},
                     "width": 1200,
                     "height": 630
                 },
-                "altText": "Extensions capillaires - Détail technique close-up"
+                "altText": "Extensions capillaires - Détail technique close-up",
+                "disableExpand": False,
+                "disableDownload": True
             }
         }
         
@@ -1681,13 +1688,16 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
         
         image3_node = {
             "type": "IMAGE",
+            "id": f"img3_{uuid.uuid4().hex[:8]}",
             "imageData": {
                 "image": {
                     "src": {"url": image3_url},
                     "width": 1200,
                     "height": 630
                 },
-                "altText": "Extensions capillaires - Résultat final luxueux"
+                "altText": "Extensions capillaires - Résultat final glamour",
+                "disableExpand": False,
+                "disableDownload": True
             }
         }
         
