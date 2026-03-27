@@ -1720,33 +1720,11 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
             nodes.insert(insert_point_3, image3_node)
     
     # =====================================================
-    # VIDÉO: Ajoutée avant la signature Luxura
+    # VIDÉO: DÉSACTIVÉE pour Wix Blog (format Ricos incompatible)
+    # La vidéo est générée et sauvegardée pour Instagram/Facebook uniquement
     # =====================================================
-    if video_url:
-        # Titre avant la vidéo
-        nodes.append({
-            "type": "HEADING",
-            "headingData": {"level": 2},
-            "nodes": [{
-                "type": "TEXT",
-                "textData": {"text": "Voir le résultat en vidéo"}
-            }]
-        })
-        
-        # Vidéo embed
-        nodes.append({
-            "type": "VIDEO",
-            "id": f"vid_{uuid.uuid4().hex[:8]}",
-            "videoData": {
-                "video": {
-                    "src": {
-                        "url": video_url
-                    }
-                },
-                "title": "Extensions Luxura - Transformation",
-                "thumbnail": image3_url if image3_url else image1_url
-            }
-        })
+    # NOTE: video_url n'est plus utilisée dans le blog Wix
+    # Elle reste disponible dans blog_post["video_url"] pour les réseaux sociaux
     
     # Ajouter la signature Luxura à la fin (SANS image logo car il est maintenant dans l'image principale)
     if add_logo:
