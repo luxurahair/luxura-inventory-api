@@ -136,6 +136,76 @@ GLAMOUR_SCENES = [
 # Index pour rotation et éviter répétition
 _used_scenes = {"cover": set(), "detail": set(), "glamour": set()}
 
+# =====================================================
+# VARIÉTÉ DE MODÈLES (couleurs de cheveux + ethnies)
+# Pour éviter que toutes les images soient identiques
+# =====================================================
+
+HAIR_COLORS = [
+    "platinum blonde",
+    "honey blonde", 
+    "golden blonde",
+    "light brown",
+    "chocolate brown",
+    "dark brown",
+    "chestnut brown",
+    "auburn red",
+    "copper red",
+    "jet black",
+    "soft black",
+    "caramel highlights",
+    "balayage brunette",
+    "ombre blonde to brown",
+]
+
+MODEL_DESCRIPTIONS = [
+    "Caucasian woman with fair skin",
+    "Mediterranean woman with olive skin",
+    "Latina woman with warm golden skin",
+    "Light-skinned Black woman",
+    "Mixed-race woman with caramel skin",
+    "Eastern European woman with porcelain skin",
+    "Middle Eastern woman with olive complexion",
+    "Southern European woman with sun-kissed skin",
+]
+
+_used_hair_colors = set()
+_used_models = set()
+
+def _get_diverse_model_description(seed: str = None) -> str:
+    """
+    Génère une description de modèle UNIQUE pour chaque image.
+    Évite de répéter la même couleur de cheveux ou le même type de modèle.
+    """
+    global _used_hair_colors, _used_models
+    
+    # Reset si toutes utilisées
+    available_colors = [c for c in HAIR_COLORS if c not in _used_hair_colors]
+    if not available_colors:
+        _used_hair_colors = set()
+        available_colors = HAIR_COLORS
+    
+    available_models = [m for m in MODEL_DESCRIPTIONS if m not in _used_models]
+    if not available_models:
+        _used_models = set()
+        available_models = MODEL_DESCRIPTIONS
+    
+    # Sélection basée sur le seed pour être déterministe mais varié
+    if seed:
+        color_idx = int(hashlib.md5(f"{seed}_color".encode()).hexdigest(), 16) % len(available_colors)
+        model_idx = int(hashlib.md5(f"{seed}_model".encode()).hexdigest(), 16) % len(available_models)
+    else:
+        color_idx = random.randint(0, len(available_colors) - 1)
+        model_idx = random.randint(0, len(available_models) - 1)
+    
+    hair_color = available_colors[color_idx]
+    model_type = available_models[model_idx]
+    
+    _used_hair_colors.add(hair_color)
+    _used_models.add(model_type)
+    
+    return f"{model_type}, {hair_color} VERY LONG hair (waist length or longer)"
+
 def _get_unique_scene(scene_list: list, scene_type: str, seed: str = None) -> str:
     """Sélectionne une scène unique non utilisée récemment."""
     global _used_scenes
@@ -200,6 +270,9 @@ def build_hyper_realistic_prompt(blog_data: Dict, image_type: str) -> str:
     tech = TECHNIQUE_TRUTH.get(category, TECHNIQUE_TRUTH["genius"])
     seed = ctx["seed"]
     
+    # Générer une description de modèle UNIQUE pour cette image
+    model_desc = _get_diverse_model_description(f"{seed}_{image_type}")
+    
     # Base commune pour le réalisme
     realism_rules = """
 PHOTOGRAPHY STYLE:
@@ -211,14 +284,14 @@ PHOTOGRAPHY STYLE:
 - NO watermarks, NO text overlays
 - Magazine editorial quality"""
 
-    women_rules = """
+    # NOUVEAU: Utilise la description de modèle VARIÉE
+    women_rules = f"""
 SUBJECT:
-- Beautiful feminine woman, age 25-40
-- VERY LONG hair (waist length minimum)
-- Natural hair color (blonde, brunette, auburn, or black)
+- {model_desc}
 - NO short hair, NO bob, NO shoulder length
-- NO men
-- Confident, natural expression"""
+- NO men in the image
+- Confident, natural expression
+- Authentic beauty, not overly retouched"""
 
     if image_type == "cover":
         # COVER: Scène d'installation variée
