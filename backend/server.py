@@ -75,25 +75,43 @@ app = FastAPI(
 blog_scheduler = None
 
 async def scheduled_blog_generation():
-    """Génère des blogs automatiquement selon le CRON."""
+    """
+    🛡️ SEO-SAFE MODE: Génère des BROUILLONS uniquement (pas de publication auto)
+    
+    Changements appliqués pour éviter les risques SEO:
+    - Publication automatique: DÉSACTIVÉE
+    - Fréquence: 1 brouillon/jour maximum
+    - Catégories: Limitées (entretien, comparatifs, cheveux fins)
+    - Validation humaine: OBLIGATOIRE avant publication
+    """
     try:
-        logger.info(f"🕐 CRON: Starting scheduled blog generation at {datetime.now(timezone.utc)}")
+        logger.info(f"🕐 CRON SEO-SAFE: Starting draft generation at {datetime.now(timezone.utc)}")
         
-        # Importer ici pour éviter les imports circulaires
         from blog_automation import generate_daily_blogs
         
-        # Générer 2 blogs
-        results = await generate_daily_blogs(count=2, send_email=True)
+        # ⚠️ SEO-SAFE: Catégories autorisées uniquement (évite cannibalisation)
+        SAFE_CATEGORIES = ['entretien', 'comparatif', 'cheveux_fins']
+        import random
+        safe_category = random.choice(SAFE_CATEGORIES)
+        
+        # ⚠️ SEO-SAFE: 1 seul brouillon, PAS de publication automatique
+        results = await generate_daily_blogs(
+            count=1,                    # 1 seul article
+            send_email=True,            # Notifier par email
+            publish_to_wix=False,       # ❌ PAS DE PUBLICATION AUTO
+            force_category=safe_category
+        )
         
         if results:
-            logger.info(f"✅ CRON: Generated {len(results)} blog(s)")
+            logger.info(f"✅ CRON SEO-SAFE: Generated {len(results)} DRAFT(s) - NOT PUBLISHED")
+            logger.info(f"   ⚠️ Validation humaine requise avant publication!")
             for blog in results:
                 logger.info(f"   - {blog.get('title', 'No title')[:50]}...")
         else:
-            logger.warning("⚠️ CRON: No blogs generated")
+            logger.warning("⚠️ CRON SEO-SAFE: No drafts generated")
             
     except Exception as e:
-        logger.error(f"❌ CRON: Error in scheduled blog generation: {e}")
+        logger.error(f"❌ CRON SEO-SAFE: Error in draft generation: {e}")
 
 # Startup event - ping Luxura API to wake it up
 @app.on_event("startup")
