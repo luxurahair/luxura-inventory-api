@@ -433,5 +433,12 @@ async def upload_image_bytes_to_wix(
 
 # Fallback (ne devrait pas être utilisé si DALL-E fonctionne)
 def get_fallback_unsplash_image() -> str:
-    """Retourne une image de fallback"""
-    return "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&h=630&fit=crop"
+    """Retourne une image de fallback - FEMME avec cheveux longs UNIQUEMENT"""
+    import random
+    fallback_images = [
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Femme blonde
+        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Femme brune
+        "https://images.unsplash.com/photo-1596178060671-7a80dc8059ea?w=1200&h=630&fit=crop",  # Femme cheveux longs
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Femme ondulés
+    ]
+    return random.choice(fallback_images)

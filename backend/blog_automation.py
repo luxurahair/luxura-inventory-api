@@ -371,15 +371,15 @@ LUXURA_CUSTOM_IMAGES = [
 
 # Images de secours - Style similaire sur Unsplash (plusieurs femmes, cheveux longs, ambiance chic)
 UNSPLASH_LIFESTYLE_IMAGES = [
-    # Groupe de femmes élégantes - brunch/soirée
-    "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&h=630&fit=crop",  # Groupe amies riant
-    "https://images.unsplash.com/photo-1543807535-eceef0bc6599?w=1200&h=630&fit=crop",  # Femmes cheveux longs
-    "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&h=630&fit=crop",  # Groupe femmes table
-    "https://images.unsplash.com/photo-1571508601891-ca5e7a713859?w=1200&h=630&fit=crop",  # Salon coiffure chic
-    "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=1200&h=630&fit=crop",  # Femme cheveux très longs
-    "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Femme cheveux longs ondulés
-    "https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=1200&h=630&fit=crop",  # Groupe femmes élégantes
+    # ✅ VÉRIFIÉES: Femmes avec cheveux longs UNIQUEMENT - Pas d'hommes!
+    "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",  # Femme blonde cheveux longs
+    "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Femme brune cheveux ondulés longs
+    "https://images.unsplash.com/photo-1605980776721-6c984b96a393?w=1200&h=630&fit=crop",  # Femme rousse cheveux longs
+    "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=1200&h=630&fit=crop",  # Femme cheveux noirs longs
     "https://images.unsplash.com/photo-1596178060671-7a80dc8059ea?w=1200&h=630&fit=crop",  # Femme cheveux longs bruns
+    "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Femme cheveux longs ondulés
+    "https://images.unsplash.com/photo-1592621385612-4d7129426394?w=1200&h=630&fit=crop",  # Femme élégante cheveux longs
+    "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?w=1200&h=630&fit=crop",  # Femme moderne cheveux longs
 ]
 
 # Images par catégorie - Utilise les images Luxura en priorité
@@ -389,41 +389,41 @@ UNSPLASH_IMAGES = {
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
-        # Backup Unsplash lifestyle
-        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=1200&h=630&fit=crop",
+        # Backup - Femmes UNIQUEMENT
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1596178060671-7a80dc8059ea?w=1200&h=630&fit=crop",
     ],
     "genius": [
         # Images Luxura personnalisées
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
-        # Backup
+        # Backup - Femmes UNIQUEMENT
         "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1596178060671-7a80dc8059ea?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",
     ],
     "tape": [
         # Images Luxura personnalisées
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
-        # Backup
-        "https://images.unsplash.com/photo-1543807535-eceef0bc6599?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=1200&h=630&fit=crop",
+        # Backup - Femmes UNIQUEMENT
+        "https://images.unsplash.com/photo-1605980776721-6c984b96a393?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1592621385612-4d7129426394?w=1200&h=630&fit=crop",
     ],
     "itip": [
         # Images Luxura personnalisées
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
-        # Backup
-        "https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
+        # Backup - Femmes UNIQUEMENT
+        "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?w=1200&h=630&fit=crop",
     ],
     "entretien": [
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
-        "https://images.unsplash.com/photo-1571508601891-ca5e7a713859?w=1200&h=630&fit=crop",
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=630&fit=crop",
         "https://images.unsplash.com/photo-1596178060671-7a80dc8059ea?w=1200&h=630&fit=crop",
     ],
     "tendances": [
