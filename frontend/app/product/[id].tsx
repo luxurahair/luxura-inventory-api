@@ -629,10 +629,11 @@ export default function ProductScreen() {
       </View>
 
       <ScrollView 
-        style={styles.scrollView} 
+        style={[styles.scrollView, { marginTop: insets.top + 60 }]} 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 180 }}
         bounces={true}
+        scrollEventThrottle={16}
       >
         {/* Product Images */}
         <View style={styles.imageSection}>
@@ -800,8 +801,6 @@ export default function ProductScreen() {
             </View>
           </View>
         </View>
-
-        <View style={{ height: 150 }} />
       </ScrollView>
 
       {/* Bottom Action Bar */}
