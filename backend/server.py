@@ -3483,6 +3483,124 @@ async def ping_services():
     
     return results
 
+# ==================== BLOG APPROVAL ENDPOINTS ====================
+
+@api_router.get("/blog/approve/{draft_id}")
+async def approve_blog(draft_id: str):
+    """
+    ✅ Approuve et publie un brouillon de blog sur Wix
+    Appelé depuis le lien dans l'email d'approbation
+    """
+    try:
+        logger.info(f"📝 Approbation du brouillon: {draft_id}")
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # Publier le brouillon sur Wix
+            response = await client.post(
+                f"{WIX_API_BASE}/blog/v3/draft-posts/{draft_id}/publish",
+                headers=get_wix_headers(),
+                json={}
+            )
+            
+            if response.status_code in [200, 201]:
+                logger.info(f"✅ Blog publié avec succès: {draft_id}")
+                # Retourner une page HTML de confirmation
+                return Response(
+                    content="""
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Blog Approuvé</title>
+                        <style>
+                            body { font-family: Arial; background: #0c0c0c; color: #fff; 
+                                   display: flex; justify-content: center; align-items: center; 
+                                   height: 100vh; margin: 0; }
+                            .card { background: #1a1a1a; padding: 40px; border-radius: 12px; 
+                                    text-align: center; max-width: 400px; }
+                            .icon { font-size: 60px; margin-bottom: 20px; }
+                            h1 { color: #c9a050; }
+                            a { color: #c9a050; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="card">
+                            <div class="icon">✅</div>
+                            <h1>Blog Publié!</h1>
+                            <p>Le brouillon a été approuvé et publié sur votre site Wix.</p>
+                            <p><a href="https://www.luxuradistribution.com/blog">Voir le blog</a></p>
+                        </div>
+                    </body>
+                    </html>
+                    """,
+                    media_type="text/html"
+                )
+            else:
+                logger.error(f"❌ Erreur publication: {response.status_code} - {response.text}")
+                raise HTTPException(status_code=response.status_code, detail=f"Erreur Wix: {response.text}")
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erreur approbation blog: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/blog/reject/{draft_id}")
+async def reject_blog(draft_id: str):
+    """
+    ❌ Rejette et supprime un brouillon de blog sur Wix
+    Appelé depuis le lien dans l'email d'approbation
+    """
+    try:
+        logger.info(f"🗑️ Rejet du brouillon: {draft_id}")
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # Supprimer le brouillon sur Wix
+            response = await client.delete(
+                f"{WIX_API_BASE}/blog/v3/draft-posts/{draft_id}",
+                headers=get_wix_headers()
+            )
+            
+            if response.status_code in [200, 204]:
+                logger.info(f"✅ Brouillon supprimé: {draft_id}")
+                return Response(
+                    content="""
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Brouillon Rejeté</title>
+                        <style>
+                            body { font-family: Arial; background: #0c0c0c; color: #fff; 
+                                   display: flex; justify-content: center; align-items: center; 
+                                   height: 100vh; margin: 0; }
+                            .card { background: #1a1a1a; padding: 40px; border-radius: 12px; 
+                                    text-align: center; max-width: 400px; }
+                            .icon { font-size: 60px; margin-bottom: 20px; }
+                            h1 { color: #f44; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="card">
+                            <div class="icon">🗑️</div>
+                            <h1>Brouillon Supprimé</h1>
+                            <p>Le brouillon a été rejeté et supprimé.</p>
+                        </div>
+                    </body>
+                    </html>
+                    """,
+                    media_type="text/html"
+                )
+            else:
+                logger.error(f"❌ Erreur suppression: {response.status_code}")
+                raise HTTPException(status_code=response.status_code, detail="Erreur lors de la suppression")
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erreur rejet blog: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.get("/")
 async def root():
     return {"message": "Luxura Distribution API", "status": "running", "inventory_api": LUXURA_API_URL}

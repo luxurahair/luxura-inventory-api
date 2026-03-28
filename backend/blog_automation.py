@@ -11,6 +11,7 @@ import asyncio
 import json
 import smtplib
 import base64
+import urllib.parse
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
@@ -48,6 +49,226 @@ except ImportError:
 
 LUXURA_EMAIL = os.getenv("LUXURA_EMAIL", "info@luxuradistribution.com")
 LUXURA_APP_PASSWORD = os.getenv("LUXURA_APP_PASSWORD")
+
+# URL Emergent pour demander des modifications
+EMERGENT_PROJECT_URL = "https://www.emergentagent.com"
+
+
+async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: str = None):
+    """
+    📧 Envoie un email de validation avec boutons d'action:
+    - ✅ Approuver (publie sur Wix)
+    - ❌ Rejeter (supprime le brouillon)
+    - ✏️ Modifier dans Wix
+    - 🤖 Demander modification via Emergent
+    
+    Args:
+        blog: Dict avec 'title', 'excerpt', 'image', 'category'
+        draft_id: ID du brouillon Wix
+        recipient_email: Email de destination
+    """
+    if not LUXURA_APP_PASSWORD:
+        logger.warning("LUXURA_APP_PASSWORD non configuré, email non envoyé")
+        return False
+    
+    recipient = recipient_email or LUXURA_EMAIL
+    
+    try:
+        title = blog.get('title', 'Sans titre')
+        excerpt = blog.get('excerpt', '')[:300] + '...' if len(blog.get('excerpt', '')) > 300 else blog.get('excerpt', '')
+        category = blog.get('category', 'general')
+        image_url = blog.get('image', blog.get('wix_image_url', ''))
+        
+        # Construire les URLs d'action
+        # Note: Ces URLs pointent vers l'API backend
+        api_base = os.getenv("API_BASE_URL", "https://luxura-inventory-api.onrender.com")
+        
+        approve_url = f"{api_base}/blog/approve/{draft_id}"
+        reject_url = f"{api_base}/blog/reject/{draft_id}"
+        wix_edit_url = f"https://manage.wix.com/dashboard/6e62c946-d068-45c1-8f5f-7af998f0d7b3/blog/posts/{draft_id}"
+        
+        # URL Emergent avec contexte pré-rempli
+        emergent_message = f"Modifier le brouillon blog: {title}"
+        emergent_url = f"{EMERGENT_PROJECT_URL}?message={urllib.parse.quote(emergent_message)}"
+        
+        # Créer le message
+        msg = MIMEMultipart('related')
+        msg['Subject'] = f"📝 Nouveau brouillon à valider: {title[:50]}..."
+        msg['From'] = LUXURA_EMAIL
+        msg['To'] = recipient
+        
+        # Corps HTML avec boutons d'action
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {{ 
+                    font-family: 'Segoe UI', Arial, sans-serif; 
+                    padding: 0; 
+                    margin: 0;
+                    background-color: #f5f5f5;
+                }}
+                .container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background: #0c0c0c;
+                    border-radius: 12px;
+                    overflow: hidden;
+                }}
+                .header {{
+                    background: linear-gradient(135deg, #c9a050 0%, #a07830 100%);
+                    padding: 20px;
+                    text-align: center;
+                }}
+                .header h1 {{
+                    color: #000;
+                    margin: 0;
+                    font-size: 24px;
+                }}
+                .content {{
+                    padding: 25px;
+                    color: #fff;
+                }}
+                .blog-image {{
+                    width: 100%;
+                    max-height: 300px;
+                    object-fit: cover;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                }}
+                .blog-title {{
+                    color: #c9a050;
+                    font-size: 22px;
+                    margin-bottom: 10px;
+                }}
+                .blog-category {{
+                    display: inline-block;
+                    background: rgba(201, 160, 80, 0.2);
+                    color: #c9a050;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    margin-bottom: 15px;
+                }}
+                .blog-excerpt {{
+                    color: #aaa;
+                    line-height: 1.6;
+                    margin-bottom: 25px;
+                    border-left: 3px solid #c9a050;
+                    padding-left: 15px;
+                }}
+                .actions {{
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    margin-top: 25px;
+                }}
+                .btn {{
+                    display: block;
+                    text-align: center;
+                    padding: 14px 20px;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    font-weight: 600;
+                    font-size: 14px;
+                }}
+                .btn-approve {{
+                    background: #c9a050;
+                    color: #000 !important;
+                }}
+                .btn-reject {{
+                    background: #333;
+                    color: #f44 !important;
+                    border: 1px solid #f44;
+                }}
+                .btn-edit {{
+                    background: #1a1a1a;
+                    color: #fff !important;
+                    border: 1px solid #444;
+                }}
+                .btn-emergent {{
+                    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                    color: #fff !important;
+                }}
+                .footer {{
+                    background: #1a1a1a;
+                    padding: 15px;
+                    text-align: center;
+                    color: #666;
+                    font-size: 11px;
+                }}
+                .divider {{
+                    height: 1px;
+                    background: #333;
+                    margin: 20px 0;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📝 Nouveau Brouillon Blog</h1>
+                </div>
+                
+                <div class="content">
+                    {f'<img src="{image_url}" class="blog-image" alt="{title}">' if image_url else ''}
+                    
+                    <div class="blog-category">{category.upper()}</div>
+                    <h2 class="blog-title">{title}</h2>
+                    
+                    <div class="blog-excerpt">
+                        {excerpt}
+                    </div>
+                    
+                    <div class="divider"></div>
+                    
+                    <p style="color: #888; font-size: 13px; text-align: center;">
+                        Que souhaitez-vous faire avec ce brouillon ?
+                    </p>
+                    
+                    <div class="actions">
+                        <a href="{approve_url}" class="btn btn-approve">
+                            ✅ APPROUVER ET PUBLIER
+                        </a>
+                        
+                        <a href="{wix_edit_url}" class="btn btn-edit">
+                            ✏️ Modifier dans Wix Dashboard
+                        </a>
+                        
+                        <a href="{emergent_url}" class="btn btn-emergent">
+                            🤖 Demander modification via Emergent
+                        </a>
+                        
+                        <a href="{reject_url}" class="btn btn-reject">
+                            ❌ Rejeter ce brouillon
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    Luxura Distribution - Système de blog automatisé<br>
+                    Ce brouillon ne sera PAS publié sans votre approbation.
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(html_content, 'html'))
+        
+        # Envoyer via Gmail SMTP
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(LUXURA_EMAIL, LUXURA_APP_PASSWORD)
+            server.send_message(msg)
+        
+        logger.info(f"✅ Email d'approbation envoyé à {recipient} pour: {title[:50]}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Erreur envoi email d'approbation: {e}")
+        return False
 
 
 async def send_blog_images_email(blogs: List[Dict], recipient_email: str = None):
@@ -2547,8 +2768,15 @@ async def generate_daily_blogs(
         results.append(blog_post)
         existing_titles.append(blog_post["title"].lower())
     
-    # Envoyer email avec les images après génération
+    # Envoyer email d'approbation pour chaque brouillon (mode SEO-safe)
     if results and send_email:
-        await send_blog_images_email(results)
+        for blog in results:
+            draft_id = blog.get("wix_post_id") or blog.get("id")
+            if draft_id and not blog.get("published_to_wix"):
+                # Mode brouillon: envoyer email d'approbation
+                await send_blog_approval_email(blog, draft_id)
+            else:
+                # Mode publié: envoyer ancien email avec images
+                await send_blog_images_email([blog])
     
     return results
