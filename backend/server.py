@@ -128,35 +128,31 @@ async def startup_event():
     asyncio.create_task(keep_luxura_awake())
     logger.info("✅ Background ping task started")
     
-    # Configurer le CRON pour la génération de blogs (2x par jour)
+    # 🛡️ SEO-SAFE CRON: 1 brouillon/jour uniquement (validation humaine requise)
     try:
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
         from apscheduler.triggers.cron import CronTrigger
         
         blog_scheduler = AsyncIOScheduler(timezone="America/Montreal")
         
-        # Génération à 08:00 EST
+        # 🛡️ SEO-SAFE: UNE SEULE génération par jour à 08:00 EST
         blog_scheduler.add_job(
             scheduled_blog_generation,
             CronTrigger(hour=8, minute=0),
-            id="morning_blog_generation",
-            name="Morning Blog Generation (08:00 EST)"
+            id="daily_blog_draft",
+            name="Daily Blog Draft (08:00 EST) - SEO Safe Mode"
         )
         
-        # Génération à 16:00 EST
-        blog_scheduler.add_job(
-            scheduled_blog_generation,
-            CronTrigger(hour=16, minute=0),
-            id="afternoon_blog_generation",
-            name="Afternoon Blog Generation (16:00 EST)"
-        )
+        # ❌ SUPPRIMÉ: 2ème génération à 16:00 (risque SEO)
+        # La génération multiple causait des pénalités Google (Scaled Content Abuse)
         
         blog_scheduler.start()
         logger.info("=" * 50)
-        logger.info("🕐 BLOG CRON SCHEDULER ACTIVE")
-        logger.info("   - 08:00 EST: Generate 2 blogs")
-        logger.info("   - 16:00 EST: Generate 2 blogs")
-        logger.info("   - Total: 4 blogs/day")
+        logger.info("🛡️ BLOG CRON - SEO SAFE MODE")
+        logger.info("   - 08:00 EST: 1 BROUILLON uniquement")
+        logger.info("   - Publication: DÉSACTIVÉE (validation humaine)")
+        logger.info("   - Catégories: entretien, comparatif, cheveux_fins")
+        logger.info("   - Total: 1 brouillon/jour MAX")
         logger.info("=" * 50)
         
     except ImportError:
