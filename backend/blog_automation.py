@@ -1440,6 +1440,115 @@ async def publish_wix_draft(api_key: str, site_id: str, draft_id: str) -> bool:
         logger.error(f"Error publishing Wix draft: {e}")
         return False
 
+
+def generate_seo_meta_description(title: str, category: str = None) -> str:
+    """
+    Génère une meta description SEO optimisée (150-160 caractères).
+    
+    Args:
+        title: Titre du blog
+        category: Catégorie du blog (halo, genius, tape, clips, itip, entretien)
+    
+    Returns:
+        Meta description optimisée pour le SEO
+    """
+    clean_title = title.lower().replace('💎', '').strip()
+    
+    # Déterminer la catégorie si non fournie
+    if not category:
+        if 'halo' in clean_title or 'everly' in clean_title:
+            category = 'halo'
+        elif 'genius' in clean_title or 'weft' in clean_title:
+            category = 'genius'
+        elif 'tape' in clean_title or 'bande' in clean_title or 'adhésive' in clean_title:
+            category = 'tape'
+        elif 'clip' in clean_title or 'sophia' in clean_title:
+            category = 'clips'
+        elif 'i-tip' in clean_title or 'itip' in clean_title or 'froid' in clean_title or 'eleanor' in clean_title:
+            category = 'itip'
+        elif 'entretien' in clean_title or 'soin' in clean_title:
+            category = 'entretien'
+        elif 'cheveux fins' in clean_title or 'fins' in clean_title:
+            category = 'fins'
+        elif 'académie' in clean_title or 'formation' in clean_title:
+            category = 'academie'
+    
+    # Meta descriptions par catégorie (optimisées SEO)
+    meta_descriptions = {
+        'halo': 'Extensions Halo Everly - Pose en 30 secondes, sans clips ni colle. Volume naturel pour cheveux fins. Livraison rapide Québec. Luxura Distribution.',
+        'genius': 'Genius Weft - Extensions trame ultra-plates et invisibles. Confort optimal, résultat naturel. Professionnels certifiés Québec. Luxura Distribution.',
+        'tape': 'Extensions Tape-In Aurora - Adhésives professionnelles, discrètes et légères. Idéal cheveux fins. Livraison Québec. Luxura Distribution.',
+        'clips': 'Extensions Clip-In Sophia - Volume instantané amovible. Cheveux 100% Remy, pose en 2 minutes. Sans engagement. Luxura Distribution Québec.',
+        'itip': 'Extensions I-Tip Eleanor - Pose à froid sans chaleur. Préserve vos cheveux naturels. Qualité professionnelle Québec. Luxura Distribution.',
+        'entretien': 'Guide entretien extensions cheveux - Conseils pros pour prolonger la durée de vie de vos extensions. Luxura Distribution Québec.',
+        'fins': 'Extensions pour cheveux fins - Solutions professionnelles pour volume naturel sans abîmer vos cheveux. Luxura Distribution Québec.',
+        'academie': 'Académie Luxura - Formation professionnelle extensions cheveux. Devenez certifié Luxura Distribution au Québec.',
+    }
+    
+    # Retourner la meta description correspondante ou une générique
+    return meta_descriptions.get(
+        category, 
+        'Extensions capillaires professionnelles - Halo, Genius, Tape-In, Clip-In. Qualité Remy, livraison rapide Québec. Luxura Distribution.'
+    )
+
+
+async def add_seo_metadata_to_draft(api_key: str, site_id: str, draft_id: str, title: str, category: str = None) -> bool:
+    """
+    Ajoute les métadonnées SEO à un brouillon de blog Wix.
+    
+    Args:
+        api_key: Clé API Wix
+        site_id: ID du site Wix
+        draft_id: ID du brouillon
+        title: Titre du blog (pour générer la meta description)
+        category: Catégorie du blog
+    
+    Returns:
+        True si succès, False sinon
+    """
+    try:
+        meta_description = generate_seo_meta_description(title, category)
+        
+        # Hashtags SEO par défaut
+        seo_hashtags = [
+            'luxuradistribution',
+            'extensionscheveux', 
+            'rallongesquébec',
+            'extensionsprofessionnelles',
+            'cheveuxremy',
+            'beautéquébec'
+        ]
+        
+        async with httpx.AsyncClient(timeout=60) as client:
+            # Mettre à jour le draft avec les métadonnées SEO
+            response = await client.patch(
+                f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
+                headers={
+                    "Authorization": api_key,
+                    "wix-site-id": site_id,
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "draftPost": {
+                        "excerpt": meta_description,  # L'excerpt sert de description
+                        "hashtags": seo_hashtags
+                    }
+                }
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"✅ SEO metadata added to draft {draft_id}")
+                logger.info(f"   Meta: {meta_description[:60]}...")
+                return True
+            else:
+                logger.warning(f"⚠️ Could not add SEO metadata: {response.status_code}")
+                return False
+                
+    except Exception as e:
+        logger.error(f"Error adding SEO metadata: {e}")
+        return False
+
+
 # URL du logo Luxura Distribution
 LUXURA_LOGO_URL = "https://static.wixstatic.com/media/f1b961_e8c5f3e0f0ff4c899c5cf99e2d0c8c4c~mv2.png"
 LUXURA_WEBSITE = "https://www.luxuradistribution.com"
@@ -2383,9 +2492,18 @@ async def generate_daily_blogs(
                 if wix_result:
                     draft_id = wix_result.get("draftPost", {}).get("id")
                     if draft_id:
+                        # NOUVEAU: Ajouter les métadonnées SEO avant publication
+                        await add_seo_metadata_to_draft(
+                            wix_api_key, 
+                            wix_site_id, 
+                            draft_id, 
+                            blog_post["title"],
+                            force_category  # Passer la catégorie pour une meilleure meta description
+                        )
+                        
                         published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
                         if published:
-                            logger.info(f"✅ Blog published successfully with 3 unique images!")
+                            logger.info(f"✅ Blog published successfully with 3 unique images + SEO metadata!")
                             await db.blog_posts.update_one(
                                 {"id": post_id},
                                 {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
