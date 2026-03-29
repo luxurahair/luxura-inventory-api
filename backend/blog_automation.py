@@ -1434,32 +1434,49 @@ async def attach_cover_image_to_wix_draft(
     cover_image_data: Optional[Dict]
 ) -> bool:
     """
-    Applique la cover image du feed/blog card via PATCH séparé.
-    IMPORTANT: On envoie le file_id SIMPLE, pas la wix_uri complète.
-    Les anciens articles qui fonctionnent utilisent juste le file_id.
+    V2 STABLE
+    Applique la cover image du feed/blog card Wix via PATCH séparé.
+
+    Format validé en production:
+    - utiliser le file_id SIMPLE (ex: f1b961_xxx~mv2.png)
+    - ajouter custom: True
+    - ne PAS utiliser wix:image://... ici
+    - ne PAS utiliser heroImage / coverMedia ici
+
+    cover_image_data attendu:
+    {
+        "file_id": "f1b961_xxx~mv2.png",
+        "static_url": "https://static.wixstatic.com/media/f1b961_xxx~mv2.png",
+        "width": 1536,
+        "height": 1024,
+        ...
+    }
     """
     if not cover_image_data:
-        logger.warning("No cover_image_data provided for draft cover patch")
+        logger.warning("No cover_image_data provided for cover PATCH")
         return False
 
-    # Utiliser file_id simple, PAS wix_uri
     file_id = cover_image_data.get("file_id")
     static_url = cover_image_data.get("static_url", "")
+    width = int(cover_image_data.get("width", 1200))
+    height = int(cover_image_data.get("height", 630))
 
     if not file_id:
         logger.error("cover_image_data missing file_id")
+        logger.error(f"cover_image_data={cover_image_data}")
         return False
 
     payload = {
         "draftPost": {
             "media": {
+                "custom": True,
                 "wixMedia": {
                     "image": {
-                        "id": file_id  # Simple file_id, pas wix_uri
+                        "id": file_id,
+                        "width": width,
+                        "height": height
                     }
-                },
-                "displayed": True,
-                "custom": True  # Les anciens articles ont custom: true
+                }
             }
         }
     }
@@ -1467,9 +1484,13 @@ async def attach_cover_image_to_wix_draft(
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             logger.info(f"PATCH cover image on draft {draft_id}")
-            logger.info(f"  file_id={file_id}")
+            logger.info(f"cover_file_id_used={file_id}")
+            logger.info(f"cover_patch_payload_version=v2")
+            logger.info(f"cover_patch_custom=True")
+            logger.info(f"cover_width={width}")
+            logger.info(f"cover_height={height}")
             if static_url:
-                logger.info(f"  static_url={static_url[:100]}")
+                logger.info(f"cover_static_url={static_url[:120]}")
 
             response = await client.patch(
                 f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
@@ -1487,8 +1508,8 @@ async def attach_cover_image_to_wix_draft(
 
             logger.info("✅ Cover PATCH accepted by Wix")
 
-            # Vérification immédiate: on relit le draft
-            verify = await client.get(
+            # Relecture immédiate du draft pour confirmer le vrai état sauvegardé
+            verify_response = await client.get(
                 f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
                 headers={
                     "Authorization": api_key,
@@ -1497,24 +1518,41 @@ async def attach_cover_image_to_wix_draft(
                 }
             )
 
-            if verify.status_code != 200:
-                logger.warning(f"Could not verify draft after PATCH: {verify.status_code}")
+            if verify_response.status_code != 200:
+                logger.warning(
+                    f"Cover PATCH accepted but verify GET failed: {verify_response.status_code}"
+                )
                 return True
 
-            draft_json = verify.json()
-            media = draft_json.get("draftPost", {}).get("media", {})
+            draft_json = verify_response.json().get("draftPost", {})
+            media = draft_json.get("media", {})
             image_obj = media.get("wixMedia", {}).get("image", {})
-            custom_flag = media.get("custom", False)
 
             saved_id = image_obj.get("id")
             saved_url = image_obj.get("url")
+            saved_width = image_obj.get("width")
+            saved_height = image_obj.get("height")
+            saved_custom = media.get("custom")
 
-            logger.info(f"  saved_id={saved_id}")
-            logger.info(f"  custom={custom_flag}")
+            if saved_id == file_id and saved_custom is True:
+                logger.info("✅ Draft re-read confirms cover media saved")
+                logger.info(f"saved_id={saved_id}")
+                logger.info(f"saved_custom={saved_custom}")
+                if saved_url:
+                    logger.info(f"saved_url={saved_url[:120]}")
+                if saved_width:
+                    logger.info(f"saved_width={saved_width}")
+                if saved_height:
+                    logger.info(f"saved_height={saved_height}")
+                return True
+
+            logger.warning("PATCH returned success but saved media does not match expected cover")
+            logger.warning(f"expected_file_id={file_id}")
+            logger.warning(f"saved_id={saved_id}")
+            logger.warning(f"saved_custom={saved_custom}")
             if saved_url:
-                logger.info(f"  saved_url={saved_url[:100]}")
-            
-            return True
+                logger.warning(f"saved_url={saved_url[:120]}")
+            return False
 
     except Exception as e:
         logger.error(f"Error patching cover image on draft: {e}")
