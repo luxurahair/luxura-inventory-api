@@ -1988,148 +1988,199 @@ async def publish_to_facebook_page(
 # GÉNÉRATION DE BLOG AVEC OPENAI
 # =====================================================
 
-
 async def generate_blog_with_ai(
     topic_data: Dict,
     openai_key: str,
     existing_titles: List[str] = None
 ) -> Optional[Dict]:
-    """
-    Génère un article SEO aligné avec le vrai modèle Luxura:
-    - importateur / distributeur
-    - vente en ligne B2C
-    - salons affiliés / partenaires B2B
-    - PAS de formation / certification / salon de pose
-    """
+    """Génère un article de blog SEO optimisé avec OpenAI GPT-4 - Version québécoise locale"""
     try:
         import openai
-
+        
         client = openai.AsyncOpenAI(api_key=openai_key)
-
+        
         topic = topic_data["topic"]
         category = topic_data["category"]
         keywords = topic_data["keywords"]
         focus_product = topic_data.get("focus_product")
         content_type = topic_data.get("content_type", "general")
         city = topic_data.get("city")
-
+        installation_steps = topic_data.get("installation_steps", [])
+        
+        # Obtenir les infos de la ville si c'est un article local
         city_info = CITIES_SEO.get(city, {}) if city else {}
         city_name = city_info.get("name", "")
         city_angle = city_info.get("angle", "")
+        city_suffix = city_info.get("suffix", "")
+        
+        # System message optimisé SEO Québec avec français québécois authentique
+        system_message = f"""Tu es un expert SEO francophone spécialisé dans les extensions capillaires au Québec.
+Tu écris pour Luxura Distribution, le leader des extensions cheveux haut de gamme au Canada.
 
-        system_message = f"""
-Tu es un expert SEO francophone spécialisé dans les extensions capillaires au Québec.
-
-TU ÉCRIS POUR LUXURA DISTRIBUTION:
-- Luxura Distribution est un IMPORTATEUR et DISTRIBUTEUR d'extensions capillaires haut de gamme
-- Luxura vend aux SALONS PROFESSIONNELS (B2B) et aussi directement aux CONSOMMATRICES EN LIGNE (B2C)
-- Luxura peut s'affilier à des salons partenaires et déposer de l'inventaire chez eux
+IDENTITÉ LUXURA DISTRIBUTION (TRÈS IMPORTANT):
+- Luxura Distribution est un IMPORTATEUR et DISTRIBUTEUR de produits d'extensions capillaires haut de gamme
 - Luxura n'est PAS un salon de coiffure
-- Luxura n'offre PAS de formations, cours, certifications ou ateliers
-- Ne jamais écrire comme si Luxura faisait la pose en salon
-
-POSITIONNEMENT ÉDITORIAL:
-- Mettre en valeur les produits, la qualité, l'achat en ligne, les salons affiliés, le dépôt d'inventaire, la comparaison des méthodes et l'entretien
-- Ton premium, crédible, chaleureux, québécois naturel
-- Pas de promesses inventées
-- Pas de jargon inutile
-- Pas de contenu qui sonne "école de coiffure"
+- Luxura VEND aux salons professionnels (B2B) ET directement aux consommatrices en ligne (B2C)
+- Luxura n'offre PAS de formations ni de services de pose
+- NE JAMAIS utiliser le hashtag #SalonProfessionnel - utiliser #LuxuraDistribution
 
 STYLE FRANÇAIS QUÉBÉCOIS:
-- Chaleureux, clair, professionnel, naturel
-- Éviter le ton trop rigide
-- Rester crédible pour la vente haut de gamme
+- Utiliser un français québécois naturel et accessible
+- Expressions typiques: "on vous explique", "ben correct", "super pratique", "pas mal populaire"
+- Éviter le vouvoiement trop formel, préférer un ton chaleureux
+- Termes locaux: "magasinage", "rabais", "pogner", "c'est l'fun"
+- Adapter au contexte local québécois
 
-PRODUITS LUXURA:
-- Genius Weft Vivian: trame ultra-fine, discrète, durable
-- Halo Everly: solution simple, confortable, idéale pour plusieurs styles de vie
-- Tape Aurora: méthode populaire, discrète, réutilisable
-- I-Tip Eleanor: mèche par mèche, mouvement naturel, rendu haut de gamme
+PRODUITS LUXURA (DURÉES DE VIE IMPORTANTES):
+- Genius Weft Vivian: Trame ultra-fine 0.78mm, couture sur base perlée, découpable sans effilochage. Durée: 12+ mois.
+- Halo Everly: Fil invisible, volume instantané, parfait pour cheveux fins/sensibles. Durée: 12+ mois.
+- Tape Aurora: Bande adhésive médicale, pose sandwich, réutilisable 3-4 fois. Durée: 12+ mois.
+- I-Tip Eleanor: Kératine italienne, pose mèche par mèche avec anneaux/microbeads. Durée: 12+ mois.
 
-IMPORTANT:
-- Toutes les durées de vie doivent être cohérentes et prudentes
-- Éviter les affirmations non vérifiées
-- Si le sujet concerne les salons, parler de partenariat, inventaire, offre de service et clientèle
-- Si le sujet concerne les consommatrices, parler de choix, résultat, entretien, confort, achat en ligne
+ÉTAPES D'INSTALLATION PAR CATÉGORIE:
 
-LANGUE: français québécois
-MARCHÉ: Québec / Canada
-"""
+GENIUS WEFT:
+1. Consultation + matching couleur/longueur
+2. Création d'une rangée de microbilles
+3. Mesure et coupe de la trame
+4. Couture de la genius weft sur la rangée perlée
+5. Fondu/blending et coupe de finition
 
+TAPE-IN / BANDE ADHÉSIVE:
+1. Sectionner proprement les cheveux
+2. Prendre une fine mèche
+3. Poser un adhésif dessous
+4. Poser un second adhésif dessus en sandwich
+5. Presser et aligner
+6. Répéter en gardant tension et espacement réguliers
+
+I-TIPS:
+1. Consultation + partition de la tête
+2. Prélever une petite mèche de cheveux naturels
+3. Enfiler un anneau/microbead
+4. Insérer la mèche I-Tip
+5. Rapprocher de la racine
+6. Serrer l'anneau
+7. Répéter rangée par rangée
+
+HALO:
+1. Brosser les cheveux
+2. Poser le halo sur la tête via le fil invisible
+3. Sortir les cheveux naturels par-dessus avec un peigne
+4. Fondre/blender
+5. Ajuster le fil si besoin
+
+VILLES CIBLÉES QUÉBEC:
+- Montréal: haut de gamme, tendance, transformation
+- Lévis: proximité, service professionnel local
+- Beauce: zone régionale forte, confiance, accessibilité
+- Sainte-Marie: proximité, naturel, entretien facile
+- Saint-Georges: transformation, longueur, volume
+- Saint-Romuald: local, pratique, service haut de gamme rive-sud
+
+⚠️ DURÉE DE VIE CRITIQUE:
+- Toutes les extensions Luxura durent PLUS DE 12 MOIS avec des soins appropriés
+- NE JAMAIS écrire "6 mois" - C'est TOUJOURS "12 mois et plus"
+- Les couleurs BLONDES nécessitent plus de soins
+- Recommander des produits sans sulfate et sans alcool
+
+LOCALISATION: Québec, Montréal, Lévis, Beauce, Saint-Georges, Sainte-Marie, Saint-Romuald, Canada
+LANGUE: Français québécois UNIQUEMENT"""
+
+        product_mention = f"\nMentionne particulièrement le produit: {focus_product}" if focus_product else ""
+        
+        # Instructions spécifiques selon le type de contenu
         content_instructions = ""
-        if content_type == "comparison":
+        if content_type == "pillar":
             content_instructions = """
-ANGLE:
-- Article comparatif utile
-- Expliquer les différences concrètes
-- Dire pour quel type de cliente ou de salon chaque méthode est pertinente
+CONTENU PILIER (PAGE PRINCIPALE):
+- Article de référence complet sur le sujet
+- Expliquer c'est quoi, pour qui, avantages
+- Inclure les étapes d'installation détaillées
+- Couvrir entretien et durabilité
+- Inclure une FAQ avec 3-4 questions fréquentes
+"""
+        elif content_type == "guide":
+            content_instructions = """
+GUIDE PRATIQUE:
+- Focus sur le "comment faire"
+- Étapes claires et numérotées
+- Conseils pratiques et erreurs à éviter
+- Ton accessible et pédagogique
+"""
+        elif content_type == "comparison":
+            content_instructions = """
+ARTICLE COMPARATIF:
+- Comparer objectivement les méthodes
+- Tableau ou liste des différences
+- Pour qui chaque méthode est idéale
+- Conclusion avec recommandation
 """
         elif content_type == "maintenance":
             content_instructions = """
-ANGLE:
-- Article entretien / durabilité
-- Conseils pratiques, concrets, réalistes
-- Ton utile et crédible
+ARTICLE ENTRETIEN:
+- Focus sur les soins et la durabilité
+- Produits recommandés (sans sulfate, sans alcool)
+- Fréquence d'entretien
+- Signes qu'il faut repositionner
 """
         elif content_type == "local":
             content_instructions = f"""
-ANGLE LOCAL:
-- Adapter au contexte de {city_name}
-- Mentionner naturellement le Québec / la ville si pertinent
-- Ne pas surcharger le texte avec des mentions locales artificielles
-- Angle local: {city_angle}
+ARTICLE LOCAL - {city_name}:
+- Angle: {city_angle}
+- Adapter le contenu au contexte local
+- Mentionner la ville et les environs
+- Inclure "secteur desservi: {city_name} et environs"
+- Ton de proximité et confiance locale
 """
-        elif content_type == "b2b":
-            content_instructions = """
-ANGLE B2B:
-- Parler aux salons
-- Mettre en avant les bénéfices commerciaux, le partenariat, l'inventaire, la qualité, la constance des produits
-- Ne pas parler comme une école ou un formateur
-"""
-        else:
-            content_instructions = """
-ANGLE:
-- Article guide / bénéfices / choix produit
-- Priorité à l'utilité réelle pour la cliente ou le salon
-"""
+        
+        # Instructions pour les étapes d'installation
+        installation_instructions = ""
+        if installation_steps:
+            steps_text = "\n".join([f"{i+1}. {step}" for i, step in enumerate(installation_steps)])
+            installation_instructions = f"""
+ÉTAPES D'INSTALLATION À INCLURE:
+{steps_text}
 
-        product_mention = f"Produit à mettre en avant: {focus_product}" if focus_product else ""
-
-        prompt = f"""
-Écris un article de blog SEO complet.
+Intégrer ces étapes dans une section dédiée avec un H2 comme "Comment se fait l'installation ?" ou "Pose étape par étape"
+"""
+        
+        # Obtenir une anecdote et une recommandation Luxura pour rendre le contenu plus humain
+        luxura_anecdote = get_random_anecdote(category)
+        luxura_recommendation = get_luxura_recommendation(category)
+        
+        prompt = f"""Écris un article de blog SEO complet sur le sujet suivant:
 
 SUJET: {topic}
 CATÉGORIE: {category}
-MOTS-CLÉS: {', '.join(keywords)}
+MOTS-CLÉS À INTÉGRER: {', '.join(keywords)}
 TYPE DE CONTENU: {content_type}
 {product_mention}
 {content_instructions}
+{installation_instructions}
 
-OBJECTIF:
-Créer un article crédible, utile, premium, cohérent avec Luxura Distribution.
+STRUCTURE IMPORTANTE (ANTI-IA - Obligatoire):
+1. Introduction engageante (100-150 mots) - SANS TITRE H1 car Wix l'affiche automatiquement
+2. Section "Pour qui c'est fait ?" avec H2 + contenu détaillé
+3. Section "Comment installer..." avec H2 + étapes numérotées (<ol>)
+4. **OBLIGATOIRE - Témoignage en BLOCKQUOTE** - Utilise cette citation:
+   <blockquote>{luxura_anecdote}</blockquote>
+5. Section "Avantages" avec H2 + liste à puces (<ul>)
+6. Section "Entretien" avec H2 + conseils pratiques
+7. **OBLIGATOIRE - Section "Luxura recommande"** avec H3:
+   "{luxura_recommendation}"
+8. Conclusion avec CTA vers Luxura Distribution
+9. OBLIGATOIRE: Section "Découvrez nos collections" avec liens
 
-STRUCTURE OBLIGATOIRE:
-1. Introduction engageante sans balise <h1>
-2. H2 : à qui s'adresse cette solution / ce produit / cette approche
-3. H2 : points clés / avantages / choix / fonctionnement
-4. H2 : conseils pratiques ou considérations importantes
-5. H2 : pourquoi choisir Luxura Distribution
-6. Conclusion avec CTA naturel
-7. Section finale avec les liens collections Luxura
+STYLE ANTI-IA (TRÈS IMPORTANT):
+- Varier la longueur des phrases (courtes ET longues)
+- Questions rhétoriques: "Tu te demandes si..." "Pourquoi c'est important?"
+- Contractions québécoises: "c'est pas mal", "ben correct", "ça l'fait vraiment"
+- Ton conversationnel et authentique, comme si tu parlais à une cliente
+- Éviter les listes trop parfaites et les transitions génériques
+- UTILISER <blockquote> pour le témoignage
 
-CONSIGNES IMPORTANTES:
-- 900 à 1400 mots
-- Ne jamais écrire comme si Luxura faisait de la formation
-- Ne jamais écrire comme si Luxura était un salon de pose
-- Pas de <h1>
-- Commencer directement par un <p>
-- HTML propre avec: <p>, <h2>, <h3>, <ul>, <ol>, <li>, <strong>, <a>, <blockquote> si pertinent
-- Éviter les répétitions IA
-- Éviter les doublons de titres
-- Intégrer les mots-clés naturellement
-- Le ton doit rester crédible pour une marque haut de gamme
-
-SECTION LIENS OBLIGATOIRE EN FIN D'ARTICLE:
+LIENS CATÉGORIES À INCLURE (OBLIGATOIRE dans la conclusion):
 <p><strong>Découvrez nos collections Luxura :</strong></p>
 <ul>
 <li><a href="https://www.luxuradistribution.com/genius-weft">Extensions Genius Weft</a></li>
@@ -2139,69 +2190,70 @@ SECTION LIENS OBLIGATOIRE EN FIN D'ARTICLE:
 <li><a href="https://www.luxuradistribution.com/boutique">Tous nos produits</a></li>
 </ul>
 
+CONSIGNES CRITIQUES:
+- 1200-1800 mots total
+- NE PAS inclure de balise <h1>
+- Commencer par <p>introduction</p>
+- Intégrer chaque mot-clé 2-3 fois naturellement
+- Utiliser: <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <a>, <blockquote>
+- Luxura = distributeur (PAS un salon)
+- Ton québécois AUTHENTIQUE
+- INCLURE <blockquote> pour le témoignage
+
 FORMAT JSON STRICT:
 {{
-  "title": "Titre SEO naturel et non répétitif",
-  "excerpt": "Résumé accrocheur 140 caractères max",
-  "content": "Contenu HTML complet",
-  "meta_description": "Meta description 155 caractères max",
-  "tags": ["mot clé 1", "mot clé 2", "mot clé 3"],
-  "hashtags": "#LuxuraDistribution #ExtensionsCheveux #Québec"
-}}
-"""
+  "title": "Titre SEO optimisé",
+  "excerpt": "Résumé accrocheur de 140 caractères max",
+  "content": "Contenu HTML avec <blockquote> pour témoignage",
+  "meta_description": "Description meta de 155 caractères max",
+  "tags": ["extensions cheveux Québec", "rallonges capillaires", "{category}", "Luxura Distribution"],
+  "hashtags": "#LuxuraDistribution #ExtensionsCheveux #RallongesQuébec"
+}}"""
 
         response = await client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": system_message.strip()},
-                {"role": "user", "content": prompt.strip()}
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": prompt}
             ],
-            temperature=0.7,
-            max_tokens=3200
+            temperature=0.75,
+            max_tokens=4000
         )
-
+        
         response_text = response.choices[0].message.content.strip()
-
+        
+        # Nettoyer les balises markdown
         if response_text.startswith("```json"):
             response_text = response_text[7:]
         if response_text.startswith("```"):
             response_text = response_text[3:]
         if response_text.endswith("```"):
             response_text = response_text[:-3]
-
+        
         try:
             blog_data = json.loads(response_text.strip())
         except json.JSONDecodeError:
             import re
             json_match = re.search(r'\{[\s\S]*\}', response_text)
-            if not json_match:
-                logger.error("OpenAI response did not contain valid JSON")
+            if json_match:
+                blog_data = json.loads(json_match.group())
+            else:
                 return None
-            blog_data = json.loads(json_match.group())
-
-        # IMPORTANT:
-        # On ne remet plus ici une image générique par catégorie comme source principale.
-        # Les images seront générées plus tard via image_generation.py
+        
+        # Ajouter l'image et les métadonnées
+        blog_data["image"] = get_blog_image_by_category(category)
         blog_data["category"] = category
         blog_data["keywords"] = keywords
         blog_data["focus_product"] = focus_product
-        blog_data["content_type"] = content_type
-        blog_data["city"] = city
-
-        # Fallback minimal seulement si vraiment nécessaire ailleurs
-        blog_data["image"] = None
-
+        
         return blog_data
-
+        
     except Exception as e:
         logger.error(f"Error generating blog with OpenAI: {e}")
-        import traceback
-        traceback.print_exc()
         return None
 
-
 # =====================================================
-# GÉNÉRATION AUTOMATIQUE - MODE SEO SAFE
+# GÉNÉRATION AUTOMATIQUE 2x PAR JOUR
 # =====================================================
 
 async def generate_daily_blogs(
@@ -2216,62 +2268,88 @@ async def generate_daily_blogs(
     publish_to_facebook: bool = False,
     send_email: bool = True,
     force_category: str = None,
-    force_topic: Dict = None
+    custom_topic: str = None
 ) -> List[Dict]:
     """
-    Génère les blogs quotidiens Luxura avec logique réalignée:
-    - pas de fallback image générique idiot
-    - génération image pilotée par le vrai contenu
-    - publication Wix plus propre
+    Génère automatiquement les blogs quotidiens avec OpenAI.
+    
+    Args:
+        force_category: Forcer une catégorie (halo, itip, tape, genius)
+        custom_topic: Sujet personnalisé à utiliser
     """
     results = []
-
+    
+    # Récupérer le member ID pour Wix si on veut publier
     wix_member_id = None
     if publish_to_wix and wix_api_key and wix_site_id:
         wix_member_id = await get_wix_member_id(wix_api_key, wix_site_id)
         if not wix_member_id:
-            logger.warning("Could not get Wix member ID")
-
+            logger.warning("Could not get Wix member ID - will try publishing without it")
+    
+    # Récupérer les titres existants pour éviter les doublons
     existing_posts = await db.blog_posts.find({}, {"title": 1}).to_list(1000)
     existing_titles = [p.get("title", "").lower() for p in existing_posts]
-
-    # Sélection des topics
-    if force_topic:
-        selected_topics = [force_topic]
-    elif force_category:
+    
+    # Si un sujet personnalisé est fourni, l'utiliser directement
+    if custom_topic:
+        category = force_category or "halo"
         selected_topics = [{
-            "topic": f"Article {force_category}",
-            "category": force_category,
-            "keywords": [force_category, "extensions", "Québec"],
-            "content_type": "general"
+            "topic": custom_topic,
+            "category": category,
+            "keywords": [category, "extensions cheveux", "Luxura Distribution"],
+            "focus_product": f"Extensions {category.title()} Luxura"
         }]
-    else:
+        count = 1
+        logger.info(f"📝 Using custom topic: {custom_topic}")
+    
+    # Si une catégorie est forcée, filtrer les topics
+    elif force_category:
         available_topics = [
-            t for t in BLOG_TOPICS_EXTENDED
+            t for t in BLOG_TOPICS_EXTENDED 
+            if t["category"].lower() == force_category.lower()
+            and t["topic"].lower() not in existing_titles
+        ]
+        if not available_topics:
+            # Prendre tous les topics de cette catégorie si aucun nouveau
+            available_topics = [t for t in BLOG_TOPICS_EXTENDED if t["category"].lower() == force_category.lower()]
+            random.shuffle(available_topics)
+        
+        selected_topics = available_topics[:count]
+        logger.info(f"📝 Forced category: {force_category} - Found {len(selected_topics)} topics")
+    
+    else:
+        # Sélection normale - sujets non couverts
+        available_topics = [
+            t for t in BLOG_TOPICS_EXTENDED 
             if t["topic"].lower() not in existing_titles
         ]
-
+        
+        # Si tous les sujets sont couverts, réutiliser avec rotation
         if len(available_topics) < count:
             available_topics = BLOG_TOPICS_EXTENDED.copy()
             random.shuffle(available_topics)
-
+        
+        # Sélectionner les sujets pour aujourd'hui (diversifier les catégories)
         categories_used = []
         selected_topics = []
-
+        
         for topic in available_topics:
             if len(selected_topics) >= count:
                 break
             if topic["category"] not in categories_used or len(categories_used) >= 4:
                 selected_topics.append(topic)
                 categories_used.append(topic["category"])
-
+    
+    # Générer chaque blog
     for topic_data in selected_topics:
         blog_data = await generate_blog_with_ai(topic_data, openai_key, existing_titles)
+        
         if not blog_data:
             continue
-
+        
+        # Créer l'entrée dans la base locale
         post_id = f"auto-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:4]}"
-
+        
         blog_post = {
             "id": post_id,
             "title": blog_data.get("title", topic_data["topic"]),
@@ -2279,142 +2357,183 @@ async def generate_daily_blogs(
             "content": blog_data.get("content", ""),
             "meta_description": blog_data.get("meta_description", ""),
             "tags": blog_data.get("tags", topic_data["keywords"]),
-            "image": None,
+            "image": blog_data.get("image"),
             "category": topic_data["category"],
-            "focus_product": topic_data.get("focus_product"),
-            "content_type": topic_data.get("content_type", "general"),
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc),
             "auto_generated": True,
-            "needs_human_review": True,
-            "human_reviewed": False,
+            "needs_human_review": True,  # NOUVEAU: Flag pour relecture humaine obligatoire
+            "human_reviewed": False,      # NOUVEAU: Sera mis à True après relecture
             "published_to_wix": False,
             "published_to_facebook": False
         }
-
+        
         await db.blog_posts.insert_one(blog_post)
-
-        if publish_to_wix and wix_api_key and wix_site_id:
+        
+        # ============================================
+        # PUBLIER SUR WIX - DALL-E DÉSACTIVÉ DÉFINITIVEMENT
+        # Utiliser UNIQUEMENT Unsplash vérifiées (femmes cheveux longs)
+        # ============================================
+        if publish_to_wix:
             category = topic_data.get("category", "general")
-            blog_title = blog_post["title"]
-            blog_content = blog_post["content"]
+            blog_title = blog_post['title']
+            blog_content = blog_post['content']
             focus_product = topic_data.get("focus_product", "")
-            blog_tags = blog_post.get("tags", [])
-
-            logger.info(f"🚀 Publishing to Wix: {blog_title[:70]}")
-
-            cover_image_data = None
-            content_image_data = None
-
-            blog_data_for_images = {
-                "title": blog_title,
-                "excerpt": blog_post.get("excerpt", ""),
-                "content": blog_content,
-                "category": category,
-                "focus_product": focus_product,
-                "keywords": blog_tags,
-                "content_type": topic_data.get("content_type", "general")
-            }
-
-            # 1) Génération images pilotée par le vrai contenu
-            if DALLE_AVAILABLE:
-                try:
-                    cover_image_data, content_image_data = await generate_and_upload_blog_images(
+            
+            logger.info(f"🚀 Publishing to Wix: {blog_title[:50]}...")
+            
+            if wix_api_key and wix_site_id:
+                cover_image_data = None
+                content_image_data = None
+                
+                # ============================================
+                # V4: ARCHITECTURE INTELLIGENTE
+                # Brief Generator analyse le contenu et décide du style
+                # ============================================
+                if DALLE_AVAILABLE:
+                    logger.info(f"🎨 V4: Smart image generation based on blog content analysis...")
+                    
+                    # Construire blog_data complet pour le brief generator
+                    blog_data_for_images = {
+                        "title": blog_title,
+                        "content": blog_content,
+                        "excerpt": blog_post.get("excerpt", ""),
+                        "category": category,
+                        "focus_product": focus_product,
+                        "tags": blog_post.get("tags", [])
+                    }
+                    
+                    try:
+                        cover_image_data, detail_image_data, result_image_data = await generate_and_upload_blog_images(
+                            api_key=wix_api_key,
+                            site_id=wix_site_id,
+                            category=category,
+                            blog_title=blog_title,
+                            keywords=blog_post.get("tags", []),
+                            focus_product=focus_product,
+                            blog_content=blog_content,
+                            blog_data=blog_data_for_images  # V9: Passe tout le blog
+                        )
+                    except Exception as dalle_error:
+                        logger.warning(f"⚠️ DALL-E V9 generation failed: {dalle_error}")
+                        import traceback
+                        traceback.print_exc()
+                        cover_image_data = None
+                        detail_image_data = None
+                        result_image_data = None
+                
+                # FALLBACK: Si DALL-E échoue, utiliser Unsplash
+                if not cover_image_data:
+                    logger.info(f"📷 Fallback: Using Unsplash images")
+                    
+                    cover_image_data = await import_image_with_retry(
                         api_key=wix_api_key,
                         site_id=wix_site_id,
                         category=category,
-                        blog_title=blog_title,
-                        keywords=blog_tags,
-                        focus_product=focus_product,
-                        blog_content=blog_content,
-                        blog_data=blog_data_for_images
+                        max_retries=3
                     )
-                except Exception as image_error:
-                    logger.warning(f"Smart image generation failed: {image_error}")
-                    import traceback
-                    traceback.print_exc()
-
-            # 2) Fallback raisonnable seulement si nécessaire
-            if not cover_image_data:
-                logger.info("Fallback cover import via curated source")
-                cover_image_data = await import_image_with_retry(
-                    api_key=wix_api_key,
-                    site_id=wix_site_id,
-                    category=category,
-                    max_retries=3
-                )
-
-            if not content_image_data:
-                logger.info("Fallback content import via curated source")
-                content_image_data = await import_image_with_retry(
-                    api_key=wix_api_key,
-                    site_id=wix_site_id,
-                    category=category,
-                    max_retries=2
-                )
-
-            if cover_image_data:
-                blog_post["image"] = cover_image_data.get("static_url")
-
-            wix_result = await create_wix_draft_post(
-                api_key=wix_api_key,
-                site_id=wix_site_id,
-                title=blog_post["title"],
-                content=blog_post["content"],
-                excerpt=blog_post["excerpt"],
-                cover_image_data=cover_image_data,
-                content_image_data=content_image_data,
-                member_id=wix_member_id
-            )
-
-            if wix_result:
-                draft_id = wix_result.get("draftPost", {}).get("id")
-                if draft_id:
-                    # NOUVEAU: Ajouter les métadonnées SEO avant publication
-                    await add_seo_metadata_to_draft(
-                        wix_api_key, 
-                        wix_site_id, 
-                        draft_id, 
-                        blog_post["title"],
-                        force_category
+                
+                # Fallback pour detail et result
+                if not detail_image_data:
+                    detail_image_data = await import_image_with_retry(
+                        api_key=wix_api_key,
+                        site_id=wix_site_id,
+                        category=category,
+                        max_retries=2
                     )
+                
+                if not result_image_data:
+                    result_image_data = await import_image_with_retry(
+                        api_key=wix_api_key,
+                        site_id=wix_site_id,
+                        category=category,
+                        max_retries=2
+                    )
+                
+                # Mettre à jour l'image principale dans blog_post
+                if cover_image_data:
+                    blog_post["image"] = cover_image_data.get("static_url", blog_post.get("image"))
+                
+                # =====================================================
+                # GÉNÉRATION VIDÉO avec FAL.AI/Kling (optionnel)
+                # =====================================================
+                video_url = None
+                try:
+                    from services.video_brief_generator import generate_video_brief, should_generate_video
+                    from services.video_generator import generate_short_video, FAL_ENABLED
                     
-                    published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
-                    if published:
-                        await db.blog_posts.update_one(
-                            {"id": post_id},
-                            {"$set": {
-                                "published_to_wix": True,
-                                "wix_post_id": draft_id,
-                                "image": blog_post.get("image"),
-                                "wix_image_url": (cover_image_data or {}).get("static_url", ""),
-                                "wix_content_image_url": (content_image_data or {}).get("static_url", "")
-                            }}
+                    if FAL_ENABLED and cover_image_data:
+                        video_brief = generate_video_brief(blog_data_for_images)
+                        if should_generate_video(video_brief):
+                            logger.info(f"🎥 Generating video for: {blog_post['title'][:40]}...")
+                            video_url = await generate_short_video(
+                                video_brief=video_brief,
+                                image_url=cover_image_data.get("static_url")
+                            )
+                            if video_url:
+                                blog_post["video_url"] = video_url
+                                logger.info(f"✅ Video generated: {video_url[:60]}...")
+                except ImportError:
+                    logger.info("🎥 Video generation not available (services not configured)")
+                except Exception as video_error:
+                    logger.warning(f"⚠️ Video generation failed (non-blocking): {video_error}")
+                
+                # Créer le draft Wix avec les 3 images + vidéo V11
+                wix_result = await create_wix_draft_post(
+                    api_key=wix_api_key,
+                    site_id=wix_site_id,
+                    title=blog_post["title"],
+                    content=blog_post["content"],
+                    excerpt=blog_post["excerpt"],
+                    cover_image_data=cover_image_data,      # Feed/Card cover
+                    detail_image_data=detail_image_data,    # Technique close-up (début contenu)
+                    result_image_data=result_image_data,    # Glamour (milieu contenu)
+                    video_url=video_url,                    # Vidéo (avant signature)
+                    member_id=wix_member_id
+                )
+                
+                if wix_result:
+                    draft_id = wix_result.get("draftPost", {}).get("id")
+                    if draft_id:
+                        # NOUVEAU: Ajouter les métadonnées SEO avant publication
+                        await add_seo_metadata_to_draft(
+                            wix_api_key, 
+                            wix_site_id, 
+                            draft_id, 
+                            blog_post["title"],
+                            force_category  # Passer la catégorie pour une meilleure meta description
                         )
-                        blog_post["published_to_wix"] = True
-                        blog_post["wix_post_id"] = draft_id
-                        if cover_image_data:
-                            blog_post["wix_image_url"] = cover_image_data.get("static_url", "")
-                        if content_image_data:
-                            blog_post["wix_content_image_url"] = content_image_data.get("static_url", "")
-                    else:
-                        logger.error("Failed to publish Wix draft")
+                        
+                        published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
+                        if published:
+                            logger.info(f"✅ Blog published successfully with 3 unique images + SEO metadata!")
+                            await db.blog_posts.update_one(
+                                {"id": post_id},
+                                {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
+                            )
+                            blog_post["published_to_wix"] = True
+                            
+                            # V9: Ajouter les URLs des 3 images pour l'email
+                            if cover_image_data:
+                                blog_post["wix_image_url"] = cover_image_data.get("static_url", "")
+                            if detail_image_data:
+                                blog_post["wix_detail_image_url"] = detail_image_data.get("static_url", "")
+                            if result_image_data:
+                                blog_post["wix_result_image_url"] = result_image_data.get("static_url", "")
                 else:
-                    logger.error("Draft created but no draft_id returned")
-            else:
-                logger.error("Failed to create Wix draft")
-
+                    logger.error(f"❌ Failed to create Wix draft")
+        
+        # Publier sur Facebook si configuré
         if publish_to_facebook and fb_access_token and fb_page_id:
-            fb_image = blog_post.get("image") or blog_post.get("wix_image_url")
             fb_result = await publish_to_facebook_page(
                 fb_access_token=fb_access_token,
                 fb_page_id=fb_page_id,
                 title=blog_post["title"],
                 content=blog_post["content"],
-                image_url=fb_image,
-                link=None
+                image_url=blog_post["image"],
+                link=None  # Ajouter le lien vers l'article Wix si disponible
             )
-
+            
             if fb_result:
                 fb_post_id = fb_result.get("id") or fb_result.get("post_id")
                 await db.blog_posts.update_one(
@@ -2422,14 +2541,15 @@ async def generate_daily_blogs(
                     {"$set": {"published_to_facebook": True, "facebook_post_id": fb_post_id}}
                 )
                 blog_post["published_to_facebook"] = True
-
+        
+        # Nettoyer pour la réponse
         blog_post.pop("_id", None)
         if isinstance(blog_post.get("created_at"), datetime):
             blog_post["created_at"] = blog_post["created_at"].isoformat()
-
+        
         results.append(blog_post)
         existing_titles.append(blog_post["title"].lower())
-
+    
     # Envoyer email d'approbation pour chaque brouillon (mode SEO-safe)
     if results and send_email:
         for blog in results:
@@ -2440,6 +2560,5 @@ async def generate_daily_blogs(
             else:
                 # Mode publié: envoyer ancien email avec images
                 await send_blog_images_email([blog])
-
+    
     return results
-
