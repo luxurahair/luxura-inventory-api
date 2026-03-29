@@ -339,14 +339,25 @@ async def upload_image_bytes_to_wix(
                             if check_response.status_code == 200:
                                 file_desc = check_response.json().get("file", {})
                                 if file_desc.get("operationStatus") == "READY":
+                                    # Extraire les vraies dimensions de Wix
+                                    media_info = file_desc.get("media", {}).get("image", {}).get("image", {})
+                                    real_width = media_info.get("width", 1200)
+                                    real_height = media_info.get("height", 630)
+                                    display_name = file_desc.get("displayName", file_name)
+                                    
                                     static_url = f"https://static.wixstatic.com/media/{file_id}"
+                                    # Format wix_uri correct: utilise display_name de Wix, pas notre file_name
+                                    wix_uri = f"wix:image://v1/{file_id}/{display_name}#originWidth={real_width}&originHeight={real_height}"
+                                    
                                     logger.info(f"✅ Direct Wix upload success: {static_url[:80]}")
+                                    logger.info(f"   wix_uri: {wix_uri}")
                                     return {
                                         "file_id": file_id,
                                         "static_url": static_url,
-                                        "wix_uri": f"wix:image://v1/{file_id}/{file_name}#originWidth=1200&originHeight=630",
-                                        "width": 1200,
-                                        "height": 630
+                                        "wix_uri": wix_uri,
+                                        "width": real_width,
+                                        "height": real_height,
+                                        "display_name": display_name
                                     }
 
                             await asyncio.sleep(1)
@@ -371,11 +382,12 @@ async def upload_image_bytes_to_wix(
                     logger.info(f"✅ Temporary image hosted on catbox: {temp_url}")
 
                     from blog_automation import import_image_and_get_wix_uri
+                    # On garde le file_name original sans changer l'extension
                     result = await import_image_and_get_wix_uri(
                         api_key,
                         site_id,
                         temp_url,
-                        file_name.replace(".png", ".jpg")
+                        file_name  # Plus de .replace()
                     )
                     return result
 
