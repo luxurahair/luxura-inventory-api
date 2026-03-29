@@ -365,11 +365,104 @@ async def submit_manual_or_skipped(page: Page, business_data: Dict, directory: D
     )
 
 
+async def submit_brownbook(page: Page, business_data: Dict, directory: Dict) -> SubmissionResult:
+    """
+    Submitter pour Brownbook.net
+    Formulaire multi-step avec React Select pour pays/catégorie
+    """
+    ok = await safe_goto(page, directory["submission_url"])
+    if not ok:
+        return build_submission_result(directory, "failed", notes="Navigation failed")
+    
+    await human_delay(1000, 2000)
+    
+    # Sélectionner Canada comme pays (React Select)
+    try:
+        country_select = page.locator('button:has-text("Select country")')
+        if await country_select.count() > 0:
+            await country_select.click()
+            await human_delay(500, 800)
+            # Chercher Canada dans la liste
+            canada_option = page.locator('div[role="option"]:has-text("Canada")')
+            if await canada_option.count() > 0:
+                await canada_option.click()
+                await human_delay(500, 800)
+    except Exception as e:
+        logger.warning(f"Country select failed: {e}")
+    
+    # Remplir les champs de base
+    await safe_fill(page, ['input[name="name"]', 'input[placeholder*="business name"]'], business_data["business_name"])
+    await safe_fill(page, ['textarea[name="address"]', 'textarea[placeholder*="address"]'], business_data.get("address_line_1", ""))
+    await safe_fill(page, ['input[name="city"]', 'input[placeholder*="city"]'], business_data.get("city", "Saint-Georges"))
+    await safe_fill(page, ['input[name="zip_code"]', 'input[placeholder*="zip"]'], business_data.get("postal_code", "G5Y 1T4"))
+    await safe_fill(page, ['input[name="phone"]', 'input[placeholder*="phone"]'], business_data.get("phone", ""))
+    await safe_fill(page, ['input[name="email"]', 'input[placeholder*="email"]'], business_data["email"])
+    await safe_fill(page, ['input[name="website"]', 'input[placeholder*="website"]'], business_data["website"])
+    
+    # Sélectionner catégorie (React Select) - optionnel
+    try:
+        category_input = page.locator('input[placeholder="Select category"]')
+        if await category_input.count() > 0:
+            await category_input.click()
+            await human_delay(300, 500)
+            await category_input.fill("Hair")
+            await human_delay(500, 800)
+            # Sélectionner la première option
+            first_option = page.locator('div[role="option"]').first
+            if await first_option.count() > 0:
+                await first_option.click()
+                await human_delay(300, 500)
+    except Exception as e:
+        logger.warning(f"Category select failed: {e}")
+    
+    # Cliquer sur Next/Submit
+    clicked = await safe_click(page, [
+        'button[type="submit"]',
+        'button:has-text("Next")',
+        'button:has-text("Submit")',
+        'button:has-text("Add")'
+    ])
+    
+    if not clicked:
+        return build_submission_result(directory, "failed", notes="Submit button not found")
+    
+    await human_delay(2000, 3000)
+    
+    # Vérifier si on est sur une page de confirmation ou étape suivante
+    current_url = page.url
+    page_content = await page.content()
+    
+    if "success" in page_content.lower() or "thank" in page_content.lower() or "confirm" in current_url.lower():
+        return build_submission_result(
+            directory,
+            "submitted",
+            submission_url=current_url,
+            notes="Submitted to Brownbook. Check email for verification."
+        )
+    
+    # Si on est passé à une étape suivante, c'est bon signe
+    if current_url != directory["submission_url"]:
+        return build_submission_result(
+            directory,
+            "submitted",
+            submission_url=current_url,
+            notes="Brownbook form progressed. May need additional steps or email verification."
+        )
+    
+    return build_submission_result(
+        directory,
+        "submitted",
+        submission_url=current_url,
+        notes="Brownbook form submitted. Status unclear - check manually."
+    )
+
+
 # -------------------------------------------------------------------
 # Registry of submitter functions
 # -------------------------------------------------------------------
 
 SUBMITTERS: Dict[str, Callable[[Page, Dict, Dict], Awaitable[SubmissionResult]]] = {
+    "brownbook": submit_brownbook,
     "hotfrog": submit_hotfrog,
     "cylex": submit_cylex,
     "canpages": submit_canpages,

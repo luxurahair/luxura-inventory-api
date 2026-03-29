@@ -14,20 +14,42 @@ from typing import Dict, List, Optional
 
 
 DIRECTORY_REGISTRY: Dict[str, Dict] = {
-    "hotfrog": {
-        "key": "hotfrog",
-        "name": "Hotfrog",
-        "domain": "hotfrog.ca",
-        "submission_url": "https://www.hotfrog.ca/add-your-business",
+    # ==========================================
+    # ANNUAIRES ACTIFS ET TESTÉS
+    # ==========================================
+    "brownbook": {
+        "key": "brownbook",
+        "name": "Brownbook",
+        "domain": "brownbook.net",
+        "submission_url": "https://www.brownbook.net/add-business",
         "category": "directory",
         "country": "CA",
-        "language": ["fr", "en"],
-        "niche": ["general_business", "local"],
+        "language": ["en"],
+        "niche": ["general_business", "global"],
         "active": True,
         "priority": 1,
         "requires_email_verification": True,
         "submission_method": "playwright",
-        "notes": "Bon annuaire local/business. Vérification email fréquente."
+        "notes": "DA 73. Formulaire sans compte. Multi-step."
+    },
+    
+    # ==========================================
+    # ANNUAIRES À VÉRIFIER / OBSOLÈTES
+    # ==========================================
+    "hotfrog": {
+        "key": "hotfrog",
+        "name": "Hotfrog",
+        "domain": "hotfrog.ca",
+        "submission_url": "https://www.hotfrog.ca/add",
+        "category": "directory",
+        "country": "CA",
+        "language": ["fr", "en"],
+        "niche": ["general_business", "local"],
+        "active": False,  # Requiert login maintenant
+        "priority": 1,
+        "requires_email_verification": True,
+        "submission_method": "playwright",
+        "notes": "⚠️ Requiert login/compte. Désactivé pour l'instant."
     },
     "cylex": {
         "key": "cylex",
@@ -38,11 +60,11 @@ DIRECTORY_REGISTRY: Dict[str, Dict] = {
         "country": "CA",
         "language": ["fr", "en"],
         "niche": ["general_business", "local"],
-        "active": True,
+        "active": False,  # Cloudflare 403
         "priority": 1,
         "requires_email_verification": True,
         "submission_method": "playwright",
-        "notes": "Souvent utile pour citation locale."
+        "notes": "⚠️ Bloqué par Cloudflare (403). Désactivé."
     },
     "canpages": {
         "key": "canpages",
@@ -53,11 +75,11 @@ DIRECTORY_REGISTRY: Dict[str, Dict] = {
         "country": "CA",
         "language": ["fr", "en"],
         "niche": ["local", "canada"],
-        "active": True,
+        "active": False,  # Page 404
         "priority": 1,
         "requires_email_verification": True,
         "submission_method": "playwright",
-        "notes": "Pertinent Canada/local."
+        "notes": "⚠️ Page de soumission 404. Désactivé."
     },
     "411": {
         "key": "411",
@@ -68,11 +90,11 @@ DIRECTORY_REGISTRY: Dict[str, Dict] = {
         "country": "CA",
         "language": ["fr", "en"],
         "niche": ["local", "canada"],
-        "active": True,
+        "active": False,  # 403 Forbidden
         "priority": 1,
         "requires_email_verification": True,
         "submission_method": "playwright",
-        "notes": "Bonne citation locale si formulaire encore valide."
+        "notes": "⚠️ 403 Forbidden. Désactivé."
     },
     "iglobal": {
         "key": "iglobal",
@@ -83,11 +105,11 @@ DIRECTORY_REGISTRY: Dict[str, Dict] = {
         "country": "CA",
         "language": ["en"],
         "niche": ["general_business"],
-        "active": True,
+        "active": False,  # DNS mort
         "priority": 2,
         "requires_email_verification": True,
         "submission_method": "playwright",
-        "notes": "Secondaire mais utile pour citation diversifiée."
+        "notes": "⚠️ Domaine inaccessible. Désactivé."
     },
     "indexbeaute": {
         "key": "indexbeaute",
