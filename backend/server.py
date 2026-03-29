@@ -76,42 +76,76 @@ blog_scheduler = None
 
 async def scheduled_blog_generation():
     """
-    🛡️ SEO-SAFE MODE: Génère des BROUILLONS uniquement (pas de publication auto)
+    📅 CALENDRIER ÉDITORIAL: Génère des BROUILLONS selon la rotation
     
-    Changements appliqués pour éviter les risques SEO:
-    - Publication automatique: DÉSACTIVÉE
-    - Fréquence: 1 brouillon/jour maximum
-    - Catégories: Limitées (entretien, comparatifs, cheveux fins)
-    - Validation humaine: OBLIGATOIRE avant publication
+    Rotation sur 2 semaines:
+    - Semaine 1: Lundi=consommateur, Mercredi=comparatif, Vendredi=B2B
+    - Semaine 2: Lundi=entretien, Mercredi=guide, Vendredi=B2B
+    
+    Publication automatique: DÉSACTIVÉE (validation humaine obligatoire)
     """
     try:
-        logger.info(f"🕐 CRON SEO-SAFE: Starting draft generation at {datetime.now(timezone.utc)}")
+        logger.info(f"🕐 CRON: Starting draft generation at {datetime.now(timezone.utc)}")
+        
+        # Import du calendrier éditorial
+        try:
+            from editorial_calendar import (
+                get_cron_category,
+                should_publish_today,
+                log_calendar_status,
+                get_suggested_topic
+            )
+            CALENDAR_AVAILABLE = True
+        except ImportError:
+            CALENDAR_AVAILABLE = False
+            logger.warning("⚠️ Calendrier éditorial non disponible - fallback aléatoire")
+        
+        # Vérifier si on doit publier aujourd'hui
+        if CALENDAR_AVAILABLE:
+            log_calendar_status()
+            should_pub, reason = should_publish_today()
+            
+            if not should_pub:
+                logger.info(f"📅 {reason} - Pas de génération aujourd'hui")
+                return
+            
+            category = get_cron_category()
+            suggested_topic = get_suggested_topic()
+            
+            if suggested_topic:
+                logger.info(f"📝 Sujet suggéré: {suggested_topic}")
+        else:
+            # Fallback: rotation aléatoire
+            SAFE_CATEGORIES = ['entretien', 'comparatif', 'cheveux_fins', 'b2b_salon', 'guide']
+            import random
+            category = random.choice(SAFE_CATEGORIES)
+        
+        if not category:
+            logger.info("📅 Pas de catégorie assignée - skip")
+            return
         
         from blog_automation import generate_daily_blogs
         
-        # ⚠️ SEO-SAFE: Catégories autorisées uniquement (évite cannibalisation)
-        SAFE_CATEGORIES = ['entretien', 'comparatif', 'cheveux_fins']
-        import random
-        safe_category = random.choice(SAFE_CATEGORIES)
-        
-        # ⚠️ SEO-SAFE: 1 seul brouillon, PAS de publication automatique
+        # 1 seul brouillon, PAS de publication automatique
         results = await generate_daily_blogs(
-            count=1,                    # 1 seul article
-            send_email=True,            # Notifier par email
-            publish_to_wix=False,       # ❌ PAS DE PUBLICATION AUTO
-            force_category=safe_category
+            count=1,
+            send_email=True,
+            publish_to_wix=False,  # ❌ PAS DE PUBLICATION AUTO
+            force_category=category
         )
         
         if results:
-            logger.info(f"✅ CRON SEO-SAFE: Generated {len(results)} DRAFT(s) - NOT PUBLISHED")
+            logger.info(f"✅ CRON: Generated {len(results)} DRAFT(s) - category={category}")
             logger.info(f"   ⚠️ Validation humaine requise avant publication!")
             for blog in results:
                 logger.info(f"   - {blog.get('title', 'No title')[:50]}...")
         else:
-            logger.warning("⚠️ CRON SEO-SAFE: No drafts generated")
+            logger.warning("⚠️ CRON: No drafts generated")
             
     except Exception as e:
-        logger.error(f"❌ CRON SEO-SAFE: Error in draft generation: {e}")
+        logger.error(f"❌ CRON: Error in draft generation: {e}")
+        import traceback
+        traceback.print_exc()
 
 # Startup event - ping Luxura API to wake it up
 @app.on_event("startup")
@@ -147,13 +181,27 @@ async def startup_event():
         # La génération multiple causait des pénalités Google (Scaled Content Abuse)
         
         blog_scheduler.start()
-        logger.info("=" * 50)
-        logger.info("🛡️ BLOG CRON - SEO SAFE MODE")
-        logger.info("   - 08:00 EST: 1 BROUILLON uniquement")
-        logger.info("   - Publication: DÉSACTIVÉE (validation humaine)")
-        logger.info("   - Catégories: entretien, comparatif, cheveux_fins")
-        logger.info("   - Total: 1 brouillon/jour MAX")
-        logger.info("=" * 50)
+        
+        # Log du calendrier éditorial
+        try:
+            from editorial_calendar import get_current_rotation_week, get_weekly_schedule
+            rotation_week = get_current_rotation_week()
+            weekly_schedule = get_weekly_schedule()
+            
+            logger.info("=" * 50)
+            logger.info("📅 CALENDRIER ÉDITORIAL ACTIVÉ")
+            logger.info(f"   Semaine de rotation: {rotation_week}/2")
+            logger.info("   Planning:")
+            for slot in weekly_schedule:
+                logger.info(f"   - {slot['day'].capitalize()}: {slot['category']} ({slot['type']})")
+            logger.info("   Publication: DÉSACTIVÉE (validation humaine)")
+            logger.info("=" * 50)
+        except ImportError:
+            logger.info("=" * 50)
+            logger.info("🛡️ BLOG CRON - MODE FALLBACK")
+            logger.info("   - 08:00 EST: 1 BROUILLON uniquement")
+            logger.info("   - Catégories: rotation aléatoire")
+            logger.info("=" * 50)
         
     except ImportError:
         logger.warning("⚠️ APScheduler not installed - CRON disabled")
