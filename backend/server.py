@@ -3656,16 +3656,16 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-# Include the router in the main app
-app.include_router(api_router)
-
-# Include backlinks routes
+# Include backlinks routes FIRST (priority over legacy routes in api_router)
 try:
     from backlinks.backlink_routes import router as backlinks_router
     app.include_router(backlinks_router)
-    logger.info("✅ Routes backlinks chargées")
+    logger.info("✅ Routes backlinks V2 chargées (priorité)")
 except ImportError as e:
     logger.warning(f"⚠️ Routes backlinks non disponibles: {e}")
+
+# Include the main router
+app.include_router(api_router)
 
 app.add_middleware(
     CORSMiddleware,

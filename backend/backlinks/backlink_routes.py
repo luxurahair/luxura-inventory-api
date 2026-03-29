@@ -1,341 +1,192 @@
+# backlink_routes.py
 """
-BACKLINK ROUTES - Routes API FastAPI
-Version: 2.0
-Date: 2026-03-29
-
-Routes pour piloter le système de backlinks via API.
-Utilise le nouvel orchestrateur clean.
+Routes API pour piloter le pipeline backlinks / citations Luxura.
 """
 
-import asyncio
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel
-from typing import List, Optional, Dict
-from datetime import datetime
-import logging
+from __future__ import annotations
+
 import os
+import json
+import logging
+from typing import Optional, Dict, Any, List
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 from .backlink_orchestrator import (
     run_backlink_cycle,
     retry_pending_verifications_only,
     load_records_from_snapshot,
-    DEFAULT_OUTPUT_PATH,
 )
-from .citation_engine import SUBMITTERS
-from .directory_registry import (
-    get_active_directories,
-    get_submission_queue,
-    build_business_payload,
-    get_directory,
-)
-from .email_verification import summarize_verification_results
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/api/backlinks", tags=["backlinks"])
 
+DEFAULT_SNAPSHOT_PATH = os.getenv(
+    "BACKLINK_RUN_OUTPUT_PATH",
+    "/app/backend/data/backlink_run_latest.json"
+)
 
-# =====================================================
-# MODÈLES DE REQUÊTE
-# =====================================================
 
-class RunCycleRequest(BaseModel):
+# -------------------------------------------------------------------
+# Request models
+# -------------------------------------------------------------------
+
+class RunBacklinkCycleRequest(BaseModel):
+    business_overrides: Optional[Dict[str, Any]] = None
     headless: bool = True
-    max_directories: Optional[int] = None
+    max_directories: Optional[int] = Field(default=3, ge=1, le=50)
     process_email_verification: bool = True
-    verification_days_back: int = 7
+    verification_days_back: int = Field(default=7, ge=1, le=30)
     click_verification_links: bool = True
     save_snapshot: bool = True
+    output_path: Optional[str] = None
 
 
-class RetryVerificationRequest(BaseModel):
-    verification_days_back: int = 7
+class RetryPendingRequest(BaseModel):
+    verification_days_back: int = Field(default=7, ge=1, le=30)
     click_verification_links: bool = True
-    save_snapshot: bool = False
+    save_snapshot: bool = True
+    output_path: Optional[str] = None
 
 
-# =====================================================
-# ROUTES - STATUS & INFO
-# =====================================================
+# -------------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------------
+
+def load_snapshot_json(path: str = DEFAULT_SNAPSHOT_PATH) -> Dict[str, Any]:
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Snapshot not found: {path}")
+
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+# -------------------------------------------------------------------
+# Routes
+# -------------------------------------------------------------------
 
 @router.get("/status")
-async def get_status():
+async def backlinks_status():
     """
-    Retourne le statut global du système de backlinks.
+    Retourne un résumé rapide du dernier snapshot.
     """
-    active_directories = get_active_directories()
-    submission_queue = get_submission_queue()
-    
-    # Check if snapshot exists
-    snapshot_exists = os.path.exists(DEFAULT_OUTPUT_PATH)
-    last_run_info = None
-    
-    if snapshot_exists:
-        try:
-            import json
-            with open(DEFAULT_OUTPUT_PATH, "r") as f:
-                snapshot = json.load(f)
-                last_run_info = {
-                    "saved_at": snapshot.get("saved_at"),
-                    "total_records": len(snapshot.get("records", [])),
-                    "metadata": snapshot.get("metadata", {}),
-                }
-        except Exception:
-            pass
-    
-    return {
-        "system": "backlinks_v2",
-        "active_directories_count": len(active_directories),
-        "submission_queue_size": len(submission_queue),
-        "available_submitters": list(SUBMITTERS.keys()),
-        "snapshot_path": DEFAULT_OUTPUT_PATH,
-        "snapshot_exists": snapshot_exists,
-        "last_run": last_run_info,
-        "timestamp": datetime.utcnow().isoformat(),
-    }
+    try:
+        payload = load_snapshot_json(DEFAULT_SNAPSHOT_PATH)
+        return {
+            "ok": True,
+            "snapshot_path": DEFAULT_SNAPSHOT_PATH,
+            "saved_at": payload.get("saved_at"),
+            "metadata": payload.get("metadata", {}),
+            "run_summary": payload.get("run_summary", {}),
+        }
+    except FileNotFoundError:
+        return {
+            "ok": False,
+            "message": "No backlink snapshot found yet",
+            "snapshot_path": DEFAULT_SNAPSHOT_PATH,
+        }
+    except Exception as e:
+        logger.error(f"Error loading backlinks status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/directories")
-async def list_directories():
+@router.get("/latest-run")
+async def backlinks_latest_run():
     """
-    Liste tous les annuaires disponibles.
+    Retourne le snapshot complet du dernier run.
     """
-    directories = get_active_directories()
-    
-    return {
-        "directories": [
-            {
-                "key": d["key"],
-                "name": d["name"],
-                "domain": d["domain"],
-                "category": d.get("category", "directory"),
-                "priority": d.get("priority", 1),
-                "requires_email_verification": d.get("requires_email_verification", False),
-                "has_submitter": d["key"] in SUBMITTERS,
-            }
-            for d in directories
-        ],
-        "total": len(directories)
-    }
+    try:
+        payload = load_snapshot_json(DEFAULT_SNAPSHOT_PATH)
+        return {
+            "ok": True,
+            "snapshot_path": DEFAULT_SNAPSHOT_PATH,
+            "data": payload,
+        }
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="No backlink snapshot found")
+    except Exception as e:
+        logger.error(f"Error loading latest backlink run: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/queue")
-async def get_queue():
+@router.get("/records")
+async def backlinks_records():
     """
-    Retourne la file d'attente de soumission triée par priorité.
+    Retourne juste la liste des records du dernier snapshot.
     """
-    queue = get_submission_queue()
-    
-    return {
-        "queue": [
-            {
-                "key": d["key"],
-                "name": d["name"],
-                "priority": d.get("priority", 1),
-                "requires_email_verification": d.get("requires_email_verification", False),
-            }
-            for d in queue
-        ],
-        "total": len(queue)
-    }
+    try:
+        payload = load_snapshot_json(DEFAULT_SNAPSHOT_PATH)
+        return {
+            "ok": True,
+            "count": len(payload.get("records", [])),
+            "records": payload.get("records", []),
+        }
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="No backlink snapshot found")
+    except Exception as e:
+        logger.error(f"Error loading backlink records: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.get("/business-info")
-async def business_info():
-    """
-    Retourne les informations business utilisées pour les soumissions.
-    """
-    return build_business_payload()
-
-
-# =====================================================
-# ROUTES - CYCLE COMPLET
-# =====================================================
 
 @router.post("/run")
-async def run_cycle(request: RunCycleRequest, background_tasks: BackgroundTasks):
+async def run_backlinks(request: RunBacklinkCycleRequest):
     """
-    Lance un cycle complet de backlinks en arrière-plan.
-    
-    1. Soumet aux annuaires actifs
-    2. Vérifie les emails si demandé
-    3. Consolide les résultats
-    4. Sauvegarde un snapshot JSON
+    Lance un cycle backlinks complet.
+    Conseil: commencer petit (2-3 annuaires max).
     """
-    cycle_id = f"cycle_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    
-    async def run_in_background():
-        try:
-            result = await run_backlink_cycle(
-                headless=request.headless,
-                max_directories=request.max_directories,
-                process_email_verification=request.process_email_verification,
-                verification_days_back=request.verification_days_back,
-                click_verification_links=request.click_verification_links,
-                save_snapshot=request.save_snapshot,
-            )
-            logger.info(f"✅ Cycle {cycle_id} terminé: {result.get('run_summary', {})}")
-        except Exception as e:
-            logger.error(f"❌ Erreur cycle {cycle_id}: {e}")
-    
-    background_tasks.add_task(asyncio.create_task, run_in_background())
-    
-    return {
-        "message": "Cycle de backlinks lancé en arrière-plan",
-        "cycle_id": cycle_id,
-        "config": {
-            "headless": request.headless,
-            "max_directories": request.max_directories,
-            "process_email_verification": request.process_email_verification,
-            "verification_days_back": request.verification_days_back,
-            "save_snapshot": request.save_snapshot,
+    try:
+        logger.info("🚀 API /api/backlinks/run called")
+
+        result = await run_backlink_cycle(
+            business_overrides=request.business_overrides,
+            headless=request.headless,
+            max_directories=request.max_directories,
+            process_email_verification=request.process_email_verification,
+            verification_days_back=request.verification_days_back,
+            click_verification_links=request.click_verification_links,
+            save_snapshot=request.save_snapshot,
+            output_path=request.output_path,
+        )
+
+        return {
+            "ok": True,
+            "message": "Backlink cycle completed",
+            "result": result,
         }
-    }
+
+    except Exception as e:
+        logger.error(f"Error running backlink cycle: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/retry-pending")
-async def retry_pending(request: RetryVerificationRequest, background_tasks: BackgroundTasks):
+async def retry_pending_backlinks(request: RetryPendingRequest):
     """
-    Relance la vérification email pour les records en attente.
-    Charge les records depuis le dernier snapshot.
+    Recharge le dernier snapshot et relance seulement les validations email en attente.
     """
-    if not os.path.exists(DEFAULT_OUTPUT_PATH):
-        raise HTTPException(
-            status_code=404,
-            detail="Aucun snapshot trouvé. Lancez d'abord un cycle complet avec /run."
-        )
-    
     try:
-        records = load_records_from_snapshot(DEFAULT_OUTPUT_PATH)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erreur chargement snapshot: {str(e)}"
+        logger.info("🔁 API /api/backlinks/retry-pending called")
+
+        snapshot_path = request.output_path or DEFAULT_SNAPSHOT_PATH
+        records = load_records_from_snapshot(snapshot_path)
+
+        result = await retry_pending_verifications_only(
+            records=records,
+            verification_days_back=request.verification_days_back,
+            click_verification_links=request.click_verification_links,
+            save_snapshot=request.save_snapshot,
+            output_path=request.output_path,
         )
-    
-    async def run_in_background():
-        try:
-            result = await retry_pending_verifications_only(
-                records=records,
-                verification_days_back=request.verification_days_back,
-                click_verification_links=request.click_verification_links,
-                save_snapshot=request.save_snapshot,
-            )
-            logger.info(f"✅ Retry terminé: {result.get('verification_summary', {})}")
-        except Exception as e:
-            logger.error(f"❌ Erreur retry: {e}")
-    
-    background_tasks.add_task(asyncio.create_task, run_in_background())
-    
-    return {
-        "message": "Relance des vérifications en arrière-plan",
-        "records_loaded": len(records),
-        "config": {
-            "verification_days_back": request.verification_days_back,
-            "click_verification_links": request.click_verification_links,
-            "save_snapshot": request.save_snapshot,
-        }
-    }
 
-
-# =====================================================
-# ROUTES - SNAPSHOT & RÉSULTATS
-# =====================================================
-
-@router.get("/latest-run")
-async def get_latest_run():
-    """
-    Retourne les résultats du dernier cycle (depuis le snapshot JSON).
-    """
-    if not os.path.exists(DEFAULT_OUTPUT_PATH):
-        raise HTTPException(
-            status_code=404,
-            detail="Aucun snapshot trouvé. Lancez d'abord un cycle complet avec /run."
-        )
-    
-    try:
-        import json
-        with open(DEFAULT_OUTPUT_PATH, "r") as f:
-            snapshot = json.load(f)
-        
         return {
-            "saved_at": snapshot.get("saved_at"),
-            "metadata": snapshot.get("metadata", {}),
-            "run_summary": snapshot.get("run_summary", {}),
-            "records_count": len(snapshot.get("records", [])),
-            "records": snapshot.get("records", [])[:20],  # Limite à 20 pour l'API
+            "ok": True,
+            "message": "Pending verifications retried",
+            "result": result,
         }
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="No backlink snapshot found to retry")
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erreur lecture snapshot: {str(e)}"
-        )
-
-
-@router.get("/latest-run/summary")
-async def get_latest_run_summary():
-    """
-    Retourne un résumé condensé du dernier cycle.
-    """
-    if not os.path.exists(DEFAULT_OUTPUT_PATH):
-        raise HTTPException(
-            status_code=404,
-            detail="Aucun snapshot trouvé."
-        )
-    
-    try:
-        import json
-        with open(DEFAULT_OUTPUT_PATH, "r") as f:
-            snapshot = json.load(f)
-        
-        records = snapshot.get("records", [])
-        
-        # Calculer les comptages
-        counts = {
-            "total": len(records),
-            "submitted": 0,
-            "email_pending": 0,
-            "email_found": 0,
-            "verification_clicked": 0,
-            "verified": 0,
-            "live": 0,
-            "failed": 0,
-            "skipped": 0,
-        }
-        
-        for r in records:
-            status = r.get("status", "unknown")
-            if status in counts:
-                counts[status] += 1
-        
-        return {
-            "saved_at": snapshot.get("saved_at"),
-            "counts": counts,
-            "success_rate": round((counts["verified"] + counts["live"]) / max(counts["total"], 1) * 100, 1),
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erreur lecture snapshot: {str(e)}"
-        )
-
-
-@router.delete("/snapshot")
-async def delete_snapshot():
-    """
-    Supprime le snapshot actuel.
-    """
-    if not os.path.exists(DEFAULT_OUTPUT_PATH):
-        raise HTTPException(
-            status_code=404,
-            detail="Aucun snapshot à supprimer."
-        )
-    
-    try:
-        os.remove(DEFAULT_OUTPUT_PATH)
-        return {"message": "Snapshot supprimé", "path": DEFAULT_OUTPUT_PATH}
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erreur suppression: {str(e)}"
-        )
+        logger.error(f"Error retrying pending verifications: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
