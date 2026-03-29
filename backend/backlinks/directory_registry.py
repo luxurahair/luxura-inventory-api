@@ -18,7 +18,7 @@ from typing import Dict, List, Optional
 
 DIRECTORY_REGISTRY: Dict[str, Dict] = {
     # ==========================================
-    # ANNUAIRE ACTIF - EXPLOITABLE
+    # TOUS LES ANNUAIRES EN MANUEL OU INACTIFS
     # ==========================================
     "brownbook": {
         "key": "brownbook",
@@ -29,11 +29,11 @@ DIRECTORY_REGISTRY: Dict[str, Dict] = {
         "country": "GLOBAL",
         "language": ["en"],
         "niche": ["general_business"],
-        "active": True,
-        "priority": 1,
+        "active": False,
+        "priority": 2,
         "requires_email_verification": True,
-        "submission_method": "multi_step",
-        "submission_notes": "Public add-business flow is live, but multi-step. DA 73. Best current option.",
+        "submission_method": "manual_only",
+        "submission_notes": "Site vivant, DA 73. Flow multi-step avec React capricieux (autocomplete, readonly inputs). Exploitable humainement, pas rentable à automatiser.",
     },
     
     # ==========================================
