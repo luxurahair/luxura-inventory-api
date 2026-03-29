@@ -43,6 +43,22 @@ except ImportError:
     logger.warning("Logo overlay module not available")
     LOGO_OVERLAY_AVAILABLE = False
 
+# Import du module anti-doublon et contrôle éditorial
+try:
+    from editorial_guard import (
+        EditorialGuard,
+        check_duplicate_before_generation,
+        log_production_event,
+        compute_topic_hash,
+        extract_keywords,
+        SIMILARITY_THRESHOLD
+    )
+    EDITORIAL_GUARD_AVAILABLE = True
+    logger.info("Editorial guard module loaded successfully")
+except ImportError:
+    logger.warning("Editorial guard module not available")
+    EDITORIAL_GUARD_AVAILABLE = False
+
 # =====================================================
 # EMAIL CONFIGURATION
 # =====================================================
@@ -2387,17 +2403,40 @@ async def generate_daily_blogs(
         if not blog_data:
             continue
 
+        generated_title = blog_data.get("title", topic_data["topic"])
+        category = topic_data["category"]
+
+        # ANTI-DOUBLON: Vérifier avant de continuer
+        if EDITORIAL_GUARD_AVAILABLE:
+            is_ok, error_msg = await check_duplicate_before_generation(
+                generated_title, db, existing_titles
+            )
+            if not is_ok:
+                log_production_event("DUPLICATE_BLOCKED", generated_title, category)
+                logger.warning(f"🚫 Génération bloquée: {error_msg}")
+                continue
+            
+            # Ajouter au cache pour éviter doublons dans le même batch
+            existing_titles.append(generated_title)
+
         post_id = f"auto-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:4]}"
+        
+        # Calculer le hash du sujet pour traçabilité
+        topic_hash = None
+        keywords_extracted = []
+        if EDITORIAL_GUARD_AVAILABLE:
+            topic_hash = compute_topic_hash(generated_title, category)
+            keywords_extracted = extract_keywords(generated_title)
 
         blog_post = {
             "id": post_id,
-            "title": blog_data.get("title", topic_data["topic"]),
+            "title": generated_title,
             "excerpt": blog_data.get("excerpt", ""),
             "content": blog_data.get("content", ""),
             "meta_description": blog_data.get("meta_description", ""),
             "tags": blog_data.get("tags", topic_data["keywords"]),
             "image": None,
-            "category": topic_data["category"],
+            "category": category,
             "focus_product": topic_data.get("focus_product"),
             "content_type": topic_data.get("content_type", "general"),
             "author": "Luxura Distribution",
@@ -2406,10 +2445,23 @@ async def generate_daily_blogs(
             "needs_human_review": True,
             "human_reviewed": False,
             "published_to_wix": False,
-            "published_to_facebook": False
+            "published_to_facebook": False,
+            # FLAGS DE PRODUCTION V2
+            "pipeline_version": "v2_stable",
+            "topic_hash": topic_hash,
+            "editorial_angle": category,
+            "keywords_extracted": keywords_extracted,
+            "cover_v2_applied": False  # Sera mis à True après PATCH
         }
 
         await db.blog_posts.insert_one(blog_post)
+        
+        # Log de production
+        if EDITORIAL_GUARD_AVAILABLE:
+            log_production_event("BLOG_GENERATED", generated_title, category, extra={
+                "topic_hash": topic_hash,
+                "keywords": keywords_extracted
+            })
 
         if publish_to_wix and wix_api_key and wix_site_id:
             category = topic_data.get("category", "general")
@@ -2510,24 +2562,45 @@ async def generate_daily_blogs(
                     
                     published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
                     if published:
+                        # FLAGS DE PRODUCTION V2
+                        update_data = {
+                            "published_to_wix": True,
+                            "wix_post_id": draft_id,
+                            "wix_draft_id": draft_id,
+                            "image": blog_post.get("image"),
+                            "wix_image_url": (cover_image_data or {}).get("static_url", ""),
+                            "wix_content_image_url": (content_image_data or {}).get("static_url", ""),
+                            "wix_cover_patch_ok": cover_attached,
+                            "cover_v2_applied": cover_attached,
+                            "cover_patch_payload_version": "v2" if cover_attached else None
+                        }
+                        
                         await db.blog_posts.update_one(
                             {"id": post_id},
-                            {"$set": {
-                                "published_to_wix": True,
-                                "wix_post_id": draft_id,
-                                "image": blog_post.get("image"),
-                                "wix_image_url": (cover_image_data or {}).get("static_url", ""),
-                                "wix_content_image_url": (content_image_data or {}).get("static_url", ""),
-                                "wix_cover_patch_ok": cover_attached
-                            }}
+                            {"$set": update_data}
                         )
+                        
                         blog_post["published_to_wix"] = True
                         blog_post["wix_post_id"] = draft_id
+                        blog_post["wix_draft_id"] = draft_id
                         blog_post["wix_cover_patch_ok"] = cover_attached
+                        blog_post["cover_v2_applied"] = cover_attached
+                        
                         if cover_image_data:
                             blog_post["wix_image_url"] = cover_image_data.get("static_url", "")
+                            blog_post["wix_cover_image"] = cover_image_data
                         if content_image_data:
                             blog_post["wix_content_image_url"] = content_image_data.get("static_url", "")
+                        
+                        # Log de production pour traçabilité
+                        if EDITORIAL_GUARD_AVAILABLE:
+                            log_production_event(
+                                "COVER_APPLIED" if cover_attached else "COVER_FAILED",
+                                blog_post["title"],
+                                category,
+                                draft_id=draft_id,
+                                cover_v2=cover_attached
+                            )
                     else:
                         logger.error("Failed to publish Wix draft")
                 else:
