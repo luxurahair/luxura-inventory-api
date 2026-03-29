@@ -1,0 +1,54 @@
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Qui peut devenir revendeur Luxura ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Les salons de coiffure, instituts de beauté, cosméticiens et professionnels de la coiffure au Québec. Nous travaillons exclusivement avec des professionnels établis."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Faut-il un volume minimum de commande ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Non. Vous commandez selon vos besoins. Cependant, le programme de dépôt d'inventaire est réservé aux salons avec un volume régulier."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Comment fonctionne le dépôt d'inventaire Luxura ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Vous recevez un stock en consignation dans votre salon. Vous payez uniquement les extensions vendues à vos clientes. Facturation mensuelle. Aucun investissement initial requis."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Quelles méthodes d'extensions capillaires proposez-vous ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Nous offrons les extensions Halo (sans pose), Tape-In (bandes adhésives), I-Tip (kératine) et Genius Weft (trame invisible). Toutes nos extensions sont en cheveux naturels 100% Remy Hair."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Livrez-vous partout au Québec ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui. Notre stock est situé à Saint-Georges (Beauce) avec livraison rapide partout au Québec. Expédition également possible dans tout le Canada."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Y a-t-il des frais pour devenir revendeur Luxura ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Non. Devenir partenaire revendeur Luxura est entièrement gratuit. Vous accédez simplement à nos tarifs professionnels réservés aux salons."
+      }
+    }
+  ]
+}
