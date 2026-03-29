@@ -1415,6 +1415,101 @@ async def publish_wix_draft(api_key: str, site_id: str, draft_id: str) -> bool:
         return False
 
 
+async def attach_cover_image_to_wix_draft(
+    api_key: str,
+    site_id: str,
+    draft_id: str,
+    cover_image_data: Optional[Dict]
+) -> bool:
+    """
+    Applique la cover image du feed/blog card via PATCH séparé.
+    On envoie UNIQUEMENT media.wixMedia.image.id avec une Wix URI complète.
+    """
+    if not cover_image_data:
+        logger.warning("No cover_image_data provided for draft cover patch")
+        return False
+
+    wix_uri = cover_image_data.get("wix_uri")
+    static_url = cover_image_data.get("static_url", "")
+
+    if not wix_uri:
+        logger.error("cover_image_data missing wix_uri")
+        return False
+
+    payload = {
+        "draftPost": {
+            "media": {
+                "wixMedia": {
+                    "image": {
+                        "id": wix_uri
+                    }
+                }
+            }
+        }
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            logger.info(f"PATCH cover image on draft {draft_id}")
+            logger.info(f"  wix_uri={wix_uri}")
+            if static_url:
+                logger.info(f"  static_url={static_url[:100]}")
+
+            response = await client.patch(
+                f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
+                headers={
+                    "Authorization": api_key,
+                    "wix-site-id": site_id,
+                    "Content-Type": "application/json"
+                },
+                json=payload
+            )
+
+            if response.status_code not in (200, 204):
+                logger.error(f"Cover PATCH failed: {response.status_code} - {response.text}")
+                return False
+
+            logger.info("✅ Cover PATCH accepted by Wix")
+
+            # Vérification immédiate: on relit le draft
+            verify = await client.get(
+                f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
+                headers={
+                    "Authorization": api_key,
+                    "wix-site-id": site_id,
+                    "Content-Type": "application/json"
+                }
+            )
+
+            if verify.status_code != 200:
+                logger.warning(f"Could not verify draft after PATCH: {verify.status_code}")
+                return True
+
+            draft_json = verify.json()
+            media = draft_json.get("draftPost", {}).get("media", {})
+            image_obj = media.get("wixMedia", {}).get("image", {})
+
+            saved_id = image_obj.get("id")
+            saved_url = image_obj.get("url")
+
+            if saved_id == wix_uri:
+                logger.info("✅ Draft re-read confirms cover media saved")
+                if saved_url:
+                    logger.info(f"  saved_url={saved_url[:100]}")
+                return True
+
+            logger.warning("PATCH returned success but draft does not reflect expected cover id")
+            logger.warning(f"Expected: {wix_uri}")
+            logger.warning(f"Saved   : {saved_id}")
+            return False
+
+    except Exception as e:
+        logger.error(f"Error patching cover image on draft: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def generate_seo_meta_description(title: str, category: str = None) -> str:
     """
     Génère une meta description SEO optimisée (150-160 caractères).
@@ -2340,8 +2435,20 @@ async def generate_daily_blogs(
 
             if wix_result:
                 draft_id = wix_result.get("draftPost", {}).get("id")
+
                 if draft_id:
-                    # NOUVEAU: Ajouter les métadonnées SEO avant publication
+                    cover_attached = False
+
+                    # PATCH séparé pour la cover image du feed
+                    if cover_image_data:
+                        cover_attached = await attach_cover_image_to_wix_draft(
+                            api_key=wix_api_key,
+                            site_id=wix_site_id,
+                            draft_id=draft_id,
+                            cover_image_data=cover_image_data
+                        )
+
+                    # Ajouter les métadonnées SEO avant publication
                     await add_seo_metadata_to_draft(
                         wix_api_key, 
                         wix_site_id, 
@@ -2359,11 +2466,13 @@ async def generate_daily_blogs(
                                 "wix_post_id": draft_id,
                                 "image": blog_post.get("image"),
                                 "wix_image_url": (cover_image_data or {}).get("static_url", ""),
-                                "wix_content_image_url": (content_image_data or {}).get("static_url", "")
+                                "wix_content_image_url": (content_image_data or {}).get("static_url", ""),
+                                "wix_cover_patch_ok": cover_attached
                             }}
                         )
                         blog_post["published_to_wix"] = True
                         blog_post["wix_post_id"] = draft_id
+                        blog_post["wix_cover_patch_ok"] = cover_attached
                         if cover_image_data:
                             blog_post["wix_image_url"] = cover_image_data.get("static_url", "")
                         if content_image_data:
