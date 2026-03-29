@@ -1,189 +1,204 @@
+# backlink_models.py
 """
-BACKLINK MODELS - Structures de données centralisées
-Version: 1.0
-Date: 2026-03-29
-
-Modèles Pydantic pour la gestion des backlinks/citations.
-Fini les JSON bancals différents d'un fichier à l'autre.
+Modèles de données standards pour le système backlinks / citations Luxura.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from __future__ import annotations
+
+from typing import Optional, List, Dict, Literal
 from datetime import datetime, timezone
-from enum import Enum
+from pydantic import BaseModel, Field
 
 
-class BacklinkStatus(str, Enum):
-    """Statuts possibles d'un backlink"""
-    NEW = "new"                           # Pas encore soumis
-    SUBMITTED = "submitted"               # Formulaire soumis
-    EMAIL_PENDING = "email_pending"       # En attente d'email de vérification
-    EMAIL_FOUND = "email_found"           # Email de vérification trouvé
-    VERIFICATION_CLICKED = "verification_clicked"  # Lien de vérification cliqué
-    VERIFIED = "verified"                 # Vérification complète
-    LIVE = "live"                         # Listing actif et visible
-    FAILED = "failed"                     # Échec de soumission
-    REJECTED = "rejected"                 # Rejeté par l'annuaire
-    EXPIRED = "expired"                   # Listing expiré
+BacklinkStatus = Literal[
+    "new",
+    "queued",
+    "submitted",
+    "email_pending",
+    "email_found",
+    "verification_clicked",
+    "verified",
+    "live",
+    "failed",
+    "skipped"
+]
+
+
+class VerificationLink(BaseModel):
+    url: str
+    source_email_subject: Optional[str] = None
+    source_email_from: Optional[str] = None
+    found_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    clicked: bool = False
+    clicked_at: Optional[datetime] = None
+    notes: Optional[str] = None
 
 
 class SubmissionResult(BaseModel):
-    """Résultat d'une soumission à un annuaire"""
     directory_key: str
     directory_name: str
+    domain: str
     status: BacklinkStatus
     requires_email_verification: bool = False
-    fields_filled: int = 0
     submission_url: Optional[str] = None
-    screenshot_path: Optional[str] = None
-    error_message: Optional[str] = None
     notes: Optional[str] = None
-    submitted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
-    class Config:
-        use_enum_values = True
+    raw_data: Dict = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class BacklinkRecord(BaseModel):
-    """Enregistrement complet d'un backlink/citation"""
-    id: Optional[str] = None
-    domain: str                           # luxuradistribution.com
-    directory_key: str                    # hotfrog, cylex, etc.
-    directory_name: str                   # Nom lisible
-    status: BacklinkStatus = BacklinkStatus.NEW
-    
-    # Soumission
-    submission_url: Optional[str] = None
-    fields_filled: int = 0
+    """
+    Enregistrement central d'une soumission / citation / backlink.
+    """
+    business_name: str = "Luxura Distribution"
+    directory_key: str
+    directory_name: str
+    domain: str
+
+    category: str = "directory"
+    country: str = "CA"
+    language: List[str] = Field(default_factory=lambda: ["fr", "en"])
+    niche: List[str] = Field(default_factory=list)
+
+    status: BacklinkStatus = "new"
+    priority: int = 1
+
+    requires_email_verification: bool = False
+    verification_links: List[VerificationLink] = Field(default_factory=list)
+
     submitted_at: Optional[datetime] = None
-    
-    # Vérification email
-    email_required: bool = False
-    verification_email_subject: Optional[str] = None
-    verification_link: Optional[str] = None
-    verification_link_found_at: Optional[datetime] = None
-    verification_clicked_at: Optional[datetime] = None
-    
-    # Résultat
-    live_url: Optional[str] = None
+    email_found_at: Optional[datetime] = None
     verified_at: Optional[datetime] = None
-    
-    # Metadata
-    screenshot_paths: List[str] = []
+    live_at: Optional[datetime] = None
+    failed_at: Optional[datetime] = None
+
+    submission_url: Optional[str] = None
+    live_url: Optional[str] = None
+    contact_email: Optional[str] = None
+
+    last_error: Optional[str] = None
     notes: Optional[str] = None
-    error_message: Optional[str] = None
-    retry_count: int = 0
-    last_checked_at: Optional[datetime] = None
+
+    pipeline_version: str = "backlinks_v1"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
-    class Config:
-        use_enum_values = True
-    
-    def update_status(self, new_status: BacklinkStatus, notes: str = None):
-        """Met à jour le statut avec timestamp"""
-        self.status = new_status
-        self.updated_at = datetime.now(timezone.utc)
+
+    def mark_submitted(self, submission_url: Optional[str] = None, notes: Optional[str] = None):
+        self.status = "submitted"
+        self.submitted_at = datetime.now(timezone.utc)
+        self.updated_at = self.submitted_at
+        if submission_url:
+            self.submission_url = submission_url
         if notes:
             self.notes = notes
-        
-        # Timestamps spécifiques
-        if new_status == BacklinkStatus.SUBMITTED:
-            self.submitted_at = datetime.now(timezone.utc)
-        elif new_status == BacklinkStatus.EMAIL_FOUND:
-            self.verification_link_found_at = datetime.now(timezone.utc)
-        elif new_status == BacklinkStatus.VERIFICATION_CLICKED:
-            self.verification_clicked_at = datetime.now(timezone.utc)
-        elif new_status == BacklinkStatus.VERIFIED:
-            self.verified_at = datetime.now(timezone.utc)
-    
-    def to_dict(self) -> Dict:
-        """Convertit en dictionnaire pour MongoDB"""
-        return self.model_dump()
-    
-    @classmethod
-    def from_submission_result(cls, result: SubmissionResult, domain: str = "luxuradistribution.com"):
-        """Crée un BacklinkRecord depuis un SubmissionResult"""
-        return cls(
-            domain=domain,
-            directory_key=result.directory_key,
-            directory_name=result.directory_name,
-            status=result.status,
-            submission_url=result.submission_url,
-            fields_filled=result.fields_filled,
-            submitted_at=result.submitted_at,
-            email_required=result.requires_email_verification,
-            screenshot_paths=[result.screenshot_path] if result.screenshot_path else [],
-            notes=result.notes,
-            error_message=result.error_message
+
+    def mark_email_pending(self):
+        self.status = "email_pending"
+        self.updated_at = datetime.now(timezone.utc)
+
+    def mark_email_found(self):
+        self.status = "email_found"
+        self.email_found_at = datetime.now(timezone.utc)
+        self.updated_at = self.email_found_at
+
+    def mark_verification_clicked(self):
+        self.status = "verification_clicked"
+        self.verified_at = datetime.now(timezone.utc)
+        self.updated_at = self.verified_at
+
+    def mark_verified(self):
+        self.status = "verified"
+        self.verified_at = datetime.now(timezone.utc)
+        self.updated_at = self.verified_at
+
+    def mark_live(self, live_url: Optional[str] = None):
+        self.status = "live"
+        self.live_at = datetime.now(timezone.utc)
+        self.updated_at = self.live_at
+        if live_url:
+            self.live_url = live_url
+
+    def mark_failed(self, error_message: str):
+        self.status = "failed"
+        self.failed_at = datetime.now(timezone.utc)
+        self.updated_at = self.failed_at
+        self.last_error = error_message
+
+    def add_verification_link(
+        self,
+        url: str,
+        source_email_subject: Optional[str] = None,
+        source_email_from: Optional[str] = None,
+        notes: Optional[str] = None
+    ):
+        self.verification_links.append(
+            VerificationLink(
+                url=url,
+                source_email_subject=source_email_subject,
+                source_email_from=source_email_from,
+                notes=notes
+            )
         )
+        self.mark_email_found()
 
 
-class EmailVerificationResult(BaseModel):
-    """Résultat de la recherche d'email de vérification"""
-    directory_key: str
-    found: bool = False
-    email_subject: Optional[str] = None
-    email_from: Optional[str] = None
-    email_date: Optional[datetime] = None
-    verification_link: Optional[str] = None
-    raw_body_preview: Optional[str] = None
-    
-    class Config:
-        use_enum_values = True
-
-
-class VerificationClickResult(BaseModel):
-    """Résultat du clic sur un lien de vérification"""
-    directory_key: str
-    link: str
-    success: bool = False
-    final_url: Optional[str] = None
-    screenshot_path: Optional[str] = None
-    error_message: Optional[str] = None
-    clicked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-
-class BacklinkCycleReport(BaseModel):
-    """Rapport d'un cycle complet de backlinks"""
-    cycle_id: str
+class BacklinkRunSummary(BaseModel):
+    """
+    Résumé d'un cycle complet de soumission / vérification.
+    """
+    total_directories: int = 0
+    submitted: int = 0
+    email_pending: int = 0
+    email_found: int = 0
+    verification_clicked: int = 0
+    verified: int = 0
+    live: int = 0
+    failed: int = 0
+    skipped: int = 0
+    notes: Optional[str] = None
     started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    completed_at: Optional[datetime] = None
-    
-    # Compteurs
-    directories_attempted: int = 0
-    submissions_success: int = 0
-    submissions_failed: int = 0
-    emails_found: int = 0
-    verifications_clicked: int = 0
-    
-    # Détails
-    results: List[Dict] = []
-    errors: List[str] = []
-    
-    def add_result(self, result: SubmissionResult):
-        """Ajoute un résultat au rapport"""
-        self.directories_attempted += 1
-        if result.status in [BacklinkStatus.SUBMITTED, BacklinkStatus.EMAIL_PENDING]:
-            self.submissions_success += 1
-        elif result.status == BacklinkStatus.FAILED:
-            self.submissions_failed += 1
-        self.results.append(result.model_dump())
-    
-    def complete(self):
-        """Marque le cycle comme terminé"""
-        self.completed_at = datetime.now(timezone.utc)
-    
-    def get_summary(self) -> Dict:
-        """Retourne un résumé du cycle"""
-        return {
-            "cycle_id": self.cycle_id,
-            "duration_seconds": (self.completed_at - self.started_at).total_seconds() if self.completed_at else None,
-            "directories_attempted": self.directories_attempted,
-            "success_rate": round(self.submissions_success / max(1, self.directories_attempted) * 100, 1),
-            "submissions_success": self.submissions_success,
-            "submissions_failed": self.submissions_failed,
-            "emails_found": self.emails_found,
-            "verifications_clicked": self.verifications_clicked,
-            "errors_count": len(self.errors)
-        }
+    finished_at: Optional[datetime] = None
+
+    def finish(self):
+        self.finished_at = datetime.now(timezone.utc)
+
+
+class ProspectRecord(BaseModel):
+    """
+    Prévu pour la future couche outreach / guest post / partenariat.
+    On le met déjà pour éviter de tout recasser plus tard.
+    """
+    domain: str
+    name: Optional[str] = None
+    source_type: Literal[
+        "directory",
+        "beauty_blog",
+        "resource_page",
+        "partner_salon",
+        "school",
+        "magazine",
+        "general_outreach"
+    ] = "general_outreach"
+
+    country: str = "CA"
+    language: List[str] = Field(default_factory=lambda: ["fr"])
+    niche: List[str] = Field(default_factory=list)
+
+    contact_email: Optional[str] = None
+    contact_page: Optional[str] = None
+    notes: Optional[str] = None
+
+    quality_score: int = 0
+    relevance_score: int = 0
+    outreach_status: Literal[
+        "new",
+        "qualified",
+        "contacted",
+        "responded",
+        "won",
+        "lost",
+        "ignored"
+    ] = "new"
+
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
