@@ -79,13 +79,9 @@ async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: s
         category = blog.get('category', 'general')
         image_url = blog.get('image', blog.get('wix_image_url', ''))
         
-        # Construire les URLs d'action
-        # Note: Ces URLs pointent vers l'API backend
-        api_base = os.getenv("API_BASE_URL", "https://luxura-inventory-api.onrender.com")
-        
-        approve_url = f"{api_base}/blog/approve/{draft_id}"
-        reject_url = f"{api_base}/blog/reject/{draft_id}"
+        # URLs d'action - Utiliser directement Wix Dashboard (plus fiable)
         wix_edit_url = f"https://manage.wix.com/dashboard/6e62c946-d068-45c1-8f5f-7af998f0d7b3/blog/posts/{draft_id}"
+        wix_publish_url = f"https://manage.wix.com/dashboard/6e62c946-d068-45c1-8f5f-7af998f0d7b3/blog/posts/{draft_id}?action=publish"
         
         # URL Emergent avec contexte pré-rempli
         emergent_message = f"Modifier le brouillon blog: {title}"
@@ -229,22 +225,18 @@ async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: s
                     </p>
                     
                     <div class="actions">
-                        <a href="{approve_url}" class="btn btn-approve">
-                            ✅ APPROUVER ET PUBLIER
-                        </a>
-                        
-                        <a href="{wix_edit_url}" class="btn btn-edit">
-                            ✏️ Modifier dans Wix Dashboard
+                        <a href="{wix_edit_url}" class="btn btn-approve">
+                            ✅ OUVRIR ET PUBLIER DANS WIX
                         </a>
                         
                         <a href="{emergent_url}" class="btn btn-emergent">
                             🤖 Demander modification via Emergent
                         </a>
-                        
-                        <a href="{reject_url}" class="btn btn-reject">
-                            ❌ Rejeter ce brouillon
-                        </a>
                     </div>
+                    
+                    <p style="color: #666; font-size: 11px; text-align: center; margin-top: 15px;">
+                        Cliquez sur "Ouvrir dans Wix" puis sur le bouton "Publier" en haut à droite
+                    </p>
                 </div>
                 
                 <div class="footer">
