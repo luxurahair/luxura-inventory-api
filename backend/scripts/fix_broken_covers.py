@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Script de migration pour réparer les covers cassées des anciens articles.
-Utilise le format qui fonctionne: file_id simple + custom: True
+Script de migration V2 pour réparer les covers cassées des anciens articles Wix.
+Format stable: file_id simple + custom: True
 
 Usage:
     python fix_broken_covers.py --dry-run    # Voir ce qui serait modifié
@@ -13,11 +13,12 @@ import asyncio
 import httpx
 import argparse
 import logging
+from typing import Optional, Dict, List
 from dotenv import load_dotenv
 
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 WIX_API_KEY = os.getenv("WIX_API_KEY")
@@ -44,24 +45,10 @@ async def get_recent_posts(limit: int = 20):
         return response.json().get("posts", [])
 
 
-def is_cover_broken(post: dict) -> bool:
-    """Vérifie si la cover utilise l'ancien format cassé"""
-    media = post.get("media", {})
-    image = media.get("wixMedia", {}).get("image", {})
-    image_id = image.get("id", "")
-    custom = media.get("custom", False)
-    
-    # Ancien format cassé: wix:image://v1/... ou custom=False
-    if image_id.startswith("wix:image://"):
-        return True
-    if image_id and not custom:
-        return True
-    
-    return False
-
-
 def extract_file_id_from_wix_uri(wix_uri: str) -> str:
     """Extrait le file_id simple d'une Wix URI"""
+    if not wix_uri:
+        return ""
     # wix:image://v1/f1b961_xxx~mv2.png/filename.png#originWidth=...
     if wix_uri.startswith("wix:image://v1/"):
         parts = wix_uri.replace("wix:image://v1/", "").split("/")
@@ -71,96 +58,181 @@ def extract_file_id_from_wix_uri(wix_uri: str) -> str:
     return wix_uri
 
 
-async def fix_post_cover(post_id: str, current_image_id: str, dry_run: bool = True):
-    """Corrige la cover d'un post avec le bon format"""
+def is_cover_broken(post: dict) -> tuple:
+    """Vérifie si la cover utilise l'ancien format cassé et retourne les infos"""
+    media = post.get("media", {})
+    image = media.get("wixMedia", {}).get("image", {})
+    image_id = image.get("id", "")
+    custom = media.get("custom", False)
+    width = image.get("width", 1200)
+    height = image.get("height", 630)
     
-    # Extraire le file_id simple
-    file_id = extract_file_id_from_wix_uri(current_image_id)
+    # Ancien format cassé: wix:image://v1/... ou custom=False
+    if image_id.startswith("wix:image://"):
+        file_id = extract_file_id_from_wix_uri(image_id)
+        return True, file_id, width, height
+    if image_id and not custom:
+        return True, image_id, width, height
     
-    if not file_id:
-        logger.warning(f"  Impossible d'extraire file_id de: {current_image_id}")
-        return False
-    
-    logger.info(f"  file_id extrait: {file_id}")
-    
-    if dry_run:
-        logger.info(f"  [DRY-RUN] Aurait appliqué: file_id={file_id}, custom=True")
-        return True
-    
-    # Créer un draft depuis le post publié pour le modifier
-    # Note: On ne peut pas modifier directement un post publié,
-    # il faut le convertir en draft, modifier, puis republier
-    
+    return False, image_id, width, height
+
+
+async def revert_post_to_draft(api_key: str, site_id: str, post_id: str) -> Optional[str]:
+    """Convertit un post publié en draft pour pouvoir le modifier"""
+    async with httpx.AsyncClient(timeout=60) as client:
+        response = await client.post(
+            f"https://www.wixapis.com/blog/v3/posts/{post_id}/revert-to-draft",
+            headers={
+                "Authorization": api_key,
+                "wix-site-id": site_id,
+                "Content-Type": "application/json"
+            }
+        )
+        
+        if response.status_code not in (200, 201):
+            logger.error(f"Erreur revert-to-draft: {response.status_code} - {response.text}")
+            return None
+        
+        return response.json().get("draftPost", {}).get("id")
+
+
+async def patch_cover_v2(
+    api_key: str,
+    site_id: str,
+    draft_id: str,
+    file_id: str,
+    width: int = 1200,
+    height: int = 630,
+) -> bool:
+    """
+    Nouveau format stable Wix:
+    - file_id simple
+    - custom: True
+    """
     payload = {
         "draftPost": {
             "media": {
+                "custom": True,
                 "wixMedia": {
                     "image": {
-                        "id": file_id
+                        "id": file_id,
+                        "width": width,
+                        "height": height
                     }
-                },
-                "displayed": True,
-                "custom": True
+                }
             }
         }
     }
-    
-    async with httpx.AsyncClient(timeout=60) as client:
-        # D'abord, créer un draft depuis le post
-        revert_response = await client.post(
-            f"https://www.wixapis.com/blog/v3/posts/{post_id}/revert-to-draft",
-            headers={
-                "Authorization": WIX_API_KEY,
-                "wix-site-id": WIX_SITE_ID,
-                "Content-Type": "application/json"
-            }
-        )
-        
-        if revert_response.status_code not in (200, 201):
-            logger.error(f"  Erreur revert-to-draft: {revert_response.status_code}")
-            return False
-        
-        draft_id = revert_response.json().get("draftPost", {}).get("id")
-        logger.info(f"  Draft créé: {draft_id}")
-        
-        # PATCH le draft avec le bon format
-        patch_response = await client.patch(
+
+    logger.info(f"  cover_file_id_used={file_id}")
+    logger.info(f"  cover_patch_payload_version=v2")
+    logger.info(f"  cover_patch_custom=True")
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.patch(
             f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
             headers={
-                "Authorization": WIX_API_KEY,
-                "wix-site-id": WIX_SITE_ID,
-                "Content-Type": "application/json"
+                "Authorization": api_key,
+                "wix-site-id": site_id,
+                "Content-Type": "application/json",
             },
-            json=payload
+            json=payload,
         )
-        
-        if patch_response.status_code not in (200, 204):
-            logger.error(f"  Erreur PATCH: {patch_response.status_code}")
+
+        if r.status_code not in (200, 204):
+            logger.error(f"PATCH failed for {draft_id}: {r.status_code} {r.text}")
             return False
-        
-        logger.info(f"  ✅ PATCH appliqué")
-        
-        # Republier le draft
-        publish_response = await client.post(
+
+        # Vérification
+        g = await client.get(
+            f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}",
+            headers={
+                "Authorization": api_key,
+                "wix-site-id": site_id,
+                "Content-Type": "application/json",
+            },
+        )
+
+        if g.status_code != 200:
+            logger.warning(f"PATCH ok but verify failed for {draft_id}: {g.status_code}")
+            return True
+
+        data = g.json().get("draftPost", {})
+        media = data.get("media", {})
+        image = media.get("wixMedia", {}).get("image", {})
+
+        saved_id = image.get("id")
+        saved_custom = media.get("custom")
+
+        if saved_id == file_id and saved_custom is True:
+            logger.info(f"  ✅ Cover verified: saved_id={saved_id}, custom={saved_custom}")
+            return True
+
+        logger.warning(
+            f"PATCH accepted but mismatch for {draft_id} | saved_id={saved_id} custom={saved_custom}"
+        )
+        return False
+
+
+async def publish_wix_draft(api_key: str, site_id: str, draft_id: str) -> bool:
+    """Publie un draft"""
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.post(
             f"https://www.wixapis.com/blog/v3/draft-posts/{draft_id}/publish",
             headers={
-                "Authorization": WIX_API_KEY,
-                "wix-site-id": WIX_SITE_ID,
-                "Content-Type": "application/json"
-            }
+                "Authorization": api_key,
+                "wix-site-id": site_id,
+                "Content-Type": "application/json",
+            },
         )
-        
-        if publish_response.status_code not in (200, 201):
-            logger.error(f"  Erreur publish: {publish_response.status_code}")
-            return False
-        
-        logger.info(f"  ✅ Republié avec succès")
+        return r.status_code in (200, 201)
+
+
+async def fix_single_post(api_key: str, site_id: str, post: dict) -> bool:
+    """Corrige un seul post: revert → patch → publish"""
+    post_id = post.get("id")
+    title = post.get("title", "")[:50]
+    
+    is_broken, file_id, width, height = is_cover_broken(post)
+    
+    if not is_broken:
+        logger.info(f"  Post déjà OK, skip")
         return True
+    
+    if not file_id:
+        logger.error(f"  Impossible d'extraire file_id")
+        return False
+    
+    logger.info(f"  Revert to draft...")
+    draft_id = await revert_post_to_draft(api_key, site_id, post_id)
+    
+    if not draft_id:
+        logger.error(f"  Échec revert-to-draft")
+        return False
+    
+    logger.info(f"  Draft créé: {draft_id}")
+    
+    logger.info(f"  PATCH cover v2...")
+    patched = await patch_cover_v2(api_key, site_id, draft_id, file_id, width, height)
+    
+    if not patched:
+        logger.error(f"  Échec PATCH")
+        return False
+    
+    logger.info(f"  Republish...")
+    published = await publish_wix_draft(api_key, site_id, draft_id)
+    
+    if not published:
+        logger.error(f"  Échec publish")
+        return False
+    
+    logger.info(f"  ✅ Post corrigé et republié!")
+    return True
 
 
 async def main(dry_run: bool = True):
     logger.info("=" * 60)
-    logger.info("MIGRATION DES COVERS CASSÉES")
+    logger.info("MIGRATION DES COVERS CASSÉES - V2")
     logger.info(f"Mode: {'DRY-RUN (simulation)' if dry_run else 'FIX (application réelle)'}")
     logger.info("=" * 60)
     
@@ -172,24 +244,20 @@ async def main(dry_run: bool = True):
     for post in posts:
         title = post.get("title", "Sans titre")[:50]
         post_id = post.get("id")
-        media = post.get("media", {})
-        image = media.get("wixMedia", {}).get("image", {})
-        image_id = image.get("id", "NONE")
-        custom = media.get("custom", "N/A")
         
-        is_broken = is_cover_broken(post)
+        is_broken, file_id, width, height = is_cover_broken(post)
         status = "❌ CASSÉ" if is_broken else "✅ OK"
+        
+        media = post.get("media", {})
+        custom = media.get("custom", "N/A")
+        image_id = media.get("wixMedia", {}).get("image", {}).get("id", "NONE")
         
         logger.info(f"{status} | {title}")
         logger.info(f"       id: {image_id[:60]}...")
         logger.info(f"       custom: {custom}")
         
         if is_broken:
-            broken_posts.append({
-                "id": post_id,
-                "title": title,
-                "image_id": image_id
-            })
+            broken_posts.append(post)
         
         logger.info("")
     
@@ -205,21 +273,31 @@ async def main(dry_run: bool = True):
         logger.info("\nPour appliquer les corrections, relancez avec --fix")
         return
     
-    logger.info("\nApplication des corrections...")
+    logger.info("\n" + "=" * 60)
+    logger.info("APPLICATION DES CORRECTIONS")
+    logger.info("=" * 60 + "\n")
+    
+    fixed = 0
+    failed = 0
     
     for post in broken_posts:
-        logger.info(f"\nCorrection: {post['title']}")
-        success = await fix_post_cover(
-            post_id=post["id"],
-            current_image_id=post["image_id"],
-            dry_run=False
-        )
-        if not success:
-            logger.error(f"  Échec de la correction")
+        title = post.get("title", "")[:50]
+        logger.info(f"\n📝 Correction: {title}")
+        
+        success = await fix_single_post(WIX_API_KEY, WIX_SITE_ID, post)
+        
+        if success:
+            fixed += 1
+        else:
+            failed += 1
+    
+    logger.info("\n" + "=" * 60)
+    logger.info(f"TERMINÉ: {fixed} corrigés, {failed} échecs")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Fix broken blog covers")
+    parser = argparse.ArgumentParser(description="Fix broken blog covers V2")
     parser.add_argument("--dry-run", action="store_true", help="Simulation seulement")
     parser.add_argument("--fix", action="store_true", help="Appliquer les corrections")
     
