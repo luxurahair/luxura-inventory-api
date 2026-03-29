@@ -3659,6 +3659,14 @@ async def health_check():
 # Include the router in the main app
 app.include_router(api_router)
 
+# Include backlinks routes
+try:
+    from backlinks.backlink_routes import router as backlinks_router
+    app.include_router(backlinks_router)
+    logger.info("✅ Routes backlinks chargées")
+except ImportError as e:
+    logger.warning(f"⚠️ Routes backlinks non disponibles: {e}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
