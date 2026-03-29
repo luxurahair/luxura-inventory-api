@@ -77,7 +77,19 @@ async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: s
         title = blog.get('title', 'Sans titre')
         excerpt = blog.get('excerpt', '')[:300] + '...' if len(blog.get('excerpt', '')) > 300 else blog.get('excerpt', '')
         category = blog.get('category', 'general')
-        image_url = blog.get('image', blog.get('wix_image_url', ''))
+        
+        # Chercher l'image dans plusieurs sources
+        image_url = (
+            blog.get('image') or 
+            blog.get('wix_image_url') or 
+            blog.get('wix_content_image_url') or
+            # Fallback: image Luxura par défaut
+            "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg"
+        )
+        
+        # S'assurer que excerpt n'est pas vide
+        if not excerpt or excerpt == '...':
+            excerpt = f"Nouveau brouillon de blog dans la catégorie {category}. Cliquez pour voir le contenu complet dans Wix."
         
         # URLs d'action - Utiliser directement Wix Dashboard (plus fiable)
         wix_edit_url = f"https://manage.wix.com/dashboard/6e62c946-d068-45c1-8f5f-7af998f0d7b3/blog/posts/{draft_id}"
