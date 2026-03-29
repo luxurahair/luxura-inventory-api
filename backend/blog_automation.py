@@ -59,6 +59,19 @@ except ImportError:
     logger.warning("Editorial guard module not available")
     EDITORIAL_GUARD_AVAILABLE = False
 
+# Import du module de maillage interne SEO
+try:
+    from internal_linking import (
+        apply_internal_linking,
+        enhance_blog_with_links,
+        detect_article_context
+    )
+    INTERNAL_LINKING_AVAILABLE = True
+    logger.info("Internal linking module loaded successfully")
+except ImportError:
+    logger.warning("Internal linking module not available")
+    INTERNAL_LINKING_AVAILABLE = False
+
 # =====================================================
 # EMAIL CONFIGURATION
 # =====================================================
@@ -2405,6 +2418,26 @@ async def generate_daily_blogs(
 
         generated_title = blog_data.get("title", topic_data["topic"])
         category = topic_data["category"]
+        
+        # MAILLAGE INTERNE: Enrichir le contenu avec des liens
+        if INTERNAL_LINKING_AVAILABLE:
+            try:
+                original_content = blog_data.get("content", "")
+                enhanced_content, links_used = apply_internal_linking(
+                    content=original_content,
+                    title=generated_title,
+                    category=category,
+                    max_links=5,
+                    max_inline=2
+                )
+                blog_data["content"] = enhanced_content
+                blog_data["internal_links"] = [
+                    {"key": l["key"], "url": l["url"], "type": l["type"]} 
+                    for l in links_used
+                ]
+                logger.info(f"🔗 Maillage interne: {len(links_used)} liens ajoutés")
+            except Exception as linking_error:
+                logger.warning(f"Maillage interne échoué: {linking_error}")
 
         # ANTI-DOUBLON: Vérifier avant de continuer
         if EDITORIAL_GUARD_AVAILABLE:
@@ -2451,7 +2484,10 @@ async def generate_daily_blogs(
             "topic_hash": topic_hash,
             "editorial_angle": category,
             "keywords_extracted": keywords_extracted,
-            "cover_v2_applied": False  # Sera mis à True après PATCH
+            "cover_v2_applied": False,  # Sera mis à True après PATCH
+            # MAILLAGE INTERNE
+            "internal_links": blog_data.get("internal_links", []),
+            "internal_links_count": len(blog_data.get("internal_links", []))
         }
 
         await db.blog_posts.insert_one(blog_post)
