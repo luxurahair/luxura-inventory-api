@@ -2181,8 +2181,7 @@ async def auto_generate_daily_blogs(
             fb_access_token=fb_access_token,
             fb_page_id=fb_page_id,
             publish_to_facebook=publish_to_facebook,
-            force_category=category,
-            custom_topic=custom_topic
+            force_category=category
         )
         
         return {
