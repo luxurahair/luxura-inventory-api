@@ -1327,79 +1327,50 @@ async def create_wix_draft_post(
     title: str,
     content: str,
     excerpt: str,
-    cover_image_data: Optional[Dict] = None,  # Image de couverture pour le feed
-    detail_image_data: Optional[Dict] = None,  # Image technique (début du contenu)
-    result_image_data: Optional[Dict] = None,  # Image glamour (milieu du contenu)
-    video_url: str = None,  # URL de la vidéo générée
+    cover_image_data: Optional[Dict] = None,
+    content_image_data: Optional[Dict] = None,
     member_id: str = None
 ) -> Optional[Dict]:
     """
-    Crée un brouillon de post sur Wix Blog v3 API.
-    
-    VERSION V11 avec 3 images + vidéo:
-    - cover_image_data: Image de couverture (s'affiche sur le feed/cards)
-    - detail_image_data: Image technique close-up (insérée au début du contenu)
-    - result_image_data: Image glamour (insérée au milieu du contenu)
-    - video_url: URL de la vidéo MP4 (insérée avant la signature)
-    - displayed: True pour forcer l'affichage de la cover
+    Crée un brouillon de post Wix Blog v3.
+
+    RÈGLE IMPORTANTE:
+    - on garde l'image DANS le contenu via richContent
+    - on ne force plus la cover du feed dans le payload de création
+    - la cover Wix doit être gérée séparément via PATCH si nécessaire
     """
     try:
         async with httpx.AsyncClient(timeout=80) as client:
-            # URLs statiques pour les 3 images dans le contenu
             cover_static_url = cover_image_data.get("static_url") if cover_image_data else None
-            detail_static_url = detail_image_data.get("static_url") if detail_image_data else None
-            result_static_url = result_image_data.get("static_url") if result_image_data else None
-            
-            # Convertir le HTML en Ricos avec les 3 images + vidéo
+            content_static_url = content_image_data.get("static_url") if content_image_data else None
+
+            # On met l'image principale dans le contenu riche,
+            # mais on ne l'utilise plus comme "media" du draft ici.
             rich_content = html_to_ricos(
-                content, 
-                None,  # hero_image_uri deprecated
-                cover_static_url,   # Image 1: Cover au début (installation)
-                detail_static_url,  # Image 2: Detail à 1/3 (close-up technique)
-                result_static_url,  # Image 3: Result à 2/3 (glamour)
-                video_url           # Vidéo avant la signature
+                content,
+                None,               # hero_image_uri deprecated
+                cover_static_url,   # image affichée dans l'article
+                content_static_url  # deuxième image dans le contenu
             )
-            
+
             logger.info(f"Creating Wix draft post: {title}")
-            logger.info(f"  - Image 1 (cover/installation): {cover_static_url[:50] if cover_static_url else 'None'}...")
-            logger.info(f"  - Image 2 (detail/close-up): {detail_static_url[:50] if detail_static_url else 'None'}...")
-            logger.info(f"  - Image 3 (result/glamour): {result_static_url[:50] if result_static_url else 'None'}...")
-            if video_url:
-                logger.info(f"  - Video: {video_url[:50]}...")
-            
+            if cover_static_url:
+                logger.info(f"  - Inline top image: {cover_static_url[:80]}")
+            if content_static_url:
+                logger.info(f"  - Inline content image: {content_static_url[:80]}")
+
             draft_post = {
                 "title": title,
                 "excerpt": excerpt,
                 "richContent": rich_content,
                 "language": "fr"
             }
-            
-            # Ajouter memberId (obligatoire pour apps tierces)
+
             if member_id:
                 draft_post["memberId"] = member_id
-            
-            # FORMAT CORRIGÉ POUR IMAGE DE COUVERTURE (affichée sur le feed)
-            if cover_image_data and isinstance(cover_image_data, dict):
-                file_id = cover_image_data.get("file_id")
-                width = cover_image_data.get("width", 1200)
-                height = cover_image_data.get("height", 630)
-                
-                if file_id:
-                    logger.info(f"  - Cover image (feed): file_id: {file_id[:50]}...")
-                    draft_post["media"] = {
-                        "wixMedia": {
-                            "image": {
-                                "id": file_id,
-                                "width": width,
-                                "height": height
-                            }
-                        },
-                        "displayed": True,
-                        "custom": True
-                    }
-            
+
             payload = {"draftPost": draft_post}
-            
+
             response = await client.post(
                 "https://www.wixapis.com/blog/v3/draft-posts",
                 headers={
@@ -1409,20 +1380,20 @@ async def create_wix_draft_post(
                 },
                 json=payload
             )
-            
+
             if response.status_code in [200, 201]:
                 result = response.json()
-                draft_id = result.get('draftPost', {}).get('id')
-                draft_media = result.get('draftPost', {}).get('media', {})
-                displayed = draft_media.get('displayed', False)
-                logger.info(f"✅ Wix draft created: {draft_id} | displayed={displayed}")
+                draft_id = result.get("draftPost", {}).get("id")
+                logger.info(f"✅ Wix draft created: {draft_id}")
                 return result
-            else:
-                logger.error(f"Wix draft creation failed: {response.status_code} - {response.text}")
-                return None
-                
+
+            logger.error(f"Wix draft creation failed: {response.status_code} - {response.text}")
+            return None
+
     except Exception as e:
         logger.error(f"Error creating Wix draft: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 async def publish_wix_draft(api_key: str, site_id: str, draft_id: str) -> bool:
