@@ -411,17 +411,39 @@ UNSPLASH_IMAGES = {
     "formation": [
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
-        "https://images.unsplash.com/photo-1571508601891-ca5e7a713859?w=1200&h=630&fit=crop",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
     ],
-    "general": [
-        # Images Luxura en priorité
+    # Nouvelles catégories pour les 12 titres stratégiques
+    "b2b_salon": [
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
         "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
-        # Backups
-        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=1200&h=630&fit=crop",
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
+    ],
+    "comparatif": [
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+    ],
+    "cheveux_fins": [
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
+    ],
+    "achat_en_ligne": [
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+    ],
+    "guide": [
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+    ],
+    "general": [
+        # Images Luxura UNIQUEMENT - Pas d'Unsplash!
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/oyi6y21r_Aq7eZ.jpg",
+        "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/21xcpk05_OdzWP.jpg",
     ]
 }
 
@@ -534,320 +556,110 @@ CITIES_SEO = {
 
 BLOG_TOPICS_EXTENDED = [
     # =====================================================
-    # GENIUS WEFT - Pages piliers et locales
-    # Angle: trame ultra-fine, couture sur base perlée, confort supérieur
+    # 12 TITRES STRATÉGIQUES LUXURA - Approuvés SEO
+    # Ratio: 40% guides consommateurs, 30% comparatifs, 30% B2B salons
     # =====================================================
     
-    # Page pilier - Genius Weft
+    # === B2B SALONS AFFILIÉS (30%) ===
     {
-        "topic": "Qu'est-ce qu'une Genius Weft : Guide complet extensions trame invisible",
-        "category": "genius",
-        "keywords": ["genius weft c'est quoi", "trame invisible extensions", "genius weft Québec", "extensions trame ultra-fine"],
-        "focus_product": "Genius Vivian",
-        "content_type": "pillar",
-        "installation_steps": ["consultation + matching couleur/longueur", "création d'une rangée de microbilles", "mesure et coupe de la trame", "couture de la genius weft sur la rangée perlée", "fondu/blending et coupe de finition"]
+        "topic": "Pourquoi devenir un salon affilié Luxura au Québec",
+        "category": "b2b_salon",
+        "keywords": ["salon affilié Luxura", "revendeur extensions Québec", "partenariat salon coiffure", "devenir distributeur extensions"],
+        "focus_product": None,
+        "content_type": "b2b",
+        "angle": "Avantages du partenariat, dépôt d'inventaire, marge revendeur, support marketing"
     },
     {
-        "topic": "Installation Genius Weft étape par étape : Pose professionnelle complète",
-        "category": "genius",
-        "keywords": ["installation genius weft", "pose genius weft", "tutoriel genius weft", "étapes pose extensions trame"],
-        "focus_product": "Genius Vivian",
+        "topic": "Comment fonctionne le dépôt d'inventaire Luxura en salon",
+        "category": "b2b_salon",
+        "keywords": ["dépôt inventaire salon", "consignation extensions", "inventaire salon coiffure", "stock extensions salon"],
+        "focus_product": None,
+        "content_type": "b2b",
+        "angle": "Fonctionnement du dépôt, avantages financiers, pas d'investissement initial"
+    },
+    {
+        "topic": "Comment un salon peut augmenter ses ventes avec les extensions Luxura",
+        "category": "b2b_salon",
+        "keywords": ["augmenter ventes salon", "vendre extensions salon", "revenus salon coiffure", "upsell extensions"],
+        "focus_product": None,
+        "content_type": "b2b",
+        "angle": "Stratégies de vente, upsell, formation équipe, fidélisation cliente"
+    },
+    {
+        "topic": "Pourquoi offrir les I-Tip et Tape-in dans un salon affilié Luxura",
+        "category": "b2b_salon",
+        "keywords": ["I-Tip salon", "Tape-in salon", "gamme extensions salon", "offre extensions complète"],
+        "focus_product": "I-Tip Eleanor, Tape Aurora",
+        "content_type": "b2b",
+        "angle": "Diversifier l'offre, répondre à tous les besoins clientes, maximiser revenus"
+    },
+    
+    # === COMPARATIFS PRODUITS (30%) ===
+    {
+        "topic": "Halo, Tape-in, Genius Weft ou I-Tip : quelle méthode choisir selon votre style de vie",
+        "category": "comparatif",
+        "keywords": ["comparatif extensions", "Halo vs Tape-in", "quelle extension choisir", "différence extensions capillaires"],
+        "focus_product": "Halo Everly, Tape Aurora, Genius Vivian, I-Tip Eleanor",
+        "content_type": "comparison",
+        "angle": "Tableau comparatif, avantages/inconvénients, recommandations par profil"
+    },
+    {
+        "topic": "Genius Weft ou Tape-in : quelle option convient le mieux à votre clientèle",
+        "category": "comparatif",
+        "keywords": ["Genius Weft vs Tape-in", "comparatif trames extensions", "quelle extension recommander"],
+        "focus_product": "Genius Vivian, Tape Aurora",
+        "content_type": "comparison",
+        "angle": "Pour stylistes: critères de choix selon type de cheveux et mode de vie cliente"
+    },
+    {
+        "topic": "Pourquoi les salons choisissent des extensions premium plutôt que des gammes bas de gamme",
+        "category": "comparatif",
+        "keywords": ["extensions premium vs bas gamme", "qualité extensions", "extensions professionnelles", "investir extensions qualité"],
+        "focus_product": None,
+        "content_type": "comparison",
+        "angle": "Durabilité, satisfaction cliente, réputation salon, rentabilité long terme"
+    },
+    
+    # === GUIDES CONSOMMATEURS (40%) ===
+    {
+        "topic": "Quelles extensions recommander à une cliente aux cheveux fins",
+        "category": "cheveux_fins",
+        "keywords": ["extensions cheveux fins", "volume cheveux fins", "rallonges cheveux fins", "extensions légères"],
+        "focus_product": "Halo Everly, Tape Aurora",
         "content_type": "guide",
-        "installation_steps": ["consultation + matching couleur/longueur", "création d'une rangée de microbilles", "mesure et coupe de la trame", "couture de la genius weft sur la rangée perlée", "fondu/blending et coupe de finition"]
+        "angle": "Solutions adaptées, éviter les dommages, techniques de pose délicates"
     },
     {
-        "topic": "Genius Weft vs trame cousue classique : Comparatif détaillé",
-        "category": "genius",
-        "keywords": ["genius weft vs hand-tied", "genius weft vs machine weft", "comparatif trames extensions", "différence genius weft"],
-        "focus_product": "Genius Vivian",
-        "content_type": "comparison"
+        "topic": "Comment prolonger la durée de vie de vos extensions Luxura",
+        "category": "entretien",
+        "keywords": ["entretien extensions", "durée vie extensions", "soins extensions capillaires", "prolonger extensions"],
+        "focus_product": None,
+        "content_type": "maintenance",
+        "angle": "Produits recommandés, gestes à éviter, calendrier d'entretien"
     },
     {
-        "topic": "Entretien et repositionnement Genius Weft : Guide soins professionnels",
-        "category": "genius",
-        "keywords": ["entretien genius weft", "repositionnement extensions trame", "soins genius weft", "durée vie genius weft"],
-        "focus_product": "Genius Vivian",
-        "content_type": "maintenance"
-    },
-    
-    # Genius Weft - Pages locales
-    {
-        "topic": "Extensions Genius Weft à Montréal : Trame invisible haut de gamme",
-        "category": "genius",
-        "keywords": ["genius weft Montréal", "extensions trame Montréal", "pose genius weft Montréal", "salon extensions Montréal"],
-        "focus_product": "Genius Vivian",
-        "city": "montreal",
-        "content_type": "local"
-    },
-    {
-        "topic": "Extensions Genius Weft à Lévis : Pose professionnelle rive-sud",
-        "category": "genius",
-        "keywords": ["genius weft Lévis", "extensions Lévis", "pose extensions Lévis", "salon beauté Lévis"],
-        "focus_product": "Genius Vivian",
-        "city": "levis",
-        "content_type": "local"
-    },
-    {
-        "topic": "Extensions Genius Weft en Beauce : Service de proximité haut de gamme",
-        "category": "genius",
-        "keywords": ["genius weft Beauce", "extensions Beauce", "rallonges capillaires Beauce", "salon extensions Beauce"],
-        "focus_product": "Genius Vivian",
-        "city": "beauce",
-        "content_type": "local"
-    },
-    {
-        "topic": "Extensions Genius Weft à Saint-Georges : Volume et transformation",
-        "category": "genius",
-        "keywords": ["genius weft Saint-Georges", "extensions Saint-Georges", "rallonges Saint-Georges", "salon beauté Saint-Georges"],
-        "focus_product": "Genius Vivian",
-        "city": "saint_georges",
-        "content_type": "local"
-    },
-    
-    # =====================================================
-    # TAPE-IN / BANDE ADHÉSIVE - Pages piliers et locales
-    # Angle: pose sandwich, adhésif médical, réutilisable 3-4 fois
-    # =====================================================
-    
-    # Page pilier - Tape-in
-    {
-        "topic": "Comment installer des extensions bande adhésive : Guide complet Tape-in",
-        "category": "tape",
-        "keywords": ["installer extensions tape-in", "pose bande adhésive", "tutoriel tape-in", "extensions sandwich"],
-        "focus_product": "Tape Aurora",
-        "content_type": "pillar",
-        "installation_steps": ["sectionner proprement les cheveux", "prendre une fine mèche", "poser un adhésif dessous", "poser un second adhésif dessus en sandwich", "presser et aligner", "répéter en gardant tension et espacement réguliers"]
-    },
-    {
-        "topic": "Extensions Tape-in : Durée, entretien et retrait professionnel",
-        "category": "tape",
-        "keywords": ["durée tape-in", "entretien tape-in", "retrait extensions tape", "combien temps tape-in"],
-        "focus_product": "Tape Aurora",
-        "content_type": "guide"
-    },
-    {
-        "topic": "Extensions Tape-in pour cheveux fins : Solution idéale volume discret",
-        "category": "tape",
-        "keywords": ["tape-in cheveux fins", "extensions fines Québec", "volume cheveux fins", "tape-in discret"],
-        "focus_product": "Tape Aurora",
-        "content_type": "guide"
-    },
-    {
-        "topic": "Erreurs à éviter avec les extensions Tape-in : Conseils professionnels",
-        "category": "tape",
-        "keywords": ["erreurs tape-in", "conseils tape-in", "problèmes extensions tape", "éviter erreurs extensions"],
-        "focus_product": "Tape Aurora",
-        "content_type": "guide"
-    },
-    
-    # Tape-in - Pages locales
-    {
-        "topic": "Extensions bande adhésive à Montréal : Pose professionnelle Tape-in",
-        "category": "tape",
-        "keywords": ["tape-in Montréal", "bande adhésive Montréal", "extensions tape Montréal", "salon tape-in Montréal"],
-        "focus_product": "Tape Aurora",
-        "city": "montreal",
-        "content_type": "local"
-    },
-    {
-        "topic": "Extensions bande adhésive à Lévis : Service rapide et professionnel",
-        "category": "tape",
-        "keywords": ["tape-in Lévis", "extensions Lévis", "bande adhésive Lévis", "pose extensions Lévis"],
-        "focus_product": "Tape Aurora",
-        "city": "levis",
-        "content_type": "local"
-    },
-    {
-        "topic": "Extensions bande adhésive à Saint-Romuald : Haut de gamme rive-sud",
-        "category": "tape",
-        "keywords": ["tape-in Saint-Romuald", "extensions Saint-Romuald", "bande adhésive rive-sud", "salon Saint-Romuald"],
-        "focus_product": "Tape Aurora",
-        "city": "saint_romuald",
-        "content_type": "local"
-    },
-    {
-        "topic": "Extensions bande adhésive à Sainte-Marie : Service de proximité",
-        "category": "tape",
-        "keywords": ["tape-in Sainte-Marie", "extensions Sainte-Marie", "bande adhésive Sainte-Marie", "salon Sainte-Marie"],
-        "focus_product": "Tape Aurora",
-        "city": "sainte_marie",
-        "content_type": "local"
-    },
-    
-    # =====================================================
-    # I-TIPS - Pages piliers et locales
-    # Angle: mèche par mèche, anneaux/microbeads, rendu ultra-discret
-    # =====================================================
-    
-    # Page pilier - I-Tips
-    {
-        "topic": "Guide complet I-Tips : Extensions kératine mèche par mèche",
-        "category": "itip",
-        "keywords": ["guide i-tip", "extensions kératine", "mèche par mèche", "i-tip c'est quoi"],
-        "focus_product": "I-Tip Eleanor",
-        "content_type": "pillar",
-        "installation_steps": ["consultation + partition de la tête", "prélever une petite mèche de cheveux naturels", "enfiler un anneau/microbead", "insérer la mèche I-Tip", "rapprocher de la racine", "serrer l'anneau", "répéter rangée par rangée"]
-    },
-    {
-        "topic": "Pose I-Tip étape par étape : Installation professionnelle kératine",
-        "category": "itip",
-        "keywords": ["pose i-tip", "installation i-tip", "tutoriel i-tip", "étapes i-tip kératine"],
-        "focus_product": "I-Tip Eleanor",
+        "topic": "Acheter des extensions capillaires en ligne au Québec : quoi vérifier avant de commander",
+        "category": "achat_en_ligne",
+        "keywords": ["acheter extensions en ligne", "commander extensions Québec", "extensions capillaires livraison", "boutique extensions Québec"],
+        "focus_product": None,
         "content_type": "guide",
-        "installation_steps": ["consultation + partition de la tête", "prélever une petite mèche de cheveux naturels", "enfiler un anneau/microbead", "insérer la mèche I-Tip", "rapprocher de la racine", "serrer l'anneau", "répéter rangée par rangée"]
+        "angle": "Critères qualité, matching couleur, politique retour, livraison rapide"
     },
     {
-        "topic": "I-Tips vs Tape vs Weft : Comparatif complet méthodes extensions",
-        "category": "itip",
-        "keywords": ["i-tip vs tape", "i-tip vs weft", "comparatif extensions", "quelle méthode choisir"],
-        "focus_product": "I-Tip Eleanor",
-        "content_type": "comparison"
+        "topic": "Les erreurs à éviter quand on choisit des extensions capillaires",
+        "category": "guide",
+        "keywords": ["erreurs extensions", "éviter mauvaises extensions", "choisir extensions", "pièges extensions capillaires"],
+        "focus_product": None,
+        "content_type": "guide",
+        "angle": "Erreurs fréquentes, comment les éviter, signes de qualité"
     },
     {
-        "topic": "Entretien I-Tip et remontée : Quand et comment repositionner",
-        "category": "itip",
-        "keywords": ["entretien i-tip", "remontée extensions", "repositionner i-tip", "soins i-tip kératine"],
-        "focus_product": "I-Tip Eleanor",
-        "content_type": "maintenance"
-    },
-    
-    # I-Tips - Pages locales
-    {
-        "topic": "Extensions I-Tip à Montréal : Pose kératine ultra-naturelle",
-        "category": "itip",
-        "keywords": ["i-tip Montréal", "extensions kératine Montréal", "mèche par mèche Montréal", "salon i-tip Montréal"],
-        "focus_product": "I-Tip Eleanor",
-        "city": "montreal",
-        "content_type": "local"
-    },
-    {
-        "topic": "Extensions I-Tip à Lévis : Service personnalisé kératine",
-        "category": "itip",
-        "keywords": ["i-tip Lévis", "extensions Lévis", "kératine Lévis", "pose i-tip Lévis"],
-        "focus_product": "I-Tip Eleanor",
-        "city": "levis",
-        "content_type": "local"
-    },
-    {
-        "topic": "Extensions I-Tip en Beauce : Qualité professionnelle locale",
-        "category": "itip",
-        "keywords": ["i-tip Beauce", "extensions Beauce", "kératine Beauce", "salon extensions Beauce"],
-        "focus_product": "I-Tip Eleanor",
-        "city": "beauce",
-        "content_type": "local"
-    },
-    {
-        "topic": "Extensions I-Tip à Sainte-Marie : Résultat naturel garanti",
-        "category": "itip",
-        "keywords": ["i-tip Sainte-Marie", "extensions Sainte-Marie", "kératine Sainte-Marie", "salon Sainte-Marie"],
-        "focus_product": "I-Tip Eleanor",
-        "city": "sainte_marie",
-        "content_type": "local"
-    },
-    
-    # =====================================================
-    # HALO SUR FIL INVISIBLE - Pages piliers et locales
-    # Angle: sans attache directe, rapide, cheveux fins/sensibles
-    # =====================================================
-    
-    # Page pilier - Halo
-    {
-        "topic": "Comment poser un Halo sur fil invisible : Guide complet débutant",
-        "category": "halo",
-        "keywords": ["poser halo extensions", "fil invisible extensions", "tutoriel halo", "halo c'est quoi"],
-        "focus_product": "Halo Everly",
+        "topic": "Guide complet pour choisir des extensions Luxura selon le volume, la longueur et le résultat recherché",
+        "category": "guide",
+        "keywords": ["choisir extensions Luxura", "guide extensions", "quelle longueur extensions", "volume extensions"],
+        "focus_product": "Toute la gamme",
         "content_type": "pillar",
-        "installation_steps": ["brosser les cheveux", "poser le halo sur la tête via le fil invisible", "sortir les cheveux naturels par-dessus avec un peigne", "fondre/blender", "ajuster le fil si besoin"]
-    },
-    {
-        "topic": "Halo vs Clip-in : Pourquoi le fil invisible est supérieur",
-        "category": "halo",
-        "keywords": ["halo vs clip-in", "comparatif halo clip", "fil invisible vs clips", "avantages halo"],
-        "focus_product": "Halo Everly",
-        "content_type": "comparison"
-    },
-    {
-        "topic": "Extensions Halo pour cheveux fins : La solution idéale sans dommage",
-        "category": "halo",
-        "keywords": ["halo cheveux fins", "extensions légères", "cheveux fins solution", "halo sans dommage"],
-        "focus_product": "Halo Everly",
-        "content_type": "guide"
-    },
-    {
-        "topic": "Entretien du Halo invisible : Conseils durabilité et soins",
-        "category": "halo",
-        "keywords": ["entretien halo", "soins halo extensions", "durée vie halo", "nettoyer halo"],
-        "focus_product": "Halo Everly",
-        "content_type": "maintenance"
-    },
-    {
-        "topic": "Erreurs de blending Halo à éviter : Conseils look naturel",
-        "category": "halo",
-        "keywords": ["erreurs halo", "blending halo", "halo naturel", "cacher fil invisible"],
-        "focus_product": "Halo Everly",
-        "content_type": "guide"
-    },
-    
-    # Halo - Pages locales
-    {
-        "topic": "Extensions Halo sur fil invisible à Montréal : Tendance et transformation",
-        "category": "halo",
-        "keywords": ["halo Montréal", "fil invisible Montréal", "extensions halo Montréal", "salon halo Montréal"],
-        "focus_product": "Halo Everly",
-        "city": "montreal",
-        "content_type": "local"
-    },
-    {
-        "topic": "Extensions Halo sur fil invisible à Saint-Georges : Volume instantané",
-        "category": "halo",
-        "keywords": ["halo Saint-Georges", "fil invisible Saint-Georges", "extensions Saint-Georges", "volume Saint-Georges"],
-        "focus_product": "Halo Everly",
-        "city": "saint_georges",
-        "content_type": "local"
-    },
-    {
-        "topic": "Extensions Halo sur fil invisible en Beauce : Solution rapide locale",
-        "category": "halo",
-        "keywords": ["halo Beauce", "fil invisible Beauce", "extensions Beauce", "salon Beauce"],
-        "focus_product": "Halo Everly",
-        "city": "beauce",
-        "content_type": "local"
-    },
-    {
-        "topic": "Extensions Halo sur fil invisible à Sainte-Marie : Naturel et facile",
-        "category": "halo",
-        "keywords": ["halo Sainte-Marie", "fil invisible Sainte-Marie", "extensions Sainte-Marie", "salon Sainte-Marie"],
-        "focus_product": "Halo Everly",
-        "city": "sainte_marie",
-        "content_type": "local"
-    },
-    
-    # =====================================================
-    # PAGES RÉGIONALES GÉNÉRALES
-    # =====================================================
-    {
-        "topic": "Extensions capillaires en Beauce : Guide complet toutes méthodes",
-        "category": "general",
-        "keywords": ["extensions Beauce", "rallonges capillaires Beauce", "salon extensions Beauce", "cheveux Beauce"],
-        "focus_product": None,
-        "city": "beauce",
-        "content_type": "regional"
-    },
-    {
-        "topic": "Extensions cheveux à Saint-Romuald : Service haut de gamme rive-sud",
-        "category": "general",
-        "keywords": ["extensions Saint-Romuald", "rallonges Saint-Romuald", "salon Saint-Romuald", "cheveux rive-sud"],
-        "focus_product": None,
-        "city": "saint_romuald",
-        "content_type": "regional"
-    },
-    {
-        "topic": "Extensions cheveux à Lévis : Toutes les méthodes disponibles",
-        "category": "general",
-        "keywords": ["extensions Lévis", "rallonges Lévis", "salon extensions Lévis", "cheveux Lévis"],
-        "focus_product": None,
-        "city": "levis",
-        "content_type": "regional"
+        "angle": "Arbre de décision complet, recommandations personnalisées par objectif"
     },
 ]
 
