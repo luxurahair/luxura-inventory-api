@@ -1,0 +1,254 @@
+{
+  "saved_at": "2026-03-29T05:47:19.380874+00:00",
+  "metadata": {
+    "pipeline_version": "backlinks_v1",
+    "headless": true,
+    "max_directories": 2,
+    "process_email_verification": false,
+    "verification_days_back": 7,
+    "click_verification_links": true
+  },
+  "run_summary": {
+    "run_summary": {
+      "total_directories": 2,
+      "submitted": 0,
+      "email_pending": 0,
+      "email_found": 0,
+      "verification_clicked": 0,
+      "verified": 0,
+      "live": 0,
+      "failed": 2,
+      "skipped": 0,
+      "notes": "Luxura backlinks pipeline run",
+      "started_at": "2026-03-29T05:47:12.225103Z",
+      "finished_at": "2026-03-29T05:47:19.380735Z"
+    },
+    "submission_summary": {
+      "total": 2,
+      "submitted": 0,
+      "email_pending": 0,
+      "skipped": 0,
+      "failed": 2,
+      "live": 0,
+      "directories": [
+        {
+          "directory_key": "411",
+          "directory_name": "411.ca",
+          "status": "failed",
+          "submission_url": null,
+          "requires_email_verification": true,
+          "notes": "Bonne citation locale si formulaire encore valide.",
+          "last_error": "Submit button not found"
+        },
+        {
+          "directory_key": "canpages",
+          "directory_name": "Canpages",
+          "status": "failed",
+          "submission_url": null,
+          "requires_email_verification": true,
+          "notes": "Pertinent Canada/local.",
+          "last_error": "Submit button not found"
+        }
+      ]
+    },
+    "verification_summary": {
+      "total": 0,
+      "email_pending": 0,
+      "email_found": 0,
+      "verification_clicked": 0,
+      "verified": 0,
+      "failed": 0,
+      "live": 0,
+      "details": []
+    },
+    "consolidated_summary": {
+      "submission_summary": {
+        "total": 2,
+        "submitted": 0,
+        "email_pending": 0,
+        "skipped": 0,
+        "failed": 2,
+        "live": 0,
+        "directories": [
+          {
+            "directory_key": "411",
+            "directory_name": "411.ca",
+            "status": "failed",
+            "submission_url": null,
+            "requires_email_verification": true,
+            "notes": "Bonne citation locale si formulaire encore valide.",
+            "last_error": "Submit button not found"
+          },
+          {
+            "directory_key": "canpages",
+            "directory_name": "Canpages",
+            "status": "failed",
+            "submission_url": null,
+            "requires_email_verification": true,
+            "notes": "Pertinent Canada/local.",
+            "last_error": "Submit button not found"
+          }
+        ]
+      },
+      "verification_summary": {
+        "total": 0,
+        "email_pending": 0,
+        "email_found": 0,
+        "verification_clicked": 0,
+        "verified": 0,
+        "failed": 0,
+        "live": 0,
+        "details": []
+      },
+      "final_counts": {
+        "total": 2,
+        "new": 0,
+        "queued": 0,
+        "submitted": 0,
+        "email_pending": 0,
+        "email_found": 0,
+        "verification_clicked": 0,
+        "verified": 0,
+        "live": 0,
+        "failed": 2,
+        "skipped": 0
+      }
+    },
+    "records": [
+      {
+        "business_name": "Luxura Distribution",
+        "directory_key": "411",
+        "directory_name": "411.ca",
+        "domain": "411.ca",
+        "category": "directory",
+        "country": "CA",
+        "language": [
+          "fr",
+          "en"
+        ],
+        "niche": [
+          "local",
+          "canada"
+        ],
+        "status": "failed",
+        "priority": 1,
+        "requires_email_verification": true,
+        "verification_links": [],
+        "submitted_at": null,
+        "email_found_at": null,
+        "verified_at": null,
+        "live_at": null,
+        "failed_at": "2026-03-29T05:47:15.263883Z",
+        "submission_url": null,
+        "live_url": null,
+        "contact_email": null,
+        "last_error": "Submit button not found",
+        "notes": "Bonne citation locale si formulaire encore valide.",
+        "pipeline_version": "backlinks_v1",
+        "created_at": "2026-03-29T05:47:13.974428Z",
+        "updated_at": "2026-03-29T05:47:15.263883Z"
+      },
+      {
+        "business_name": "Luxura Distribution",
+        "directory_key": "canpages",
+        "directory_name": "Canpages",
+        "domain": "canpages.ca",
+        "category": "directory",
+        "country": "CA",
+        "language": [
+          "fr",
+          "en"
+        ],
+        "niche": [
+          "local",
+          "canada"
+        ],
+        "status": "failed",
+        "priority": 1,
+        "requires_email_verification": true,
+        "verification_links": [],
+        "submitted_at": null,
+        "email_found_at": null,
+        "verified_at": null,
+        "live_at": null,
+        "failed_at": "2026-03-29T05:47:17.596447Z",
+        "submission_url": null,
+        "live_url": null,
+        "contact_email": null,
+        "last_error": "Submit button not found",
+        "notes": "Pertinent Canada/local.",
+        "pipeline_version": "backlinks_v1",
+        "created_at": "2026-03-29T05:47:16.563405Z",
+        "updated_at": "2026-03-29T05:47:17.596447Z"
+      }
+    ]
+  },
+  "records": [
+    {
+      "business_name": "Luxura Distribution",
+      "directory_key": "411",
+      "directory_name": "411.ca",
+      "domain": "411.ca",
+      "category": "directory",
+      "country": "CA",
+      "language": [
+        "fr",
+        "en"
+      ],
+      "niche": [
+        "local",
+        "canada"
+      ],
+      "status": "failed",
+      "priority": 1,
+      "requires_email_verification": true,
+      "verification_links": [],
+      "submitted_at": null,
+      "email_found_at": null,
+      "verified_at": null,
+      "live_at": null,
+      "failed_at": "2026-03-29T05:47:15.263883Z",
+      "submission_url": null,
+      "live_url": null,
+      "contact_email": null,
+      "last_error": "Submit button not found",
+      "notes": "Bonne citation locale si formulaire encore valide.",
+      "pipeline_version": "backlinks_v1",
+      "created_at": "2026-03-29T05:47:13.974428Z",
+      "updated_at": "2026-03-29T05:47:15.263883Z"
+    },
+    {
+      "business_name": "Luxura Distribution",
+      "directory_key": "canpages",
+      "directory_name": "Canpages",
+      "domain": "canpages.ca",
+      "category": "directory",
+      "country": "CA",
+      "language": [
+        "fr",
+        "en"
+      ],
+      "niche": [
+        "local",
+        "canada"
+      ],
+      "status": "failed",
+      "priority": 1,
+      "requires_email_verification": true,
+      "verification_links": [],
+      "submitted_at": null,
+      "email_found_at": null,
+      "verified_at": null,
+      "live_at": null,
+      "failed_at": "2026-03-29T05:47:17.596447Z",
+      "submission_url": null,
+      "live_url": null,
+      "contact_email": null,
+      "last_error": "Submit button not found",
+      "notes": "Pertinent Canada/local.",
+      "pipeline_version": "backlinks_v1",
+      "created_at": "2026-03-29T05:47:16.563405Z",
+      "updated_at": "2026-03-29T05:47:17.596447Z"
+    }
+  ]
+}
