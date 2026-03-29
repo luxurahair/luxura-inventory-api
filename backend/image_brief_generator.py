@@ -1,383 +1,262 @@
-# image_brief_generator.py - V11 VARIÉ + CLOSE-UP AJUSTÉ
-# Plus de variété, moins de répétition, close-up moins extrême
-# Architecture: Blog (GPT-4o) → Prompt (ce fichier) → Image (gpt-image-1)
+# image_brief_generator.py
+"""
+V7 - Brief generator réaligné sur le vrai modèle Luxura
+Luxura = importateur / distributeur / vente en ligne / salons affiliés
+Pas de logique "formation" ou "certification" par défaut
+"""
 
 import logging
-import random
-import hashlib
 from typing import Dict, Any
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# =====================================================
-# RÈGLES TECHNIQUES PAR CATÉGORIE (VÉRITÉ ABSOLUE)
-# =====================================================
 
-TECHNIQUE_TRUTH = {
-    "halo": {
-        "method": "invisible wire halo",
-        "installation": "self-application at home in one motion",
-        "tools": "no tools needed, just place on head",
-        "setting": "home, bedroom, bathroom mirror",
-        "NOT": "NO salon, NO stylist, NO glue, NO tape, NO microbeads, NO sewing"
-    },
-    "itip": {
-        "method": "individual strand with micro-ring/microbead",
-        "installation": "strand by strand with pliers clamping microbead",
-        "tools": "pulling needle, pliers, silicone-lined microbeads",
-        "setting": "professional salon, stylist chair",
-        "NOT": "NO tape, NO glue, NO sewn weft, NO halo wire"
-    },
-    "tape": {
-        "method": "adhesive tape wefts in sandwich method",
-        "installation": "two tape strips pressed with natural hair between",
-        "tools": "sectioning clips, rat tail comb, tape wefts",
-        "setting": "professional salon",
-        "NOT": "NO microbeads, NO sewing, NO keratin, NO halo wire"
-    },
-    "genius": {
-        "method": "ultra-thin weft sewn onto beaded row",
-        "installation": "sewing thread attaching weft to row of silicone beads",
-        "tools": "curved needle, thread, beaded row foundation",
-        "setting": "professional salon",
-        "NOT": "NO tape, NO glue, NO microbeads for attachment, NO halo wire"
+def _safe_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _combined_text(blog_data: Dict[str, Any]) -> str:
+    return " ".join([
+        _safe_text(blog_data.get("title", "")),
+        _safe_text(blog_data.get("excerpt", "")),
+        _safe_text(blog_data.get("content", "")),
+        _safe_text(blog_data.get("category", "")),
+        _safe_text(blog_data.get("focus_product", "")),
+    ]).lower()
+
+
+def _detect_visual_mode(blog_data: Dict[str, Any]) -> str:
+    """
+    Détecte l'intention visuelle du blog selon le vrai business Luxura.
+    On évite volontairement l'angle "formation" sauf si le contenu parle
+    réellement d'un tutoriel technique, et même là on le traite comme
+    démonstration produit / salon, pas comme école.
+    """
+    text = _combined_text(blog_data)
+    category = _safe_text(blog_data.get("category", "")).lower()
+
+    # === AXE B2B / SALONS / PARTENAIRES ===
+    if any(k in text for k in [
+        "salon affilié", "salons affiliés", "devenir revendeur", "revendeur",
+        "partenaire salon", "partenariat salon", "programme partenaire",
+        "distributeur", "grossiste", "wholesale", "b2b", "inventaire",
+        "déposer de l'inventaire", "depot d'inventaire", "stock en salon",
+        "vente en salon", "revente en salon"
+    ]):
+        return "salon_partner_b2b"
+
+    # === GUIDE ENTRETIEN / DURÉE DE VIE ===
+    if any(k in text for k in [
+        "entretien", "soins", "durée", "duree", "repositionnement",
+        "brosse", "shampoing", "shampooing", "lavage", "maintenance",
+        "comment entretenir", "prolonger la durée de vie"
+    ]):
+        return "maintenance_article"
+
+    # === COMPARATIFS / CHOIX PRODUIT ===
+    if any(k in text for k in [
+        " vs ", "versus", "comparatif", "comparaison", "différence",
+        "difference", "quelle méthode", "quel type", "comment choisir",
+        "halo ou", "tape-in ou", "genius weft ou", "i-tip ou", "itip ou"
+    ]):
+        return "comparison_article"
+
+    # === ARTICLE PRODUIT / AVANTAGES / BÉNÉFICES ===
+    if any(k in text for k in [
+        "avantages", "bénéfices", "benefices", "pourquoi choisir",
+        "pourquoi les salons choisissent", "solution haut de gamme",
+        "résultat naturel", "resultat naturel", "volume", "longueur",
+        "extensions capillaires professionnelles", "premium"
+    ]):
+        return "product_benefits"
+
+    # === GUIDE CONSOMMATRICE / ACHAT EN LIGNE ===
+    if any(k in text for k in [
+        "acheter en ligne", "achat en ligne", "commander", "acheter",
+        "cliente", "consommatrice", "cheveux fins", "quel style de vie",
+        "quelle méthode choisir", "guide complet", "guide ultime", "faq"
+    ]):
+        return "consumer_guide"
+
+    # === TECHNIQUE / INSTALLATION / POSE ===
+    # On traite ça comme article technique produit/salon, pas comme école.
+    if any(k in text for k in [
+        "installation", "pose", "étape", "etape", "tutoriel",
+        "comment installer", "application", "méthode", "methode",
+        "couture", "cousue", "coudre", "rangée perlée", "rangee perlee",
+        "beaded row", "microbille", "micro-bille", "sandwich", "adhésif",
+        "adhesif", "tape-in", "tape in"
+    ]):
+        return "technical_installation"
+
+    # === PAR DÉFAUT SELON LA CATÉGORIE ===
+    if category in ["halo", "genius", "tape", "itip", "i-tip"]:
+        return "product_benefits"
+
+    return "consumer_guide"
+
+
+def _resolve_product_label(blog_data: Dict[str, Any]) -> str:
+    focus_product = _safe_text(blog_data.get("focus_product", ""))
+    category = _safe_text(blog_data.get("category", "")).lower()
+
+    if focus_product:
+        return focus_product
+
+    mapping = {
+        "halo": "extensions Halo Luxura",
+        "genius": "extensions Genius Weft Luxura",
+        "tape": "extensions Tape-in Luxura",
+        "itip": "extensions I-Tip Luxura",
+        "i-tip": "extensions I-Tip Luxura",
     }
-}
+    return mapping.get(category, "extensions capillaires Luxura")
 
-# =====================================================
-# SCÈNES COVER VARIÉES (installation + contexte)
-# Plus de variété pour éviter la répétition
-# =====================================================
 
-COVER_SCENES_HALO = [
-    "Beautiful woman in cozy bedroom placing invisible wire halo on her head in front of large mirror, morning sunlight streaming through window, casual chic outfit",
-    "Elegant woman in modern bathroom with marble counters, adjusting her halo extension with both hands, soft natural lighting, relaxed at-home moment",
-    "Young professional woman in stylish apartment getting ready for work, placing halo extension quickly and easily, natural morning light",
-    "Woman in beautiful vanity setup with Hollywood lights, casually placing halo extension, showing how simple and quick the process is",
-    "Relaxed woman in bright living room, sitting on couch, easily placing halo extension before going out, effortless style moment"
-]
+def _brand_rules() -> str:
+    return """
+Brand context: Luxura Distribution is a premium hair extension importer and distributor in Quebec.
+Business model: direct-to-consumer e-commerce plus salon partner distribution.
+Visual identity must feel premium, elegant, commercial, salon-relevant, and realistic.
+No training classroom, no certification scene, no teacher/student workshop unless explicitly required by the article.
+No men, no short hair, no pixie cut, no bob haircut, no shoulder-length hero shot.
+Hair should be mid-back to very long, healthy-looking, luxurious, and extension-relevant.
+Extensions or premium result must be visually believable.
+No cartoon, no text, no watermark, no low-quality collage.
+""".strip()
 
-COVER_SCENES_SALON = [
-    "Professional salon scene with natural light, skilled stylist working on client's hair, modern minimalist interior, premium atmosphere",
-    "Upscale hair salon with large windows, experienced stylist performing precise technique, client relaxed in chair, editorial quality",
-    "Boutique salon with exposed brick walls, stylist focused on detailed work, warm ambient lighting, intimate professional setting",
-    "Modern salon station with ring light, stylist's hands performing careful technique, client with cape, clean professional environment",
-    "High-end salon with plants and natural decor, stylist working methodically, soft diffused daylight, premium beauty experience"
-]
 
-# =====================================================
-# SCÈNES DETAIL AJUSTÉES (moins extrême, plus contexte)
-# Close-up raisonnable, pas macro extrême
-# =====================================================
-
-DETAIL_SCENES = {
-    "halo": [
-        "Medium close-up showing woman's hands placing the invisible wire halo on top of her head, natural hair visible falling over the wire, soft lighting",
-        "Close shot of the halo extension sitting comfortably on the crown of the head, thin wire barely visible, natural hair blending seamlessly",
-        "Detail shot showing the simple one-step placement of halo extension, woman's profile visible, natural home setting in background"
-    ],
-    "itip": [
-        "Close-up of stylist's hands using pliers to secure microbead on a strand of hair, showing the precise technique, salon background visible",
-        "Medium close shot of the i-tip installation process, multiple strands visible, stylist working carefully, professional setting",
-        "Detail of microbead being clamped with the keratin tip inside, hands and tools clearly visible, salon chair in background"
-    ],
-    "tape": [
-        "Close-up of two tape wefts being aligned for the sandwich application, thin section of natural hair between them, professional hands",
-        "Medium close shot showing the tape-in adhesive strips meeting with hair in between, clean sectioning visible, salon environment",
-        "Detail of the flat tape weft application, showing the discreet and thin result, stylist's hands working precisely"
-    ],
-    "genius": [
-        "Close-up of needle and thread sewing the genius weft onto the beaded row, silicone beads visible, stylist's skilled hands",
-        "Medium close shot of the genius weft being attached to the foundation row, showing the precise stitching technique",
-        "Detail of the finished sewn connection between weft and beaded row, showing how secure and invisible it looks"
+def _common_avoid() -> list[str]:
+    return [
+        "men",
+        "short hair",
+        "pixie cut",
+        "bob haircut",
+        "cartoon",
+        "text",
+        "watermark",
+        "training classroom",
+        "teacher lecture scene",
+        "cheap beauty aesthetic",
+        "unrealistic hair",
     ]
-}
-
-# =====================================================
-# SCÈNES RÉSULTAT GLAMOUR (grande variété)
-# 20 scènes différentes pour éviter la répétition
-# =====================================================
-
-GLAMOUR_SCENES = [
-    # Soirées et événements
-    "Group of 4 glamorous women laughing at upscale rooftop bar, golden hour sunset, champagne glasses, all with extremely long flowing hair",
-    "Elegant woman arriving at red carpet gala, paparazzi flashes, stunning evening gown, very long sleek hair cascading down her back",
-    "Women toasting at sophisticated wine bar, warm candlelight, designer outfits, luxurious long hair catching the light",
-    
-    # Voyages et destinations
-    "Beautiful woman on luxury yacht deck, Mediterranean sea in background, flowing maxi dress, very long windswept hair",
-    "Elegant traveler at Parisian café terrace, morning espresso, chic outfit, waist-length silky hair",
-    "Woman walking through lavender fields in Provence, flowing summer dress, extremely long hair in the breeze",
-    "Sophisticated woman at Italian piazza fountain, golden hour light, very long hair with natural movement",
-    
-    # Lifestyle quotidien luxueux
-    "Woman in designer penthouse apartment, floor-to-ceiling windows, city view, loungewear, very long natural hair",
-    "Elegant brunch scene at upscale restaurant, mimosas, natural light, women with gorgeous long flowing hair",
-    "Woman in luxury spa robe on private terrace, morning coffee, serene atmosphere, long healthy shiny hair",
-    
-    # Mode et beauté
-    "High-fashion editorial shot, minimalist white studio, dramatic lighting, model with extremely long flowing hair in motion",
-    "Behind-the-scenes fashion show moment, model with stunning very long hair, elegant backstage setting",
-    "Beauty campaign style shot, woman touching her very long luxurious hair, soft studio lighting, premium feel",
-    
-    # Nature et outdoor
-    "Woman at sunset beach, bohemian style, long hair flowing in ocean breeze, golden light on waves",
-    "Elegant picnic in beautiful garden, summer dress, natural setting, very long hair with flowers",
-    "Woman in autumn forest, cozy sweater, fallen leaves, extremely long hair catching dappled sunlight",
-    
-    # Moments intimes
-    "Woman admiring her reflection in ornate vintage mirror, soft romantic lighting, very long hair cascading",
-    "Getting ready moment in beautiful boudoir, soft morning light, elegant lingerie, long luxurious hair",
-    "Confident woman power posing in corner office, business chic, very long sleek professional hair",
-    "Celebration dinner with girlfriends, elegant private dining room, all women with stunning long hair"
-]
-
-# Index pour rotation et éviter répétition
-_used_scenes = {"cover": set(), "detail": set(), "glamour": set()}
-
-# =====================================================
-# VARIÉTÉ DE MODÈLES (couleurs de cheveux + ethnies)
-# Pour éviter que toutes les images soient identiques
-# =====================================================
-
-HAIR_COLORS = [
-    "platinum blonde",
-    "honey blonde", 
-    "golden blonde",
-    "light brown",
-    "chocolate brown",
-    "dark brown",
-    "chestnut brown",
-    "auburn red",
-    "copper red",
-    "jet black",
-    "soft black",
-    "caramel highlights",
-    "balayage brunette",
-    "ombre blonde to brown",
-]
-
-MODEL_DESCRIPTIONS = [
-    "Caucasian woman with fair skin",
-    "Mediterranean woman with olive skin",
-    "Latina woman with warm golden skin",
-    "Light-skinned Black woman",
-    "Mixed-race woman with caramel skin",
-    "Eastern European woman with porcelain skin",
-    "Middle Eastern woman with olive complexion",
-    "Southern European woman with sun-kissed skin",
-]
-
-_used_hair_colors = set()
-_used_models = set()
-
-def _get_diverse_model_description(seed: str = None) -> str:
-    """
-    Génère une description de modèle UNIQUE pour chaque image.
-    Évite de répéter la même couleur de cheveux ou le même type de modèle.
-    """
-    global _used_hair_colors, _used_models
-    
-    # Reset si toutes utilisées
-    available_colors = [c for c in HAIR_COLORS if c not in _used_hair_colors]
-    if not available_colors:
-        _used_hair_colors = set()
-        available_colors = HAIR_COLORS
-    
-    available_models = [m for m in MODEL_DESCRIPTIONS if m not in _used_models]
-    if not available_models:
-        _used_models = set()
-        available_models = MODEL_DESCRIPTIONS
-    
-    # Sélection basée sur le seed pour être déterministe mais varié
-    if seed:
-        color_idx = int(hashlib.md5(f"{seed}_color".encode()).hexdigest(), 16) % len(available_colors)
-        model_idx = int(hashlib.md5(f"{seed}_model".encode()).hexdigest(), 16) % len(available_models)
-    else:
-        color_idx = random.randint(0, len(available_colors) - 1)
-        model_idx = random.randint(0, len(available_models) - 1)
-    
-    hair_color = available_colors[color_idx]
-    model_type = available_models[model_idx]
-    
-    _used_hair_colors.add(hair_color)
-    _used_models.add(model_type)
-    
-    return f"{model_type}, {hair_color} VERY LONG hair (waist length or longer)"
-
-def _get_unique_scene(scene_list: list, scene_type: str, seed: str = None) -> str:
-    """Sélectionne une scène unique non utilisée récemment."""
-    global _used_scenes
-    
-    # Reset si toutes utilisées
-    available = [s for s in scene_list if s not in _used_scenes[scene_type]]
-    if not available:
-        _used_scenes[scene_type] = set()
-        available = scene_list
-    
-    # Utiliser le seed pour une sélection déterministe mais variée
-    if seed:
-        idx = int(hashlib.md5(seed.encode()).hexdigest(), 16) % len(available)
-    else:
-        idx = random.randint(0, len(available) - 1)
-    
-    selected = available[idx]
-    _used_scenes[scene_type].add(selected)
-    
-    return selected
-
-
-def extract_blog_context(blog_data: Dict) -> Dict:
-    """Extrait le contexte pertinent du blog pour personnaliser les prompts."""
-    title = blog_data.get("title", "")
-    content = blog_data.get("content", "")
-    excerpt = blog_data.get("excerpt", "")
-    category = blog_data.get("category", "general")
-    focus_product = blog_data.get("focus_product", "extensions Luxura")
-    
-    text = f"{title} {excerpt} {content}".lower()
-    
-    is_installation = any(k in text for k in [
-        "installation", "pose", "poser", "étape", "tutoriel", "comment",
-        "méthode", "technique", "step", "guide"
-    ])
-    
-    # Détecter la catégorie si pas définie
-    if category == "general":
-        if "halo" in text: category = "halo"
-        elif "i-tip" in text or "itip" in text: category = "itip"
-        elif "tape" in text: category = "tape"
-        elif "genius" in text or "weft" in text: category = "genius"
-    
-    return {
-        "title": title,
-        "category": category,
-        "product": focus_product,
-        "is_installation": is_installation,
-        "seed": hashlib.md5(title.encode()).hexdigest()[:8]
-    }
-
-
-def build_hyper_realistic_prompt(blog_data: Dict, image_type: str) -> str:
-    """
-    Construit un prompt HYPER-RÉALISTE avec VARIÉTÉ.
-    
-    image_type: "cover" | "detail" | "result"
-    """
-    ctx = extract_blog_context(blog_data)
-    category = ctx["category"]
-    tech = TECHNIQUE_TRUTH.get(category, TECHNIQUE_TRUTH["genius"])
-    seed = ctx["seed"]
-    
-    # Générer une description de modèle UNIQUE pour cette image
-    model_desc = _get_diverse_model_description(f"{seed}_{image_type}")
-    
-    # Base commune pour le réalisme
-    realism_rules = """
-PHOTOGRAPHY STYLE:
-- Professional DSLR quality (Canon 5D or Sony A7R)
-- Natural lighting, authentic atmosphere
-- Real skin texture, natural imperfections
-- Shallow depth of field for professional look
-- NO cartoon, NO illustration, NO AI artifacts
-- NO watermarks, NO text overlays
-- Magazine editorial quality"""
-
-    # NOUVEAU: Utilise la description de modèle VARIÉE
-    women_rules = f"""
-SUBJECT:
-- {model_desc}
-- NO short hair, NO bob, NO shoulder length
-- NO men in the image
-- Confident, natural expression
-- Authentic beauty, not overly retouched"""
-
-    if image_type == "cover":
-        # COVER: Scène d'installation variée
-        if ctx["is_installation"]:
-            if category == "halo":
-                scene = _get_unique_scene(COVER_SCENES_HALO, "cover", seed)
-            else:
-                scene = _get_unique_scene(COVER_SCENES_SALON, "cover", seed)
-            
-            prompt = f"""{scene}
-
-TECHNIQUE: {tech['method']} - {tech['installation']}
-{tech['NOT']}
-
-{realism_rules}
-{women_rules}"""
-        else:
-            scene = _get_unique_scene(GLAMOUR_SCENES, "glamour", seed)
-            prompt = f"""{scene}
-
-{realism_rules}
-{women_rules}"""
-
-    elif image_type == "detail":
-        # DETAIL: Close-up RAISONNABLE (pas macro extrême)
-        detail_scenes = DETAIL_SCENES.get(category, DETAIL_SCENES["genius"])
-        scene = _get_unique_scene(detail_scenes, "detail", seed)
-        
-        prompt = f"""{scene}
-
-FRAMING: Medium close-up, NOT extreme macro
-CONTEXT: Show enough background to understand the setting
-TECHNIQUE: {tech['method']}
-{tech['NOT']}
-
-{realism_rules}"""
-
-    else:  # result
-        # RESULT: Scène glamour variée
-        scene = _get_unique_scene(GLAMOUR_SCENES, "glamour", seed + "_result")
-        
-        prompt = f"""{scene}
-
-HAIR: Extremely long (waist to hip length), flowing, luxurious, natural movement
-MUST SHOW: Beautiful transformation result with premium hair extensions
-
-{realism_rules}
-{women_rules}
-
-MOOD: Aspirational, glamorous, confident, effortlessly beautiful"""
-
-    return prompt.strip()
 
 
 def generate_image_brief(blog_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    V11: Prompts VARIÉS + close-up ajusté.
-    
-    - Plus de variété dans les scènes (20+ options glamour)
-    - Close-up moins extrême (medium close-up)
-    - Système anti-répétition
-    """
-    ctx = extract_blog_context(blog_data)
-    
-    logger.info(f"📸 Brief V11 - Category: {ctx['category']} | Installation: {ctx['is_installation']}")
-    
-    # Construire les 3 prompts variés
-    cover_prompt = build_hyper_realistic_prompt(blog_data, "cover")
-    detail_prompt = build_hyper_realistic_prompt(blog_data, "detail")
-    result_prompt = build_hyper_realistic_prompt(blog_data, "result")
-    
-    # Mode visuel
-    if ctx["is_installation"]:
-        visual_mode = f"installation_{ctx['category']}"
-    else:
-        visual_mode = "result_natural"
-    
+    mode = _detect_visual_mode(blog_data)
+    category = _safe_text(blog_data.get("category", "general")).lower()
+    product = _resolve_product_label(blog_data)
+    title = _safe_text(blog_data.get("title", ""))
+
+    logger.info(f"📋 Brief V7 - Mode: {mode} | Catégorie: {category} | Produit: {product}")
+
+    base_rules = _brand_rules()
+
+    # Par défaut
+    cover_style = "premium realistic commercial photography, clean composition, soft professional lighting, horizontal blog cover framing"
+    content_style = "realistic editorial beauty photography, higher detail, closer framing, professional salon-grade lighting"
+
+    if mode == "salon_partner_b2b":
+        cover_scene = f"""
+Premium salon partnership scene for {product}. Elegant stylist in a high-end salon with a client who has long, beautiful extension-enhanced hair.
+Commercial B2B beauty atmosphere, refined Quebec salon environment, trustworthy distributor brand feeling, ideal for a blog card cover.
+{base_rules}
+"""
+        content_scene = f"""
+Professional salon scene showing a stylist and a client with beautiful long hair enhanced by {product}.
+Subtle product relevance, premium service atmosphere, realistic partner-salon context, no classroom feeling.
+{base_rules}
+"""
+        cover_focus = "salon partnership credibility, premium result, long hair"
+        content_focus = "real salon context, stylist-client relationship, product credibility"
+
+    elif mode == "maintenance_article":
+        cover_scene = f"""
+Elegant woman with long healthy-looking hair extensions maintained with proper care using {product}.
+Beautiful shine, smooth texture, premium result, clear and simple commercial composition for a blog cover.
+{base_rules}
+"""
+        content_scene = f"""
+Close-up realistic beauty image showing the shine, texture, softness, and healthy appearance of well-maintained long hair using {product}.
+Luxury salon-quality finish.
+{base_rules}
+"""
+        cover_focus = "healthy premium hair result, shine, durability"
+        content_focus = "texture, shine, maintained extension quality"
+
+    elif mode == "comparison_article":
+        cover_scene = f"""
+Premium beauty comparison-style image related to {product}, featuring one elegant woman with long luxurious hair and a clear high-end salon result.
+Image should communicate choice, method comparison, and informed buying without using text or split-screen gimmicks.
+{base_rules}
+"""
+        content_scene = f"""
+Detailed realistic salon-beauty image supporting a product comparison around {product}.
+Focus on believable extension result, texture, attachment discretion, and premium finish.
+{base_rules}
+"""
+        cover_focus = "decision-making, premium extension result, clarity"
+        content_focus = "method detail, believable comparison support, texture"
+
+    elif mode == "technical_installation":
+        cover_scene = f"""
+Professional salon application scene for {product}. Show a stylist working on a real female client with long hair in a premium salon.
+Keep it commercial and elegant rather than educational classroom style. Technique may be implied, but the image must still sell the result.
+{base_rules}
+"""
+        content_scene = f"""
+Closer realistic salon detail of {product} application on long hair. Hands may be visible. Clean sections, believable extension work, premium technical detail.
+No school or classroom atmosphere.
+{base_rules}
+"""
+        cover_focus = "premium salon application, believable result, long hair"
+        content_focus = "application detail, hands, clean sections, realistic technique"
+
+    elif mode == "product_benefits":
+        cover_scene = f"""
+Elegant woman with long luxurious hair enhanced by {product}. Premium salon-quality result, visible length and volume, clean commercial beauty image suitable for Luxura Distribution.
+{base_rules}
+"""
+        content_scene = f"""
+Closer product-result image showing the texture, movement, density, and realistic luxury finish of {product} on long beautiful hair.
+{base_rules}
+"""
+        cover_focus = "premium product result, visible volume and length"
+        content_focus = "texture, movement, believable luxury hair"
+
+    else:  # consumer_guide
+        cover_scene = f"""
+Premium direct-to-consumer beauty image for {product}. Elegant woman with long beautiful hair extensions, realistic volume and length, clean upscale composition suitable for e-commerce blog content.
+{base_rules}
+"""
+        content_scene = f"""
+Closer editorial beauty image showing the realistic result of {product} for a consumer audience: soft movement, healthy texture, natural blend, premium finish.
+{base_rules}
+"""
+        cover_focus = "consumer appeal, premium result, long extension-friendly hair"
+        content_focus = "realistic result, blend, softness, texture"
+
     return {
-        "visual_mode": visual_mode,
-        "category": ctx["category"],
-        "product": ctx["product"],
-        "is_technical": ctx["is_installation"],
-        "blog_title": ctx["title"],
-        "cover": {"scene": cover_prompt, "style": "professional photography"},
-        "content": {"scene": detail_prompt, "style": "medium close-up photography"},
-        "detail": {"scene": detail_prompt, "style": "medium close-up photography"},
-        "result": {"scene": result_prompt, "style": "cinematic lifestyle photography"},
-        "logo_overlay": True
+        "brand": "Luxura Distribution",
+        "category": category,
+        "product": product,
+        "title": title,
+        "visual_mode": mode,
+        "brand_rules": base_rules,
+        "cover": {
+            "scene": " ".join(cover_scene.split()),
+            "style": cover_style,
+            "focus": cover_focus,
+            "avoid": _common_avoid(),
+        },
+        "content": {
+            "scene": " ".join(content_scene.split()),
+            "style": content_style,
+            "focus": content_focus,
+            "avoid": _common_avoid(),
+        },
+        "logo_overlay": True,
+        "hair_length_rule": "mid-back to very long hair preferred; no short-hair hero images; extension result must be believable",
     }
