@@ -3,7 +3,7 @@ EDITORIAL CALENDAR - Calendrier éditorial optimisé femmes Québec
 Version: 2.0
 Date: 2026-03-31
 
-🎯 CIBLE: Femmes québécoises 25-55 ans intéressées par la beauté/coiffure
+🎯 CIBLE: Femmes québécoises 18-50 ans intéressées par la beauté/coiffure
 
 📅 ROTATION SUR 2 SEMAINES (7 jours/semaine):
 - Lundi-Vendredi: Mix consommateur/B2B

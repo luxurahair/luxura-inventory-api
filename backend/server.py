@@ -213,7 +213,7 @@ async def startup_event():
             logger.info("=" * 50)
             logger.info("📅 CALENDRIER ÉDITORIAL - OPTIMISÉ FEMMES QUÉBEC")
             logger.info(f"   Semaine de rotation: {rotation_week}/2")
-            logger.info("   🎯 Cible: Femmes québécoises 25-55 ans")
+            logger.info("   🎯 Cible: Femmes québécoises 18-50 ans")
             logger.info("   ⏰ Heures de pointe optimisées:")
             for slot in weekly_schedule:
                 hour = slot.get('hour', 8)
