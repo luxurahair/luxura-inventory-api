@@ -37,6 +37,15 @@ def _detect_visual_mode(blog_data: Dict[str, Any]) -> str:
     text = _combined_text(blog_data)
     category = _safe_text(blog_data.get("category", "")).lower()
 
+    # === OCCASIONS SPÉCIALES (MARIAGE, GALA, ÉVÉNEMENT) ===
+    if any(k in text for k in [
+        "mariage", "mariée", "marie", "wedding", "bride", "noces",
+        "gala", "événement", "evenement", "bal", "soirée", "soiree",
+        "fête", "fete", "célébration", "celebration", "occasion spéciale",
+        "occasion speciale", "tapis rouge", "red carpet"
+    ]):
+        return "special_occasion"
+
     # === AXE B2B / SALONS / PARTENAIRES ===
     if any(k in text for k in [
         "salon affilié", "salons affiliés", "devenir revendeur", "revendeur",
@@ -120,10 +129,18 @@ def _brand_rules() -> str:
 Brand context: Luxura Distribution is a premium hair extension importer and distributor in Quebec.
 Business model: direct-to-consumer e-commerce plus salon partner distribution.
 Visual identity must feel premium, elegant, commercial, salon-relevant, and realistic.
+
+CRITICAL HAIR RULES:
+- Hair MUST be the hero of every image
+- Hair length: mid-back to very long (below shoulders minimum, ideally to waist)
+- Hair volume: full, luxurious, healthy-looking
+- Hair texture: smooth, shiny, natural movement
+- The image MUST demonstrate that we sell hair extensions (volume + length)
+- Show hair from angles that demonstrate length: from behind, three-quarter view, or side profile
+- Avoid front-facing shots where hair length is hidden
+
 No training classroom, no certification scene, no teacher/student workshop unless explicitly required by the article.
 No men, no short hair, no pixie cut, no bob haircut, no shoulder-length hero shot.
-Hair should be mid-back to very long, healthy-looking, luxurious, and extension-relevant.
-Extensions or premium result must be visually believable.
 No cartoon, no text, no watermark, no low-quality collage.
 """.strip()
 
@@ -134,6 +151,9 @@ def _common_avoid() -> list[str]:
         "short hair",
         "pixie cut",
         "bob haircut",
+        "shoulder-length hair only",
+        "hair hidden or not visible",
+        "front-facing shot hiding hair length",
         "cartoon",
         "text",
         "watermark",
@@ -141,6 +161,8 @@ def _common_avoid() -> list[str]:
         "teacher lecture scene",
         "cheap beauty aesthetic",
         "unrealistic hair",
+        "face covering hair",
+        "hair tied up completely",
     ]
 
 
@@ -158,7 +180,24 @@ def generate_image_brief(blog_data: Dict[str, Any]) -> Dict[str, Any]:
     cover_style = "premium realistic commercial photography, clean composition, soft professional lighting, horizontal blog cover framing"
     content_style = "realistic editorial beauty photography, higher detail, closer framing, professional salon-grade lighting"
 
-    if mode == "salon_partner_b2b":
+    if mode == "special_occasion":
+        cover_scene = f"""
+Elegant bride or gala-ready woman photographed from behind or three-quarter view, showcasing very long flowing hair extensions reaching mid-back or lower.
+Delicate bridal veil or elegant accessory partially visible but NOT covering the hair length.
+The hair must be the hero: luxurious volume, beautiful movement, visible length demonstrating {product} quality.
+Premium wedding/gala atmosphere, soft romantic lighting, high-end Quebec salon result.
+{base_rules}
+"""
+        content_scene = f"""
+Close-up detail shot of beautiful long bridal or event hairstyle enhanced by {product}.
+Focus on hair texture, shine, length, and extension blend quality. Hair cascading down the back, visible volume and movement.
+Romantic elegant lighting, premium result that sells the dream of perfect hair for special occasions.
+{base_rules}
+"""
+        cover_focus = "long flowing hair from behind, visible length and volume, bridal/gala elegance"
+        content_focus = "hair texture detail, extension quality, romantic premium result"
+
+    elif mode == "salon_partner_b2b":
         cover_scene = f"""
 Premium salon partnership scene for {product}. Elegant stylist in a high-end salon with a client who has long, beautiful extension-enhanced hair.
 Commercial B2B beauty atmosphere, refined Quebec salon environment, trustworthy distributor brand feeling, ideal for a blog card cover.
