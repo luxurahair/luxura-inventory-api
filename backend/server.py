@@ -126,8 +126,21 @@ async def scheduled_blog_generation():
         
         from blog_automation import generate_daily_blogs
         
+        # Récupérer les clés API nécessaires
+        openai_key = os.getenv("EMERGENT_LLM_KEY") or os.getenv("OPENAI_API_KEY")
+        wix_api_key = os.getenv("WIX_API_KEY")
+        wix_site_id = os.getenv("WIX_SITE_ID")
+        
+        if not openai_key:
+            logger.error("❌ CRON: Missing EMERGENT_LLM_KEY or OPENAI_API_KEY")
+            return
+        
         # 1 seul brouillon, PAS de publication automatique
         results = await generate_daily_blogs(
+            db=db,  # ✅ Passer la connexion MongoDB
+            openai_key=openai_key,  # ✅ Passer la clé OpenAI
+            wix_api_key=wix_api_key,
+            wix_site_id=wix_site_id,
             count=1,
             send_email=True,
             publish_to_wix=False,  # ❌ PAS DE PUBLICATION AUTO
