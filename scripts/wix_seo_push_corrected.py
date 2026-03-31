@@ -52,6 +52,7 @@ TYPE_META = {
     "i-tip": {"label": "I-Tip", "series": "Eleanor", "prefix": "I"},
     "ponytail": {"label": "Ponytail", "series": "Victoria", "prefix": "PT"},
     "clip-in": {"label": "Clip-In", "series": "Sophia", "prefix": "CL"},
+    "hand-tied": {"label": "Hand-Tied", "series": "Aurora", "prefix": "HW"},
 }
 
 FAKE_VARIANT_ID = "00000000-0000-0000-0000-000000000000"
@@ -200,11 +201,14 @@ def _infer_type_and_series(prod: Product) -> Tuple[str, str, str]:
     hay = " ".join([
         prod.name or "",
         prod.handle or "",
+        prod.sku or "",
         " ".join(_safe_options(prod.options).get("categories", []) or []),
     ]).lower()
 
     if "halo" in hay:
         meta = TYPE_META["halo"]
+    elif "hand-tied" in hay or "hand tied" in hay or "handtied" in hay or hay.startswith("hw-") or "/hw-" in hay:
+        meta = TYPE_META["hand-tied"]
     elif "genius" in hay:
         meta = TYPE_META["genius"]
     elif "i-tip" in hay or "itip" in hay or "i tip" in hay:
@@ -552,6 +556,33 @@ def _build_description_html(prod: Product) -> str:
 <br>
 {seo_local}"""
 
+    elif product_type == "Hand-Tied":
+        return f"""<p><strong>Extensions Hand-Tied Weft {series}</strong> – Trame cousue main artisanale par {luxura}.</p>
+<br>
+<p><strong>Qualité Russe exceptionnelle</strong> – Les cheveux les plus fins et soyeux au monde.</p>
+<br>
+<p><strong>Fabrication artisanale:</strong><br>
+• Chaque mèche cousue individuellement à la main<br>
+• Trame ultra-fine, plate et flexible<br>
+• Épouse parfaitement le cuir chevelu<br>
+• Résultat naturel et invisible</p>
+<br>
+<p><strong>Qualité Premium:</strong><br>
+• 100% <strong>cheveux humains vierges Remy</strong><br>
+• Cuticules intactes alignées dans le même sens<br>
+• Série {series} – Collection professionnelle {luxura}<br>
+• Teinte: <strong>{luxe_name} #{color_code}</strong></p>
+<br>
+<p><strong>Avantages uniques:</strong><br>
+• Idéal pour cheveux fins ou clairsemés<br>
+• Installation sans chaleur ni colle – cousue sur tresse<br>
+• Légère et confortable toute la journée<br>
+• Durée de vie: 9-12 mois avec bon entretien</p>
+<br>
+<p><strong>Application:</strong> Pose professionnelle en salon (méthode couture sur tresse)</p>
+<br>
+{seo_local}"""
+
     elif product_type == "Tape":
         return f"""<p><strong>Extensions Bande Adhésive {series}</strong> – Pose rapide et confort absolu par {luxura}.</p>
 <br>
@@ -712,6 +743,23 @@ def _build_info_sections(prod: Product) -> List[Dict[str, str]]:
         maintenance = (
             "Laver avec des soins professionnels sans sulfates. Hydrater régulièrement les longueurs. "
             "Démêler des pointes vers la racine avec une brosse adaptée. Limiter la chaleur excessive."
+        )
+
+    elif product_type == "Hand-Tied":
+        desc = (
+            f"Les extensions {label} Weft sont des trames cousues main artisanales, ultra-fines et flexibles. "
+            f"Idéales pour les cheveux fins, elles offrent un résultat naturel et invisible."
+        )
+        about = (
+            f"La série {series} propose des extensions Hand-Tied fabriquées à la main, mèche par mèche. "
+            f"Teinte {luxe_name} #{color_code}, qualité professionnelle Luxura."
+        )
+        recommendation = (
+            "1 à 2 paquets pour un ajout de volume naturel, 3 paquets ou plus pour une transformation complète."
+        )
+        maintenance = (
+            "Laver avec des soins professionnels sans sulfates. Démêler délicatement des pointes vers la racine. "
+            "Hydrater régulièrement les longueurs. Éviter la chaleur excessive."
         )
 
     elif product_type == "Tape":
