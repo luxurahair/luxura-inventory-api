@@ -2499,14 +2499,16 @@ async def generate_daily_blogs(
                 "keywords": keywords_extracted
             })
 
-        if publish_to_wix and wix_api_key and wix_site_id:
+        # Créer un brouillon Wix si les clés API sont disponibles
+        # (même si publish_to_wix=False, on crée le brouillon pour l'email)
+        if wix_api_key and wix_site_id:
             category = topic_data.get("category", "general")
             blog_title = blog_post["title"]
             blog_content = blog_post["content"]
             focus_product = topic_data.get("focus_product", "")
             blog_tags = blog_post.get("tags", [])
 
-            logger.info(f"🚀 Publishing to Wix: {blog_title[:70]}")
+            logger.info(f"🚀 Creating Wix draft: {blog_title[:70]}")
 
             cover_image_data = None
             content_image_data = None
@@ -2596,49 +2598,57 @@ async def generate_daily_blogs(
                         force_category
                     )
                     
-                    published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
-                    if published:
-                        # FLAGS DE PRODUCTION V2
-                        update_data = {
-                            "published_to_wix": True,
-                            "wix_post_id": draft_id,
-                            "wix_draft_id": draft_id,
-                            "image": blog_post.get("image"),
-                            "wix_image_url": (cover_image_data or {}).get("static_url", ""),
-                            "wix_content_image_url": (content_image_data or {}).get("static_url", ""),
-                            "wix_cover_patch_ok": cover_attached,
-                            "cover_v2_applied": cover_attached,
-                            "cover_patch_payload_version": "v2" if cover_attached else None
-                        }
-                        
-                        await db.blog_posts.update_one(
-                            {"id": post_id},
-                            {"$set": update_data}
-                        )
-                        
-                        blog_post["published_to_wix"] = True
-                        blog_post["wix_post_id"] = draft_id
-                        blog_post["wix_draft_id"] = draft_id
-                        blog_post["wix_cover_patch_ok"] = cover_attached
-                        blog_post["cover_v2_applied"] = cover_attached
-                        
-                        if cover_image_data:
-                            blog_post["wix_image_url"] = cover_image_data.get("static_url", "")
-                            blog_post["wix_cover_image"] = cover_image_data
-                        if content_image_data:
-                            blog_post["wix_content_image_url"] = content_image_data.get("static_url", "")
-                        
-                        # Log de production pour traçabilité
-                        if EDITORIAL_GUARD_AVAILABLE:
-                            log_production_event(
-                                "COVER_APPLIED" if cover_attached else "COVER_FAILED",
-                                blog_post["title"],
-                                category,
-                                draft_id=draft_id,
-                                cover_v2=cover_attached
-                            )
+                    # MODE BROUILLON: Ne PAS publier automatiquement
+                    # Le brouillon reste en attente de validation humaine
+                    if publish_to_wix:
+                        # Publication automatique demandée
+                        published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
+                        blog_post["published_to_wix"] = published
                     else:
-                        logger.error("Failed to publish Wix draft")
+                        # Mode brouillon uniquement - ne pas publier
+                        published = False
+                        blog_post["published_to_wix"] = False
+                        logger.info(f"📝 Brouillon Wix créé (non publié): {draft_id}")
+                    
+                    # Mettre à jour les métadonnées même si pas publié
+                    update_data = {
+                        "wix_post_id": draft_id,
+                        "wix_draft_id": draft_id,
+                        "published_to_wix": published,
+                        "image": blog_post.get("image"),
+                        "wix_image_url": (cover_image_data or {}).get("static_url", ""),
+                        "wix_content_image_url": (content_image_data or {}).get("static_url", ""),
+                        "wix_cover_patch_ok": cover_attached,
+                        "cover_v2_applied": cover_attached,
+                        "cover_patch_payload_version": "v2" if cover_attached else None
+                    }
+                    
+                    await db.blog_posts.update_one(
+                        {"id": post_id},
+                        {"$set": update_data}
+                    )
+                    
+                    # Toujours mettre à jour le blog_post avec les infos Wix
+                    blog_post["wix_post_id"] = draft_id
+                    blog_post["wix_draft_id"] = draft_id
+                    blog_post["wix_cover_patch_ok"] = cover_attached
+                    blog_post["cover_v2_applied"] = cover_attached
+                    
+                    if cover_image_data:
+                        blog_post["wix_image_url"] = cover_image_data.get("static_url", "")
+                        blog_post["wix_cover_image"] = cover_image_data
+                    if content_image_data:
+                        blog_post["wix_content_image_url"] = content_image_data.get("static_url", "")
+                    
+                    # Log de production pour traçabilité
+                    if published and EDITORIAL_GUARD_AVAILABLE:
+                        log_production_event(
+                            "COVER_APPLIED" if cover_attached else "COVER_FAILED",
+                            blog_post["title"],
+                            category,
+                            draft_id=draft_id,
+                            cover_v2=cover_attached
+                        )
                 else:
                     logger.error("Draft created but no draft_id returned")
             else:
