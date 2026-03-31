@@ -175,45 +175,57 @@ async def startup_event():
     asyncio.create_task(keep_luxura_awake())
     logger.info("✅ Background ping task started")
     
-    # 🛡️ SEO-SAFE CRON: 1 brouillon/jour uniquement (validation humaine requise)
+    # 🛡️ CRON OPTIMISÉ FEMMES QUÉBEC: 1 article/jour aux heures de pointe
     try:
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
         from apscheduler.triggers.cron import CronTrigger
         
         blog_scheduler = AsyncIOScheduler(timezone="America/Montreal")
         
-        # 🛡️ SEO-SAFE: UNE SEULE génération par jour à 08:00 EST
-        blog_scheduler.add_job(
-            scheduled_blog_generation,
-            CronTrigger(hour=8, minute=0),
-            id="daily_blog_draft",
-            name="Daily Blog Draft (08:00 EST) - SEO Safe Mode"
-        )
+        # 📅 HEURES DE POINTE PAR JOUR (optimisé engagement femmes Québec)
+        # Lundi 7h, Mardi 12h, Mercredi 19h, Jeudi 7h, Vendredi 12h, Samedi 10h, Dimanche 20h
+        CRON_SCHEDULE = [
+            {"day": "mon", "hour": 7, "desc": "Lundi 7h - Transformation"},
+            {"day": "tue", "hour": 12, "desc": "Mardi 12h - Cheveux fins"},
+            {"day": "wed", "hour": 19, "desc": "Mercredi 19h - Comparatif"},
+            {"day": "thu", "hour": 7, "desc": "Jeudi 7h - B2B Salon"},
+            {"day": "fri", "hour": 12, "desc": "Vendredi 12h - Tendances"},
+            {"day": "sat", "hour": 10, "desc": "Samedi 10h - Inspiration"},
+            {"day": "sun", "hour": 20, "desc": "Dimanche 20h - Témoignages/Self-care"},
+        ]
         
-        # ❌ SUPPRIMÉ: 2ème génération à 16:00 (risque SEO)
-        # La génération multiple causait des pénalités Google (Scaled Content Abuse)
+        for schedule in CRON_SCHEDULE:
+            blog_scheduler.add_job(
+                scheduled_blog_generation,
+                CronTrigger(day_of_week=schedule["day"], hour=schedule["hour"], minute=0),
+                id=f"blog_{schedule['day']}",
+                name=f"Blog {schedule['desc']}"
+            )
         
         blog_scheduler.start()
         
         # Log du calendrier éditorial
         try:
-            from editorial_calendar import get_current_rotation_week, get_weekly_schedule
+            from editorial_calendar import get_current_rotation_week, get_weekly_schedule, get_week_preview
             rotation_week = get_current_rotation_week()
             weekly_schedule = get_weekly_schedule()
             
             logger.info("=" * 50)
-            logger.info("📅 CALENDRIER ÉDITORIAL ACTIVÉ")
+            logger.info("📅 CALENDRIER ÉDITORIAL - OPTIMISÉ FEMMES QUÉBEC")
             logger.info(f"   Semaine de rotation: {rotation_week}/2")
-            logger.info("   Planning:")
+            logger.info("   🎯 Cible: Femmes québécoises 25-55 ans")
+            logger.info("   ⏰ Heures de pointe optimisées:")
             for slot in weekly_schedule:
-                logger.info(f"   - {slot['day'].capitalize()}: {slot['category']} ({slot['type']})")
-            logger.info("   Publication: DÉSACTIVÉE (validation humaine)")
+                hour = slot.get('hour', 8)
+                target = slot.get('target', 'femmes')
+                logger.info(f"   - {slot['day'].capitalize()} {hour}h: {slot['category']} ({target})")
+            logger.info("   Publication: BROUILLON (validation humaine)")
             logger.info("=" * 50)
         except ImportError:
             logger.info("=" * 50)
             logger.info("🛡️ BLOG CRON - MODE FALLBACK")
-            logger.info("   - 08:00 EST: 1 BROUILLON uniquement")
-            logger.info("   - Catégories: rotation aléatoire")
+            logger.info("   - 7 jours/semaine aux heures de pointe")
+            logger.info("   - Catégories: rotation automatique")
             logger.info("=" * 50)
         
     except ImportError:
