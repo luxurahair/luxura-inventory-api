@@ -16,6 +16,7 @@ import httpx
 import json
 import asyncio
 from color_system import COLOR_SYSTEM, get_color_info, get_seo_description, get_all_colors_for_filter, get_colors_by_category, get_colors_by_type
+from color_engine_api import process_color_engine, base64_to_image, image_to_base64
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -3694,6 +3695,57 @@ async def root():
 @api_router.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+
+# ==================== COLOR ENGINE API ====================
+
+class ColorEngineRequest(BaseModel):
+    """Requête pour le Color Engine"""
+    gabarit1: str = Field(..., description="Image gabarit 1 en base64")
+    gabarit2: Optional[str] = Field(None, description="Image gabarit 2 en base64 (optionnel)")
+    reference: str = Field(..., description="Image référence couleur en base64")
+    blend: float = Field(0.65, ge=0.3, le=0.9, description="Intensité du mélange")
+
+
+@api_router.post("/color-engine/process")
+async def color_engine_process(request: ColorEngineRequest):
+    """
+    Endpoint Color Engine V2 - Recolorisation intelligente des extensions.
+    
+    Envoie les images en base64, reçoit les images recolorisées en base64.
+    """
+    try:
+        logger.info("🎨 Color Engine: Traitement en cours...")
+        
+        result = await process_color_engine(
+            gabarit1_b64=request.gabarit1,
+            gabarit2_b64=request.gabarit2,
+            reference_b64=request.reference,
+            blend=request.blend
+        )
+        
+        logger.info("✅ Color Engine: Traitement terminé")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Color Engine erreur: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/color-engine/status")
+async def color_engine_status():
+    """Vérifie que le Color Engine est disponible"""
+    return {
+        "status": "ready",
+        "version": "2.0",
+        "features": [
+            "LAB color space recoloring",
+            "Improved hair mask (rembg + skin detection)",
+            "Ombré preservation",
+            "Texture/highlight blending"
+        ]
+    }
+
 
 # Include backlinks routes FIRST (priority over legacy routes in api_router)
 try:
