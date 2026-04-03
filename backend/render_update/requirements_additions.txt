@@ -1,0 +1,5 @@
+# === AJOUTER CES LIGNES À TON requirements.txt EXISTANT ===
+
+# Color Engine V2 - Recolorisation intelligente
+rembg[cpu]>=2.0.50
+opencv-python-headless>=4.8.0
