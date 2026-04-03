@@ -50,25 +50,43 @@ def extract_color_profile(reference: np.ndarray) -> dict:
     """Extrait le profil couleur complet de la référence (teinte, sat, ombré)."""
     ref_person = remove(reference)
     ref_hsv = cv2.cvtColor(reference, cv2.COLOR_RGB2HSV)
+    ref_lab = cv2.cvtColor(reference, cv2.COLOR_RGB2LAB)
     ref_gray = cv2.cvtColor(np.array(ref_person), cv2.COLOR_RGBA2GRAY)
     _, ref_hair = cv2.threshold(ref_gray, 30, 255, cv2.THRESH_BINARY)
     
     if np.sum(ref_hair > 0) == 0:
-        return {"hue": 90, "sat": 0.5, "ombre_ratio": 0.2}
+        return {"l_top": 80, "l_bottom": 200, "a_avg": 128, "b_avg": 128}
     
-    # Analyser l'ombré (différence haut vs bas)
     height = reference.shape[0]
-    top_section = ref_hair[:height//4]
-    bottom_section = ref_hair[3*height//4:]
     
-    top_hue = np.median(ref_hsv[:height//4, :, 0][top_section > 0]) if np.any(top_section > 0) else 90
-    bottom_hue = np.median(ref_hsv[3*height//4:, :, 0][bottom_section > 0]) if np.any(bottom_section > 0) else 90
+    # Diviser en sections pour analyser l'ombré
+    top_mask = ref_hair[:height//5]  # Top 20%
+    bottom_mask = ref_hair[4*height//5:]  # Bottom 20%
+    
+    # Extraire les valeurs LAB pour le haut (racines)
+    top_l = ref_lab[:height//5, :, 0][top_mask > 0]
+    top_a = ref_lab[:height//5, :, 1][top_mask > 0]
+    top_b = ref_lab[:height//5, :, 2][top_mask > 0]
+    
+    # Extraire les valeurs LAB pour le bas (pointes)
+    bottom_l = ref_lab[4*height//5:, :, 0][bottom_mask > 0]
+    bottom_a = ref_lab[4*height//5:, :, 1][bottom_mask > 0]
+    bottom_b = ref_lab[4*height//5:, :, 2][bottom_mask > 0]
+    
+    # Moyennes avec fallback
+    l_top = int(np.median(top_l)) if len(top_l) > 0 else 80
+    l_bottom = int(np.median(bottom_l)) if len(bottom_l) > 0 else 200
+    
+    a_top = int(np.median(top_a)) if len(top_a) > 0 else 128
+    a_bottom = int(np.median(bottom_a)) if len(bottom_a) > 0 else 128
+    
+    b_top = int(np.median(top_b)) if len(top_b) > 0 else 128
+    b_bottom = int(np.median(bottom_b)) if len(bottom_b) > 0 else 128
     
     return {
-        "hue_top": int(top_hue),
-        "hue_bottom": int(bottom_hue),
-        "sat": np.mean(ref_hsv[:, :, 1][ref_hair > 0]) / 255.0,
-        "ombre_ratio": abs(top_hue - bottom_hue) / 180.0
+        "l_top": l_top, "l_bottom": l_bottom,
+        "a_top": a_top, "a_bottom": a_bottom,
+        "b_top": b_top, "b_bottom": b_bottom
     }
 
 
@@ -81,30 +99,43 @@ def recolor_template_with_reference(reference: np.ndarray, blend: float = 0.65) 
     hair_mask = improve_hair_mask(gabarit)
     color_profile = extract_color_profile(reference)
     
-    # Recolorisation LAB avec ombré
+    # Recolorisation LAB avec ombré complet
     lab = cv2.cvtColor(gabarit, cv2.COLOR_RGB2LAB)
     l, a, b = cv2.split(lab)
     
+    # Valeurs originales du gabarit pour le blending
+    original_lab = cv2.cvtColor(gabarit, cv2.COLOR_RGB2LAB)
+    orig_l, orig_a, orig_b = cv2.split(original_lab)
+    
     height = lab.shape[0]
     for y in range(height):
-        ratio = y / height
+        ratio = y / height  # 0 en haut, 1 en bas
         mask_row = hair_mask[y] > 0
+        
         if np.any(mask_row):
-            # Interpoler entre hue_top et hue_bottom pour l'ombré
-            current_hue = color_profile["hue_top"] * (1 - ratio) + color_profile["hue_bottom"] * ratio
+            # Interpoler L, A, B entre haut et bas
+            target_l = int(color_profile["l_top"] * (1 - ratio) + color_profile["l_bottom"] * ratio)
+            target_a = int(color_profile["a_top"] * (1 - ratio) + color_profile["a_bottom"] * ratio)
+            target_b = int(color_profile["b_top"] * (1 - ratio) + color_profile["b_bottom"] * ratio)
             
-            adjusted_a = a[y][mask_row].astype(np.float32) + (current_hue - 90) * 0.8
-            adjusted_b = b[y][mask_row].astype(np.float32) + (color_profile["sat"] * 50 - 25) * 0.8
-            a[y][mask_row] = np.clip(adjusted_a, 0, 255).astype(np.uint8)
-            b[y][mask_row] = np.clip(adjusted_b, 0, 255).astype(np.uint8)
+            # Calculer la différence à appliquer (préserve la texture)
+            current_l = orig_l[y][mask_row].astype(np.float32)
+            current_a = orig_a[y][mask_row].astype(np.float32)
+            current_b = orig_b[y][mask_row].astype(np.float32)
+            
+            # Appliquer la nouvelle couleur en préservant les variations locales
+            # L (luminosité) : remplacer partiellement
+            new_l = current_l * (1 - blend * 0.7) + target_l * (blend * 0.7)
+            # A et B (couleur) : remplacer plus fortement
+            new_a = current_a * (1 - blend) + target_a * blend
+            new_b = current_b * (1 - blend) + target_b * blend
+            
+            l[y][mask_row] = np.clip(new_l, 0, 255).astype(np.uint8)
+            a[y][mask_row] = np.clip(new_a, 0, 255).astype(np.uint8)
+            b[y][mask_row] = np.clip(new_b, 0, 255).astype(np.uint8)
 
     recolored_lab = cv2.merge([l, a, b])
-    recolored = cv2.cvtColor(recolored_lab, cv2.COLOR_LAB2RGB)
-
-    # Mélange pour préserver texture/reflets
-    original = gabarit.copy()
-    final = (recolored.astype(np.float32) * blend + original.astype(np.float32) * (1 - blend))
-    final = np.clip(final, 0, 255).astype(np.uint8)
+    final = cv2.cvtColor(recolored_lab, cv2.COLOR_LAB2RGB)
     
     return final
 
