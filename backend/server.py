@@ -1,4 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Response, Request, Depends, BackgroundTasks
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -70,6 +72,18 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json"
 )
+
+# Servir les fichiers statiques (images générées)
+STATIC_DIR = Path(__file__).parent / "static"
+STATIC_DIR.mkdir(exist_ok=True)
+
+@app.get("/api/static/{filename}")
+async def serve_static_file(filename: str):
+    """Sert les fichiers statiques (images générées)"""
+    file_path = STATIC_DIR / filename
+    if file_path.exists():
+        return FileResponse(file_path)
+    raise HTTPException(status_code=404, detail="File not found")
 
 # Variable globale pour le scheduler
 blog_scheduler = None
