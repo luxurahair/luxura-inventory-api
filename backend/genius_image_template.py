@@ -60,7 +60,51 @@ def get_product_prompt(hair_color_description: str, color_name: str) -> str:
         Prompt formaté pour gpt-image-1
     """
     
-    prompt = f'''Luxury hair extension product photography for high-end brand catalog.
+    # PROMPT ULTRA-PRÉCIS pour consistance maximale
+    prompt = f'''EXACT REPLICA REQUIRED - Product photography template.
+
+=== CRITICAL: EXACT SAME COMPOSITION FOR ALL COLORS ===
+This is a standardized product template. The ONLY difference between images is the hair color.
+ALL other elements must be PIXEL-PERFECT IDENTICAL across all color variants.
+
+=== CANVAS AND LAYOUT (FIXED) ===
+- Image ratio: 3:4 portrait (e.g., 1024x1365 pixels)
+- Pure white background #FFFFFF covering entire canvas
+
+=== HAIR WEFT EXACT POSITION (FIXED - DO NOT VARY) ===
+- Keratin tips position: X=60%, Y=3% (top-right area)
+- Two silver I-tip connectors, small, metallic
+- Hair strand width at top: approximately 8% of image width
+- Hair flows DIAGONALLY from top-right to bottom-center
+- Hair end position: X=45%, Y=95% (bottom center-left)
+- Total hair length spans 92% of image height
+
+=== HAIR SHAPE (FIXED - MINIMAL CURVE) ===
+- Almost perfectly STRAIGHT vertical flow
+- Only ONE subtle curve: a gentle arc toward the right at Y=50-60%
+- This curve displacement is MAX 5% of image width
+- Hair ends taper naturally with slight leftward curve
+- NO S-curves, NO waves, NO bouncy curls
+
+=== WATERMARK POSITION (FIXED COORDINATES) ===
+- "Série" text: X=12%, Y=38%, font: italic serif, size: 2% of image height
+- "Vivian" text: X=10%, Y=44%, font: elegant script with large V, size: 8% of image height
+- "EXTENSIONS À TRAME INVISIBLE": X=12%, Y=55%, font: serif capitals, size: 1.5% of image height
+- All text color: #D4C9B5 (light beige/gold)
+- Text opacity: 65% transparent
+- Text appears BEHIND the hair
+
+=== HAIR TEXTURE (FIXED) ===
+- Perfectly straight, silky smooth
+- Glass-like shine
+- Individual strands visible
+- No frizz
+
+=== HAIR COLOR (VARIABLE - THIS IS THE ONLY THING THAT CHANGES) ===
+{hair_color_description}
+Product: {color_name}
+
+Luxury hair extension product photography for high-end brand catalog.
 
 === HAIR WEFT POSITION (CRITICAL - MUST FOLLOW EXACTLY) ===
 - Hair weft positioned on the RIGHT SIDE of image (occupying 45-70% horizontal area)
