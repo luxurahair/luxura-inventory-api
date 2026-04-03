@@ -1,14 +1,24 @@
-# Luxura Color Engine V2 🚀
+# Luxura Color Engine 🎨
 
-Micro-service de recolorisation intelligente pour les extensions capillaires Luxura.
+Micro-service de recolorisation intelligente pour extensions capillaires Luxura.
 
-## Fonctionnalités
+## Principe
 
-- ✅ Masque cheveux PRO (rembg + détection peau + nettoyage morphologique)
-- ✅ Extraction réelle de l'ombré + mèches de la référence
-- ✅ Recolorisation en espace LAB (plus naturel que HSV)
-- ✅ Préservation des reflets et textures
-- ✅ Affichage du masque pour debug
+- **Gabarit = intact** : on ne régénère jamais le visuel complet
+- **Masque cheveux** : rembg isole uniquement la mèche
+- **Transfert couleur** : on copie le profil vertical LAB de la référence (ombré inclus)
+- **Watermark protégé** : hors du masque, jamais touché
+
+## Fichiers
+
+```
+luxura-color-engine/
+├── app.py              # Interface Streamlit
+├── requirements.txt    # Dépendances
+├── render.yaml         # Config déploiement Render
+├── README.md           # Ce fichier
+└── outputs/            # Images générées (auto-créé)
+```
 
 ## Installation locale
 
@@ -19,23 +29,28 @@ streamlit run app.py
 
 ## Déploiement Render
 
-1. Push ce repo sur GitHub
-2. Connecte-le à Render.com
-3. Le fichier `render.yaml` configure tout automatiquement
+1. Push ce dossier sur GitHub
+2. Connecte le repo à Render.com
+3. Le `render.yaml` configure tout automatiquement
+4. URL : `https://luxura-color-engine.onrender.com`
 
 ## Utilisation
 
-1. Upload **Gabarit 1** (photo modèle complet)
-2. Upload **Gabarit 2** (extension seule)
-3. Upload **Référence** (couleur + ombré + mèches à copier)
-4. Ajuste le slider de mélange
-5. Clique "Générer" → télécharge les résultats
+1. **Gabarit 1** : photo produit avec watermark
+2. **Gabarit 2** : autre vue (optionnel)
+3. **Référence** : photo avec la couleur à copier (ombré, mèches, etc.)
+4. **Force** : slider pour doser le transfert (0.65 = équilibré)
+5. **Générer** → télécharge les résultats
 
-## Structure
+## Limitations
 
-```
-├── app.py              # Interface Streamlit
-├── requirements.txt    # Dépendances Python
-├── render.yaml         # Config déploiement Render
-└── outputs/            # Images générées (auto-créé)
-```
+- Pour extensions seules sur fond propre : excellent
+- Pour modèles complets (visage, mains) : masque manuel recommandé
+- Watermark doit être hors zone cheveux pour être 100% protégé
+
+## Améliorations futures
+
+- [ ] Masque verrouillé pour extensions produit
+- [ ] Watermark replaqué net après traitement
+- [ ] Export automatique par SKU
+- [ ] Interface plus clean
