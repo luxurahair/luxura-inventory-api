@@ -17,6 +17,7 @@ import json
 import asyncio
 from color_system import COLOR_SYSTEM, get_color_info, get_seo_description, get_all_colors_for_filter, get_colors_by_category, get_colors_by_type
 from color_engine_api import process_color_engine, base64_to_image, image_to_base64
+from auto_color_engine import auto_recolor
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -3745,6 +3746,74 @@ async def color_engine_status():
             "Texture/highlight blending"
         ]
     }
+
+
+# ==================== AUTO COLOR ENGINE (SIMPLIFIÉ) ====================
+
+class AutoColorRequest(BaseModel):
+    """Requête simplifiée - juste la référence couleur"""
+    reference: str = Field(..., description="Image référence couleur en base64")
+    blend: float = Field(0.65, ge=0.3, le=0.9, description="Intensité du mélange")
+
+
+@api_router.post("/color-engine/auto")
+async def color_engine_auto(request: AutoColorRequest):
+    """
+    🎨 AUTO COLOR ENGINE - Upload simplifié
+    
+    Envoie SEULEMENT l'image de référence (couleur), 
+    reçois l'image du gabarit Genius recolorisée avec watermark.
+    
+    Le gabarit est conservé côté serveur.
+    """
+    try:
+        logger.info("🎨 Auto Color Engine: Traitement...")
+        
+        result = await auto_recolor(
+            reference_b64=request.reference,
+            blend=request.blend
+        )
+        
+        logger.info("✅ Auto Color Engine: Terminé")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Auto Color Engine erreur: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/color-engine/auto-url")
+async def color_engine_auto_url(image_url: str, blend: float = 0.65):
+    """
+    🎨 AUTO COLOR ENGINE par URL
+    
+    Envoie l'URL de l'image référence, reçois l'image recolorisée.
+    """
+    try:
+        import httpx
+        import base64
+        
+        logger.info(f"🎨 Auto Color Engine URL: {image_url[:50]}...")
+        
+        # Télécharger l'image
+        async with httpx.AsyncClient() as client:
+            response = await client.get(image_url)
+            if response.status_code != 200:
+                raise HTTPException(status_code=400, detail="Impossible de télécharger l'image")
+            
+            reference_b64 = base64.b64encode(response.content).decode('utf-8')
+        
+        result = await auto_recolor(
+            reference_b64=reference_b64,
+            blend=blend
+        )
+        
+        logger.info("✅ Auto Color Engine URL: Terminé")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Auto Color Engine URL erreur: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Include backlinks routes FIRST (priority over legacy routes in api_router)
