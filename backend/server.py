@@ -3816,6 +3816,212 @@ async def color_engine_auto_url(image_url: str, blend: float = 0.65):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== SEO IMAGE OPTIMIZER ====================
+
+# Import SEO module - functions use dynamic imports to get latest changes
+import seo_image_optimizer as seo_module
+
+class SEOGenerateRequest(BaseModel):
+    product_type: str  # genius, tape, halo, i-tip, ponytail, clip-in
+    color_code: str    # 1, 6, 60a, hps, etc.
+    length: Optional[str] = None  # 16, 18, 20, 22, 24
+    geo_variation: int = 0  # Rotation des régions (0-12)
+
+class SEOBatchRequest(BaseModel):
+    dry_run: bool = True  # Si False, applique les changements sur Wix
+
+@api_router.post("/seo/image/generate")
+async def generate_image_seo(request: SEOGenerateRequest):
+    """
+    🔍 Génère toutes les données SEO pour un produit.
+    
+    Retourne: filename, alt_text, meta_description, title_tag, keywords, geo_region
+    
+    Exemple:
+    - product_type: "genius"
+    - color_code: "60a"
+    - length: "20"
+    - geo_variation: 0 (Québec), 1 (Beauce), 2 (Lévis), etc.
+    """
+    seo_data = seo_module.generate_product_seo_data(
+        product_type=request.product_type,
+        color_code=request.color_code,
+        length=request.length,
+        variation_index=request.geo_variation
+    )
+    
+    return {
+        "success": True,
+        "seo_data": seo_data,
+        "available_regions": seo_module.GEO_KEYWORDS,
+        "tip": "Utilise geo_variation pour alterner les régions (0=Québec, 1=Beauce, 2=Lévis...)"
+    }
+
+@api_router.get("/seo/image/preview")
+async def preview_seo_variations(
+    product_type: str = "genius",
+    color_code: str = "60a",
+    length: str = "20"
+):
+    """
+    👀 Prévisualise les variations SEO pour toutes les régions.
+    
+    Utile pour voir comment les noms de fichiers et alt texts varient.
+    """
+    variations = []
+    
+    for i, geo in enumerate(seo_module.GEO_KEYWORDS):
+        seo_data = seo_module.generate_product_seo_data(
+            product_type=product_type,
+            color_code=color_code,
+            length=length,
+            variation_index=i
+        )
+        variations.append({
+            "geo_index": i,
+            "region": geo,
+            "filename": seo_data["filename"],
+            "alt_text": seo_data["alt_text"],
+            "title_tag": seo_data["title_tag"]
+        })
+    
+    return {
+        "product": f"{product_type.upper()} #{color_code}",
+        "variations": variations,
+        "total_variations": len(variations)
+    }
+
+@api_router.post("/seo/catalog/batch-update")
+async def batch_update_seo(request: SEOBatchRequest):
+    """
+    🔄 Met à jour le SEO de tout le catalogue Wix.
+    
+    ⚠️ ATTENTION: Si dry_run=False, les changements sont appliqués sur Wix!
+    
+    - dry_run=True: Prévisualise les changements sans les appliquer
+    - dry_run=False: Applique les changements sur tous les produits
+    """
+    if not WIX_API_KEY:
+        raise HTTPException(
+            status_code=400, 
+            detail="WIX_API_KEY non configurée. Impossible de mettre à jour le catalogue."
+        )
+    
+    report = await seo_module.batch_update_catalog_seo(dry_run=request.dry_run)
+    
+    return {
+        "success": True,
+        "dry_run": report["dry_run"],
+        "total_products": report["total_products"],
+        "updated": report["updated"],
+        "skipped": report["skipped"],
+        "errors": report["errors"],
+        "sample_changes": report["changes"][:5] if report["changes"] else [],
+        "warning": "Pour appliquer les changements, envoyez dry_run=false" if report["dry_run"] else "Changements appliqués sur Wix!"
+    }
+
+@api_router.get("/seo/config")
+async def get_seo_config():
+    """
+    📋 Retourne la configuration SEO disponible.
+    
+    - Régions géographiques ciblées
+    - Types de produits avec mots-clés
+    - Codes couleur avec noms SEO
+    """
+    return {
+        "geo_keywords": seo_module.GEO_KEYWORDS,
+        "product_types": {
+            k: {
+                "name": v["name"],
+                "keywords": v["keywords"][:3],
+                "benefits": v["benefits"][:2]
+            } for k, v in seo_module.PRODUCT_TYPES_SEO.items()
+        },
+        "color_codes": {
+            k: {
+                "name": v["name"],
+                "keywords": v["keywords"][:2]
+            } for k, v in list(seo_module.COLOR_SEO_MAP.items())[:15]  # Top 15 couleurs
+        },
+        "naming_format": "luxura-{rallonge|extension}-{type}-{couleur}-{région}-{longueur}po.jpg",
+        "example": seo_module.generate_product_seo_data("genius", "60a", "20", 0)
+    }
+
+@api_router.get("/seo/filename-generator")
+async def generate_seo_filenames_bulk(
+    product_type: str = "genius",
+    color_codes: str = "1,2,3,6,60a,hps"
+):
+    """
+    📁 Génère des noms de fichiers SEO pour plusieurs couleurs et régions.
+    
+    Parfait pour renommer un lot d'images avant upload sur Wix.
+    
+    Args:
+        product_type: Type de produit (genius, tape, halo, etc.)
+        color_codes: Liste de codes couleur séparés par virgules
+    """
+    # Config SEO inline pour éviter les problèmes de cache
+    GEO_REGIONS = ["Québec", "Beauce", "Lévis", "Chaudière-Appalaches", "Rive-Sud", "St-Georges"]
+    
+    COLOR_NAMES = {
+        "1": "Noir Foncé", "1b": "Noir Naturel", "2": "Brun Foncé", "3": "Châtain Moyen",
+        "6": "Châtain Clair", "6/24": "Balayage Caramel", "18/22": "Blond Cendré",
+        "60a": "Blond Platine", "613/18a": "Blond Glacé", "hps": "Blond Cendré Foncé",
+        "pha": "Blond Perle", "cb": "Ombré Miel", "db": "Brun Nuit", "dc": "Chocolat Profond",
+        "cacao": "Cacao", "cinnamon": "Cannelle"
+    }
+    
+    TYPE_NAMES = {
+        "genius": "Genius Trame Invisible", "tape": "Bande Adhésive", "halo": "Halo",
+        "i-tip": "I-Tip Kératine", "ponytail": "Queue de Cheval", "clip-in": "Extensions à Clips"
+    }
+    
+    def normalize_text(text: str) -> str:
+        """Normalise les caractères spéciaux pour les URLs"""
+        text = text.lower()
+        replacements = {"é": "e", "è": "e", "ê": "e", "â": "a", "à": "a", "î": "i", "ï": "i", 
+                       "ô": "o", "û": "u", "ù": "u", "ç": "c", "'": "", " ": "-"}
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+        return re.sub(r'-+', '-', text).strip('-')
+    
+    def gen_filename(ptype: str, color: str, geo_idx: int) -> str:
+        word = "rallonge" if geo_idx % 2 == 0 else "extension"
+        color_name = normalize_text(COLOR_NAMES.get(color, color))
+        region = normalize_text(GEO_REGIONS[geo_idx % len(GEO_REGIONS)])
+        return f"luxura-{word}-{ptype}-{color_name}-{region}-20po.jpg"
+    
+    def gen_alt(ptype: str, color: str, geo_idx: int) -> str:
+        word = "Rallonge" if geo_idx % 2 == 0 else "Extension"
+        type_name = TYPE_NAMES.get(ptype, ptype.title())
+        color_name = COLOR_NAMES.get(color, color)
+        region = GEO_REGIONS[geo_idx % len(GEO_REGIONS)]
+        return f"{word} {type_name} {color_name} 20 pouces - Luxura Distribution {region}"
+    
+    codes = [c.strip() for c in color_codes.split(",")]
+    filenames = []
+    
+    for code in codes:
+        for geo_idx in range(min(3, len(GEO_REGIONS))):
+            filenames.append({
+                "color_code": code,
+                "color_name": COLOR_NAMES.get(code, code),
+                "region": GEO_REGIONS[geo_idx],
+                "filename": gen_filename(product_type, code, geo_idx),
+                "alt_text": gen_alt(product_type, code, geo_idx)
+            })
+    
+    return {
+        "product_type": product_type,
+        "generated_filenames": filenames,
+        "total": len(filenames),
+        "available_regions": GEO_REGIONS,
+        "tip": "Télécharge les images et renomme-les avec ces noms avant upload sur Wix"
+    }
+
+
 # Include backlinks routes FIRST (priority over legacy routes in api_router)
 try:
     from backlinks.backlink_routes import router as backlinks_router
