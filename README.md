@@ -1,4 +1,4 @@
-# 🌟 Luxura Distribution - Système d'Automatisation Wix & SEO
+# 🌟 Luxura Distribution - Système d'Automatisation Wix & Marketing
 
 > **Plateforme complète** de gestion automatisée pour extensions capillaires professionnelles au Québec.
 
@@ -7,40 +7,175 @@
 ## 📋 Table des matières
 
 1. [Vue d'ensemble](#vue-densemble)
-2. [Capacités SEO Wix](#capacités-seo-wix)
-3. [Gestion des produits](#gestion-des-produits)
-4. [Blog Automation](#blog-automation)
-5. [Scripts disponibles](#scripts-disponibles)
-6. [API Endpoints](#api-endpoints)
-7. [Configuration](#configuration)
-8. [Commandes utiles](#commandes-utiles)
+2. [🆕 Nouvelles fonctionnalités](#-nouvelles-fonctionnalités)
+3. [Facebook Marketing](#-facebook-marketing)
+4. [SEO Image Optimizer](#-seo-image-optimizer)
+5. [Vidéos Marketing AI](#-vidéos-marketing-ai)
+6. [Capacités SEO Wix](#capacités-seo-wix)
+7. [Blog Automation](#blog-automation)
+8. [API Endpoints](#api-endpoints)
+9. [Configuration](#configuration)
+10. [Commandes utiles](#commandes-utiles)
 
 ---
 
 ## 🎯 Vue d'ensemble
 
 Ce système permet de :
+- ✅ **Publier automatiquement sur Facebook** via API Graph
+- ✅ **Générer des noms d'images SEO-friendly** géolocalisés (Québec, Beauce, Lévis...)
+- ✅ **Créer des vidéos marketing AI** avec Fal.ai
 - ✅ **Modifier automatiquement les produits Wix** (noms, descriptions, SKUs)
 - ✅ **Générer et publier des articles de blog** SEO-optimisés
 - ✅ **Synchroniser l'inventaire** entre Wix et la base locale
-- ✅ **Gérer les collections/catégories** de produits
-- ✅ **Appliquer des descriptions SEO** riches en HTML
-- ✅ **Générer des images** avec DALL-E et overlay logo
+- ✅ **Recolorer des images produits** avec le Color Engine PRO
+
+---
+
+## 🆕 Nouvelles fonctionnalités
+
+### Avril 2025
+
+| Fonctionnalité | Description | Statut |
+|----------------|-------------|--------|
+| **Facebook Auto-Post** | Publication automatique sur la page FB Luxura | ✅ Live |
+| **SEO Image Optimizer** | Génération de noms de fichiers SEO géolocalisés | ✅ Live |
+| **Vidéos AI Marketing** | Génération de vidéos promotionnelles avec Fal.ai | ✅ Live |
+| **Color Engine PRO** | Recoloration d'images produits (OpenCV/Streamlit) | ✅ Prêt |
+
+---
+
+## 📘 Facebook Marketing
+
+### Endpoints disponibles
+
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/facebook/status` | GET | Vérifier la connexion Facebook |
+| `/facebook/test` | GET | Test rapide de la connexion |
+| `/facebook/post` | POST | Publier un message/lien/image |
+| `/facebook/post-blog` | POST | Publier un article de blog formaté |
+
+### Utilisation
+
+```bash
+# Vérifier le statut (Local ou Render)
+curl https://luxura-inventory-api.onrender.com/facebook/status
+
+# Publier un message
+curl -X POST "https://luxura-inventory-api.onrender.com/facebook/post" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "✨ Nouvelles extensions Genius disponibles!\n\n#LuxuraDistribution #Quebec",
+    "link": "https://www.luxuradistribution.com/genius"
+  }'
+
+# Publier un article de blog
+curl -X POST "https://luxura-inventory-api.onrender.com/facebook/post-blog" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Guide entretien extensions",
+    "excerpt": "Découvrez nos conseils pour...",
+    "url": "https://www.luxuradistribution.com/blog/guide-entretien"
+  }'
+```
+
+### Configuration Facebook
+
+Variables d'environnement requises sur **Render** :
+```env
+FB_PAGE_ID=1838415193042352
+FB_PAGE_ACCESS_TOKEN=EAAU4dnLcR8IB...
+```
+
+---
+
+## 🔍 SEO Image Optimizer
+
+### Génération de noms de fichiers SEO
+
+L'outil génère automatiquement des noms de fichiers optimisés avec :
+- Rotation "rallonge" / "extension"
+- Régions géolocalisées (Québec, Beauce, Lévis, Chaudière-Appalaches...)
+- Noms de couleurs en français
+
+### Endpoints
+
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/api/seo/filename-generator` | GET | Génère des noms SEO pour plusieurs couleurs |
+| `/api/seo/config` | GET | Configuration SEO disponible |
+| `/api/seo/image/generate` | POST | Génère les données SEO complètes |
+| `/api/seo/image/preview` | GET | Prévisualise toutes les variations |
+
+### Utilisation
+
+```bash
+# Générer des noms pour les produits Genius
+curl "http://localhost:8001/api/seo/filename-generator?product_type=genius&color_codes=1,6,60a,hps"
+
+# Résultat:
+# luxura-rallonge-genius-noir-fonce-quebec-20po.jpg
+# luxura-extension-genius-noir-fonce-beauce-20po.jpg
+# luxura-rallonge-genius-noir-fonce-levis-20po.jpg
+```
+
+### Régions supportées
+
+```python
+GEO_REGIONS = [
+    "Québec", "Beauce", "Lévis", "Chaudière-Appalaches", 
+    "Rive-Sud", "St-Georges", "Thetford", "Montmagny",
+    "Trois-Rivières", "Montréal", "Sherbrooke", "Gatineau", "Saguenay"
+]
+```
+
+---
+
+## 🎬 Vidéos Marketing AI
+
+### Génération avec Fal.ai
+
+Le système peut générer des vidéos promotionnelles à partir d'images produits.
+
+```bash
+# Générer une vidéo pour un produit
+curl -X POST "http://localhost:8001/api/video/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image_url": "https://static.wixstatic.com/media/...",
+    "prompt": "Elegant hair flowing in slow motion, luxury salon ambiance"
+  }'
+```
+
+### Vidéos générées
+
+| Collection | Couleur | Durée | Statut |
+|------------|---------|-------|--------|
+| Genius | Onyx Noir (#1) | 5s | ✅ Généré |
+| Genius | Espresso (#2) | 5s | ✅ Généré |
+| Genius | Blond Platine (#60a) | 5s | ✅ Généré |
+| ... | ... | ... | ... |
 
 ---
 
 ## 🔧 Capacités SEO Wix
 
-### 1. Modification des produits
+### Push SEO Global
 
-| Capacité | Commande/Script | Description |
-|----------|-----------------|-------------|
-| **Renommer produits** | `rename_handtied_products.py` | Change les noms en masse par collection |
-| **Modifier SKUs** | `fix_genius_skus_wix.py` | Corrige et standardise les SKUs |
-| **Descriptions SEO** | `wix_seo_push_corrected.py` | Applique descriptions HTML riches |
-| **Push SEO global** | API `/api/seo-push` | Met à jour tous les produits d'un coup |
+```bash
+# Via l'API Render (recommandé)
+curl -X POST "https://luxura-inventory-api.onrender.com/wix/seo/push_preview" \
+  -H "Content-Type: application/json" \
+  -d '{"limit": 10}'
 
-### 2. Types de produits supportés
+# Appliquer les changements
+curl -X POST "https://luxura-inventory-api.onrender.com/wix/seo/push_apply" \
+  -H "Content-Type: application/json" \
+  -d '{"confirm": true, "limit": 10}'
+```
+
+### Types de produits supportés
 
 ```python
 TYPE_META = {
@@ -54,83 +189,21 @@ TYPE_META = {
 }
 ```
 
-### 3. Descriptions SEO générées
-
-Chaque produit reçoit une description HTML complète avec :
-- ✅ Qualité Russe exceptionnelle
-- ✅ Caractéristiques techniques (trame, cuticules, etc.)
-- ✅ Avantages uniques du type de produit
-- ✅ Instructions d'application
-- ✅ Mots-clés SEO locaux (Québec, Montréal, Laval, etc.)
-- ✅ Marque Luxura stylisée en couleur or (#D4AF37)
-
-### 4. Système de couleurs
-
-```python
-# Fichier: color_system.py
-# 40+ couleurs avec noms luxueux français
-
-"1": {"luxe": "Onyx Noir", "base": "Noir", "category": "dark"}
-"18/22": {"luxe": "Champagne Doré", "base": "Blond", "category": "blonde"}
-"CB": {"luxe": "Miel Sauvage Ombré", "base": "Ombré", "category": "ombre"}
-# etc.
-```
-
----
-
-## 📦 Gestion des produits
-
-### Renommer une collection complète
-
-```bash
-# Mode simulation (dry_run)
-python3 /app/scripts/rename_handtied_products.py
-
-# Mode production (applique les changements)
-python3 /app/scripts/rename_handtied_products.py --apply
-```
-
-### Push SEO sur tous les produits
-
-```bash
-# Via l'API Render
-curl -X POST "https://luxura-inventory-api.onrender.com/seo/push-all"
-
-# Via le script local
-python3 /app/scripts/wix_seo_push_corrected.py
-```
-
-### Récupérer les produits d'une collection
-
-```python
-# Collection IDs disponibles
-COLLECTIONS = {
-    "genius": "df309160-f8c2-4bfb-8b96-4c7167d6ca80",
-    "halo": "8a9a11e9-f98c-4846-b70e-0d169ed89454",
-    "tape": "ba5a0f74-5828-4baa-be83-78991547e1ed",
-    "i-tip": "f8926eac-b11e-4dff-ae76-59b3f727cdbf",
-    "hand-tied": "ffa67c64-ec16-1770-6aef-03dfc39a166c",
-    "liquidation": "32f3916d-5c98-4b4f-acca-c29256d4f253",
-    "ponytails": "d6adc071-c1cd-4190-9691-9466377cd4cf",
-    "clips": "e6f52b5b-fb69-4d04-b0c4-b8704b50fc86",
-    "essentiels": "0ffe1b2c-4408-47bd-b1f8-6fbbfa5cb96b",
-}
-```
-
 ---
 
 ## 📝 Blog Automation
 
 ### Calendrier éditorial
 
-Rotation sur 2 semaines :
-
-| Jour | Semaine 1 | Semaine 2 |
-|------|-----------|------------|
-| Lundi | consommateur | entretien |
-| Mercredi | comparatif | guide |
-| Vendredi | B2B salon | B2B salon |
-| Samedi/Dimanche | ❌ Aucune publication | ❌ Aucune publication |
+| Jour | Heure | Type | Audience |
+|------|-------|------|----------|
+| Lundi | 07:00 | Transformation | Femmes |
+| Mardi | 12:00 | Cheveux fins | Femmes |
+| Mercredi | 19:00 | Comparatif | Femmes |
+| Jeudi | 07:00 | B2B Salon | Salons |
+| Vendredi | 12:00 | Tendances | Femmes |
+| Samedi | 10:00 | Inspiration | Femmes |
+| Dimanche | 20:00 | Témoignages | Femmes |
 
 ### Génération manuelle
 
@@ -144,71 +217,34 @@ curl -X POST "http://localhost:8001/api/blog/generate" \
 curl -X POST "http://localhost:8001/api/blog/publish/{draft_id}"
 ```
 
-### Fonctionnalités du blog
-
-- ✅ Génération de contenu SEO avec GPT-4o
-- ✅ Images générées avec DALL-E 3
-- ✅ Overlay logo Luxura automatique
-- ✅ Maillage interne SEO (liens vers autres articles)
-- ✅ Anti-doublon intelligent (similarité de contenu)
-- ✅ Publication Wix via API
-- ✅ Notification email après génération
-
----
-
-## 📂 Scripts disponibles
-
-### /app/scripts/
-
-| Script | Description | Utilisation |
-|--------|-------------|-------------|
-| `wix_seo_push_corrected.py` | Push SEO complet sur tous les produits | `python3 wix_seo_push_corrected.py` |
-| `rename_handtied_products.py` | Renomme les Hand-Tied Weft | `python3 rename_handtied_products.py --apply` |
-| `fix_genius_skus_wix.py` | Corrige les SKUs Genius | `python3 fix_genius_skus_wix.py` |
-
-### /app/backend/
-
-| Module | Description |
-|--------|-------------|
-| `server.py` | API principale FastAPI |
-| `blog_automation.py` | Génération et publication de blogs |
-| `color_system.py` | Système de noms de couleurs luxueux |
-| `editorial_calendar.py` | Calendrier éditorial 2 semaines |
-| `editorial_guard.py` | Anti-doublon et contrôle qualité |
-| `image_generation.py` | Génération DALL-E + upload Wix |
-| `internal_linking.py` | Maillage interne SEO |
-| `logo_overlay.py` | Overlay logo sur images |
-
 ---
 
 ## 🔌 API Endpoints
 
-### Blog
+### Local (http://localhost:8001/api)
 
-| Endpoint | Méthode | Description |
-|----------|---------|-------------|
-| `/api/blog/generate` | POST | Génère un brouillon |
-| `/api/blog/publish/{id}` | POST | Publie un brouillon |
-| `/api/blog/drafts` | GET | Liste les brouillons |
-| `/api/blog/posts` | GET | Liste les articles publiés |
-| `/api/blog/calendar` | GET | Statut du calendrier |
+| Catégorie | Endpoint | Méthode | Description |
+|-----------|----------|---------|-------------|
+| **Facebook** | `/facebook/status` | GET | Statut connexion FB |
+| **Facebook** | `/facebook/post` | POST | Publier sur FB |
+| **SEO** | `/seo/filename-generator` | GET | Noms fichiers SEO |
+| **SEO** | `/seo/config` | GET | Config SEO |
+| **Blog** | `/blog/generate` | POST | Générer brouillon |
+| **Blog** | `/blog/publish/{id}` | POST | Publier brouillon |
+| **Produits** | `/products` | GET | Liste produits |
+| **Wix** | `/wix/capabilities` | GET | Capacités API Wix |
 
-### Produits
+### Render (https://luxura-inventory-api.onrender.com)
 
-| Endpoint | Méthode | Description |
-|----------|---------|-------------|
-| `/api/products` | GET | Liste tous les produits |
-| `/api/products/{id}` | GET | Détails d'un produit |
-| `/api/categories` | GET | Liste les catégories |
-| `/api/colors` | GET | Liste les couleurs disponibles |
-
-### SEO (via Render API)
-
-| Endpoint | Méthode | Description |
-|----------|---------|-------------|
-| `/seo/push-all` | POST | Push SEO sur tous les produits |
-| `/seo/status` | GET | Statut du dernier push |
-| `/products` | GET | Liste produits synchronisés |
+| Catégorie | Endpoint | Méthode | Description |
+|-----------|----------|---------|-------------|
+| **Facebook** | `/facebook/status` | GET | Statut connexion FB |
+| **Facebook** | `/facebook/post` | POST | Publier sur FB |
+| **Facebook** | `/facebook/post-blog` | POST | Publier blog sur FB |
+| **Wix SEO** | `/wix/seo/push_preview` | POST | Prévisualiser SEO |
+| **Wix SEO** | `/wix/seo/push_apply` | POST | Appliquer SEO |
+| **Wix Token** | `/wix/token` | POST | Refresh OAuth token |
+| **Produits** | `/products` | GET | Liste produits sync |
 
 ---
 
@@ -217,24 +253,30 @@ curl -X POST "http://localhost:8001/api/blog/publish/{draft_id}"
 ### Variables d'environnement (/app/backend/.env)
 
 ```env
-# Wix API
+# === WIX API ===
 WIX_API_KEY=IST.eyJ...
 WIX_SITE_ID=6e62c946-d068-45c1-8f5f-7af998f0d7b3
-WIX_INSTANCE_ID=...
 
-# OpenAI (génération contenu + images)
+# === FACEBOOK ===
+FB_PAGE_ID=1838415193042352
+FB_PAGE_ACCESS_TOKEN=EAAU4dnLcR8IB...
+
+# === OPENAI (via Emergent) ===
 EMERGENT_LLM_KEY=...
 
-# MongoDB local
+# === FAL.AI (Vidéos) ===
+FAL_KEY=...
+
+# === MONGODB ===
 MONGO_URL=mongodb://...
 DB_NAME=luxura_db
 
-# Email notifications
+# === RENDER API ===
+LUXURA_API_URL=https://luxura-inventory-api.onrender.com
+
+# === EMAIL ===
 LUXURA_EMAIL=info@luxuradistribution.com
 LUXURA_APP_PASSWORD=...
-
-# API externe
-LUXURA_API_URL=https://luxura-inventory-api.onrender.com
 ```
 
 ---
@@ -261,15 +303,17 @@ tail -f /var/log/supervisor/backend.err.log
 tail -f /var/log/supervisor/expo.err.log
 ```
 
-### Tester l'API Wix
+### Tests rapides
 
 ```bash
-# Vérifier la connexion
-curl -X POST "https://www.wixapis.com/stores/v1/products/query" \
-  -H "Authorization: IST.eyJ..." \
-  -H "wix-site-id: 6e62c946-d068-45c1-8f5f-7af998f0d7b3" \
-  -H "Content-Type: application/json" \
-  -d '{"query": {"paging": {"limit": 1}}}'
+# Facebook status
+curl https://luxura-inventory-api.onrender.com/facebook/status
+
+# SEO filenames
+curl "http://localhost:8001/api/seo/filename-generator?product_type=genius&color_codes=60a"
+
+# Wix capabilities
+curl http://localhost:8001/api/wix/capabilities
 ```
 
 ---
@@ -282,4 +326,4 @@ curl -X POST "https://www.wixapis.com/stores/v1/products/query" \
 
 ---
 
-*Dernière mise à jour: Mars 2025*
+*Dernière mise à jour: Avril 2025*

@@ -1,6 +1,6 @@
 # 🏗️ Architecture Technique - Luxura Distribution
 
-> Documentation complète de l'architecture du système d'automatisation Wix & SEO.
+> Documentation complète de l'architecture du système d'automatisation Wix, Facebook & Marketing AI.
 
 ---
 
@@ -14,83 +14,118 @@
 │
 ├── backend/                     # API FastAPI principale
 │   ├── .env                     # Variables d'environnement
-│   ├── server.py                # Point d'entrée API (3681 lignes)
+│   ├── server.py                # Point d'entrée API (~4000 lignes)
 │   ├── requirements.txt         # Dépendances Python
 │   │
+│   ├── # === MODULES FACEBOOK ===
+│   ├── (intégré dans server.py) # Endpoints /facebook/*
+│   │
+│   ├── # === MODULES SEO IMAGE ===
+│   ├── seo_image_optimizer.py   # Génération noms SEO géolocalisés
+│   │
 │   ├── # === MODULES BLOG ===
-│   ├── blog_automation.py       # Génération & publication blogs (2686 lignes)
+│   ├── blog_automation.py       # Génération & publication blogs
 │   ├── editorial_calendar.py    # Calendrier 2 semaines
 │   ├── editorial_guard.py       # Anti-doublon intelligent
 │   ├── image_generation.py      # DALL-E 3 + upload Wix
 │   ├── internal_linking.py      # Maillage interne SEO
 │   ├── logo_overlay.py          # Overlay logo sur images
-│   ├── image_brief_generator.py # Génération briefs pour images
 │   │
 │   ├── # === MODULES SEO PRODUITS ===
 │   ├── color_system.py          # 40+ couleurs avec noms luxueux
 │   ├── seo_description_template.py  # Templates descriptions
-│   ├── wix_seo_cleanup.py       # Nettoyage SEO
-│   ├── wix_seo_fix.py           # Corrections SEO
-│   ├── wix_description_fix.py   # Fix descriptions
 │   │
-│   ├── # === MODULES BACKLINKS (PAUSÉ) ===
-│   ├── backlinks/               # Architecture V2 backlinks
-│   │   ├── backlink_orchestrator.py
-│   │   ├── backlink_routes.py
-│   │   ├── directory_registry.py
-│   │   └── models.py
-│   ├── backlink_automation.py   # Automation Playwright (pausé)
-│   ├── gmail_checker.py         # Vérification emails (pausé)
+│   ├── # === COLOR ENGINE PRO ===
+│   ├── color_engine/            # Micro-service Streamlit
+│   │   ├── app.py               # UI Streamlit + OpenCV
+│   │   ├── requirements.txt
+│   │   ├── render.yaml
+│   │   └── README.md
 │   │
-│   ├── # === DONNÉES GÉNÉRÉES ===
-│   ├── data/
-│   │   ├── page_devenir_revendeur_optimisee.md  # Contenu SEO page
-│   │   └── schema_faq_revendeur.html            # Schema JSON-LD
+│   ├── # === VIDÉO AI ===
+│   ├── services/
+│   │   ├── video_generator.py   # Génération vidéos Fal.ai
+│   │   └── wix_media.py
 │   │
-│   └── services/                # Services utilitaires
-│       └── wix_media.py
+│   └── exports/                 # Fichiers générés
+│       ├── facebook.py          # Code pour Render API
+│       └── luxura-facebook-update.zip
 │
 ├── scripts/                     # Scripts standalone
-│   ├── wix_seo_push_corrected.py    # Push SEO complet (1460 lignes)
+│   ├── wix_seo_push_corrected.py    # Push SEO complet
 │   ├── rename_handtied_products.py  # Renommage Hand-Tied
-│   ├── fix_genius_skus_wix.py       # Fix SKUs Genius
-│   └── wix_velo_fix_genius_skus.js  # Script Velo Wix
+│   └── fix_genius_skus_wix.py       # Fix SKUs Genius
 │
 ├── frontend/                    # Application Expo React Native
 │   ├── app/                     # Routes (expo-router)
-│   │   ├── index.tsx
-│   │   ├── _layout.tsx
-│   │   └── (tabs)/
+│   │   ├── index.tsx            # Page d'accueil
+│   │   ├── _layout.tsx          # Layout principal
+│   │   ├── admin.tsx            # Dashboard admin
+│   │   └── (tabs)/              # Navigation par onglets
 │   ├── components/              # Composants réutilisables
 │   ├── contexts/                # React Context (Auth, Cart)
-│   ├── package.json
 │   └── .env
 │
-├── luxura-inventory-api/        # API Render (synchronisation)
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── models/              # SQLAlchemy models
-│   │   ├── routes/              # API endpoints
-│   │   │   ├── products.py
-│   │   │   ├── wix_seo_push.py
-│   │   │   ├── wix_webhooks.py
-│   │   │   └── seo.py
-│   │   └── services/
-│   │       ├── wix_client.py    # Client API Wix
-│   │       ├── wix_sync.py      # Synchronisation
-│   │       └── catalog_normalizer.py
-│   └── scripts/
-│       ├── sync_wix_to_luxura.py
-│       └── import_inventory_from_csv.py
-│
-└── tests/                       # Tests automatisés
+└── luxura-inventory-api/        # API Render (GitHub)
+    ├── app/
+    │   ├── main.py              # Point d'entrée
+    │   └── routes/
+    │       ├── products.py
+    │       ├── facebook.py      # 🆕 Endpoints Facebook
+    │       ├── wix_seo_push.py
+    │       ├── wix_oauth.py
+    │       ├── wix_token.py
+    │       └── wix_webhooks.py
+    └── requirements.txt
 ```
 
 ---
 
 ## 🔄 Flux de données
 
-### 1. Synchronisation Produits
+### 1. Publication Facebook
+
+```
+┌─────────────────┐     POST /facebook/post     ┌──────────────────┐
+│   App Locale    │ ──────────────────────────> │   Render API     │
+│   ou Client     │                             │   (Centralisé)   │
+└─────────────────┘                             └────────┬─────────┘
+                                                         │
+                                                         │ Graph API v25.0
+                                                         ▼
+                                                ┌──────────────────┐
+                                                │   Facebook       │
+                                                │   Page Luxura    │
+                                                │   ID: 183841...  │
+                                                └──────────────────┘
+```
+
+### 2. Génération Noms SEO Images
+
+```
+┌─────────────────┐
+│   Requête       │  product_type=genius
+│   /api/seo/     │  color_codes=60a
+│   filename-gen  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐     Rotation          ┌─────────────────┐
+│   Type Produit  │ ──────────────────>   │   Régions       │
+│   Genius/Tape/  │                       │   Québec/Beauce │
+│   Halo/I-Tip    │                       │   Lévis/...     │
+└────────┬────────┘                       └────────┬────────┘
+         │                                         │
+         ▼                                         ▼
+┌──────────────────────────────────────────────────────────┐
+│   Génération Nom Fichier SEO                             │
+│   luxura-rallonge-genius-blond-platine-quebec-20po.jpg   │
+│   luxura-extension-genius-blond-platine-beauce-20po.jpg  │
+│   luxura-rallonge-genius-blond-platine-levis-20po.jpg    │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 3. Synchronisation Produits
 
 ```
 ┌─────────────┐     Sync      ┌──────────────────┐     Query     ┌─────────────┐
@@ -106,119 +141,125 @@
 └─────────────┘               └──────────────────┘
 ```
 
-### 2. Génération Blog
+### 4. Génération Blog + Publication Facebook
 
 ```
-┌─────────────┐     Generate    ┌──────────────────┐     Upload     ┌─────────────┐
-│   Cron Job  │ ──────────────> │   GPT-4o         │ ─────────────> │   DALL-E 3  │
-│  (08:00 EST)│                 │  (Contenu SEO)   │                │   (Images)  │
-└─────────────┘                 └──────────────────┘                └─────────────┘
-                                        │                                  │
-                                        │ HTML                             │ PNG
-                                        ▼                                  ▼
-                                ┌──────────────────┐               ┌─────────────┐
-                                │   Editorial      │               │ Logo Overlay│
-                                │   Guard          │               │ (Luxura)    │
-                                │  (Anti-doublon)  │               └─────────────┘
-                                └──────────────────┘                       │
-                                        │                                  │
-                                        │ Validated                        │
-                                        ▼                                  ▼
-                                ┌──────────────────────────────────────────────┐
-                                │              Wix Blog API                    │
-                                │         (Draft ou Publication)               │
-                                └──────────────────────────────────────────────┘
-```
-
-### 3. Push SEO Produits
-
-```
-┌─────────────────┐
-│ Script Python   │
-│ ou API Endpoint │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐     Query Products     ┌─────────────────┐
-│ Wix API         │ ◄────────────────────── │ Filter by       │
-│ (Products)      │                         │ Collection ID   │
-└────────┬────────┘                         └─────────────────┘
-         │
-         │ For each product
-         ▼
-┌─────────────────┐
-│ Detect Type     │  Genius? Tape? Halo? Hand-Tied? I-Tip?
-│ (from name/SKU) │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Extract Color   │  #18/22 → "Champagne Doré"
-│ (from name)     │  #1B → "Noir Soie"
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Generate        │  HTML description with:
-│ Description     │  - Type-specific features
-│ (SEO Template)  │  - Color name
-│                 │  - Quebec SEO keywords
-│                 │  - Luxura branding
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ PATCH Wix API   │  Update:
-│ (Update Product)│  - name
-│                 │  - description
-│                 │  - sku
-└─────────────────┘
+┌─────────────┐     Generate    ┌──────────────┐     Image      ┌─────────────┐
+│   Cron Job  │ ──────────────> │   GPT-4o     │ ─────────────> │   DALL-E 3  │
+│  (Schedule) │                 │  (Content)   │                │   (Cover)   │
+└─────────────┘                 └──────────────┘                └─────────────┘
+                                       │                               │
+                                       │ HTML                          │ PNG
+                                       ▼                               ▼
+                               ┌──────────────┐                ┌─────────────┐
+                               │   Wix Blog   │                │ Logo Overlay│
+                               │   API        │                └─────────────┘
+                               └──────┬───────┘
+                                      │
+                                      │ Published
+                                      ▼
+                               ┌──────────────┐
+                               │   Facebook   │  POST /facebook/post-blog
+                               │   Auto-Post  │
+                               └──────────────┘
 ```
 
 ---
 
 ## 🔌 APIs Externes
 
+### Facebook Graph API
+
+| Service | URL | Auth |
+|---------|-----|------|
+| Pages API | `https://graph.facebook.com/v25.0/{page_id}/feed` | Page Access Token |
+| Photos API | `https://graph.facebook.com/v25.0/{page_id}/photos` | Page Access Token |
+
 ### Wix REST API
 
-| Service | URL | Authentification |
-|---------|-----|------------------|
-| Stores API | `https://www.wixapis.com/stores/v1` | `Authorization: IST.xxx` + `wix-site-id` |
+| Service | URL | Auth |
+|---------|-----|------|
+| Stores API | `https://www.wixapis.com/stores/v1` | `Authorization: IST.xxx` |
 | Blog API | `https://www.wixapis.com/blog/v3` | Idem |
 | Media API | `https://www.wixapis.com/site-media/v1` | Idem |
 
-### Endpoints Wix utilisés
-
-```
-POST /stores/v1/products/query          # Lister produits
-PATCH /stores/v1/products/{id}          # Modifier produit
-POST /stores/v1/collections/query       # Lister collections
-POST /blog/v3/draft-posts               # Créer brouillon
-POST /blog/v3/posts/publish             # Publier article
-POST /site-media/v1/files/upload-url    # Upload média
-```
-
-### OpenAI API
+### OpenAI API (via Emergent)
 
 | Service | Modèle | Usage |
 |---------|--------|-------|
 | Chat Completions | GPT-4o | Génération contenu blog |
 | Images | DALL-E 3 | Génération images blog |
+| Images | gpt-image-1 | Génération marketing |
 
-### Luxura Inventory API (Render)
+### Fal.ai API
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /products` | Liste produits synchronisés |
-| `POST /seo/push-all` | Push SEO global |
-| `GET /seo/status` | Statut dernier push |
-| `POST /sync/wix` | Sync depuis Wix |
+| Service | Usage |
+|---------|-------|
+| Image-to-Video | Génération vidéos marketing produits |
 
 ---
 
-## 📊 Base de données
+## 📊 Endpoints Complets
 
-### MongoDB Local (Auth, Cart, Blog Cache)
+### API Locale (http://localhost:8001/api)
+
+```
+# === FACEBOOK ===
+GET  /facebook/status           # Statut connexion (local + Render)
+POST /facebook/post             # Publier message/lien/image
+POST /facebook/post-blog        # Publier article blog formaté
+POST /facebook/update-token     # Mettre à jour token local
+
+# === SEO IMAGES ===
+GET  /seo/filename-generator    # Générer noms fichiers SEO
+GET  /seo/config                # Configuration SEO disponible
+POST /seo/image/generate        # Données SEO complètes pour 1 produit
+GET  /seo/image/preview         # Prévisualiser variations géo
+
+# === BLOG ===
+POST /blog/generate             # Générer brouillon
+POST /blog/publish/{id}         # Publier brouillon
+GET  /blog/drafts               # Liste brouillons
+GET  /blog/posts                # Liste publiés
+GET  /blog/calendar             # Statut calendrier
+
+# === PRODUITS ===
+GET  /products                  # Liste produits
+GET  /products/{id}             # Détails produit
+GET  /categories                # Liste catégories
+GET  /colors                    # Liste couleurs
+
+# === WIX ===
+GET  /wix/capabilities          # Capacités API Wix
+POST /wix/token/refresh         # Refresh OAuth token
+```
+
+### API Render (https://luxura-inventory-api.onrender.com)
+
+```
+# === FACEBOOK ===
+GET  /facebook/status           # Statut connexion
+GET  /facebook/test             # Test rapide
+POST /facebook/post             # Publier
+POST /facebook/post-blog        # Publier blog formaté
+
+# === WIX SEO ===
+POST /wix/seo/push_preview      # Prévisualiser changements SEO
+POST /wix/seo/push_apply        # Appliquer changements
+
+# === WIX TOKEN ===
+POST /wix/token                 # Générer/refresh OAuth token
+
+# === PRODUITS ===
+GET  /products                  # Liste produits synchronisés
+GET  /inventory/view            # Vue inventaire
+```
+
+---
+
+## 📊 Bases de données
+
+### MongoDB Local
 
 ```javascript
 // Collection: blog_posts
@@ -230,10 +271,10 @@ POST /site-media/v1/files/upload-url    # Upload média
   category: "entretien" | "guide" | "comparatif" | "b2b_salon",
   status: "draft" | "published",
   wix_post_id: String,
+  facebook_post_id: String,  // 🆕
   created_at: Date,
   published_at: Date,
-  topic_hash: String,  // Anti-doublon
-  keywords: [String]
+  topic_hash: String
 }
 
 // Collection: users
@@ -241,20 +282,11 @@ POST /site-media/v1/files/upload-url    # Upload média
   _id: ObjectId,
   email: String,
   password_hash: String,
-  role: "client" | "salon" | "admin",
-  created_at: Date
-}
-
-// Collection: carts
-{
-  _id: ObjectId,
-  user_id: ObjectId,
-  items: [{ product_id, quantity, variant }],
-  updated_at: Date
+  role: "client" | "salon" | "admin"
 }
 ```
 
-### PostgreSQL (Render - Inventaire)
+### PostgreSQL (Render)
 
 ```sql
 -- Table: products
@@ -264,7 +296,6 @@ CREATE TABLE products (
   name VARCHAR(255),
   sku VARCHAR(50),
   price DECIMAL(10,2),
-  description TEXT,
   collection_ids TEXT[],
   synced_at TIMESTAMP
 );
@@ -274,63 +305,77 @@ CREATE TABLE salons (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255),
   email VARCHAR(255),
-  phone VARCHAR(20),
-  address TEXT,
   status VARCHAR(20) DEFAULT 'active'
-);
-
--- Table: inventory_movements
-CREATE TABLE inventory_movements (
-  id SERIAL PRIMARY KEY,
-  product_id INTEGER REFERENCES products(id),
-  salon_id INTEGER REFERENCES salons(id),
-  quantity INTEGER,
-  type VARCHAR(20),  -- 'deposit' | 'sale' | 'return'
-  created_at TIMESTAMP DEFAULT NOW()
 );
 ```
 
 ---
 
-## 🔐 Sécurité
+## 🔐 Variables d'environnement
 
-### Variables sensibles
+### /app/backend/.env (Local)
 
-| Variable | Localisation | Usage |
-|----------|--------------|-------|
-| `WIX_API_KEY` | `/app/backend/.env` | Authentification Wix API |
-| `WIX_SITE_ID` | `/app/backend/.env` | Identification site Wix |
-| `EMERGENT_LLM_KEY` | `/app/backend/.env` | OpenAI via Emergent |
-| `LUXURA_APP_PASSWORD` | `/app/backend/.env` | Email SMTP |
-| `MONGO_URL` | `/app/backend/.env` | MongoDB connection |
+```env
+# === WIX ===
+WIX_API_KEY=IST.eyJ...
+WIX_SITE_ID=6e62c946-d068-45c1-8f5f-7af998f0d7b3
 
-### Bonnes pratiques
+# === FACEBOOK ===
+FB_PAGE_ID=1838415193042352
+FB_PAGE_ACCESS_TOKEN=EAAU4dnLcR8IB...
 
-- ✅ Toutes les clés dans `.env` (jamais en dur)
-- ✅ `.env` dans `.gitignore`
-- ✅ Validation des entrées utilisateur
-- ✅ Rate limiting sur les endpoints sensibles
+# === AI ===
+EMERGENT_LLM_KEY=...
+FAL_KEY=...
+
+# === DATABASE ===
+MONGO_URL=mongodb://...
+
+# === RENDER API ===
+LUXURA_API_URL=https://luxura-inventory-api.onrender.com
+```
+
+### Render Environment Variables
+
+```env
+# === WIX ===
+WIX_CLIENT_ID=...
+WIX_CLIENT_SECRET=...
+WIX_REFRESH_TOKEN=...
+
+# === FACEBOOK ===
+FB_PAGE_ID=1838415193042352
+FB_PAGE_ACCESS_TOKEN=EAAU4dnLcR8IB...
+
+# === DATABASE ===
+DATABASE_URL=postgresql://...
+```
 
 ---
 
 ## 🚀 Déploiement
 
-### Services
+### Services Locaux
 
 | Service | Port | Commande |
 |---------|------|----------|
 | Backend FastAPI | 8001 | `sudo supervisorctl restart backend` |
 | Frontend Expo | 3000 | `sudo supervisorctl restart expo` |
-| MongoDB | 27017 | Automatique |
+| MongoDB | 27017 | Auto |
 
-### URLs
+### Services Render
 
-| Environnement | URL |
-|---------------|-----|
-| API Backend | `http://localhost:8001/api` |
-| Frontend Web | `http://localhost:3000` |
-| API Render | `https://luxura-inventory-api.onrender.com` |
-| Site Wix | `https://www.luxuradistribution.com` |
+| Service | URL | Auto-deploy |
+|---------|-----|-------------|
+| luxura-inventory-api | https://luxura-inventory-api.onrender.com | GitHub push |
+
+### URLs de production
+
+| Service | URL |
+|---------|-----|
+| Site Wix | https://www.luxuradistribution.com |
+| API Render | https://luxura-inventory-api.onrender.com |
+| Page Facebook | https://www.facebook.com/1838415193042352 |
 
 ---
 
@@ -341,52 +386,51 @@ CREATE TABLE inventory_movements (
 ```bash
 # Backend
 tail -f /var/log/supervisor/backend.err.log
-tail -f /var/log/supervisor/backend.out.log
 
-# Frontend
+# Expo
 tail -f /var/log/supervisor/expo.err.log
-tail -f /var/log/supervisor/expo.out.log
 ```
 
-### Health checks
+### Health Checks
 
 ```bash
-# Backend health
+# Local
 curl http://localhost:8001/api/ping
 
-# Luxura API health
-curl https://luxura-inventory-api.onrender.com/products?limit=1
+# Render
+curl https://luxura-inventory-api.onrender.com/health
+
+# Facebook
+curl https://luxura-inventory-api.onrender.com/facebook/test
 ```
 
 ---
 
 ## 🔧 Maintenance
 
-### Tâches planifiées (Cron)
+### Tâches Cron
 
 | Tâche | Fréquence | Description |
 |-------|-----------|-------------|
-| Blog generation | Lun/Mer/Ven 08:00 EST | Génère brouillons selon calendrier |
-| Luxura API ping | Toutes les 5 min | Garde l'API Render éveillée |
+| Blog generation | Selon calendrier | Génère brouillons |
+| Render ping | 5 min | Garde API éveillée |
+| Wix token refresh | 3h | Renouvelle OAuth |
 
-### Nettoyage
+### Tokens à surveiller
 
-```bash
-# Supprimer les logs anciens
-find /var/log/supervisor -name "*.log" -mtime +30 -delete
-
-# Vider le cache MongoDB
-mongosh luxura_db --eval "db.cache.drop()"
-```
+| Token | Expiration | Renouvellement |
+|-------|------------|----------------|
+| Wix OAuth | 14 jours | Auto via cron |
+| Facebook Page | ~60 jours | Manuel via Graph Explorer |
 
 ---
 
 ## 📞 Contacts
 
-- **Email technique:** info@luxuradistribution.com
+- **Email:** info@luxuradistribution.com
 - **Téléphone:** 418-774-4315
 - **Adresse:** 8905 Boulevard Lacroix, Saint-Georges, QC G5Y 1T4
 
 ---
 
-*Dernière mise à jour: Mars 2025*
+*Dernière mise à jour: Avril 2025*
