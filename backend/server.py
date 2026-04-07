@@ -3504,28 +3504,64 @@ async def refresh_wix_token():
         return {"ok": False, "error": str(e)}
 
 # ==================== FACEBOOK ENDPOINTS ====================
+# Ces endpoints utilisent Render comme source de vérité si disponible
 
 class FacebookPostRequest(BaseModel):
     message: str
     link: Optional[str] = None
+    image_url: Optional[str] = None
     
 class FacebookTokenUpdate(BaseModel):
     token: str
+
+async def get_facebook_token_from_render() -> Optional[str]:
+    """Essaie de récupérer le token Facebook depuis Render"""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{LUXURA_RENDER_API}/facebook/status")
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("token_valid"):
+                    return "RENDER"  # Utiliser Render pour poster
+    except:
+        pass
+    return None
 
 @api_router.post("/facebook/post")
 async def post_to_facebook(request: FacebookPostRequest):
     """
     📘 Publier un message sur la page Facebook Luxura.
     
-    Utilise le FB_PAGE_ACCESS_TOKEN configuré dans les variables d'environnement.
+    Essaie d'abord via Render, sinon utilise le token local.
     """
+    # Essayer d'abord via Render
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{LUXURA_RENDER_API}/facebook/post",
+                json={"message": request.message, "link": request.link, "image_url": request.image_url}
+            )
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("success"):
+                    return {
+                        "success": True,
+                        "post_id": result.get("post_id"),
+                        "message": "Publication réussie via Render!",
+                        "source": "render",
+                        "page_url": result.get("page_url")
+                    }
+    except Exception as e:
+        logger.info(f"Render Facebook non disponible, utilisation du token local: {e}")
+    
+    # Fallback: utiliser le token local
     fb_token = os.getenv("FB_PAGE_ACCESS_TOKEN")
     fb_page_id = os.getenv("FB_PAGE_ID", "1838415193042352")
     
     if not fb_token:
         raise HTTPException(
             status_code=400, 
-            detail="FB_PAGE_ACCESS_TOKEN non configuré. Utilisez /api/facebook/update-token pour le configurer."
+            detail="FB_PAGE_ACCESS_TOKEN non configuré. Ajoutez les endpoints Facebook sur Render ou configurez le token local."
         )
     
     try:
@@ -3534,10 +3570,21 @@ async def post_to_facebook(request: FacebookPostRequest):
             if request.link:
                 data["link"] = request.link
             
-            response = await client.post(
-                f"https://graph.facebook.com/v25.0/{fb_page_id}/feed",
-                data=data
-            )
+            # Si image_url fournie, poster comme photo
+            if request.image_url:
+                response = await client.post(
+                    f"https://graph.facebook.com/v25.0/{fb_page_id}/photos",
+                    data={
+                        "url": request.image_url,
+                        "caption": request.message,
+                        "access_token": fb_token
+                    }
+                )
+            else:
+                response = await client.post(
+                    f"https://graph.facebook.com/v25.0/{fb_page_id}/feed",
+                    data=data
+                )
             
             result = response.json()
             
@@ -3546,14 +3593,15 @@ async def post_to_facebook(request: FacebookPostRequest):
                 if error.get("code") == 190:  # Token expired
                     raise HTTPException(
                         status_code=401,
-                        detail=f"Token Facebook expiré: {error.get('message')}. Utilisez /api/facebook/update-token pour le mettre à jour."
+                        detail=f"Token Facebook expiré: {error.get('message')}. Mettez à jour le token sur Render."
                     )
                 raise HTTPException(status_code=400, detail=f"Erreur Facebook: {error.get('message')}")
             
             return {
                 "success": True,
                 "post_id": result.get("id"),
-                "message": "Publication réussie sur Facebook!",
+                "message": "Publication réussie via token local!",
+                "source": "local",
                 "page_url": f"https://www.facebook.com/{fb_page_id}"
             }
             
@@ -3566,9 +3614,9 @@ async def post_to_facebook(request: FacebookPostRequest):
 @api_router.post("/facebook/update-token")
 async def update_facebook_token(request: FacebookTokenUpdate):
     """
-    🔑 Mettre à jour le token Facebook Page Access Token.
+    🔑 Mettre à jour le token Facebook Page Access Token (local).
     
-    Le token est sauvegardé dans le fichier .env local.
+    Note: Pour une solution permanente, mettez à jour le token sur Render Dashboard.
     """
     import re
     
@@ -3598,8 +3646,9 @@ async def update_facebook_token(request: FacebookTokenUpdate):
         
         return {
             "success": True,
-            "message": "Token Facebook mis à jour avec succès!",
-            "token_preview": f"{request.token[:30]}..."
+            "message": "Token Facebook local mis à jour! Pour une solution permanente, mettez aussi à jour sur Render.",
+            "token_preview": f"{request.token[:30]}...",
+            "tip": "Ajoutez les endpoints Facebook sur luxura-inventory-api pour un contrôle centralisé."
         }
         
     except Exception as e:
@@ -3609,23 +3658,42 @@ async def update_facebook_token(request: FacebookTokenUpdate):
 @api_router.get("/facebook/status")
 async def get_facebook_status():
     """
-    📊 Vérifier le statut de la connexion Facebook.
+    📊 Vérifier le statut de la connexion Facebook (Render + Local).
     """
     fb_token = os.getenv("FB_PAGE_ACCESS_TOKEN")
     fb_page_id = os.getenv("FB_PAGE_ID", "1838415193042352")
     
     status = {
-        "configured": bool(fb_token),
-        "page_id": fb_page_id,
-        "token_preview": f"{fb_token[:30]}..." if fb_token else None,
-        "token_valid": False,
-        "page_name": None
+        "local": {
+            "configured": bool(fb_token),
+            "page_id": fb_page_id,
+            "token_preview": f"{fb_token[:30]}..." if fb_token else None,
+            "token_valid": False,
+            "page_name": None
+        },
+        "render": {
+            "available": False,
+            "token_valid": False,
+            "page_name": None
+        }
     }
     
+    # Vérifier Render
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{LUXURA_RENDER_API}/facebook/status")
+            if response.status_code == 200:
+                render_status = response.json()
+                status["render"]["available"] = True
+                status["render"]["token_valid"] = render_status.get("token_valid", False)
+                status["render"]["page_name"] = render_status.get("page_name")
+    except Exception as e:
+        status["render"]["error"] = f"Render non disponible: {str(e)[:50]}"
+    
+    # Vérifier le token local
     if fb_token:
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                # Vérifier le token
                 response = await client.get(
                     f"https://graph.facebook.com/v25.0/{fb_page_id}",
                     params={"access_token": fb_token, "fields": "name,id"}
@@ -3633,15 +3701,40 @@ async def get_facebook_status():
                 result = response.json()
                 
                 if "error" not in result:
-                    status["token_valid"] = True
-                    status["page_name"] = result.get("name")
+                    status["local"]["token_valid"] = True
+                    status["local"]["page_name"] = result.get("name")
                 else:
-                    status["error"] = result["error"].get("message")
+                    status["local"]["error"] = result["error"].get("message")
                     
         except Exception as e:
-            status["error"] = str(e)
+            status["local"]["error"] = str(e)
+    
+    # Recommandation
+    if status["render"]["available"] and status["render"]["token_valid"]:
+        status["recommendation"] = "✅ Utilisez Render (centralisé, 24/7)"
+    elif status["local"]["token_valid"]:
+        status["recommendation"] = "⚠️ Token local OK, mais ajoutez les endpoints Facebook sur Render pour un contrôle permanent"
+    else:
+        status["recommendation"] = "❌ Aucun token valide. Configurez sur Render ou localement."
     
     return status
+
+@api_router.post("/facebook/post-blog")
+async def post_blog_to_facebook(
+    title: str,
+    excerpt: str,
+    url: str,
+    image_url: Optional[str] = None
+):
+    """
+    📰 Publier un article de blog sur Facebook avec formatage automatique.
+    """
+    # Formater le message
+    message = f"📰 NOUVEAU BLOG | {title}\n\n{excerpt[:200]}...\n\n👉 Lire l'article complet:\n{url}\n\n#LuxuraDistribution #ExtensionsCheveux #Quebec #Blog"
+    
+    # Utiliser l'endpoint principal
+    request = FacebookPostRequest(message=message, link=url, image_url=image_url)
+    return await post_to_facebook(request)
 
 # ==================== SALON ENDPOINTS ====================
 
