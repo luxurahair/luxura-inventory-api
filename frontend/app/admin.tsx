@@ -263,6 +263,13 @@ export default function AdminScreen() {
             </Text>
             
             <ActionButton 
+              icon="megaphone-outline" 
+              label="Marketing Automation" 
+              onPress={() => router.push('/marketing')}
+              color="#FF6B35"
+            />
+            
+            <ActionButton 
               icon="code-slash-outline" 
               label="Swagger API Locale" 
               onPress={openSwagger}

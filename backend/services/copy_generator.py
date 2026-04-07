@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # Import emergentintegrations pour OpenAI
 try:
-    from emergentintegrations.llm.openai import chat as openai_chat, Message
+    from emergentintegrations.llm.openai import LlmChat
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
@@ -132,18 +132,14 @@ async def generate_ad_copy(
     try:
         logger.info(f"Génération copie pub pour: {product_name}")
         
-        response = await openai_chat(
-            api_key=EMERGENT_LLM_KEY,
-            messages=[
-                Message(role="system", content=SYSTEM_PROMPT),
-                Message(role="user", content=user_prompt)
-            ],
-            model="gpt-4o",
-            temperature=0.7
-        )
+        # Utiliser LlmChat
+        chat = LlmChat(api_key=EMERGENT_LLM_KEY)
+        
+        full_prompt = f"{SYSTEM_PROMPT}\n\n{user_prompt}"
+        response = await chat.send_message_async(full_prompt)
         
         # Parser le JSON de la réponse
-        content = response.content.strip()
+        content = response.strip()
         
         # Nettoyer si wrapped dans ```json
         if content.startswith("```"):
