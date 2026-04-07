@@ -1,10 +1,19 @@
 {
-  "request_id": "019d680a-b339-7f43-ad03-24d90e04fee7",
+  "videos": [
+    {
+      "request_id": "019d680a-b339-7f43-ad03-24d90e04fee7",
+      "video_url": "https://v3b.fal.media/files/b/0a954ce8/TpOE_RMWu4KDps6sOSEDb_output.mp4",
+      "concept": "Main glissant dans cheveux soyeux",
+      "status": "COMPLETED"
+    },
+    {
+      "request_id": "019d6822-2a31-71f0-b469-842c43694c2b", 
+      "video_url": "https://v3b.fal.media/files/b/0a954d80/RX48qQSAppPkn7uqbg0F2_output.mp4",
+      "concept": "Extensions ombré en salon de coiffure",
+      "source_reference": "IMG_1483.jpeg - Ombré brun foncé vers blond platine",
+      "status": "COMPLETED"
+    }
+  ],
   "model": "fal-ai/kling-video/v2.5-turbo/pro/text-to-video",
-  "status": "COMPLETED",
-  "video_url": "https://v3b.fal.media/files/b/0a954ce8/TpOE_RMWu4KDps6sOSEDb_output.mp4",
-  "timestamp": "2026-04-07T13:08:00Z",
-  "inference_time_seconds": 98.65,
-  "prompt": "Main qui glisse dans cheveux soyeux - Luxura Distribution",
-  "file_size_mb": 12.58
+  "timestamp": "2026-04-07T13:20:00Z"
 }
