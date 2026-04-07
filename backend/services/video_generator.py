@@ -1,193 +1,250 @@
-# services/video_generator.py
 """
-Génération de vidéos courtes avec FAL.AI (Kling 2.0)
-Version V2 - FAL.AI Integration
-
-FAL.AI donne accès à Kling 2.0 qui est aussi bon que Runway Gen-3
-Prix: ~$0.10 par vidéo de 5 secondes
+Luxura Marketing - Générateur de vidéos publicitaires via Fal.ai
 """
 
 import os
-import logging
+import json
 import asyncio
+import logging
 import httpx
-from typing import Dict, Optional
+from typing import Optional, Tuple
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Configuration FAL.AI
-# Supporte les deux noms de variable: FAL_KEY et FLA_AI_API_KEY
-FAL_KEY = os.getenv("FAL_KEY") or os.getenv("FLA_AI_API_KEY")
-FAL_ENABLED = bool(FAL_KEY)
+FAL_KEY = os.getenv("FAL_KEY")
+FAL_API_BASE = "https://queue.fal.run"
 
-if FAL_ENABLED:
-    logger.info("✅ FAL.AI video generation enabled")
-else:
-    logger.info("⚠️ FAL.AI not configured (FAL_KEY missing)")
+# Modèles disponibles
+MODELS = {
+    "text_to_video": "fal-ai/kling-video/v2.5-turbo/pro/text-to-video",
+    "image_to_video": "fal-ai/kling-video/v1.6/pro/image-to-video"
+}
 
 
-async def generate_short_video(
-    video_brief: Dict,
+async def submit_video_job(
+    prompt: str,
+    aspect_ratio: str = "9:16",
+    duration: str = "5",
     image_url: Optional[str] = None
-) -> Optional[str]:
+) -> dict:
     """
-    Génère une vidéo courte avec FAL.AI (Kling 2.0).
+    Soumet un job de génération vidéo à Fal.ai
     
     Args:
-        video_brief: Brief de la vidéo (scene, motion, duration, etc.)
-        image_url: URL de l'image source pour image-to-video
+        prompt: Description de la vidéo à générer
+        aspect_ratio: "9:16" pour Story, "4:5" pour Feed
+        duration: Durée en secondes
+        image_url: URL image source (optionnel, pour image-to-video)
     
     Returns:
-        URL de la vidéo générée ou None si échec
+        dict avec request_id et URLs de status
     """
-    if not FAL_ENABLED:
-        logger.info("🎥 Video generation skipped (FAL_KEY not configured)")
-        return None
     
-    if not image_url:
-        logger.warning("🎥 Video generation skipped (no source image)")
-        return None
+    if not FAL_KEY:
+        raise Exception("FAL_KEY non configurée")
     
-    try:
-        # Construire le prompt pour la vidéo
-        scene = video_brief.get("scene", "")
-        motion = video_brief.get("motion", "Beautiful woman with very long flowing hair")
+    # Choisir le modèle
+    if image_url:
+        model = MODELS["image_to_video"]
+        payload = {
+            "prompt": prompt,
+            "image_url": image_url,
+            "duration": duration,
+            "aspect_ratio": aspect_ratio
+        }
+    else:
+        model = MODELS["text_to_video"]
+        payload = {
+            "prompt": prompt,
+            "duration": duration,
+            "aspect_ratio": aspect_ratio
+        }
+    
+    headers = {
+        "Authorization": f"Key {FAL_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.post(
+            f"{FAL_API_BASE}/{model}",
+            headers=headers,
+            json=payload
+        )
         
-        # Prompt optimisé pour Kling
-        prompt = f"{scene}. {motion}. Cinematic quality, smooth camera movement, natural hair flow, professional lighting."
+        if response.status_code != 200:
+            logger.error(f"Erreur Fal.ai submit: {response.status_code} - {response.text}")
+            raise Exception(f"Erreur Fal.ai: {response.status_code}")
         
-        # Règles de sécurité
-        negative_prompt = "short hair, bob cut, men, masculine, cartoon, animation, text, watermark, low quality"
+        data = response.json()
         
-        logger.info(f"🎥 Generating video with FAL.AI/Kling...")
-        logger.info(f"   Source image: {image_url[:60]}...")
+        logger.info(f"Job Fal.ai soumis: {data.get('request_id')}")
         
-        # FAL.AI/Kling ne supporte que 5 ou 10 secondes
-        duration = video_brief.get("duration_seconds", 5)
-        if duration not in (5, 10):
-            duration = 5
-        
-        logger.info(f"   Duration: {duration}s")
-        
-        async with httpx.AsyncClient(timeout=300.0) as client:
-            # Appel à FAL.AI - Kling Image-to-Video
-            response = await client.post(
-                "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/image-to-video",
-                headers={
-                    "Authorization": f"Key {FAL_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "prompt": prompt,
-                    "negative_prompt": negative_prompt,
-                    "image_url": image_url,
-                    "duration": str(duration),  # "5" ou "10" uniquement
-                    "aspect_ratio": video_brief.get("aspect_ratio", "16:9")
-                }
-            )
-            
-            if response.status_code not in (200, 201, 202):
-                logger.error(f"FAL.AI error: {response.status_code} - {response.text}")
-                return None
-            
-            result = response.json()
-            
-            # FAL.AI utilise un système de queue
-            request_id = result.get("request_id")
-            if not request_id:
-                # Résultat direct
-                video_url = result.get("video", {}).get("url")
-                if video_url:
-                    logger.info(f"✅ Video generated: {video_url[:60]}...")
-                    return video_url
-                return None
-            
-            logger.info(f"   Queue ID: {request_id}")
-            
-            # Polling pour attendre le résultat
-            for attempt in range(60):  # Max 5 minutes
-                await asyncio.sleep(5)
-                
-                status_response = await client.get(
-                    f"https://queue.fal.run/fal-ai/kling-video/requests/{request_id}/status",
-                    headers={"Authorization": f"Key {FAL_KEY}"}
-                )
-                
-                if status_response.status_code != 200:
-                    continue
-                
-                status_data = status_response.json()
-                status = status_data.get("status")
-                
-                if status == "COMPLETED":
-                    # Récupérer le résultat
-                    result_response = await client.get(
-                        f"https://queue.fal.run/fal-ai/kling-video/requests/{request_id}",
-                        headers={"Authorization": f"Key {FAL_KEY}"}
-                    )
-                    
-                    if result_response.status_code == 200:
-                        final_result = result_response.json()
-                        video_url = final_result.get("video", {}).get("url")
-                        if video_url:
-                            logger.info(f"✅ Video generated: {video_url[:60]}...")
-                            return video_url
-                    return None
-                
-                elif status == "FAILED":
-                    error = status_data.get("error", "Unknown error")
-                    logger.error(f"Video generation failed: {error}")
-                    return None
-                
-                elif status in ("IN_QUEUE", "IN_PROGRESS"):
-                    if attempt % 6 == 0:  # Log every 30 seconds
-                        logger.info(f"   Still processing... ({attempt * 5}s)")
-                    continue
-            
-            logger.error("Video generation timed out")
-            return None
-            
-    except Exception as e:
-        logger.error(f"Video generation error: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
+        return {
+            "request_id": data.get("request_id"),
+            "status_url": data.get("status_url"),
+            "response_url": data.get("response_url"),
+            "model": model,
+            "aspect_ratio": aspect_ratio
+        }
 
 
-async def generate_text_to_video(
+async def check_video_status(request_id: str, model: str = None) -> dict:
+    """
+    Vérifie le status d'un job Fal.ai
+    
+    Returns:
+        dict avec status et video_url si complété
+    """
+    
+    if not FAL_KEY:
+        raise Exception("FAL_KEY non configurée")
+    
+    if not model:
+        model = MODELS["text_to_video"]
+    
+    headers = {
+        "Authorization": f"Key {FAL_KEY}"
+    }
+    
+    status_url = f"{FAL_API_BASE}/{model}/requests/{request_id}/status"
+    response_url = f"{FAL_API_BASE}/{model}/requests/{request_id}"
+    
+    async with httpx.AsyncClient(timeout=15) as client:
+        # Vérifier le status
+        status_resp = await client.get(status_url, headers=headers)
+        
+        if status_resp.status_code != 200:
+            # Essayer l'URL générique
+            status_url = f"https://queue.fal.run/fal-ai/kling-video/requests/{request_id}/status"
+            status_resp = await client.get(status_url, headers=headers)
+        
+        status_data = status_resp.json()
+        status = status_data.get("status", "unknown")
+        
+        result = {
+            "status": status,
+            "request_id": request_id,
+            "video_url": None,
+            "file_size": None
+        }
+        
+        if status == "COMPLETED":
+            # Récupérer le résultat
+            response_url = f"https://queue.fal.run/fal-ai/kling-video/requests/{request_id}"
+            result_resp = await client.get(response_url, headers=headers)
+            
+            if result_resp.status_code == 200:
+                result_data = result_resp.json()
+                video = result_data.get("video", {})
+                result["video_url"] = video.get("url")
+                result["file_size"] = video.get("file_size")
+        
+        return result
+
+
+async def generate_video_with_polling(
     prompt: str,
-    duration: int = 5,
-    aspect_ratio: str = "16:9"
-) -> Optional[str]:
+    aspect_ratio: str = "9:16",
+    duration: str = "5",
+    image_url: Optional[str] = None,
+    max_wait_seconds: int = 300,
+    poll_interval: int = 10
+) -> dict:
     """
-    Génère une vidéo à partir d'un prompt texte uniquement (sans image source).
-    """
-    if not FAL_ENABLED:
-        return None
+    Génère une vidéo et attend le résultat via polling
     
-    try:
-        async with httpx.AsyncClient(timeout=300.0) as client:
-            response = await client.post(
-                "https://queue.fal.run/fal-ai/kling-video/v1.5/pro/text-to-video",
-                headers={
-                    "Authorization": f"Key {FAL_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "prompt": prompt,
-                    "negative_prompt": "short hair, men, cartoon, low quality",
-                    "duration": str(duration),
-                    "aspect_ratio": aspect_ratio
-                }
-            )
-            
-            if response.status_code not in (200, 201, 202):
-                return None
-            
-            result = response.json()
-            video_url = result.get("video", {}).get("url")
-            return video_url
-            
-    except Exception as e:
-        logger.error(f"Text-to-video error: {e}")
-        return None
+    Returns:
+        dict avec video_url ou erreur
+    """
+    
+    # Soumettre le job
+    job = await submit_video_job(
+        prompt=prompt,
+        aspect_ratio=aspect_ratio,
+        duration=duration,
+        image_url=image_url
+    )
+    
+    request_id = job["request_id"]
+    model = job["model"]
+    
+    logger.info(f"Polling vidéo {request_id}...")
+    
+    # Polling
+    elapsed = 0
+    while elapsed < max_wait_seconds:
+        await asyncio.sleep(poll_interval)
+        elapsed += poll_interval
+        
+        result = await check_video_status(request_id, model)
+        status = result["status"]
+        
+        logger.info(f"[{elapsed}s] Status: {status}")
+        
+        if status == "COMPLETED":
+            return {
+                "success": True,
+                "request_id": request_id,
+                "video_url": result["video_url"],
+                "file_size": result["file_size"],
+                "aspect_ratio": aspect_ratio
+            }
+        elif status == "FAILED":
+            return {
+                "success": False,
+                "request_id": request_id,
+                "error": "Génération échouée"
+            }
+    
+    # Timeout
+    return {
+        "success": False,
+        "request_id": request_id,
+        "error": f"Timeout après {max_wait_seconds}s",
+        "status": "timeout"
+    }
+
+
+async def generate_ad_videos(
+    story_prompt: str,
+    feed_prompt: str,
+    image_url: Optional[str] = None
+) -> Tuple[dict, dict]:
+    """
+    Génère les deux formats vidéo (Story + Feed) en parallèle
+    
+    Returns:
+        Tuple (story_result, feed_result)
+    """
+    
+    # Soumettre les deux jobs
+    story_job = await submit_video_job(
+        prompt=story_prompt,
+        aspect_ratio="9:16",
+        duration="5",
+        image_url=image_url
+    )
+    
+    feed_job = await submit_video_job(
+        prompt=feed_prompt,
+        aspect_ratio="4:5",
+        duration="5",
+        image_url=image_url
+    )
+    
+    return {
+        "story": {
+            "request_id": story_job["request_id"],
+            "model": story_job["model"],
+            "status": "IN_QUEUE"
+        },
+        "feed": {
+            "request_id": feed_job["request_id"],
+            "model": feed_job["model"],
+            "status": "IN_QUEUE"
+        }
+    }

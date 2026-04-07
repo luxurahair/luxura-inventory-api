@@ -4263,6 +4263,14 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️ Routes backlinks non disponibles: {e}")
 
+# Marketing Automation Routes
+try:
+    from routes.marketing.campaigns import router as marketing_router
+    app.include_router(marketing_router, prefix="/api")
+    logger.info("✅ Routes Marketing Automation chargées")
+except ImportError as e:
+    logger.warning(f"⚠️ Routes marketing non disponibles: {e}")
+
 # Include the main router
 app.include_router(api_router)
 

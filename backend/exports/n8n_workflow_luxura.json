@@ -1,0 +1,280 @@
+{
+  "name": "Luxura Marketing Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "luxura-create-ad",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-1",
+      "name": "Webhook | Create Ad Job",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\nconst required = ['offer_type', 'hook', 'cta', 'landing_url'];\nfor (const key of required) {\n  if (!item[key]) {\n    throw new Error(`Champ manquant: ${key}`);\n  }\n}\n\nitem.job_id = `lux_${Date.now()}`;\nitem.created_at = new Date().toISOString();\n\n// Map offer type to campaign\nif (item.offer_type === 'direct_sale') {\n  item.meta_campaign_name = 'LUXURA_CA_QC_PROSPECTING_DIRECT_2026Q2';\n  item.meta_objective = 'TRAFFIC';\n  item.primary_text_angle = 'B2C premium beauty';\n} else if (item.offer_type === 'salon_affilie') {\n  item.meta_campaign_name = 'LUXURA_CA_QC_PROSPECTING_SALON_2026Q2';\n  item.meta_objective = 'LEADS';\n  item.primary_text_angle = 'B2B salon partner';\n}\n\nreturn [{ json: item }];"
+      },
+      "id": "code-validate",
+      "name": "Code | Validate & Map",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.LUXURA_BACKEND_URL}}/api/marketing/generate-copy",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "offer_type", "value": "={{$json.offer_type}}" },
+            { "name": "product_name", "value": "={{$json.product_name}}" },
+            { "name": "hook", "value": "={{$json.hook}}" },
+            { "name": "proof", "value": "={{$json.proof}}" },
+            { "name": "cta", "value": "={{$json.cta}}" }
+          ]
+        }
+      },
+      "id": "http-copy",
+      "name": "HTTP | Generate Copy (OpenAI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://queue.fal.run/fal-ai/kling-video/v2.5-turbo/pro/text-to-video",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Key {{$env.FAL_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "prompt", "value": "={{$json.fal_prompt_story}}" },
+            { "name": "duration", "value": "5" },
+            { "name": "aspect_ratio", "value": "9:16" }
+          ]
+        }
+      },
+      "id": "fal-story",
+      "name": "HTTP | Fal Submit Story 9:16",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [840, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://queue.fal.run/fal-ai/kling-video/v2.5-turbo/pro/text-to-video",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Key {{$env.FAL_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "prompt", "value": "={{$json.fal_prompt_feed}}" },
+            { "name": "duration", "value": "5" },
+            { "name": "aspect_ratio", "value": "4:5" }
+          ]
+        }
+      },
+      "id": "fal-feed",
+      "name": "HTTP | Fal Submit Feed 4:5",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [840, 400]
+    },
+    {
+      "parameters": {
+        "amount": 60,
+        "unit": "seconds"
+      },
+      "id": "wait-1",
+      "name": "Wait | 60s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://queue.fal.run/fal-ai/kling-video/requests/={{$json.story_request_id}}/status",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Key {{$env.FAL_KEY}}" }
+          ]
+        }
+      },
+      "id": "poll-story",
+      "name": "HTTP | Poll Story Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1240, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://queue.fal.run/fal-ai/kling-video/requests/={{$json.feed_request_id}}/status",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Key {{$env.FAL_KEY}}" }
+          ]
+        }
+      },
+      "id": "poll-feed",
+      "name": "HTTP | Poll Feed Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1240, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.story_status === 'COMPLETED' && $json.feed_status === 'COMPLETED'}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-ready",
+      "name": "IF | Both Videos Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1440, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://graph.facebook.com/v25.0/act_{{$env.META_AD_ACCOUNT_ID}}/adcreatives",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.META_ACCESS_TOKEN}}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "name", "value": "={{$json.job_id}}_STORY" },
+            { "name": "object_story_spec", "value": "={{JSON.stringify({page_id: $env.META_PAGE_ID, video_data: {video_url: $json.story_video_url, message: $json.primary_text, call_to_action: {type: 'LEARN_MORE', value: {link: $json.landing_url}}}})}}" }
+          ]
+        }
+      },
+      "id": "meta-creative-story",
+      "name": "HTTP | Create Story Creative",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1640, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://graph.facebook.com/v25.0/act_{{$env.META_AD_ACCOUNT_ID}}/ads",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.META_ACCESS_TOKEN}}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "name", "value": "={{$json.job_id}}_AD_STORY" },
+            { "name": "adset_id", "value": "={{$json.adset_id}}" },
+            { "name": "creative", "value": "={{JSON.stringify({creative_id: $json.story_creative_id})}}" },
+            { "name": "status", "value": "PAUSED" }
+          ]
+        }
+      },
+      "id": "meta-ad-story",
+      "name": "HTTP | Create Story Ad (PAUSED)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1840, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"success\": true, \"job_id\": \"{{$json.job_id}}\", \"status\": \"draft_created\", \"story_ad_id\": \"{{$json.story_ad_id}}\", \"feed_ad_id\": \"{{$json.feed_ad_id}}\"}"
+      },
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2040, 300]
+    }
+  ],
+  "connections": {
+    "Webhook | Create Ad Job": {
+      "main": [[{ "node": "Code | Validate & Map", "type": "main", "index": 0 }]]
+    },
+    "Code | Validate & Map": {
+      "main": [[{ "node": "HTTP | Generate Copy (OpenAI)", "type": "main", "index": 0 }]]
+    },
+    "HTTP | Generate Copy (OpenAI)": {
+      "main": [
+        [
+          { "node": "HTTP | Fal Submit Story 9:16", "type": "main", "index": 0 },
+          { "node": "HTTP | Fal Submit Feed 4:5", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP | Fal Submit Story 9:16": {
+      "main": [[{ "node": "Wait | 60s", "type": "main", "index": 0 }]]
+    },
+    "HTTP | Fal Submit Feed 4:5": {
+      "main": [[{ "node": "Wait | 60s", "type": "main", "index": 0 }]]
+    },
+    "Wait | 60s": {
+      "main": [
+        [
+          { "node": "HTTP | Poll Story Status", "type": "main", "index": 0 },
+          { "node": "HTTP | Poll Feed Status", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP | Poll Story Status": {
+      "main": [[{ "node": "IF | Both Videos Ready?", "type": "main", "index": 0 }]]
+    },
+    "HTTP | Poll Feed Status": {
+      "main": [[{ "node": "IF | Both Videos Ready?", "type": "main", "index": 0 }]]
+    },
+    "IF | Both Videos Ready?": {
+      "main": [
+        [{ "node": "HTTP | Create Story Creative", "type": "main", "index": 0 }],
+        [{ "node": "Wait | 60s", "type": "main", "index": 0 }]
+      ]
+    },
+    "HTTP | Create Story Creative": {
+      "main": [[{ "node": "HTTP | Create Story Ad (PAUSED)", "type": "main", "index": 0 }]]
+    },
+    "HTTP | Create Story Ad (PAUSED)": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["luxura", "marketing", "automation"],
+  "pinData": {},
+  "versionId": "1.0.0"
+}
