@@ -193,39 +193,51 @@ export default function MarketingDashboard() {
 
       {/* Videos status */}
       <View style={styles.videosRow}>
-        <View style={styles.videoStatus}>
+        <TouchableOpacity 
+          style={[
+            styles.videoStatus,
+            job.story_video?.video_url && styles.videoReady
+          ]}
+          onPress={() => job.story_video?.video_url && openVideo(job.story_video.video_url)}
+          disabled={!job.story_video?.video_url}
+        >
           <Ionicons 
             name="phone-portrait-outline" 
             size={16} 
             color={job.story_video?.video_url ? '#4CAF50' : '#9E9E9E'} 
           />
           <Text style={styles.videoLabel}>Story 9:16</Text>
-          {job.story_video?.video_url && (
-            <TouchableOpacity onPress={() => openVideo(job.story_video!.video_url!)}>
-              <Ionicons name="play-circle" size={20} color="#c9a050" />
-            </TouchableOpacity>
-          )}
-          {job.story_video?.status === 'IN_PROGRESS' && (
+          {job.story_video?.video_url ? (
+            <View style={styles.playButton}>
+              <Ionicons name="play" size={14} color="#000" />
+            </View>
+          ) : job.story_video?.status === 'IN_PROGRESS' || job.story_video?.status === 'IN_QUEUE' ? (
             <ActivityIndicator size="small" color="#c9a050" />
-          )}
-        </View>
+          ) : null}
+        </TouchableOpacity>
         
-        <View style={styles.videoStatus}>
+        <TouchableOpacity 
+          style={[
+            styles.videoStatus,
+            job.feed_video?.video_url && styles.videoReady
+          ]}
+          onPress={() => job.feed_video?.video_url && openVideo(job.feed_video.video_url)}
+          disabled={!job.feed_video?.video_url}
+        >
           <Ionicons 
             name="tablet-portrait-outline" 
             size={16} 
             color={job.feed_video?.video_url ? '#4CAF50' : '#9E9E9E'} 
           />
           <Text style={styles.videoLabel}>Feed 4:5</Text>
-          {job.feed_video?.video_url && (
-            <TouchableOpacity onPress={() => openVideo(job.feed_video!.video_url!)}>
-              <Ionicons name="play-circle" size={20} color="#c9a050" />
-            </TouchableOpacity>
-          )}
-          {job.feed_video?.status === 'IN_PROGRESS' && (
+          {job.feed_video?.video_url ? (
+            <View style={styles.playButton}>
+              <Ionicons name="play" size={14} color="#000" />
+            </View>
+          ) : job.feed_video?.status === 'IN_PROGRESS' || job.feed_video?.status === 'IN_QUEUE' ? (
             <ActivityIndicator size="small" color="#c9a050" />
-          )}
-        </View>
+          ) : null}
+        </TouchableOpacity>
       </View>
 
       {/* Actions */}
@@ -587,6 +599,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     flex: 1,
+  },
+  videoReady: {
+    borderColor: '#4CAF50',
+    borderWidth: 1,
+  },
+  playButton: {
+    backgroundColor: '#c9a050',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   actionsRow: {
     flexDirection: 'row',
