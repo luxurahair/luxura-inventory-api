@@ -12,7 +12,7 @@ Endpoints:
 """
 
 import os
-import httpx
+import requests
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -41,7 +41,7 @@ class FacebookBlogRequest(BaseModel):
 # ==================== ENDPOINTS ====================
 
 @router.get("/status")
-async def facebook_status():
+def facebook_status():
     """
     📊 Vérifier le statut de la connexion Facebook.
     
@@ -60,19 +60,19 @@ async def facebook_status():
         return status
     
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(
-                f"https://graph.facebook.com/v25.0/{FB_PAGE_ID}",
-                params={"access_token": fb_token, "fields": "name,id"}
-            )
-            result = response.json()
+        response = requests.get(
+            f"https://graph.facebook.com/v25.0/{FB_PAGE_ID}",
+            params={"access_token": fb_token, "fields": "name,id"},
+            timeout=10
+        )
+        result = response.json()
+        
+        if "error" not in result:
+            status["token_valid"] = True
+            status["page_name"] = result.get("name")
+        else:
+            status["error"] = result["error"].get("message")
             
-            if "error" not in result:
-                status["token_valid"] = True
-                status["page_name"] = result.get("name")
-            else:
-                status["error"] = result["error"].get("message")
-                
     except Exception as e:
         status["error"] = str(e)
     
@@ -80,13 +80,13 @@ async def facebook_status():
 
 
 @router.get("/test")
-async def test_facebook_connection():
+def test_facebook_connection():
     """
     🧪 Test rapide de la connexion Facebook.
     
     Vérifie que le token est valide sans rien publier.
     """
-    status = await facebook_status()
+    status = facebook_status()
     
     if status.get("token_valid"):
         return {
@@ -105,7 +105,7 @@ async def test_facebook_connection():
 
 
 @router.post("/post")
-async def post_to_facebook(request: FacebookPostRequest):
+def post_to_facebook(request: FacebookPostRequest):
     """
     📘 Publier un message sur la page Facebook Luxura.
     
@@ -128,57 +128,58 @@ async def post_to_facebook(request: FacebookPostRequest):
         )
     
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            # Si image_url fournie, poster comme photo
-            if request.image_url:
-                response = await client.post(
-                    f"https://graph.facebook.com/v25.0/{FB_PAGE_ID}/photos",
-                    data={
-                        "url": request.image_url,
-                        "caption": request.message,
-                        "access_token": fb_token
-                    }
-                )
-            else:
-                # Post texte/lien standard
-                data = {
-                    "message": request.message,
+        # Si image_url fournie, poster comme photo
+        if request.image_url:
+            response = requests.post(
+                f"https://graph.facebook.com/v25.0/{FB_PAGE_ID}/photos",
+                data={
+                    "url": request.image_url,
+                    "caption": request.message,
                     "access_token": fb_token
-                }
-                if request.link:
-                    data["link"] = request.link
-                
-                response = await client.post(
-                    f"https://graph.facebook.com/v25.0/{FB_PAGE_ID}/feed",
-                    data=data
-                )
-            
-            result = response.json()
-            
-            if "error" in result:
-                error = result["error"]
-                error_code = error.get("code")
-                error_msg = error.get("message")
-                
-                if error_code == 190:
-                    raise HTTPException(
-                        status_code=401,
-                        detail=f"Token Facebook expiré. Mettez à jour FB_PAGE_ACCESS_TOKEN sur Render. Erreur: {error_msg}"
-                    )
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Erreur Facebook ({error_code}): {error_msg}"
-                )
-            
-            post_id = result.get("id") or result.get("post_id")
-            
-            return {
-                "success": True,
-                "post_id": post_id,
-                "page_url": f"https://www.facebook.com/{FB_PAGE_ID}",
-                "post_url": f"https://www.facebook.com/{post_id}" if post_id else None
+                },
+                timeout=30
+            )
+        else:
+            # Post texte/lien standard
+            data = {
+                "message": request.message,
+                "access_token": fb_token
             }
+            if request.link:
+                data["link"] = request.link
             
+            response = requests.post(
+                f"https://graph.facebook.com/v25.0/{FB_PAGE_ID}/feed",
+                data=data,
+                timeout=30
+            )
+        
+        result = response.json()
+        
+        if "error" in result:
+            error = result["error"]
+            error_code = error.get("code")
+            error_msg = error.get("message")
+            
+            if error_code == 190:
+                raise HTTPException(
+                    status_code=401,
+                    detail=f"Token Facebook expiré. Mettez à jour FB_PAGE_ACCESS_TOKEN sur Render. Erreur: {error_msg}"
+                )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Erreur Facebook ({error_code}): {error_msg}"
+            )
+        
+        post_id = result.get("id") or result.get("post_id")
+        
+        return {
+            "success": True,
+            "post_id": post_id,
+            "page_url": f"https://www.facebook.com/{FB_PAGE_ID}",
+            "post_url": f"https://www.facebook.com/{post_id}" if post_id else None
+        }
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -186,7 +187,7 @@ async def post_to_facebook(request: FacebookPostRequest):
 
 
 @router.post("/post-blog")
-async def post_blog_to_facebook(request: FacebookBlogRequest):
+def post_blog_to_facebook(request: FacebookBlogRequest):
     """
     📰 Publier un article de blog sur Facebook avec formatage automatique.
     
@@ -217,4 +218,4 @@ async def post_blog_to_facebook(request: FacebookBlogRequest):
         image_url=request.image_url
     )
     
-    return await post_to_facebook(post_request)
+    return post_to_facebook(post_request)
