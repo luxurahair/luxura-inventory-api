@@ -1,19 +1,10 @@
 {
-  "videos": [
-    {
-      "request_id": "019d680a-b339-7f43-ad03-24d90e04fee7",
-      "video_url": "https://v3b.fal.media/files/b/0a954ce8/TpOE_RMWu4KDps6sOSEDb_output.mp4",
-      "concept": "Main glissant dans cheveux soyeux",
-      "status": "COMPLETED"
-    },
-    {
-      "request_id": "019d6822-2a31-71f0-b469-842c43694c2b", 
-      "video_url": "https://v3b.fal.media/files/b/0a954d80/RX48qQSAppPkn7uqbg0F2_output.mp4",
-      "concept": "Extensions ombré en salon de coiffure",
-      "source_reference": "IMG_1483.jpeg - Ombré brun foncé vers blond platine",
-      "status": "COMPLETED"
-    }
-  ],
-  "model": "fal-ai/kling-video/v2.5-turbo/pro/text-to-video",
-  "timestamp": "2026-04-07T13:20:00Z"
+  "request_id": "019d682a-df92-74b0-aadc-d34c27ed0012",
+  "video_url": "https://v3b.fal.media/files/b/0a954dc6/9169E9kWahdiYLH0Xe-GD_output.mp4",
+  "source_image": "https://v3b.fal.media/files/b/0a954db1/JlS9EyBw6_Mvp0_8Xubdu_source_hair_916.jpg",
+  "original_image": "IMG_1483.jpeg",
+  "model": "fal-ai/kling-video/v1.6/pro/image-to-video",
+  "concept": "Extensions ombré en salon de coiffure - basé sur vraie photo client",
+  "status": "COMPLETED",
+  "timestamp": "2026-04-07T13:30:00Z"
 }
