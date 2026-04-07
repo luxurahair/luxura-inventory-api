@@ -3503,6 +3503,146 @@ async def refresh_wix_token():
         logger.error(f"Error refreshing Wix token: {e}")
         return {"ok": False, "error": str(e)}
 
+# ==================== FACEBOOK ENDPOINTS ====================
+
+class FacebookPostRequest(BaseModel):
+    message: str
+    link: Optional[str] = None
+    
+class FacebookTokenUpdate(BaseModel):
+    token: str
+
+@api_router.post("/facebook/post")
+async def post_to_facebook(request: FacebookPostRequest):
+    """
+    📘 Publier un message sur la page Facebook Luxura.
+    
+    Utilise le FB_PAGE_ACCESS_TOKEN configuré dans les variables d'environnement.
+    """
+    fb_token = os.getenv("FB_PAGE_ACCESS_TOKEN")
+    fb_page_id = os.getenv("FB_PAGE_ID", "1838415193042352")
+    
+    if not fb_token:
+        raise HTTPException(
+            status_code=400, 
+            detail="FB_PAGE_ACCESS_TOKEN non configuré. Utilisez /api/facebook/update-token pour le configurer."
+        )
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            data = {"message": request.message, "access_token": fb_token}
+            if request.link:
+                data["link"] = request.link
+            
+            response = await client.post(
+                f"https://graph.facebook.com/v25.0/{fb_page_id}/feed",
+                data=data
+            )
+            
+            result = response.json()
+            
+            if "error" in result:
+                error = result["error"]
+                if error.get("code") == 190:  # Token expired
+                    raise HTTPException(
+                        status_code=401,
+                        detail=f"Token Facebook expiré: {error.get('message')}. Utilisez /api/facebook/update-token pour le mettre à jour."
+                    )
+                raise HTTPException(status_code=400, detail=f"Erreur Facebook: {error.get('message')}")
+            
+            return {
+                "success": True,
+                "post_id": result.get("id"),
+                "message": "Publication réussie sur Facebook!",
+                "page_url": f"https://www.facebook.com/{fb_page_id}"
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur publication Facebook: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/facebook/update-token")
+async def update_facebook_token(request: FacebookTokenUpdate):
+    """
+    🔑 Mettre à jour le token Facebook Page Access Token.
+    
+    Le token est sauvegardé dans le fichier .env local.
+    """
+    import re
+    
+    env_path = ROOT_DIR / '.env'
+    
+    try:
+        # Lire le fichier .env
+        with open(env_path, 'r') as f:
+            content = f.read()
+        
+        # Mettre à jour ou ajouter le token
+        if 'FB_PAGE_ACCESS_TOKEN=' in content:
+            content = re.sub(
+                r'FB_PAGE_ACCESS_TOKEN=.*',
+                f'FB_PAGE_ACCESS_TOKEN={request.token}',
+                content
+            )
+        else:
+            content += f'\nFB_PAGE_ACCESS_TOKEN={request.token}\n'
+        
+        # Sauvegarder
+        with open(env_path, 'w') as f:
+            f.write(content)
+        
+        # Mettre à jour la variable d'environnement en mémoire
+        os.environ['FB_PAGE_ACCESS_TOKEN'] = request.token
+        
+        return {
+            "success": True,
+            "message": "Token Facebook mis à jour avec succès!",
+            "token_preview": f"{request.token[:30]}..."
+        }
+        
+    except Exception as e:
+        logger.error(f"Erreur mise à jour token Facebook: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/facebook/status")
+async def get_facebook_status():
+    """
+    📊 Vérifier le statut de la connexion Facebook.
+    """
+    fb_token = os.getenv("FB_PAGE_ACCESS_TOKEN")
+    fb_page_id = os.getenv("FB_PAGE_ID", "1838415193042352")
+    
+    status = {
+        "configured": bool(fb_token),
+        "page_id": fb_page_id,
+        "token_preview": f"{fb_token[:30]}..." if fb_token else None,
+        "token_valid": False,
+        "page_name": None
+    }
+    
+    if fb_token:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                # Vérifier le token
+                response = await client.get(
+                    f"https://graph.facebook.com/v25.0/{fb_page_id}",
+                    params={"access_token": fb_token, "fields": "name,id"}
+                )
+                result = response.json()
+                
+                if "error" not in result:
+                    status["token_valid"] = True
+                    status["page_name"] = result.get("name")
+                else:
+                    status["error"] = result["error"].get("message")
+                    
+        except Exception as e:
+            status["error"] = str(e)
+    
+    return status
+
 # ==================== SALON ENDPOINTS ====================
 
 @api_router.get("/salons")
