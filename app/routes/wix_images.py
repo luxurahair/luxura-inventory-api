@@ -36,25 +36,9 @@ class BulkAltUpdateRequest(BaseModel):
 # ============ HELPERS ============
 
 def get_wix_access_token() -> str:
-    """Get Wix access token from environment or token endpoint"""
-    token = os.getenv("WIX_ACCESS_TOKEN", "").strip()
-    if token:
-        return token
-    
-    # Try to get from token endpoint
-    instance_id = os.getenv("WIX_INSTANCE_ID", "").strip()
-    if not instance_id:
-        raise HTTPException(500, "Missing WIX_ACCESS_TOKEN or WIX_INSTANCE_ID")
-    
-    base_url = os.getenv("PUBLIC_BASE_URL", "https://luxura-inventory-api.onrender.com")
-    try:
-        response = requests.post(f"{base_url}/wix/token", params={"instance_id": instance_id}, timeout=30)
-        if response.ok:
-            return response.json().get("access_token", "")
-    except Exception as e:
-        logger.error(f"Failed to get Wix token: {e}")
-    
-    raise HTTPException(500, "Could not obtain Wix access token")
+    """Get Wix access token using the centralized token manager"""
+    from app.routes.wix_token import get_wix_access_token as get_token
+    return get_token()
 
 
 def get_all_wix_products(access_token: str) -> List[Dict]:
