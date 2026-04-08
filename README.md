@@ -267,6 +267,10 @@ EMERGENT_LLM_KEY=...
 # === FAL.AI (Vidéos) ===
 FAL_KEY=...
 
+# === GOOGLE DRIVE (Marketing Ads) ===
+GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"luxura-marketing",...}
+GOOGLE_DRIVE_FOLDER_ID=1w0tX9-V_Y39Vi8ZDqxmF-Hy9eoMvsAs1
+
 # === MONGODB ===
 MONGO_URL=mongodb://...
 DB_NAME=luxura_db
