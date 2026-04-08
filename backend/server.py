@@ -4266,8 +4266,11 @@ except ImportError as e:
 # Marketing Automation Routes
 try:
     from routes.marketing.campaigns import router as marketing_router
+    from routes.marketing.templates import router as templates_router
     app.include_router(marketing_router, prefix="/api")
+    app.include_router(templates_router, prefix="/api")
     logger.info("✅ Routes Marketing Automation chargées")
+    logger.info("✅ Routes Templates Marketing chargées")
 except ImportError as e:
     logger.warning(f"⚠️ Routes marketing non disponibles: {e}")
 
