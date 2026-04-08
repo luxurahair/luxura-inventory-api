@@ -25,6 +25,19 @@ from services.video_generator import (
     submit_video_job, check_video_status, generate_ad_videos
 )
 
+# Google Drive integration
+try:
+    from services.google_drive import (
+        test_drive_connection, 
+        upload_marketing_video,
+        list_marketing_files,
+        upload_video_from_url
+    )
+    GDRIVE_AVAILABLE = True
+except ImportError as e:
+    GDRIVE_AVAILABLE = False
+    logging.warning(f"Google Drive non disponible: {e}")
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/marketing", tags=["Marketing"])
@@ -33,7 +46,77 @@ router = APIRouter(prefix="/marketing", tags=["Marketing"])
 AD_JOBS_DB = {}
 
 
-# ============ ENDPOINTS ============
+# ============ GOOGLE DRIVE ENDPOINTS ============
+
+@router.get("/drive/status")
+async def drive_status():
+    """Vérifie la connexion à Google Drive"""
+    if not GDRIVE_AVAILABLE:
+        return {"success": False, "error": "Google Drive SDK non disponible"}
+    
+    try:
+        result = test_drive_connection()
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/drive/files")
+async def list_drive_files(limit: int = 20):
+    """Liste les fichiers dans le dossier Marketing_Ads"""
+    if not GDRIVE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Google Drive non disponible")
+    
+    try:
+        files = list_marketing_files(limit=limit)
+        return {
+            "success": True,
+            "count": len(files),
+            "files": files
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/drive/upload")
+async def upload_to_drive(
+    video_url: str,
+    filename: str = None,
+    offer_type: str = "direct_sale",
+    video_format: str = "story"
+):
+    """
+    Upload une vidéo vers Google Drive
+    
+    - video_url: URL de la vidéo (Fal.ai ou autre)
+    - filename: Nom du fichier (optionnel, généré automatiquement)
+    - offer_type: direct_sale ou salon_affilie
+    - video_format: story ou feed
+    """
+    if not GDRIVE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Google Drive non disponible")
+    
+    try:
+        if filename:
+            result = await upload_video_from_url(video_url, filename)
+        else:
+            result = await upload_marketing_video(
+                video_url=video_url,
+                offer_type=offer_type,
+                video_format=video_format
+            )
+        
+        return {
+            "success": True,
+            "message": "Vidéo uploadée sur Google Drive!",
+            **result
+        }
+    except Exception as e:
+        logger.error(f"Erreur upload Drive: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ MARKETING ENDPOINTS ============
 
 @router.get("/health")
 async def health_check():
