@@ -30,7 +30,7 @@ except ImportError:
 GOOGLE_SERVICE_ACCOUNT_JSON = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
 GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "1w0tX9-V_Y39Vi8ZDqxmF-Hy9eoMvsAs1")
 
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
+SCOPES = ['https://www.googleapis.com/auth/drive']
 
 
 def get_drive_service():
@@ -98,7 +98,7 @@ def upload_file_to_drive(
     if not folder_id:
         folder_id = GOOGLE_DRIVE_FOLDER_ID
     
-    # Métadonnées du fichier
+    # Métadonnées du fichier - IMPORTANT: spécifier le parent pour utiliser le quota du propriétaire
     file_metadata = {
         'name': filename,
         'parents': [folder_id]
@@ -111,13 +111,14 @@ def upload_file_to_drive(
         resumable=True
     )
     
-    # Upload
+    # Upload avec supportsAllDrives pour supporter les dossiers partagés
     logger.info(f"📤 Upload vers Google Drive: {filename}")
     
     file = service.files().create(
         body=file_metadata,
         media_body=media,
-        fields='id, name, webViewLink, webContentLink'
+        fields='id, name, webViewLink, webContentLink',
+        supportsAllDrives=True
     ).execute()
     
     logger.info(f"✅ Fichier uploadé: {file.get('name')} (ID: {file.get('id')})")
