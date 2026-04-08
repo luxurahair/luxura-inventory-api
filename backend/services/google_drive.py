@@ -251,10 +251,11 @@ def test_drive_connection() -> dict:
     try:
         service = get_drive_service()
         
-        # Vérifier l'accès au dossier
+        # Vérifier l'accès au dossier - avec supportsAllDrives pour Shared Drives
         folder = service.files().get(
             fileId=GOOGLE_DRIVE_FOLDER_ID,
-            fields='id, name'
+            fields='id, name',
+            supportsAllDrives=True
         ).execute()
         
         return {
