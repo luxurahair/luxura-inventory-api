@@ -285,6 +285,100 @@ def main() -> None:
         f"Variantes synchronisées: {synced_variants} | "
         f"Variantes ignorées: {skipped_variants}"
     )
+    
+    # ============================================================
+    # PHASE 2: Synchroniser les QUANTITÉS depuis Wix Inventory API
+    # ============================================================
+    print("\n[INVENTORY] Début de la synchronisation des quantités...")
+    
+    try:
+        # Récupérer tout l'inventaire Wix
+        all_inventory = []
+        offset = 0
+        while True:
+            inv_data = client.query_inventory_items_v1(limit=100, offset=offset)
+            items = inv_data.get("inventoryItems") or inv_data.get("items") or []
+            if not items:
+                break
+            all_inventory.extend(items)
+            offset += len(items)
+            if len(items) < 100:
+                break
+        
+        print(f"[INVENTORY] {len(all_inventory)} items d'inventaire récupérés de Wix")
+        
+        # Créer un mapping product_id -> quantity
+        inventory_map = {}
+        for item in all_inventory:
+            product_id = item.get("productId") or item.get("externalId")
+            variant_id = item.get("variantId")
+            
+            # Quantité
+            qty = 0
+            if "quantity" in item:
+                try:
+                    qty = int(item.get("quantity") or 0)
+                except:
+                    qty = 0
+            elif "numericValue" in item:
+                try:
+                    qty = int(item.get("numericValue") or 0)
+                except:
+                    qty = 0
+            
+            # Tracking
+            track = item.get("trackQuantity", False)
+            in_stock = item.get("inStock", qty > 0)
+            
+            if product_id:
+                key = f"{product_id}:{variant_id}" if variant_id else product_id
+                inventory_map[key] = {
+                    "quantity": qty,
+                    "track_quantity": track,
+                    "in_stock": in_stock,
+                    "product_id": product_id,
+                    "variant_id": variant_id,
+                }
+        
+        print(f"[INVENTORY] Mapping créé pour {len(inventory_map)} produits/variantes")
+        
+        # Mettre à jour les produits dans la DB
+        updated_qty = 0
+        with Session(engine) as db:
+            products = db.exec(select(Product)).all()
+            
+            for product in products:
+                wix_id = product.wix_id
+                if not wix_id:
+                    continue
+                
+                # Chercher dans le mapping
+                opts = product.options if isinstance(product.options, dict) else {}
+                variant_id = opts.get("wix_variant_id")
+                
+                # Clé de recherche
+                if variant_id:
+                    key = f"{wix_id}:{variant_id}"
+                else:
+                    key = wix_id
+                
+                inv = inventory_map.get(key)
+                if inv:
+                    old_qty = product.quantity
+                    product.quantity = inv["quantity"]
+                    product.is_in_stock = inv["in_stock"]
+                    if old_qty != inv["quantity"]:
+                        print(f"[INVENTORY] {product.sku}: {old_qty} → {inv['quantity']}")
+                        updated_qty += 1
+            
+            db.commit()
+        
+        print(f"[INVENTORY] ✅ {updated_qty} quantités mises à jour")
+        
+    except Exception as e:
+        print(f"[INVENTORY] ⚠️ Erreur sync inventaire: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
