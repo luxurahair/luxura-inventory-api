@@ -2146,11 +2146,13 @@ async def generate_blog_with_ai(
     - vente en ligne B2C
     - salons affiliés / partenaires B2B
     - PAS de formation / certification / salon de pose
+    
+    Utilise emergentintegrations pour compatibilité avec EMERGENT_LLM_KEY
     """
     try:
-        import openai
-
-        client = openai.AsyncOpenAI(api_key=openai_key)
+        # Utiliser emergentintegrations au lieu de openai directement
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        import uuid as uuid_mod
 
         topic = topic_data["topic"]
         category = topic_data["category"]
@@ -2295,18 +2297,15 @@ FORMAT JSON STRICT:
   "hashtags": "#LuxuraDistribution #ExtensionsCheveux #Québec"
 }}
 """
-
-        response = await client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_message.strip()},
-                {"role": "user", "content": prompt.strip()}
-            ],
-            temperature=0.7,
-            max_tokens=3200
-        )
-
-        response_text = response.choices[0].message.content.strip()
+        # Utiliser LlmChat avec emergentintegrations
+        chat = LlmChat(
+            api_key=openai_key,
+            session_id=f"blog-gen-{uuid_mod.uuid4().hex[:8]}",
+            system_message=system_message.strip()
+        ).with_model("openai", "gpt-4o")
+        
+        user_message = UserMessage(text=prompt.strip())
+        response_text = await chat.send_message(user_message)
 
         if response_text.startswith("```json"):
             response_text = response_text[7:]
