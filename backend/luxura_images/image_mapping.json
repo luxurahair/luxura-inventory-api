@@ -1,0 +1,710 @@
+{
+  "halo": {
+    "6": {
+      "filename": "HALO_6_Caramel_Doré.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_6_Caramel_Doré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_5b61b7d6874a47abb7997a78d99c7125~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_5b61b7d6874a47abb7997a78d99c7125~mv2.png",
+      "color_name": "Caramel Doré",
+      "product_name": "Halo Everly Caramel Doré #6",
+      "handle": "halo-série-everly-brun-lumineux-blond-foncé-6"
+    },
+    "6/6T24": {
+      "filename": "HALO_6-6T24_Caramel_Soleil.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_6-6T24_Caramel_Soleil.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_276e2a0ba6ab4e92a0da09977692256e~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_276e2a0ba6ab4e92a0da09977692256e~mv2.png",
+      "color_name": "Caramel Soleil",
+      "product_name": "Halo Everly Caramel Soleil #6/6T24",
+      "handle": "halo-série-everly-ombré-blond-moka-6-6t24"
+    },
+    "HPS": {
+      "filename": "HALO_HPS_Cendré_Étoilé.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_HPS_Cendré_Étoilé.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_13645139441a4ad0bdae63bca7d65c37~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_13645139441a4ad0bdae63bca7d65c37~mv2.png",
+      "color_name": "Cendré Étoilé",
+      "product_name": "Halo Everly Cendré Étoilé #HPS",
+      "handle": "halo-série-everly-ombré-blond-cendré-hps"
+    },
+    "18/22": {
+      "filename": "HALO_18-22_Champagne_Doré.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_18-22_Champagne_Doré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png",
+      "color_name": "Champagne Doré",
+      "product_name": "Halo Everly Champagne Doré #18/22",
+      "handle": "halo-série-everly-balayage-blond-beige-18-22"
+    },
+    "3": {
+      "filename": "HALO_3_Châtaigne_Douce.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_3_Châtaigne_Douce.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_d1bb2905a7b748f5ac4676d5c96bae2a~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_d1bb2905a7b748f5ac4676d5c96bae2a~mv2.png",
+      "color_name": "Châtaigne Douce",
+      "product_name": "Halo Everly Châtaigne Douce #3",
+      "handle": "halo-série-everly-brun-moyen-3"
+    },
+    "3/3T24": {
+      "filename": "HALO_3-3T24_Châtaigne_Lumière.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_3-3T24_Châtaigne_Lumière.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_bc6218e7631045ff801eeb0195b3b8c9~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_bc6218e7631045ff801eeb0195b3b8c9~mv2.png",
+      "color_name": "Châtaigne Lumière",
+      "product_name": "Halo Everly Châtaigne Lumière #3/3T24",
+      "handle": "halo-série-everly-ombré-brun-cacao-3-3t24"
+    },
+    "613/18A": {
+      "filename": "HALO_613-18A_Diamant_Glacé.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_613-18A_Diamant_Glacé.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png",
+      "color_name": "Diamant Glacé",
+      "product_name": "Halo Everly Diamant Glacé #613/18A",
+      "handle": "halo-série-everly-balayage-blond-cendré-613-18a"
+    },
+    "6/24": {
+      "filename": "HALO_6-24_Golden_Hour.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_6-24_Golden_Hour.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_7858886b3ecb41e5bdf5be80b2aa4359~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_7858886b3ecb41e5bdf5be80b2aa4359~mv2.png",
+      "color_name": "Golden Hour",
+      "product_name": "Halo Everly Golden Hour #6/24",
+      "handle": "halo-série-everly-balayage-blond-foncé-6-24"
+    },
+    "CB": {
+      "filename": "HALO_CB_Miel_Sauvage_Ombré.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_CB_Miel_Sauvage_Ombré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png",
+      "color_name": "Miel Sauvage Ombré",
+      "product_name": "Halo Everly Miel Sauvage Ombré #CB",
+      "handle": "halo-série-everly-ombré-blond-miel-cb"
+    },
+    "1B": {
+      "filename": "HALO_1B_Noir_Soie.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_1B_Noir_Soie.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png",
+      "color_name": "Noir Soie",
+      "product_name": "Halo Everly Noir Soie #1B",
+      "handle": "halo-série-everly-noir-doux-brun-foncé-1b"
+    },
+    "DB": {
+      "filename": "HALO_DB_Nuit_Mystère.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_DB_Nuit_Mystère.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_601ee2f6e66b48d6b09e471501537fc9~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_601ee2f6e66b48d6b09e471501537fc9~mv2.png",
+      "color_name": "Nuit Mystère",
+      "product_name": "Halo Everly Nuit Mystère #DB",
+      "handle": "halo-série-everly-ombré-brun-nuit-db"
+    },
+    "1": {
+      "filename": "HALO_1_Onyx_Noir.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_1_Onyx_Noir.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_7c4c9a8b07484a5eb66b12e9b9322b4a~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_7c4c9a8b07484a5eb66b12e9b9322b4a~mv2.jpg",
+      "color_name": "Onyx Noir",
+      "product_name": "Halo Everly Onyx Noir #1",
+      "handle": "halo-série-everly-noir-foncé-1"
+    },
+    "60A": {
+      "filename": "HALO_60A_Platine_Pur.jpg",
+      "local_path": "/app/backend/luxura_images/HALO_pictures/HALO_60A_Platine_Pur.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_1e9953c3551440479117fa2954918173~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_1e9953c3551440479117fa2954918173~mv2.png",
+      "color_name": "Platine Pur",
+      "product_name": "Halo Everly Platine Pur #60A",
+      "handle": "halo-série-everly-blond-platine-60a"
+    }
+  },
+  "genius": {
+    "5ATP18B62": {
+      "filename": "GENIUS_5ATP18B62_Aurore_Boréale.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_5ATP18B62_Aurore_Boréale.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0e7cf48e1d59418bbf1b562c21494176~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_0e7cf48e1d59418bbf1b562c21494176~mv2.jpg",
+      "color_name": "Aurore Boréale",
+      "product_name": "Genius Vivian Aurore Boréale #5ATP18B62",
+      "handle": "genius-trame-invisible-série-vivian-5atp18b62"
+    },
+    "5AT60": {
+      "filename": "GENIUS_5AT60_Aurore_Glaciale.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_5AT60_Aurore_Glaciale.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_9f8115b4f7614340b0dc9aeba39bd699~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_9f8115b4f7614340b0dc9aeba39bd699~mv2.jpg",
+      "color_name": "Aurore Glaciale",
+      "product_name": "Genius Vivian Aurore Glaciale #5AT60",
+      "handle": "genius-ssd-série-vivian-ombré-blond-cendré-5at60"
+    },
+    "CACAO": {
+      "filename": "GENIUS_CACAO_Cacao_Velours.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_CACAO_Cacao_Velours.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_11271a5d5d91485883888a201592829c~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_11271a5d5d91485883888a201592829c~mv2.jpg",
+      "color_name": "Cacao Velours",
+      "product_name": "Genius Vivian Cacao Velours #CACAO",
+      "handle": "genius-ssd-trame-invisible-série-vivian-brun-cacao"
+    },
+    "FOOCHOW": {
+      "filename": "GENIUS_FOOCHOW_Cachemire_Oriental.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_FOOCHOW_Cachemire_Oriental.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_28d930f0f9924b229beb3be484bc1fbd~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_28d930f0f9924b229beb3be484bc1fbd~mv2.jpg",
+      "color_name": "Cachemire Oriental",
+      "product_name": "Genius Vivian Cachemire Oriental #FOOCHOW",
+      "handle": "genius-trame-invisible-série-vivian-foochow"
+    },
+    "CINNAMON": {
+      "filename": "GENIUS_CINNAMON_Cannelle_Épicée.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_CINNAMON_Cannelle_Épicée.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_23960136c3df4e84852f5dde15475d17~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_23960136c3df4e84852f5dde15475d17~mv2.jpg",
+      "color_name": "Cannelle Épicée",
+      "product_name": "Genius Vivian Cannelle Épicée #CINNAMON",
+      "handle": "genius-nouvelle-trame-invisible-série-vivian-cannelle-cinnamon"
+    },
+    "6": {
+      "filename": "GENIUS_6_Caramel_Doré.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_6_Caramel_Doré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_5769d9b826004a6f91eb9112dc140cfb~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_5769d9b826004a6f91eb9112dc140cfb~mv2.png",
+      "color_name": "Caramel Doré",
+      "product_name": "Genius Vivian Caramel Doré #6",
+      "handle": "genius-série-vivian-brun-lumineux-blond-foncé-6"
+    },
+    "6/6T24": {
+      "filename": "GENIUS_6-6T24_Caramel_Soleil.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_6-6T24_Caramel_Soleil.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_b1da0ecc4ce04c86955047f5f172a44c~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_b1da0ecc4ce04c86955047f5f172a44c~mv2.png",
+      "color_name": "Caramel Soleil",
+      "product_name": "Genius Vivian Caramel Soleil #6/6T24",
+      "handle": "genius-ombré-blond-moka-6-6t24"
+    },
+    "PHA": {
+      "filename": "GENIUS_PHA_Cendré_Céleste.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_PHA_Cendré_Céleste.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_54514ba920d34aed9aa1f10c62f1759a~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_54514ba920d34aed9aa1f10c62f1759a~mv2.jpg",
+      "color_name": "Cendré Céleste",
+      "product_name": "Genius Vivian Cendré Céleste #PHA",
+      "handle": "genius-trame-invisible-série-vivian-perfect-highlift-ash-pha"
+    },
+    "HPS": {
+      "filename": "GENIUS_HPS_Cendré_Étoilé.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_HPS_Cendré_Étoilé.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_46c106d70c154c34918e15ad23452fc4~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_46c106d70c154c34918e15ad23452fc4~mv2.png",
+      "color_name": "Cendré Étoilé",
+      "product_name": "Genius Vivian Cendré Étoilé #HPS",
+      "handle": "genius-série-vivian-ombré-blond-cendré-hps"
+    },
+    "18/22": {
+      "filename": "GENIUS_18-22_Champagne_Doré.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_18-22_Champagne_Doré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_b7d3eb648bf443cb8d30e3e23fa62ad8~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_b7d3eb648bf443cb8d30e3e23fa62ad8~mv2.png",
+      "color_name": "Champagne Doré",
+      "product_name": "Genius Vivian Champagne Doré #18/22",
+      "handle": "genius-trame-invisible-série-vivian-balayage-blond-beige-18-22"
+    },
+    "DC": {
+      "filename": "GENIUS_DC_Chocolat_Profond.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_DC_Chocolat_Profond.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_58c11630ff1349728c47e56190218422~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_58c11630ff1349728c47e56190218422~mv2.png",
+      "color_name": "Chocolat Profond",
+      "product_name": "Genius Vivian Chocolat Profond #DC",
+      "handle": "genius-trame-invisible-série-vivian-dark-chocolate-dc"
+    },
+    "3/3T24": {
+      "filename": "GENIUS_3-3T24_Châtaigne_Lumière.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_3-3T24_Châtaigne_Lumière.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_f7c08b4eeb9d454aa0da2db110ab359d~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_f7c08b4eeb9d454aa0da2db110ab359d~mv2.png",
+      "color_name": "Châtaigne Lumière",
+      "product_name": "Genius Vivian Châtaigne Lumière #3/3T24",
+      "handle": "genius-trame-invisible-série-vivian-ombré-brun-cacao-3-3t24"
+    },
+    "613/18A": {
+      "filename": "GENIUS_613-18A_Diamant_Glacé.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_613-18A_Diamant_Glacé.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_c15e5a01c6024a1699cb92a2be325f8f~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_c15e5a01c6024a1699cb92a2be325f8f~mv2.png",
+      "color_name": "Diamant Glacé",
+      "product_name": "Genius Vivian Diamant Glacé #613/18A",
+      "handle": "genius-série-vivian-balayage-blond-cendré-613-18a"
+    },
+    "2": {
+      "filename": "GENIUS_2_Espresso_Intense.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_2_Espresso_Intense.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_2596437db6134f7bbdc1c5b2d72907fd~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_2596437db6134f7bbdc1c5b2d72907fd~mv2.jpg",
+      "color_name": "Espresso Intense",
+      "product_name": "Genius Vivian Espresso Intense #2",
+      "handle": "genius-trame-invisible-série-vivian-brun-2"
+    },
+    "2BTP18/1006": {
+      "filename": "GENIUS_2BTP18-1006_Espresso_Lumière.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_2BTP18-1006_Espresso_Lumière.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_75316de55cf441ecb82211cbc8d91010~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_75316de55cf441ecb82211cbc8d91010~mv2.jpg",
+      "color_name": "Espresso Lumière",
+      "product_name": "Genius Vivian Espresso Lumière #2BTP18/1006",
+      "handle": "genius-sdd-série-vivian-ombré-2btp18-1006"
+    },
+    "6/24": {
+      "filename": "GENIUS_6-24_Golden_Hour.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_6-24_Golden_Hour.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_387bbe6d47cd4217a7b0157f398d9a63~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_387bbe6d47cd4217a7b0157f398d9a63~mv2.png",
+      "color_name": "Golden Hour",
+      "product_name": "Genius Vivian Golden Hour #6/24",
+      "handle": "genius-trame-invisible-série-vivian-balayage-blond-foncé-6-24"
+    },
+    "IVORY": {
+      "filename": "GENIUS_IVORY_Ivoire_Précieux.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_IVORY_Ivoire_Précieux.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_2dbcedc5036044b69e1ba01c58cc93d4~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_2dbcedc5036044b69e1ba01c58cc93d4~mv2.jpg",
+      "color_name": "Ivoire Précieux",
+      "product_name": "Genius Vivian Ivoire Précieux #IVORY",
+      "handle": "genius-trame-invisible-série-vivian-blanc-polar-ivory"
+    },
+    "BM": {
+      "filename": "GENIUS_BM_Miel_Sauvage.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_BM_Miel_Sauvage.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png",
+      "color_name": "Miel Sauvage",
+      "product_name": "Genius Vivian Miel Sauvage #BM",
+      "handle": "ponytail-queue-de-cheval-série-everly-ombré-brun-moka-bm"
+    },
+    "CB": {
+      "filename": "GENIUS_CB_Miel_Sauvage_Ombré.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_CB_Miel_Sauvage_Ombré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png",
+      "color_name": "Miel Sauvage Ombré",
+      "product_name": "Genius Vivian Miel Sauvage Ombré #CB",
+      "handle": "genius-série-vivian-ombré-blond-miel-cb"
+    },
+    "1B": {
+      "filename": "GENIUS_1B_Noir_Soie.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_1B_Noir_Soie.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",
+      "color_name": "Noir Soie",
+      "product_name": "Genius Vivian Noir Soie #1B",
+      "handle": "clips-série-everly-noir-doux-brun-foncé-1b"
+    },
+    "DB": {
+      "filename": "GENIUS_DB_Nuit_Mystère.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_DB_Nuit_Mystère.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_b049d0356ab04230a0291ddadc1dfbe8~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_b049d0356ab04230a0291ddadc1dfbe8~mv2.png",
+      "color_name": "Nuit Mystère",
+      "product_name": "Genius Vivian Nuit Mystère #DB",
+      "handle": "genius-trame-invisible-série-vivian-ombré-brun-nuit-db"
+    },
+    "1": {
+      "filename": "GENIUS_1_Onyx_Noir.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_1_Onyx_Noir.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",
+      "color_name": "Onyx Noir",
+      "product_name": "Genius Vivian Onyx Noir #1",
+      "handle": "genius-trame-invisible-série-vivian-noir-foncé-1"
+    },
+    "60A": {
+      "filename": "GENIUS_60A_Platine_Pur.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_60A_Platine_Pur.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_c3168b50e6d9464db8365cdef0b16557~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_c3168b50e6d9464db8365cdef0b16557~mv2.png",
+      "color_name": "Platine Pur",
+      "product_name": "Genius Vivian Platine Pur #60A",
+      "handle": "genius-trame-invisible-série-vivian-blond-platine-60a"
+    },
+    "CHENGTU": {
+      "filename": "GENIUS_CHENGTU_Soie_dOrient.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_CHENGTU_Soie_dOrient.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_e440aecc44e44c69b0d56dad273a95e9~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_e440aecc44e44c69b0d56dad273a95e9~mv2.jpg",
+      "color_name": "Soie d'Orient",
+      "product_name": "Genius Vivian Soie d'Orient #CHENGTU",
+      "handle": "genius-trame-invisible-série-vivian-chengtu"
+    },
+    "T14/P14/24": {
+      "filename": "GENIUS_T14-P14-24_Venise_Dorée.jpg",
+      "local_path": "/app/backend/luxura_images/GENIUS_pictures/GENIUS_T14-P14-24_Venise_Dorée.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_9c2192c6fa5f4458913d46ea8a8f9dae~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_9c2192c6fa5f4458913d46ea8a8f9dae~mv2.jpg",
+      "color_name": "Venise Dorée",
+      "product_name": "Genius Vivian Venise Dorée #T14/P14/24",
+      "handle": "genius-trame-invisible-série-vivian-t14-p14-24"
+    }
+  },
+  "tape": {
+    "6": {
+      "filename": "TAPE_6_Caramel_Doré.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_6_Caramel_Doré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_5d6668fdf8114e3d99f528fe612222f0~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_5d6668fdf8114e3d99f528fe612222f0~mv2.png",
+      "color_name": "Caramel Doré",
+      "product_name": "Bande Adhésive Aurora Caramel Doré #6",
+      "handle": "trame-invisible-série-vivian-brun-lumineux-blond-foncé-6"
+    },
+    "6/6T24": {
+      "filename": "TAPE_6-6T24_Caramel_Soleil.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_6-6T24_Caramel_Soleil.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_276e2a0ba6ab4e92a0da09977692256e~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_276e2a0ba6ab4e92a0da09977692256e~mv2.png",
+      "color_name": "Caramel Soleil",
+      "product_name": "Bande Adhésive Aurora Caramel Soleil #6/6T24",
+      "handle": "trame-invisible-série-vivian-ombré-blond-moka-6-6t24"
+    },
+    "PHA": {
+      "filename": "TAPE_PHA_Cendré_Céleste.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_PHA_Cendré_Céleste.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_54514ba920d34aed9aa1f10c62f1759a~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_54514ba920d34aed9aa1f10c62f1759a~mv2.jpg",
+      "color_name": "Cendré Céleste",
+      "product_name": "Bande Adhésive Aurora Cendré Céleste #PHA",
+      "handle": "bande-adhésive-série-aurora-blond-pha"
+    },
+    "HPS": {
+      "filename": "TAPE_HPS_Cendré_Étoilé.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_HPS_Cendré_Étoilé.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_13645139441a4ad0bdae63bca7d65c37~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_13645139441a4ad0bdae63bca7d65c37~mv2.png",
+      "color_name": "Cendré Étoilé",
+      "product_name": "Bande Adhésive Aurora Cendré Étoilé #HPS",
+      "handle": "trame-invisible-série-vivian-ombré-blond-cendré-hps"
+    },
+    "18/22": {
+      "filename": "TAPE_18-22_Champagne_Doré.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_18-22_Champagne_Doré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png",
+      "color_name": "Champagne Doré",
+      "product_name": "Bande Adhésive Aurora Champagne Doré #18/22",
+      "handle": "trame-invisible-série-vivian-balayage-blond-beige-18-22"
+    },
+    "DC": {
+      "filename": "TAPE_DC_Chocolat_Profond.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_DC_Chocolat_Profond.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_fa7cd15003c94b16a263bd39d22dc48c~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_fa7cd15003c94b16a263bd39d22dc48c~mv2.jpg",
+      "color_name": "Chocolat Profond",
+      "product_name": "Bande Adhésive Aurora Chocolat Profond #DC",
+      "handle": "bande-adhésive-série-aurora-dark-chocolate-dc"
+    },
+    "3": {
+      "filename": "TAPE_3_Châtaigne_Douce.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_3_Châtaigne_Douce.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_a0bb462af6f44e25aa751ea359024bba~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_a0bb462af6f44e25aa751ea359024bba~mv2.png",
+      "color_name": "Châtaigne Douce",
+      "product_name": "Bande Adhésive Aurora Châtaigne Douce #3",
+      "handle": "trame-invisible-série-vivian-brun-moyen-3"
+    },
+    "3/3T24": {
+      "filename": "TAPE_3-3T24_Châtaigne_Lumière.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_3-3T24_Châtaigne_Lumière.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_bc6218e7631045ff801eeb0195b3b8c9~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_bc6218e7631045ff801eeb0195b3b8c9~mv2.png",
+      "color_name": "Châtaigne Lumière",
+      "product_name": "Bande Adhésive Aurora Châtaigne Lumière #3/3T24",
+      "handle": "trame-invisible-série-vivian-ombré-brun-cacao-3-3t24"
+    },
+    "ICW": {
+      "filename": "TAPE_ICW_Cristal_Polaire.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_ICW_Cristal_Polaire.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_9b2d02f5f8fe47369534f67678bbc79d~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_9b2d02f5f8fe47369534f67678bbc79d~mv2.jpg",
+      "color_name": "Cristal Polaire",
+      "product_name": "Bande Adhésive Aurora Cristal Polaire #ICW",
+      "handle": "bande-invisible-série-aurora-ice-white-icw"
+    },
+    "613/18A": {
+      "filename": "TAPE_613-18A_Diamant_Glacé.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_613-18A_Diamant_Glacé.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png",
+      "color_name": "Diamant Glacé",
+      "product_name": "Bande Adhésive Aurora Diamant Glacé #613/18A",
+      "handle": "trame-invisible-série-vivian-balayage-blond-cendré-613-18a"
+    },
+    "6/24": {
+      "filename": "TAPE_6-24_Golden_Hour.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_6-24_Golden_Hour.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_7858886b3ecb41e5bdf5be80b2aa4359~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_7858886b3ecb41e5bdf5be80b2aa4359~mv2.png",
+      "color_name": "Golden Hour",
+      "product_name": "Bande Adhésive Aurora Golden Hour #6/24",
+      "handle": "trame-invisible-série-vivian-balayage-blond-foncé-6-24"
+    },
+    "CB": {
+      "filename": "TAPE_CB_Miel_Sauvage_Ombré.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_CB_Miel_Sauvage_Ombré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png",
+      "color_name": "Miel Sauvage Ombré",
+      "product_name": "Bande Adhésive Aurora Miel Sauvage Ombré #CB",
+      "handle": "trame-invisible-série-vivian-ombré-blond-miel-cb"
+    },
+    "1": {
+      "filename": "TAPE_1_Unknown.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_1_Unknown.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png",
+      "color_name": "Unknown",
+      "product_name": "Bande Adhésive Aurora Noir Jet Black",
+      "handle": "bande-adhésive-série-aurora-noir-foncé-1-jet-black"
+    },
+    "1B": {
+      "filename": "TAPE_1B_Noir_Soie.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_1B_Noir_Soie.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_088e24bf74854319bab62d49634b608a~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_088e24bf74854319bab62d49634b608a~mv2.png",
+      "color_name": "Noir Soie",
+      "product_name": "Bande Adhésive Aurora Noir Soie #1B",
+      "handle": "trame-invisible-brun-foncé-noir-doux-1b"
+    },
+    "DB": {
+      "filename": "TAPE_DB_Nuit_Mystère.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_DB_Nuit_Mystère.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_601ee2f6e66b48d6b09e471501537fc9~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_601ee2f6e66b48d6b09e471501537fc9~mv2.png",
+      "color_name": "Nuit Mystère",
+      "product_name": "Bande Adhésive Aurora Nuit Mystère #DB",
+      "handle": "trame-invisible-série-vivian-ombré-brun-nuit-db"
+    },
+    "60A": {
+      "filename": "TAPE_60A_Platine_Pur.jpg",
+      "local_path": "/app/backend/luxura_images/TAPE_pictures/TAPE_60A_Platine_Pur.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_e75015e3740242dab6c3567bf8445811~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_e75015e3740242dab6c3567bf8445811~mv2.png",
+      "color_name": "Platine Pur",
+      "product_name": "Bande Adhésive Aurora Platine Pur #60A",
+      "handle": "trame-invisible-série-vivian-blond-platine-60a"
+    }
+  },
+  "i-tip": {
+    "6": {
+      "filename": "I-TIP_6_Caramel_Doré.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_6_Caramel_Doré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Caramel Doré",
+      "product_name": "I-Tip Eleanor Caramel Doré #6",
+      "handle": "i-tips-série-eleanor-brun-lumineux-blond-foncé-6"
+    },
+    "6/6T24": {
+      "filename": "I-TIP_6-6T24_Caramel_Soleil.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_6-6T24_Caramel_Soleil.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Caramel Soleil",
+      "product_name": "I-Tip Eleanor Caramel Soleil #6/6T24",
+      "handle": "i-tips-série-eleanor-ombré-blond-moka-6-6t24"
+    },
+    "HPS": {
+      "filename": "I-TIP_HPS_Cendré_Étoilé.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_HPS_Cendré_Étoilé.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Cendré Étoilé",
+      "product_name": "I-Tip Eleanor Cendré Étoilé #HPS",
+      "handle": "i-tips-série-eleanor-ombré-blond-cendré-hps"
+    },
+    "18/22": {
+      "filename": "I-TIP_18-22_Champagne_Doré.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_18-22_Champagne_Doré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Champagne Doré",
+      "product_name": "I-Tip Eleanor Champagne Doré #18/22",
+      "handle": "i-tips-série-eleanor-balayage-blond-beige-18-22"
+    },
+    "3": {
+      "filename": "I-TIP_3_Châtaigne_Douce.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_3_Châtaigne_Douce.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Châtaigne Douce",
+      "product_name": "I-Tip Eleanor Châtaigne Douce #3",
+      "handle": "i-tips-série-eleanor-brun-moyen-3"
+    },
+    "3/3T24": {
+      "filename": "I-TIP_3-3T24_Châtaigne_Lumière.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_3-3T24_Châtaigne_Lumière.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Châtaigne Lumière",
+      "product_name": "I-Tip Eleanor Châtaigne Lumière #3/3T24",
+      "handle": "i-tips-série-eleanor-ombré-brun-cacao-3-3t24"
+    },
+    "613/18A": {
+      "filename": "I-TIP_613-18A_Diamant_Glacé.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_613-18A_Diamant_Glacé.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Diamant Glacé",
+      "product_name": "I-Tip Eleanor Diamant Glacé #613/18A",
+      "handle": "i-tips-série-eleanor-balayage-blond-cendré-613-18a"
+    },
+    "6/24": {
+      "filename": "I-TIP_6-24_Golden_Hour.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_6-24_Golden_Hour.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Golden Hour",
+      "product_name": "I-Tip Eleanor Golden Hour #6/24",
+      "handle": "i-tips-série-eleanor-balayage-blond-foncé-6-24"
+    },
+    "CB": {
+      "filename": "I-TIP_CB_Miel_Sauvage_Ombré.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_CB_Miel_Sauvage_Ombré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Miel Sauvage Ombré",
+      "product_name": "I-Tip Eleanor Miel Sauvage Ombré #CB",
+      "handle": "i-tips-série-eleanor-ombré-blond-miel-cb"
+    },
+    "1B": {
+      "filename": "I-TIP_1B_Noir_Soie.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_1B_Noir_Soie.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Noir Soie",
+      "product_name": "I-Tip Eleanor Noir Soie #1B",
+      "handle": "i-tips-série-eleanor-brun-foncé-noir-doux-1b"
+    },
+    "DB": {
+      "filename": "I-TIP_DB_Nuit_Mystère.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_DB_Nuit_Mystère.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Nuit Mystère",
+      "product_name": "I-Tip Eleanor Nuit Mystère #DB",
+      "handle": "i-tips-série-eleanor-ombré-brun-nuit-db"
+    },
+    "1": {
+      "filename": "I-TIP_1_Onyx_Noir.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_1_Onyx_Noir.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Onyx Noir",
+      "product_name": "I-Tip Eleanor Onyx Noir #1",
+      "handle": "i-tips-série-eleanor-noir-foncé-1"
+    },
+    "60A": {
+      "filename": "I-TIP_60A_Platine_Pur.jpg",
+      "local_path": "/app/backend/luxura_images/I-TIP_pictures/I-TIP_60A_Platine_Pur.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_0d440382da1f450da579fd73c14daf88~mv2.png",
+      "color_name": "Platine Pur",
+      "product_name": "I-Tip Eleanor Platine Pur #60A",
+      "handle": "i-tips-série-eleanor-blond-platine-60a"
+    }
+  },
+  "ponytail": {
+    "CB": {
+      "filename": "PONYTAIL_CB_Unknown.jpg",
+      "local_path": "/app/backend/luxura_images/PONYTAIL_pictures/PONYTAIL_CB_Unknown.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_7ba6134ca87e4423817e9b0fa07754c1~mv2.png",
+      "color_name": "Unknown",
+      "product_name": "Queue de Cheval Victoria Blond Ombré Cl",
+      "handle": "ponytail-victoria-blond-miel-ombré-cl"
+    },
+    "HPS": {
+      "filename": "PONYTAIL_HPS_Unknown.jpg",
+      "local_path": "/app/backend/luxura_images/PONYTAIL_pictures/PONYTAIL_HPS_Unknown.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_13645139441a4ad0bdae63bca7d65c37~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_13645139441a4ad0bdae63bca7d65c37~mv2.png",
+      "color_name": "Unknown",
+      "product_name": "Queue de Cheval Victoria Blond Ombré Sb",
+      "handle": "ponytail-victoria-blond-cendré-ombré-sb"
+    },
+    "6/6T24": {
+      "filename": "PONYTAIL_6-6T24_Unknown.jpg",
+      "local_path": "/app/backend/luxura_images/PONYTAIL_pictures/PONYTAIL_6-6T24_Unknown.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_276e2a0ba6ab4e92a0da09977692256e~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_276e2a0ba6ab4e92a0da09977692256e~mv2.png",
+      "color_name": "Unknown",
+      "product_name": "Queue de Cheval Victoria Brun Ombré Du",
+      "handle": "ponytail-victoria-brun-miel-ombré-du"
+    },
+    "6": {
+      "filename": "PONYTAIL_6_Caramel_Doré.jpg",
+      "local_path": "/app/backend/luxura_images/PONYTAIL_pictures/PONYTAIL_6_Caramel_Doré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_5b61b7d6874a47abb7997a78d99c7125~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_5b61b7d6874a47abb7997a78d99c7125~mv2.png",
+      "color_name": "Caramel Doré",
+      "product_name": "Queue de Cheval Victoria Caramel Doré #6",
+      "handle": "ponytail-victoria-caramel-doré-6"
+    },
+    "18/22": {
+      "filename": "PONYTAIL_18-22_Champagne_Doré.jpg",
+      "local_path": "/app/backend/luxura_images/PONYTAIL_pictures/PONYTAIL_18-22_Champagne_Doré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png",
+      "color_name": "Champagne Doré",
+      "product_name": "Queue de Cheval Victoria Champagne Doré #18/22",
+      "handle": "ponytail-victoria-champagne-doré-18-22"
+    },
+    "3": {
+      "filename": "PONYTAIL_3_Châtaigne_Douce.jpg",
+      "local_path": "/app/backend/luxura_images/PONYTAIL_pictures/PONYTAIL_3_Châtaigne_Douce.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_d1bb2905a7b748f5ac4676d5c96bae2a~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_d1bb2905a7b748f5ac4676d5c96bae2a~mv2.png",
+      "color_name": "Châtaigne Douce",
+      "product_name": "Queue de Cheval Victoria Châtaigne Douce #3",
+      "handle": "ponytail-victoria-châtaigne-douce-3"
+    },
+    "3/3T24": {
+      "filename": "PONYTAIL_3-3T24_Châtaigne_Lumière.jpg",
+      "local_path": "/app/backend/luxura_images/PONYTAIL_pictures/PONYTAIL_3-3T24_Châtaigne_Lumière.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_bc6218e7631045ff801eeb0195b3b8c9~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_bc6218e7631045ff801eeb0195b3b8c9~mv2.png",
+      "color_name": "Châtaigne Lumière",
+      "product_name": "Queue de Cheval Victoria Châtaigne Lumière #3/3T24",
+      "handle": "ponytail-victoria-châtaigne-lumière-3-3t24"
+    },
+    "613/18A": {
+      "filename": "PONYTAIL_613-18A_Diamant_Glacé.jpg",
+      "local_path": "/app/backend/luxura_images/PONYTAIL_pictures/PONYTAIL_613-18A_Diamant_Glacé.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png",
+      "color_name": "Diamant Glacé",
+      "product_name": "Queue de Cheval Victoria Diamant Glacé #613/18A",
+      "handle": "ponytail-victoria-diamant-glacé-613-18a"
+    },
+    "6/24": {
+      "filename": "PONYTAIL_6-24_Golden_Hour.jpg",
+      "local_path": "/app/backend/luxura_images/PONYTAIL_pictures/PONYTAIL_6-24_Golden_Hour.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_7858886b3ecb41e5bdf5be80b2aa4359~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_7858886b3ecb41e5bdf5be80b2aa4359~mv2.png",
+      "color_name": "Golden Hour",
+      "product_name": "Queue de Cheval Victoria Golden Hour #6/24",
+      "handle": "ponytail-victoria-golden-hour-6-24"
+    },
+    "BM": {
+      "filename": "PONYTAIL_BM_Miel_Sauvage.jpg",
+      "local_path": "/app/backend/luxura_images/PONYTAIL_pictures/PONYTAIL_BM_Miel_Sauvage.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_601ee2f6e66b48d6b09e471501537fc9~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_601ee2f6e66b48d6b09e471501537fc9~mv2.png",
+      "color_name": "Miel Sauvage",
+      "product_name": "Queue de Cheval Victoria Miel Sauvage #BM",
+      "handle": "ponytail-victoria-brun-moka-ombré-bm"
+    },
+    "1B": {
+      "filename": "PONYTAIL_1B_Noir_Soie.jpg",
+      "local_path": "/app/backend/luxura_images/PONYTAIL_pictures/PONYTAIL_1B_Noir_Soie.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png",
+      "color_name": "Noir Soie",
+      "product_name": "Queue de Cheval Victoria Noir Soie #1B",
+      "handle": "ponytail-victoria-noir-soie-1b"
+    },
+    "60A": {
+      "filename": "PONYTAIL_60A_Platine_Pur.jpg",
+      "local_path": "/app/backend/luxura_images/PONYTAIL_pictures/PONYTAIL_60A_Platine_Pur.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_1e9953c3551440479117fa2954918173~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_1e9953c3551440479117fa2954918173~mv2.png",
+      "color_name": "Platine Pur",
+      "product_name": "Queue de Cheval Victoria Platine Pur #60A",
+      "handle": "ponytail-victoria-platine-pur-60a"
+    }
+  },
+  "clip-in": {
+    "6": {
+      "filename": "CLIP-IN_6_Caramel_Doré.jpg",
+      "local_path": "/app/backend/luxura_images/CLIP-IN_pictures/CLIP-IN_6_Caramel_Doré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_5b61b7d6874a47abb7997a78d99c7125~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_5b61b7d6874a47abb7997a78d99c7125~mv2.png",
+      "color_name": "Caramel Doré",
+      "product_name": "Extensions à Clips Sophia Caramel Doré #6",
+      "handle": "clip-in-sophia-caramel-doré-6"
+    },
+    "HPS": {
+      "filename": "CLIP-IN_HPS_Cendré_Étoilé.jpg",
+      "local_path": "/app/backend/luxura_images/CLIP-IN_pictures/CLIP-IN_HPS_Cendré_Étoilé.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_13645139441a4ad0bdae63bca7d65c37~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_13645139441a4ad0bdae63bca7d65c37~mv2.png",
+      "color_name": "Cendré Étoilé",
+      "product_name": "Extensions à Clips Sophia Cendré Étoilé #HPS",
+      "handle": "clip-in-sophia-cendré-étoilé-hps"
+    },
+    "18/22": {
+      "filename": "CLIP-IN_18-22_Champagne_Doré.jpg",
+      "local_path": "/app/backend/luxura_images/CLIP-IN_pictures/CLIP-IN_18-22_Champagne_Doré.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_ed52f5195856485796099c2a1823a0fd~mv2.png",
+      "color_name": "Champagne Doré",
+      "product_name": "Extensions à Clips Sophia Champagne Doré #18/22",
+      "handle": "clip-in-sophia-champagne-doré-18-22"
+    },
+    "3": {
+      "filename": "CLIP-IN_3_Châtaigne_Douce.jpg",
+      "local_path": "/app/backend/luxura_images/CLIP-IN_pictures/CLIP-IN_3_Châtaigne_Douce.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_d1bb2905a7b748f5ac4676d5c96bae2a~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_d1bb2905a7b748f5ac4676d5c96bae2a~mv2.png",
+      "color_name": "Châtaigne Douce",
+      "product_name": "Extensions à Clips Sophia Châtaigne Douce #3",
+      "handle": "clip-in-sophia-châtaigne-douce-3"
+    },
+    "613/18A": {
+      "filename": "CLIP-IN_613-18A_Diamant_Glacé.jpg",
+      "local_path": "/app/backend/luxura_images/CLIP-IN_pictures/CLIP-IN_613-18A_Diamant_Glacé.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_2fba27c18fe14584a828cfa9880a3146~mv2.png",
+      "color_name": "Diamant Glacé",
+      "product_name": "Extensions à Clips Sophia Diamant Glacé #613/18A",
+      "handle": "clip-in-sophia-diamant-glacé-613-18a"
+    },
+    "1B": {
+      "filename": "CLIP-IN_1B_Noir_Soie.jpg",
+      "local_path": "/app/backend/luxura_images/CLIP-IN_pictures/CLIP-IN_1B_Noir_Soie.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_42148bb43bbe484f9ca8f1127a4d30e4~mv2.png",
+      "color_name": "Noir Soie",
+      "product_name": "Extensions à Clips Sophia Noir Soie #1B",
+      "handle": "clip-in-sophia-noir-soie-1b"
+    },
+    "1": {
+      "filename": "CLIP-IN_1_Onyx_Noir.jpg",
+      "local_path": "/app/backend/luxura_images/CLIP-IN_pictures/CLIP-IN_1_Onyx_Noir.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_7c4c9a8b07484a5eb66b12e9b9322b4a~mv2.jpg/v1/fill/w_400,h_400,al_c,q_80/f1b961_7c4c9a8b07484a5eb66b12e9b9322b4a~mv2.jpg",
+      "color_name": "Onyx Noir",
+      "product_name": "Extensions à Clips Sophia Onyx Noir #1",
+      "handle": "clip-in-sophia-onyx-noir-1"
+    },
+    "60A": {
+      "filename": "CLIP-IN_60A_Platine_Pur.jpg",
+      "local_path": "/app/backend/luxura_images/CLIP-IN_pictures/CLIP-IN_60A_Platine_Pur.jpg",
+      "wix_url": "https://static.wixstatic.com/media/f1b961_1e9953c3551440479117fa2954918173~mv2.png/v1/fill/w_400,h_400,al_c,q_80/f1b961_1e9953c3551440479117fa2954918173~mv2.png",
+      "color_name": "Platine Pur",
+      "product_name": "Extensions à Clips Sophia Platine Pur #60A",
+      "handle": "clip-in-sophia-platine-pur-60a"
+    }
+  }
+}
