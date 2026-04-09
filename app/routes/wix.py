@@ -327,7 +327,21 @@ def sync_wix_to_luxura(
                     existing = sku_owner
 
                 # Récupérer la vraie quantité depuis inv_map AVANT update/create
-                it = inv_map.get(f"{wix_product_id}:{wix_variant_id}")
+                key = f"{wix_product_id}:{wix_variant_id}"
+                it = inv_map.get(key)
+                
+                # DEBUG: Logger si le mapping échoue
+                if it is None:
+                    log.warning("[WIX INV] No match for key=%s sku=%s - trying fallback by product_id only", key, sku)
+                    # FALLBACK: chercher par product_id seul (sans variant)
+                    for inv_key, inv_data in inv_map.items():
+                        if inv_key.startswith(f"{wix_product_id}:"):
+                            it = inv_data
+                            log.info("[WIX INV] Fallback found: %s -> qty=%s", inv_key, inv_data.get("qty"))
+                            break
+                else:
+                    log.info("[WIX INV] Match key=%s sku=%s qty=%s track=%s", key, sku, it.get("qty"), it.get("track"))
+                
                 real_qty = int((it or {}).get("qty") or 0)
                 track = bool((it or {}).get("track"))
 
