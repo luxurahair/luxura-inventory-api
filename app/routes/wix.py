@@ -280,6 +280,9 @@ def sync_wix_to_luxura(
                     if name:
                         cat_names.append(name)
             cat_names = sorted(set(cat_names)) if cat_names else []
+            
+            # Filtrer "All Products" des catégories
+            cat_names = [c for c in cat_names if c != "All Products"]
 
             variants = client.query_variants_v1(wix_product_id) or []
             for v in variants:
