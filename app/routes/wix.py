@@ -329,18 +329,38 @@ def sync_wix_to_luxura(
                 # Récupérer la vraie quantité depuis inv_map AVANT update/create
                 key = f"{wix_product_id}:{wix_variant_id}"
                 it = inv_map.get(key)
+                fallback_used = None
                 
                 # DEBUG: Logger si le mapping échoue
                 if it is None:
-                    log.warning("[WIX INV] No match for key=%s sku=%s - trying fallback by product_id only", key, sku)
-                    # FALLBACK: chercher par product_id seul (sans variant)
-                    for inv_key, inv_data in inv_map.items():
-                        if inv_key.startswith(f"{wix_product_id}:"):
-                            it = inv_data
-                            log.info("[WIX INV] Fallback found: %s -> qty=%s", inv_key, inv_data.get("qty"))
-                            break
+                    log.warning("[WIX INV] No exact match for key=%s sku=%s", key, sku)
+                    
+                    # FALLBACK 1: Chercher par SKU dans les vendor_sku de inv_map
+                    if sku:
+                        for inv_key, inv_data in inv_map.items():
+                            if inv_data.get("vendor_sku") == sku:
+                                it = inv_data
+                                fallback_used = f"SKU match: {inv_key}"
+                                log.info("[WIX INV] Fallback SKU match: %s -> qty=%s", inv_key, inv_data.get("qty"))
+                                break
+                    
+                    # FALLBACK 2: Chercher par product_id seul (prend le premier variant)
+                    if it is None:
+                        candidates = [(k, v) for k, v in inv_map.items() if k.startswith(f"{wix_product_id}:")]
+                        if candidates:
+                            # Préférer le variant avec qty > 0 si plusieurs
+                            candidates_with_qty = [(k, v) for k, v in candidates if v.get("qty", 0) > 0]
+                            if candidates_with_qty:
+                                inv_key, it = candidates_with_qty[0]
+                            else:
+                                inv_key, it = candidates[0]
+                            fallback_used = f"ProductID match: {inv_key}"
+                            log.info("[WIX INV] Fallback ProductID: %s -> qty=%s", inv_key, it.get("qty"))
+                    
+                    if it is None:
+                        log.warning("[WIX INV] NO inventory data found for sku=%s wix_id=%s", sku, wix_product_id)
                 else:
-                    log.info("[WIX INV] Match key=%s sku=%s qty=%s track=%s", key, sku, it.get("qty"), it.get("track"))
+                    log.debug("[WIX INV] Exact match key=%s sku=%s qty=%s", key, sku, it.get("qty"))
                 
                 real_qty = int((it or {}).get("qty") or 0)
                 track = bool((it or {}).get("track"))
