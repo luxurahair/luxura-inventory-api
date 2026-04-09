@@ -24,20 +24,6 @@ const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.
 const { width } = Dimensions.get('window');
 const LUXURA_LOGO = 'https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/i7uo40l8_Luxura%20Distribution%20-%20OR%20-%20PNG.png';
 
-// Helper function to get full image URL (handles both relative and absolute URLs)
-const getImageUrl = (imageUrl: string | undefined): string => {
-  if (!imageUrl) return '';
-  // If it's already an absolute URL, return as is
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    return imageUrl;
-  }
-  // If it's a relative URL (starts with /), prefix with API_URL
-  if (imageUrl.startsWith('/')) {
-    return `${API_URL}${imageUrl}`;
-  }
-  return imageUrl;
-};
-
 // ═══════════════════════════════════════════════════════════════
 // COLOR SYSTEM - Noms de luxe Luxura (copie locale pour affichage)
 // ═══════════════════════════════════════════════════════════════
@@ -656,7 +642,7 @@ export default function ProductScreen() {
         {/* Product Images */}
         <View style={styles.imageSection}>
           <Image
-            source={{ uri: getImageUrl(product.images[selectedImageIndex] || product.images[0]) }}
+            source={{ uri: product.images[selectedImageIndex] || product.images[0] }}
             style={styles.mainImage}
             contentFit="cover"
           />
@@ -679,7 +665,7 @@ export default function ProductScreen() {
                   selectedImageIndex === index && styles.thumbnailActive,
                 ]}
               >
-                <Image source={{ uri: getImageUrl(image) }} style={styles.thumbnailImage} contentFit="cover" />
+                <Image source={{ uri: image }} style={styles.thumbnailImage} contentFit="cover" />
               </TouchableOpacity>
             ))}
           </ScrollView>

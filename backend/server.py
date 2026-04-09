@@ -774,10 +774,9 @@ def get_product_image(handle: str, category: str, color_code: str = None) -> str
     Get product image based on color code and category.
     
     Priorité:
-    1. Image locale watermarkée (si disponible)
-    2. Image spécifique à la catégorie + code couleur (CATEGORY_SPECIFIC_IMAGES)
-    3. Image par code couleur universel (COLOR_CODE_IMAGES)
-    4. Image par défaut de la catégorie (CATEGORY_DEFAULT_IMAGES)
+    1. Image spécifique à la catégorie + code couleur (CATEGORY_SPECIFIC_IMAGES)
+    2. Image par code couleur universel (COLOR_CODE_IMAGES)
+    3. Image par défaut de la catégorie (CATEGORY_DEFAULT_IMAGES)
     
     Args:
         handle: Le handle Wix du produit
@@ -795,14 +794,7 @@ def get_product_image(handle: str, category: str, color_code: str = None) -> str
     color_code_lower = color_code.lower() if color_code else ""
     
     if color_code_lower:
-        # 1. PRIORITÉ: Chercher image locale watermarkée
-        local_filename = f"{category.lower()}_{color_code_lower.replace('/', '-')}.jpg"
-        local_path = PRODUCTS_IMG_DIR / local_filename
-        if local_path.exists():
-            # Retourner URL relative vers l'API qui sert les images
-            return f"/api/products/image/{category.lower()}/{color_code_lower.replace('/', '-')}"
-        
-        # 2. Chercher d'abord dans les images spécifiques à la catégorie
+        # 1. Chercher d'abord dans les images spécifiques à la catégorie
         if category in CATEGORY_SPECIFIC_IMAGES:
             cat_images = CATEGORY_SPECIFIC_IMAGES[category]
             if color_code_lower in cat_images:
@@ -810,11 +802,11 @@ def get_product_image(handle: str, category: str, color_code: str = None) -> str
             if "default" in cat_images:
                 return format_wix_image_url(cat_images["default"])
         
-        # 3. Chercher dans le mapping universel par code couleur
+        # 2. Chercher dans le mapping universel par code couleur
         if color_code_lower in COLOR_CODE_IMAGES:
             return format_wix_image_url(COLOR_CODE_IMAGES[color_code_lower])
     
-    # 4. Fallback: image par défaut de la catégorie
+    # 3. Fallback: image par défaut de la catégorie
     return format_wix_image_url(CATEGORY_DEFAULT_IMAGES.get(category, CATEGORY_DEFAULT_IMAGES["genius"]))
 
 # ==================== AUTH HELPERS ====================
