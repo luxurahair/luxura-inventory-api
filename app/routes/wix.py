@@ -408,6 +408,9 @@ def sync_wix_to_luxura(
 
     except Exception as e:
         db.rollback()
+        
+        # LOG LA STACKTRACE COMPLÈTE pour debug
+        log.exception("[WIX SYNC] ❌ Crash dans /wix/sync")
 
         # --- SyncRun: error ---
         try:
@@ -422,7 +425,7 @@ def sync_wix_to_luxura(
             db.add(run)
             db.commit()
         except Exception:
-            pass
+            log.exception("[WIX SYNC] Impossible d'enregistrer SyncRun en erreur")
 
         raise HTTPException(status_code=500, detail=str(e))
 
