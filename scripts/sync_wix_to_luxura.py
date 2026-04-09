@@ -89,80 +89,87 @@ def _upsert_product(db: Session, existing: Optional[Product], data: Dict[str, An
     clean_data.pop("_track_quantity", None)
     clean_data.pop("_quantity", None)
 
-    sku = (clean_data.get("sku") or "").strip() or None
+    incoming_sku = (clean_data.get("sku") or "").strip() or None
     wix_id = (clean_data.get("wix_id") or "").strip() or None
 
-    # PRIORITÉ 1: Si on a déjà trouvé un produit existant (par wix_id), on l'utilise
-    # Ne PAS re-chercher par SKU car cela causerait des conflits!
-    
-    # PRIORITÉ 2: Chercher par wix_id si pas déjà trouvé
+    # PRIORITÉ 1: Chercher par wix_id (le plus fiable)
     if not existing and wix_id:
         with db.no_autoflush:
             stmt = select(Product).where(Product.wix_id == wix_id)
             existing = db.exec(stmt).first()
             if existing:
-                print(f"[SYNC] Trouvé par wix_id: ID={existing.id}, SKU actuel={existing.sku}")
+                print(f"[SYNC] Trouvé par wix_id: ID={existing.id}, SKU actuel={existing.sku}, wix_id={wix_id}")
 
-    # PRIORITÉ 3: Chercher par SKU si toujours pas trouvé
-    if not existing and sku:
+    # PRIORITÉ 2: Chercher par SKU si toujours pas trouvé
+    if not existing and incoming_sku:
         with db.no_autoflush:
-            stmt = select(Product).where(Product.sku == sku)
+            stmt = select(Product).where(Product.sku == incoming_sku)
             existing = db.exec(stmt).first()
             if existing:
-                print(f"[SYNC] Trouvé par SKU: ID={existing.id}")
+                print(f"[SYNC] Trouvé par SKU: ID={existing.id}, SKU={incoming_sku}")
 
-    # Vérifier si le SKU qu'on veut assigner existe déjà sur UN AUTRE produit
-    if sku:
+    # ============================================================
+    # GESTION DES CONFLITS SKU - AVANT d'appliquer les modifications
+    # ============================================================
+    final_sku = incoming_sku
+    
+    if incoming_sku:
         with db.no_autoflush:
-            stmt = select(Product).where(Product.sku == sku)
+            stmt = select(Product).where(Product.sku == incoming_sku)
             sku_owner = db.exec(stmt).first()
             
-            # Si le SKU appartient à un autre produit (pas celui qu'on update)
-            if sku_owner and existing and sku_owner.id != existing.id:
-                # L'autre produit a le même wix_id → fusionner (supprimer le doublon)
-                if wix_id and sku_owner.wix_id == wix_id:
-                    print(f"[SYNC] Fusion: SKU={sku} existe sur ID={sku_owner.id}, update ID={existing.id}")
-                    db.delete(sku_owner)
-                    db.flush()
-                # Conflit réel → garder l'ancien SKU sur notre produit
-                else:
-                    print(f"[SYNC] ⚠️ Conflit SKU: {sku} appartient à ID={sku_owner.id}, on garde SKU actuel pour ID={existing.id}")
-                    # Ne pas changer le SKU - garder l'ancien
-                    if existing.sku:
-                        clean_data["sku"] = existing.sku
+            # Le SKU appartient à un AUTRE produit?
+            if sku_owner:
+                is_same_product = existing and sku_owner.id == existing.id
+                
+                if not is_same_product:
+                    # CAS 1: L'autre produit a le même wix_id → doublon à supprimer
+                    if wix_id and sku_owner.wix_id == wix_id:
+                        print(f"[SYNC] 🔄 Fusion doublon: SKU={incoming_sku} sur ID={sku_owner.id} sera supprimé, update vers ID={existing.id if existing else 'NEW'}")
+                        db.delete(sku_owner)
+                        db.flush()
+                        # Garder le SKU incoming
+                        final_sku = incoming_sku
+                    
+                    # CAS 2: Conflit réel - le SKU appartient à un produit différent
                     else:
-                        # Générer un SKU unique
-                        counter = 1
-                        while True:
-                            new_sku = f"{sku}-{existing.id}"
-                            with db.no_autoflush:
-                                stmt = select(Product).where(Product.sku == new_sku)
-                                if not db.exec(stmt).first():
-                                    break
-                            counter += 1
-                        print(f"[SYNC] Nouveau SKU généré: {new_sku}")
-                        clean_data["sku"] = new_sku
-            
-            # Si on insère un nouveau produit et le SKU existe déjà
-            elif sku_owner and not existing:
-                # Générer un SKU unique pour le nouveau produit
-                counter = 1
-                original_sku = sku
-                while True:
-                    new_sku = f"{original_sku}-NEW{counter}"
-                    with db.no_autoflush:
-                        stmt = select(Product).where(Product.sku == new_sku)
-                        if not db.exec(stmt).first():
-                            break
-                    counter += 1
-                print(f"[SYNC] Nouveau produit, SKU conflit: {original_sku} → {new_sku}")
-                clean_data["sku"] = new_sku
+                        if existing and existing.sku:
+                            # Garder l'ancien SKU du produit existant
+                            print(f"[SYNC] ⚠️ Conflit SKU: {incoming_sku} appartient à ID={sku_owner.id} (wix_id={sku_owner.wix_id})")
+                            print(f"[SYNC] → On garde le SKU actuel: {existing.sku} pour ID={existing.id}")
+                            final_sku = existing.sku
+                        else:
+                            # Générer un SKU unique basé sur l'ID du produit
+                            product_id = existing.id if existing else "NEW"
+                            new_sku = f"{incoming_sku}-ID{product_id}"
+                            
+                            # Vérifier que ce nouveau SKU n'existe pas non plus
+                            counter = 1
+                            while True:
+                                with db.no_autoflush:
+                                    stmt = select(Product).where(Product.sku == new_sku)
+                                    if not db.exec(stmt).first():
+                                        break
+                                new_sku = f"{incoming_sku}-ID{product_id}-{counter}"
+                                counter += 1
+                            
+                            print(f"[SYNC] ⚠️ Conflit SKU: {incoming_sku} appartient à ID={sku_owner.id}")
+                            print(f"[SYNC] → Nouveau SKU généré: {new_sku}")
+                            final_sku = new_sku
+    
+    # Appliquer le SKU final (résolu)
+    clean_data["sku"] = final_sku
 
+    # ============================================================
+    # UPDATE ou INSERT
+    # ============================================================
     if existing:
+        print(f"[SYNC] UPDATE ID={existing.id}: SKU {existing.sku} → {final_sku}, wix_id={wix_id}")
         for field, value in clean_data.items():
             setattr(existing, field, value)
         return existing
 
+    print(f"[SYNC] INSERT nouveau produit: SKU={final_sku}, wix_id={wix_id}")
     prod = Product(**clean_data)
     db.add(prod)
     return prod
