@@ -125,13 +125,30 @@ def _upsert_product(db: Session, existing: Optional[Product], data: Dict[str, An
                 if not is_same_product:
                     # CAS 1: L'autre produit a le même wix_id → doublon à supprimer
                     if wix_id and sku_owner.wix_id == wix_id:
-                        print(f"[SYNC] 🔄 Fusion doublon: SKU={incoming_sku} sur ID={sku_owner.id} sera supprimé, update vers ID={existing.id if existing else 'NEW'}")
-                        db.delete(sku_owner)
-                        db.flush()
-                        # Garder le SKU incoming
-                        final_sku = incoming_sku
+                        try:
+                            print(f"[SYNC] 🔄 Fusion doublon: SKU={incoming_sku} sur ID={sku_owner.id} sera supprimé, update vers ID={existing.id if existing else 'NEW'}")
+                            db.delete(sku_owner)
+                            db.flush()
+                            # Vérifier que la suppression a réellement fonctionné
+                            with db.no_autoflush:
+                                stmt_verify = select(Product).where(Product.sku == incoming_sku)
+                                if not db.exec(stmt_verify).first():
+                                    final_sku = incoming_sku
+                                    print(f"[SYNC] ✅ Doublon supprimé, SKU {incoming_sku} disponible")
+                                else:
+                                    raise Exception("SKU existe toujours après suppression")
+                        except Exception as e:
+                            print(f"[SYNC] ⚠️ Échec suppression doublon: {e}")
+                            # Fallback: résolution de conflit comme CAS 2
+                            if existing and existing.sku:
+                                final_sku = existing.sku
+                                print(f"[SYNC] → Fallback: on garde SKU actuel {existing.sku}")
+                            else:
+                                product_id = existing.id if existing else "NEW"
+                                final_sku = f"{incoming_sku}-ID{product_id}"
+                                print(f"[SYNC] → Fallback: nouveau SKU {final_sku}")
                     
-                    # CAS 2: Conflit réel - le SKU appartient à un produit différent
+                    # CAS 2: Conflit réel - le SKU appartient à un produit différent (wix_id différent)
                     else:
                         if existing and existing.sku:
                             # Garder l'ancien SKU du produit existant
