@@ -21,6 +21,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
+// Helper function to get full image URL (handles both relative and absolute URLs)
+const getImageUrl = (imageUrl: string | undefined): string => {
+  if (!imageUrl) return '';
+  // If it's already an absolute URL, return as is
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  // If it's a relative URL (starts with /), prefix with API_URL
+  if (imageUrl.startsWith('/')) {
+    return `${API_URL}${imageUrl}`;
+  }
+  return imageUrl;
+};
+
 // Use fixed width for consistent layout on web and mobile
 const getCardWidth = () => {
   const screenWidth = Dimensions.get('window').width;
@@ -105,7 +119,7 @@ export default function CatalogueScreen() {
       >
         <View style={[styles.imageContainer, { width: CARD_WIDTH, height: CARD_WIDTH }]}>
           <Image
-            source={{ uri: product.images?.[0] }}
+            source={{ uri: getImageUrl(product.images?.[0]) }}
             style={{ width: CARD_WIDTH, height: CARD_WIDTH }}
             contentFit="cover"
           />

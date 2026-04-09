@@ -79,6 +79,10 @@ app = FastAPI(
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 
+# Dossier pour les images de produits watermarkées
+PRODUCTS_IMG_DIR = STATIC_DIR / "products"
+PRODUCTS_IMG_DIR.mkdir(exist_ok=True)
+
 @app.get("/api/static/{filename}")
 async def serve_static_file(filename: str):
     """Sert les fichiers statiques (images générées)"""
@@ -86,6 +90,25 @@ async def serve_static_file(filename: str):
     if file_path.exists():
         return FileResponse(file_path)
     raise HTTPException(status_code=404, detail="File not found")
+
+@app.get("/api/products/image/{category}/{color_code}")
+async def serve_product_image(category: str, color_code: str):
+    """
+    Sert les images de produits watermarkées locales.
+    Format: /api/products/image/genius/cacao -> genius_cacao.jpg
+    """
+    # Normalize the color code and category
+    cat_lower = category.lower()
+    color_lower = color_code.lower().replace('/', '-')
+    
+    filename = f"{cat_lower}_{color_lower}.jpg"
+    file_path = PRODUCTS_IMG_DIR / filename
+    
+    if file_path.exists():
+        return FileResponse(file_path, media_type="image/jpeg")
+    
+    # If not found, return 404
+    raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
 
 # Variable globale pour le scheduler
 blog_scheduler = None
@@ -751,9 +774,10 @@ def get_product_image(handle: str, category: str, color_code: str = None) -> str
     Get product image based on color code and category.
     
     Priorité:
-    1. Image spécifique à la catégorie + code couleur (CATEGORY_SPECIFIC_IMAGES)
-    2. Image par code couleur universel (COLOR_CODE_IMAGES)
-    3. Image par défaut de la catégorie (CATEGORY_DEFAULT_IMAGES)
+    1. Image locale watermarkée (si disponible)
+    2. Image spécifique à la catégorie + code couleur (CATEGORY_SPECIFIC_IMAGES)
+    3. Image par code couleur universel (COLOR_CODE_IMAGES)
+    4. Image par défaut de la catégorie (CATEGORY_DEFAULT_IMAGES)
     
     Args:
         handle: Le handle Wix du produit
@@ -771,7 +795,14 @@ def get_product_image(handle: str, category: str, color_code: str = None) -> str
     color_code_lower = color_code.lower() if color_code else ""
     
     if color_code_lower:
-        # 1. Chercher d'abord dans les images spécifiques à la catégorie
+        # 1. PRIORITÉ: Chercher image locale watermarkée
+        local_filename = f"{category.lower()}_{color_code_lower.replace('/', '-')}.jpg"
+        local_path = PRODUCTS_IMG_DIR / local_filename
+        if local_path.exists():
+            # Retourner URL relative vers l'API qui sert les images
+            return f"/api/products/image/{category.lower()}/{color_code_lower.replace('/', '-')}"
+        
+        # 2. Chercher d'abord dans les images spécifiques à la catégorie
         if category in CATEGORY_SPECIFIC_IMAGES:
             cat_images = CATEGORY_SPECIFIC_IMAGES[category]
             if color_code_lower in cat_images:
@@ -779,11 +810,11 @@ def get_product_image(handle: str, category: str, color_code: str = None) -> str
             if "default" in cat_images:
                 return format_wix_image_url(cat_images["default"])
         
-        # 2. Chercher dans le mapping universel par code couleur
+        # 3. Chercher dans le mapping universel par code couleur
         if color_code_lower in COLOR_CODE_IMAGES:
             return format_wix_image_url(COLOR_CODE_IMAGES[color_code_lower])
     
-    # 3. Fallback: image par défaut de la catégorie
+    # 4. Fallback: image par défaut de la catégorie
     return format_wix_image_url(CATEGORY_DEFAULT_IMAGES.get(category, CATEGORY_DEFAULT_IMAGES["genius"]))
 
 # ==================== AUTH HELPERS ====================
