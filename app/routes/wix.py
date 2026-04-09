@@ -326,6 +326,11 @@ def sync_wix_to_luxura(
                         db.flush()
                     existing = sku_owner
 
+                # Récupérer la vraie quantité depuis inv_map AVANT update/create
+                it = inv_map.get(f"{wix_product_id}:{wix_variant_id}")
+                real_qty = int((it or {}).get("qty") or 0)
+                track = bool((it or {}).get("track"))
+
                 # update/create
                 prod: Optional[Product] = None
                 if existing:
@@ -333,10 +338,16 @@ def sync_wix_to_luxura(
                     if not dry_run:
                         for k, val in data.items():
                             setattr(existing, k, val)
+                        # IMPORTANT: Mettre à jour product.quantity avec la vraie quantité
+                        existing.quantity = real_qty
+                        existing.is_in_stock = real_qty > 0
                     prod = existing
                 else:
                     created += 1
                     if not dry_run:
+                        # IMPORTANT: Injecter la vraie quantité dans le nouveau produit
+                        data["quantity"] = real_qty
+                        data["is_in_stock"] = real_qty > 0
                         prod = Product(**data)
                         db.add(prod)
                         db.flush()
@@ -344,12 +355,10 @@ def sync_wix_to_luxura(
                     else:
                         prod = None
 
-                # inventaire entrepot
-                it = inv_map.get(f"{wix_product_id}:{wix_variant_id}")
-                if it and it.get("track"):
+                # inventaire entrepot (toujours écrire, même si track=False)
+                if not dry_run and prod is not None:
+                    upsert_inventory_entrepot(db, entrepot.id, prod.id, real_qty)
                     inv_written += 1
-                    if not dry_run and prod is not None:
-                        upsert_inventory_entrepot(db, entrepot.id, prod.id, int(it.get("qty") or 0))
 
         if not dry_run:
             db.commit()
