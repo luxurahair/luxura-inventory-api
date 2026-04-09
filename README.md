@@ -1,4 +1,4 @@
-# 🌟 Luxura Distribution - Système d'Automatisation Wix & Marketing
+# 🌟 Luxura Distribution - Application Mobile & Système d'Automatisation
 
 > **Plateforme complète** de gestion automatisée pour extensions capillaires professionnelles au Québec.
 
@@ -6,318 +6,404 @@
 
 ## 📋 Table des matières
 
-1. [Vue d'ensemble](#vue-densemble)
-2. [🆕 Nouvelles fonctionnalités](#-nouvelles-fonctionnalités)
-3. [Facebook Marketing](#-facebook-marketing)
-4. [SEO Image Optimizer](#-seo-image-optimizer)
-5. [Vidéos Marketing AI](#-vidéos-marketing-ai)
-6. [Capacités SEO Wix](#capacités-seo-wix)
-7. [Blog Automation](#blog-automation)
-8. [API Endpoints](#api-endpoints)
-9. [Configuration](#configuration)
-10. [Commandes utiles](#commandes-utiles)
+1. [Architecture Globale](#architecture-globale)
+2. [Stack Technique](#stack-technique)
+3. [Variables d'Environnement](#variables-denvironnement)
+4. [Configuration Supabase](#configuration-supabase)
+5. [Configuration Render](#configuration-render)
+6. [API Endpoints](#api-endpoints)
+7. [Application Mobile](#application-mobile)
+8. [Commandes Utiles](#commandes-utiles)
 
 ---
 
-## 🎯 Vue d'ensemble
+## 🏗️ Architecture Globale
 
-Ce système permet de :
-- ✅ **Publier automatiquement sur Facebook** via API Graph
-- ✅ **Générer des noms d'images SEO-friendly** géolocalisés (Québec, Beauce, Lévis...)
-- ✅ **Créer des vidéos marketing AI** avec Fal.ai
-- ✅ **Modifier automatiquement les produits Wix** (noms, descriptions, SKUs)
-- ✅ **Générer et publier des articles de blog** SEO-optimisés
-- ✅ **Synchroniser l'inventaire** entre Wix et la base locale
-- ✅ **Recolorer des images produits** avec le Color Engine PRO
-
----
-
-## 🆕 Nouvelles fonctionnalités
-
-### Avril 2025
-
-| Fonctionnalité | Description | Statut |
-|----------------|-------------|--------|
-| **Facebook Auto-Post** | Publication automatique sur la page FB Luxura | ✅ Live |
-| **SEO Image Optimizer** | Génération de noms de fichiers SEO géolocalisés | ✅ Live |
-| **Vidéos AI Marketing** | Génération de vidéos promotionnelles avec Fal.ai | ✅ Live |
-| **Color Engine PRO** | Recoloration d'images produits (OpenCV/Streamlit) | ✅ Prêt |
-
----
-
-## 📘 Facebook Marketing
-
-### Endpoints disponibles
-
-| Endpoint | Méthode | Description |
-|----------|---------|-------------|
-| `/facebook/status` | GET | Vérifier la connexion Facebook |
-| `/facebook/test` | GET | Test rapide de la connexion |
-| `/facebook/post` | POST | Publier un message/lien/image |
-| `/facebook/post-blog` | POST | Publier un article de blog formaté |
-
-### Utilisation
-
-```bash
-# Vérifier le statut (Local ou Render)
-curl https://luxura-inventory-api.onrender.com/facebook/status
-
-# Publier un message
-curl -X POST "https://luxura-inventory-api.onrender.com/facebook/post" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "✨ Nouvelles extensions Genius disponibles!\n\n#LuxuraDistribution #Quebec",
-    "link": "https://www.luxuradistribution.com/genius"
-  }'
-
-# Publier un article de blog
-curl -X POST "https://luxura-inventory-api.onrender.com/facebook/post-blog" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Guide entretien extensions",
-    "excerpt": "Découvrez nos conseils pour...",
-    "url": "https://www.luxuradistribution.com/blog/guide-entretien"
-  }'
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        LUXURA DISTRIBUTION                               │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌──────────────────┐      ┌──────────────────┐      ┌────────────────┐ │
+│  │   EXPO MOBILE    │      │  FASTAPI PROXY   │      │   RENDER API   │ │
+│  │   /app/frontend  │ ──▶  │  /app/backend    │ ──▶  │   (External)   │ │
+│  │                  │      │                  │      │                │ │
+│  │  • React Native  │      │  • Port 8001     │      │  luxura-       │ │
+│  │  • Expo Router   │      │  • MongoDB local │      │  inventory-api │ │
+│  │  • Zustand       │      │  • Auth/Cart     │      │                │ │
+│  │  • Port 3000     │      │  • Blog CRON     │      │  • Wix Sync    │ │
+│  └──────────────────┘      └──────────────────┘      │  • Supabase DB │ │
+│           │                         │                │  • Facebook    │ │
+│           │                         │                └────────────────┘ │
+│           │                         │                        │          │
+│           ▼                         ▼                        ▼          │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │                         BASES DE DONNÉES                          │   │
+│  ├──────────────────────────────────────────────────────────────────┤   │
+│  │  MongoDB (Local)           │    Supabase (Cloud - PostgreSQL)    │   │
+│  │  • Users                   │    • Products (Wix sync)            │   │
+│  │  • Sessions                │    • Inventory_items                │   │
+│  │  • Cart items              │    • Salons                         │   │
+│  │  • Blog drafts             │    • Categories                     │   │
+│  │  • Marketing jobs          │    • Blog posts                     │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │                    INTÉGRATIONS EXTERNES                          │   │
+│  ├──────────────────────────────────────────────────────────────────┤   │
+│  │  Wix Store API  │  Facebook Graph  │  OpenAI GPT  │  Fal.ai     │   │
+│  │  • Products     │  • Page posts    │  • Blog gen  │  • Videos   │   │
+│  │  • Inventory    │  • Scheduling    │  • SEO       │  • Images   │   │
+│  │  • Blog posts   │                  │              │             │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Configuration Facebook
+---
 
-Variables d'environnement requises sur **Render** :
+## 🛠️ Stack Technique
+
+### Frontend (Application Mobile)
+| Composant | Technologie | Version |
+|-----------|-------------|---------|
+| Framework | Expo (React Native) | SDK 52 |
+| Routing | expo-router | 4.x |
+| State | Zustand | 5.x |
+| UI | React Native + Custom |
+| Images | expo-image | 2.x |
+| Auth | Google OAuth (Emergent) |
+
+### Backend Local (Proxy)
+| Composant | Technologie | Version |
+|-----------|-------------|---------|
+| Framework | FastAPI | 0.115+ |
+| Database | MongoDB | 7.x |
+| Auth | JWT Sessions |
+| Scheduler | APScheduler | 3.x |
+
+### Backend Render (API Principale)
+| Composant | Technologie |
+|-----------|-------------|
+| Framework | FastAPI |
+| Database | Supabase (PostgreSQL) |
+| ORM | SQLModel |
+| Hosting | Render.com |
+
+---
+
+## 🔐 Variables d'Environnement
+
+### Frontend (`/app/frontend/.env`)
 ```env
+EXPO_TUNNEL_SUBDOMAIN=hair-extensions-shop
+EXPO_PACKAGER_HOSTNAME=https://hair-extensions-shop.preview.emergentagent.com
+EXPO_PUBLIC_BACKEND_URL=https://hair-extensions-shop.preview.emergentagent.com
+EXPO_USE_FAST_RESOLVER="1"
+METRO_CACHE_ROOT=/app/frontend/.metro-cache
+```
+
+### Backend Local (`/app/backend/.env`)
+```env
+# === MONGODB (Local) ===
+MONGO_URL="mongodb://localhost:27017"
+DB_NAME="test_database"
+
+# === AI / LLM ===
+EMERGENT_LLM_KEY=sk-emergent-xxxxx
+OPENAI_API_KEY=sk-proj-xxxxx
+
+# === WIX API ===
+WIX_API_KEY=IST.eyJ...
+WIX_SITE_ID=6e62c946-d068-45c1-8f5f-7af998f0d7b3
+WIX_INSTANCE_ID=ab8a5a88-69a5-4348-ad2e-06017de46f57
+WIX_CLIENT_ID=1969322e-ef8d-4aa4-90e1-d6fd3eb994ff
+WIX_CLIENT_SECRET=58e2d7b7-5a8d-44dc-bd74-b9e0c37c58fc
+WIX_ACCOUNT_ID=f1b961ed-82d6-4b38-967b-557a0c345165
+WIX_OAUTH_SCOPES=SCOPE.DC-STORES-MEGA.MANAGE-STORES
+WIX_REDIRECT_URL=https://luxura-inventory-api.onrender.com/wix/oauth/callback
+
+# === SUPABASE ===
+DATABASE_URL=postgresql+psycopg://postgres.xxxxx:password@aws-1-ca-central-1.pooler.supabase.com:5432/postgres?sslmode=require
+
+# === FACEBOOK ===
 FB_PAGE_ID=1838415193042352
 FB_PAGE_ACCESS_TOKEN=EAAU4dnLcR8IB...
+
+# === FAL.AI (Video Generation) ===
+FAL_KEY=xxxxx:xxxxx
+
+# === EMAIL (IMAP/SMTP) ===
+LUXURA_EMAIL=info@luxuradistribution.com
+LUXURA_APP_PASSWORD=xxxxx
+EMAIL_USERNAME=info@luxuradistribution.com
+EMAIL_PASSWORD=xxxxx
+IMAP_HOST=imap.gmail.com
+IMAP_PORT=993
+
+# === GOOGLE DRIVE ===
+GOOGLE_DRIVE_FOLDER_ID=0AP66guFE3lalUk9PVA
+GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+
+# === SECRETS ===
+WIX_PUSH_SECRET=xxxxx
+SEO_SECRET=xxxxx
+
+# === INVENTAIRE ===
+LUXURA_SALON_ID=4
 ```
 
 ---
 
-## 🔍 SEO Image Optimizer
+## 🗄️ Configuration Supabase
 
-### Génération de noms de fichiers SEO
+### Accès Dashboard
+- **URL:** https://supabase.com/dashboard/project/cpnwntahrkfpenjsqzsy
+- **Projet:** `cpnwntahrkfpenjsqzsy`
+- **Région:** `aws-1-ca-central-1` (Montréal)
 
-L'outil génère automatiquement des noms de fichiers optimisés avec :
-- Rotation "rallonge" / "extension"
-- Régions géolocalisées (Québec, Beauce, Lévis, Chaudière-Appalaches...)
-- Noms de couleurs en français
-
-### Endpoints
-
-| Endpoint | Méthode | Description |
-|----------|---------|-------------|
-| `/api/seo/filename-generator` | GET | Génère des noms SEO pour plusieurs couleurs |
-| `/api/seo/config` | GET | Configuration SEO disponible |
-| `/api/seo/image/generate` | POST | Génère les données SEO complètes |
-| `/api/seo/image/preview` | GET | Prévisualise toutes les variations |
-
-### Utilisation
-
-```bash
-# Générer des noms pour les produits Genius
-curl "http://localhost:8001/api/seo/filename-generator?product_type=genius&color_codes=1,6,60a,hps"
-
-# Résultat:
-# luxura-rallonge-genius-noir-fonce-quebec-20po.jpg
-# luxura-extension-genius-noir-fonce-beauce-20po.jpg
-# luxura-rallonge-genius-noir-fonce-levis-20po.jpg
+### Connection String
+```
+postgresql://postgres.cpnwntahrkfpenjsqzsy:[PASSWORD]@aws-1-ca-central-1.pooler.supabase.com:5432/postgres
 ```
 
-### Régions supportées
+### Tables Principales
+| Table | Description | Colonnes clés |
+|-------|-------------|---------------|
+| `product` | Produits synchronisés depuis Wix | `id`, `wix_id`, `sku`, `name`, `category`, `quantity`, `price` |
+| `inventory_item` | Stock par salon | `product_id`, `salon_id`, `quantity` |
+| `salon` | Liste des salons partenaires | `id`, `name`, `email`, `is_active` |
+| `blog` | Articles de blog | `id`, `title`, `content`, `wix_post_id` |
 
-```python
-GEO_REGIONS = [
-    "Québec", "Beauce", "Lévis", "Chaudière-Appalaches", 
-    "Rive-Sud", "St-Georges", "Thetford", "Montmagny",
-    "Trois-Rivières", "Montréal", "Sherbrooke", "Gatineau", "Saguenay"
-]
-```
-
----
-
-## 🎬 Vidéos Marketing AI
-
-### Génération avec Fal.ai
-
-Le système peut générer des vidéos promotionnelles à partir d'images produits.
-
-```bash
-# Générer une vidéo pour un produit
-curl -X POST "http://localhost:8001/api/video/generate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "image_url": "https://static.wixstatic.com/media/...",
-    "prompt": "Elegant hair flowing in slow motion, luxury salon ambiance"
-  }'
-```
-
-### Vidéos générées
-
-| Collection | Couleur | Durée | Statut |
-|------------|---------|-------|--------|
-| Genius | Onyx Noir (#1) | 5s | ✅ Généré |
-| Genius | Espresso (#2) | 5s | ✅ Généré |
-| Genius | Blond Platine (#60a) | 5s | ✅ Généré |
-| ... | ... | ... | ... |
-
----
-
-## 🔧 Capacités SEO Wix
-
-### Push SEO Global
-
-```bash
-# Via l'API Render (recommandé)
-curl -X POST "https://luxura-inventory-api.onrender.com/wix/seo/push_preview" \
-  -H "Content-Type: application/json" \
-  -d '{"limit": 10}'
-
-# Appliquer les changements
-curl -X POST "https://luxura-inventory-api.onrender.com/wix/seo/push_apply" \
-  -H "Content-Type: application/json" \
-  -d '{"confirm": true, "limit": 10}'
-```
-
-### Types de produits supportés
-
-```python
-TYPE_META = {
-    "halo": {"label": "Halo", "series": "Everly"},
-    "genius": {"label": "Genius", "series": "Vivian"},
-    "tape": {"label": "Tape", "series": "Aurora"},
-    "i-tip": {"label": "I-Tip", "series": "Eleanor"},
-    "ponytail": {"label": "Ponytail", "series": "Victoria"},
-    "clip-in": {"label": "Clip-In", "series": "Sophia"},
-    "hand-tied": {"label": "Hand-Tied", "series": "Aurora"},
-}
+### Schéma Product
+```sql
+CREATE TABLE product (
+    id SERIAL PRIMARY KEY,
+    wix_id VARCHAR(255) UNIQUE,
+    wix_variant_id VARCHAR(255),
+    sku VARCHAR(100),
+    name VARCHAR(500),
+    handle VARCHAR(500),
+    description TEXT,
+    price DECIMAL(10,2),
+    quantity INTEGER DEFAULT 0,
+    category VARCHAR(100),  -- genius, halo, tape, i-tip, etc.
+    is_in_stock BOOLEAN DEFAULT true,
+    options JSONB,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
 ---
 
-## 📝 Blog Automation
+## 🚀 Configuration Render
 
-### Calendrier éditorial
+### Service Principal
+- **URL:** https://luxura-inventory-api.onrender.com
+- **Repo GitHub:** luxura-inventory-api
+- **Type:** Web Service (Python)
+- **Region:** Oregon (US West)
 
-| Jour | Heure | Type | Audience |
-|------|-------|------|----------|
-| Lundi | 07:00 | Transformation | Femmes |
-| Mardi | 12:00 | Cheveux fins | Femmes |
-| Mercredi | 19:00 | Comparatif | Femmes |
-| Jeudi | 07:00 | B2B Salon | Salons |
-| Vendredi | 12:00 | Tendances | Femmes |
-| Samedi | 10:00 | Inspiration | Femmes |
-| Dimanche | 20:00 | Témoignages | Femmes |
+### Variables Render (Environment)
+```env
+# Base de données
+DATABASE_URL=postgresql+psycopg://...
 
-### Génération manuelle
+# Wix
+WIX_API_KEY=IST.eyJ...
+WIX_SITE_ID=...
+WIX_CLIENT_ID=...
+WIX_CLIENT_SECRET=...
+WIX_ACCOUNT_ID=...
 
-```bash
-# Générer un brouillon
-curl -X POST "http://localhost:8001/api/blog/generate" \
-  -H "Content-Type: application/json" \
-  -d '{"category": "entretien", "auto_publish": false}'
+# Facebook
+FB_PAGE_ID=...
+FB_PAGE_ACCESS_TOKEN=...
 
-# Publier un brouillon
-curl -X POST "http://localhost:8001/api/blog/publish/{draft_id}"
+# Secrets
+SEO_SECRET=...
+WIX_PUSH_SECRET=...
+
+# Email
+LUXURA_EMAIL=...
+LUXURA_APP_PASSWORD=...
+```
+
+### CRON Jobs (Render)
+| Job | Fréquence | Endpoint | Description |
+|-----|-----------|----------|-------------|
+| Wix Sync | Toutes les 15 min | `POST /wix/sync` | Synchronise produits Wix → Supabase |
+| Keep Alive | Toutes les 10 min | `GET /health` | Garde le service actif |
+
+### Fichier cron.yaml (Render)
+```yaml
+jobs:
+  - name: wix-sync
+    schedule: "*/15 * * * *"
+    command: "python scripts/sync_wix_to_luxura.py"
+    env:
+      X-SEO-SECRET: ${SEO_SECRET}
 ```
 
 ---
 
 ## 🔌 API Endpoints
 
-### Local (http://localhost:8001/api)
+### Backend Local (http://localhost:8001/api)
 
-| Catégorie | Endpoint | Méthode | Description |
-|-----------|----------|---------|-------------|
-| **Facebook** | `/facebook/status` | GET | Statut connexion FB |
-| **Facebook** | `/facebook/post` | POST | Publier sur FB |
-| **SEO** | `/seo/filename-generator` | GET | Noms fichiers SEO |
-| **SEO** | `/seo/config` | GET | Config SEO |
-| **Blog** | `/blog/generate` | POST | Générer brouillon |
-| **Blog** | `/blog/publish/{id}` | POST | Publier brouillon |
-| **Produits** | `/products` | GET | Liste produits |
-| **Wix** | `/wix/capabilities` | GET | Capacités API Wix |
+#### Authentification
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/auth/session` | POST | Échange session_id pour token |
+| `/auth/me` | GET | Utilisateur courant |
+| `/auth/logout` | POST | Déconnexion |
 
-### Render (https://luxura-inventory-api.onrender.com)
+#### Produits (Proxy vers Luxura API)
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/products` | GET | Liste tous les produits |
+| `/products?category=halo` | GET | Filtre par catégorie |
+| `/products/{handle}` | GET | Détail produit par handle |
+| `/categories` | GET | Liste des catégories |
 
-| Catégorie | Endpoint | Méthode | Description |
-|-----------|----------|---------|-------------|
-| **Facebook** | `/facebook/status` | GET | Statut connexion FB |
-| **Facebook** | `/facebook/post` | POST | Publier sur FB |
-| **Facebook** | `/facebook/post-blog` | POST | Publier blog sur FB |
-| **Wix SEO** | `/wix/seo/push_preview` | POST | Prévisualiser SEO |
-| **Wix SEO** | `/wix/seo/push_apply` | POST | Appliquer SEO |
-| **Wix Token** | `/wix/token` | POST | Refresh OAuth token |
-| **Produits** | `/products` | GET | Liste produits sync |
+#### Panier
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/cart` | GET | Contenu du panier |
+| `/cart` | POST | Ajouter au panier |
+| `/cart/{id}` | PUT | Modifier quantité |
+| `/cart/{id}` | DELETE | Supprimer item |
+
+#### Blog
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/blog/posts` | GET | Liste des articles |
+| `/blog/posts/{id}` | GET | Détail article |
+| `/blog/generate` | POST | Générer brouillon AI |
+| `/blog/drafts` | GET | Brouillons en attente |
+
+#### Marketing
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/marketing/jobs` | GET | Jobs marketing actifs |
+| `/marketing/generate-legend` | POST | Générer légende social |
+| `/facebook/post` | POST | Publier sur Facebook |
+
+### Render API (https://luxura-inventory-api.onrender.com)
+
+#### Synchronisation Wix
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/wix/sync` | POST | Déclenche sync manuelle |
+| `/wix/token` | POST | Refresh OAuth token |
+| `/wix/capabilities` | GET | Capacités API Wix |
+
+#### Inventaire
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/products` | GET | Tous les produits |
+| `/inventory/view` | GET | Vue inventaire complète |
+| `/inventory/export.xlsx` | GET | Export Excel |
+
+#### Facebook
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/facebook/status` | GET | Statut connexion |
+| `/facebook/post` | POST | Publier message |
+| `/facebook/post-blog` | POST | Publier article |
 
 ---
 
-## ⚙️ Configuration
+## 📱 Application Mobile
 
-### Variables d'environnement (/app/backend/.env)
-
-```env
-# === WIX API ===
-WIX_API_KEY=IST.eyJ...
-WIX_SITE_ID=6e62c946-d068-45c1-8f5f-7af998f0d7b3
-
-# === FACEBOOK ===
-FB_PAGE_ID=1838415193042352
-FB_PAGE_ACCESS_TOKEN=EAAU4dnLcR8IB...
-
-# === OPENAI (via Emergent) ===
-EMERGENT_LLM_KEY=...
-
-# === FAL.AI (Vidéos) ===
-FAL_KEY=...
-
-# === GOOGLE DRIVE (Marketing Ads) ===
-GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"luxura-marketing",...}
-GOOGLE_DRIVE_FOLDER_ID=0AP66guFE3lalUk9PVA
-
-# === MONGODB ===
-MONGO_URL=mongodb://...
-DB_NAME=luxura_db
-
-# === RENDER API ===
-LUXURA_API_URL=https://luxura-inventory-api.onrender.com
-
-# === EMAIL ===
-LUXURA_EMAIL=info@luxuradistribution.com
-LUXURA_APP_PASSWORD=...
+### Navigation (Expo Router)
+```
+/app/frontend/app/
+├── (tabs)/
+│   ├── _layout.tsx      # Tab navigator
+│   ├── index.tsx        # Accueil
+│   ├── catalogue.tsx    # Catalogue produits
+│   ├── salons.tsx       # Carte des salons
+│   ├── blog.tsx         # Articles de blog
+│   └── profile.tsx      # Profil utilisateur
+├── product/
+│   └── [id].tsx         # Page détail produit
+├── blog/
+│   └── [id].tsx         # Page détail article
+├── cart.tsx             # Panier
+├── login.tsx            # Connexion
+├── marketing.tsx        # Dashboard marketing (admin)
+└── admin.tsx            # Admin panel
 ```
 
+### Stores Zustand
+| Store | Fichier | Usage |
+|-------|---------|-------|
+| authStore | `/src/store/authStore.ts` | Auth, session, user |
+| cartStore | `/src/store/cartStore.ts` | Panier, count |
+
+### Catégories Produits
+| ID | Nom | Série |
+|----|-----|-------|
+| `genius` | Genius Weft | Vivian |
+| `halo` | Halo | Everly |
+| `tape` | Bande Adhésive | Aurora |
+| `i-tip` | I-Tip Kératine | Eleanor |
+| `ponytail` | Queue de Cheval | Victoria |
+| `clip-in` | Extensions Clips | Sophia |
+| `essentiels` | Accessoires | - |
+
 ---
 
-## 🚀 Commandes utiles
+## 🚀 Commandes Utiles
 
-### Redémarrer les services
-
+### Services
 ```bash
-# Backend
+# Redémarrer backend
 sudo supervisorctl restart backend
 
-# Frontend Expo
+# Redémarrer frontend Expo
 sudo supervisorctl restart expo
+
+# Voir statut tous les services
+sudo supervisorctl status
 ```
 
-### Vérifier les logs
-
+### Logs
 ```bash
-# Backend
+# Backend logs
 tail -f /var/log/supervisor/backend.err.log
 
-# Expo
-tail -f /var/log/supervisor/expo.err.log
+# Expo logs
+tail -f /var/log/supervisor/expo.out.log
+
+# Backend API requests
+tail -f /var/log/supervisor/backend.out.log
 ```
 
-### Tests rapides
-
+### Tests API
 ```bash
-# Facebook status
+# Tester produits
+curl http://localhost:8001/api/products?limit=5
+
+# Tester catégorie Halo
+curl "http://localhost:8001/api/products?category=halo"
+
+# Tester Facebook
 curl https://luxura-inventory-api.onrender.com/facebook/status
 
-# SEO filenames
-curl "http://localhost:8001/api/seo/filename-generator?product_type=genius&color_codes=60a"
+# Tester sync Wix (avec secret)
+curl -X POST https://luxura-inventory-api.onrender.com/wix/sync \
+  -H "X-SEO-SECRET: votre_secret"
+```
 
-# Wix capabilities
-curl http://localhost:8001/api/wix/capabilities
+### Base de données
+```bash
+# MongoDB local
+mongosh luxura_db
+
+# Supabase (via psql)
+psql "postgresql://postgres.cpnwntahrkfpenjsqzsy:PASSWORD@aws-1-ca-central-1.pooler.supabase.com:5432/postgres"
 ```
 
 ---
@@ -327,6 +413,7 @@ curl http://localhost:8001/api/wix/capabilities
 - **Email:** info@luxuradistribution.com
 - **Téléphone:** 418-774-4315
 - **Adresse:** 8905 Boulevard Lacroix, Saint-Georges, QC G5Y 1T4
+- **Site Web:** https://www.luxuradistribution.com
 
 ---
 

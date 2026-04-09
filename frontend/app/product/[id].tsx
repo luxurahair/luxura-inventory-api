@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   Dimensions,
   Alert,
@@ -596,20 +597,21 @@ export default function ProductScreen() {
     <View style={styles.container}>
       {/* Header - Navigation fixe avec logo */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity 
+        <Pressable 
           onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace('/(tabs)/catalogue');
-            }
+            // Always navigate to catalogue - more reliable than router.back() on web
+            router.push('/(tabs)/catalogue');
           }} 
-          style={styles.headerButton}
-          activeOpacity={0.6}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={({ pressed }) => [
+            styles.headerButton,
+            pressed && { opacity: 0.7 }
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Retour au catalogue"
+          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
+        </Pressable>
         <Image 
           source={{ uri: LUXURA_LOGO }}
           style={styles.logoImage}
@@ -903,17 +905,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    zIndex: 10,
+    zIndex: 100,
+    backgroundColor: 'rgba(12,12,12,0.8)',
   },
   logoImage: {
     width: 100,
     height: 28,
   },
   headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
