@@ -83,6 +83,10 @@ STATIC_DIR.mkdir(exist_ok=True)
 PRODUCTS_IMG_DIR = STATIC_DIR / "products"
 PRODUCTS_IMG_DIR.mkdir(exist_ok=True)
 
+# Dossier pour les téléchargements (ZIP)
+DOWNLOADS_DIR = STATIC_DIR / "downloads"
+DOWNLOADS_DIR.mkdir(exist_ok=True)
+
 @app.get("/api/static/{filename}")
 async def serve_static_file(filename: str):
     """Sert les fichiers statiques (images générées)"""
@@ -90,6 +94,31 @@ async def serve_static_file(filename: str):
     if file_path.exists():
         return FileResponse(file_path)
     raise HTTPException(status_code=404, detail="File not found")
+
+@app.get("/api/downloads/{filename}")
+async def download_file(filename: str):
+    """Télécharger les fichiers ZIP d'images par catégorie"""
+    file_path = DOWNLOADS_DIR / filename
+    if file_path.exists():
+        return FileResponse(
+            file_path, 
+            media_type="application/zip",
+            filename=filename
+        )
+    raise HTTPException(status_code=404, detail="File not found")
+
+@app.get("/api/downloads")
+async def list_downloads():
+    """Liste tous les fichiers disponibles au téléchargement"""
+    files = []
+    if DOWNLOADS_DIR.exists():
+        for f in DOWNLOADS_DIR.glob("*.zip"):
+            files.append({
+                "name": f.name,
+                "size_mb": round(f.stat().st_size / (1024*1024), 2),
+                "url": f"/api/downloads/{f.name}"
+            })
+    return {"files": files}
 
 @app.get("/api/products/image/{category}/{color_code}")
 async def serve_product_image(category: str, color_code: str):
