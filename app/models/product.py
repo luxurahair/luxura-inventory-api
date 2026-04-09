@@ -16,6 +16,7 @@ class Product(SQLModel, table=True):
     sku: Optional[str] = Field(default=None, index=True, unique=True)
 
     name: str
+    category: Optional[str] = Field(default=None, index=True)  # Catégorie lisible (Tape, Halo, etc.)
     price: float = 0.0
     description: Optional[str] = None
     handle: Optional[str] = Field(default=None, index=True)
@@ -42,6 +43,7 @@ class ProductCreate(SQLModel):
     sku: Optional[str] = None
 
     name: str
+    category: Optional[str] = None
     price: float = 0.0
     description: Optional[str] = None
     handle: Optional[str] = None
@@ -56,6 +58,7 @@ class ProductRead(SQLModel):
     sku: Optional[str] = None
 
     name: str
+    category: Optional[str] = None
     price: float = 0.0
     description: Optional[str] = None
     handle: Optional[str] = None
@@ -70,6 +73,7 @@ class ProductUpdate(SQLModel):
     wix_id: Optional[str] = None
     sku: Optional[str] = None
     name: Optional[str] = None
+    category: Optional[str] = None
     price: Optional[float] = None
     description: Optional[str] = None
     handle: Optional[str] = None

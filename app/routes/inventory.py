@@ -80,7 +80,7 @@ def inventory_view(
                 "price": getattr(prod, "price", None),
                 "options": getattr(prod, "options", None),
                 "wix_id": getattr(prod, "wix_id", None),
-                "is_active": getattr(prod, "active", None),
+                "is_active": getattr(prod, "is_in_stock", None),
             }
         )
 
@@ -136,6 +136,7 @@ def export_inventory_xlsx(
         "salon",
         "sku",
         "name",
+        "category",
         "quantity",
         "price",
         "value",
@@ -183,12 +184,15 @@ def export_inventory_xlsx(
         vendor_sku_str = "" if vendor_sku is None else str(vendor_sku)
         wix_variant_id_str = "" if wix_variant_id_val is None else str(wix_variant_id_val)
         wix_id_str = "" if getattr(prod, "wix_id", None) is None else str(getattr(prod, "wix_id", None))
+        # Utilise product.category si disponible, sinon cats_str
+        category_str = getattr(prod, "category", None) or cats_str
 
         return [
             s.id,
             s.name,
             prod.sku,
             prod.name,
+            category_str,
             qty,
             price,
             value,

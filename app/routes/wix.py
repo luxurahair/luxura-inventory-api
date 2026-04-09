@@ -297,6 +297,9 @@ def sync_wix_to_luxura(
                         opts = {}
                     opts["categories"] = cat_names
                     data["options"] = opts
+                    
+                    # Écrire aussi dans la colonne SQL category (visible dans Supabase)
+                    data["category"] = ", ".join(cat_names) if cat_names else None
 
                 sku = (data.get("sku") or "").strip()
                 wix_variant_id = (data.get("options") or {}).get("wix_variant_id")
