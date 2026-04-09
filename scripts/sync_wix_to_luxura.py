@@ -15,6 +15,9 @@ from app.services.catalog_normalizer import normalize_product, normalize_variant
 
 BATCH_SIZE = 25
 
+# Track des SKUs utilisés dans le batch courant (pas encore commités)
+_batch_skus: set = set()
+
 
 def _is_variant_record(prod: Product) -> bool:
     opts = prod.options if isinstance(prod.options, dict) else {}
@@ -79,8 +82,10 @@ def _upsert_product(db: Session, existing: Optional[Product], data: Dict[str, An
     - update si trouvé par wix_id (priorité)
     - sinon cherche par SKU
     - sinon insert
-    - GÈRE les conflits de SKU (si le SKU existe déjà sur un autre produit)
+    - GÈRE les conflits de SKU (DB + batch en mémoire)
     """
+    global _batch_skus
+    
     clean_data = dict(data)
 
     if "options" in clean_data:
@@ -91,6 +96,10 @@ def _upsert_product(db: Session, existing: Optional[Product], data: Dict[str, An
 
     incoming_sku = (clean_data.get("sku") or "").strip() or None
     wix_id = (clean_data.get("wix_id") or "").strip() or None
+    
+    # Extraire le wix_variant_id pour les variantes
+    options = _safe_options(clean_data.get("options"))
+    wix_variant_id = options.get("wix_variant_id")
 
     # PRIORITÉ 1: Chercher par wix_id (le plus fiable)
     if not existing and wix_id:
@@ -109,90 +118,92 @@ def _upsert_product(db: Session, existing: Optional[Product], data: Dict[str, An
                 print(f"[SYNC] Trouvé par SKU: ID={existing.id}, SKU={incoming_sku}")
 
     # ============================================================
-    # GESTION DES CONFLITS SKU - AVANT d'appliquer les modifications
+    # GESTION DES CONFLITS SKU - DB + BATCH EN MÉMOIRE
     # ============================================================
     final_sku = incoming_sku
     
     if incoming_sku:
-        with db.no_autoflush:
-            stmt = select(Product).where(Product.sku == incoming_sku)
-            sku_owner = db.exec(stmt).first()
+        # VÉRIFICATION 1: SKU déjà utilisé dans le batch courant (non commité)
+        if incoming_sku in _batch_skus:
+            # Générer un SKU unique pour cette variante
+            if wix_variant_id:
+                # Pour les variantes, utiliser le variant_id pour rendre unique
+                variant_suffix = wix_variant_id[:8] if len(wix_variant_id) > 8 else wix_variant_id
+                final_sku = f"{incoming_sku}-V{variant_suffix}"
+            else:
+                # Pour les autres cas, ajouter un compteur
+                counter = 1
+                while f"{incoming_sku}-{counter}" in _batch_skus:
+                    counter += 1
+                final_sku = f"{incoming_sku}-{counter}"
             
-            # Le SKU appartient à un AUTRE produit?
-            if sku_owner:
-                is_same_product = existing and sku_owner.id == existing.id
+            print(f"[SYNC] ⚠️ SKU {incoming_sku} déjà dans batch → {final_sku}")
+        else:
+            # VÉRIFICATION 2: SKU existe en DB?
+            with db.no_autoflush:
+                stmt = select(Product).where(Product.sku == incoming_sku)
+                sku_owner = db.exec(stmt).first()
                 
-                if not is_same_product:
-                    # CAS 1: L'autre produit a le même wix_id → doublon à supprimer
-                    if wix_id and sku_owner.wix_id == wix_id:
-                        try:
-                            print(f"[SYNC] 🔄 Fusion doublon: SKU={incoming_sku} sur ID={sku_owner.id} sera supprimé, update vers ID={existing.id if existing else 'NEW'}")
-                            db.delete(sku_owner)
-                            db.flush()
-                            # Vérifier que la suppression a réellement fonctionné
-                            with db.no_autoflush:
-                                stmt_verify = select(Product).where(Product.sku == incoming_sku)
-                                if not db.exec(stmt_verify).first():
-                                    final_sku = incoming_sku
-                                    print(f"[SYNC] ✅ Doublon supprimé, SKU {incoming_sku} disponible")
-                                else:
-                                    raise Exception("SKU existe toujours après suppression")
-                        except Exception as e:
-                            print(f"[SYNC] ⚠️ Échec suppression doublon: {e}")
-                            # Fallback: résolution de conflit comme CAS 2
-                            if existing and existing.sku:
-                                final_sku = existing.sku
-                                print(f"[SYNC] → Fallback: on garde SKU actuel {existing.sku}")
-                            else:
-                                product_id = existing.id if existing else "NEW"
-                                final_sku = f"{incoming_sku}-ID{product_id}"
-                                print(f"[SYNC] → Fallback: nouveau SKU {final_sku}")
+                if sku_owner:
+                    is_same_product = existing and sku_owner.id == existing.id
                     
-                    # CAS 2: Conflit réel - le SKU appartient à un produit différent (wix_id différent)
-                    else:
-                        if existing and existing.sku:
-                            # Garder l'ancien SKU du produit existant
-                            print(f"[SYNC] ⚠️ Conflit SKU: {incoming_sku} appartient à ID={sku_owner.id} (wix_id={sku_owner.wix_id})")
-                            print(f"[SYNC] → On garde le SKU actuel: {existing.sku} pour ID={existing.id}")
-                            final_sku = existing.sku
+                    if not is_same_product:
+                        # CAS 1: Même wix_id → doublon
+                        if wix_id and sku_owner.wix_id == wix_id:
+                            try:
+                                print(f"[SYNC] 🔄 Fusion doublon: SKU={incoming_sku}")
+                                db.delete(sku_owner)
+                                db.flush()
+                                final_sku = incoming_sku
+                                print(f"[SYNC] ✅ Doublon supprimé")
+                            except Exception as e:
+                                print(f"[SYNC] ⚠️ Échec fusion: {e}")
+                                if wix_variant_id:
+                                    final_sku = f"{incoming_sku}-V{wix_variant_id[:8]}"
+                                else:
+                                    final_sku = f"{incoming_sku}-NEW"
+                        
+                        # CAS 2: Conflit réel
                         else:
-                            # Générer un SKU unique basé sur l'ID du produit
-                            product_id = existing.id if existing else "NEW"
-                            new_sku = f"{incoming_sku}-ID{product_id}"
-                            
-                            # Vérifier que ce nouveau SKU n'existe pas non plus
-                            counter = 1
-                            while True:
-                                with db.no_autoflush:
-                                    stmt = select(Product).where(Product.sku == new_sku)
-                                    if not db.exec(stmt).first():
-                                        break
-                                new_sku = f"{incoming_sku}-ID{product_id}-{counter}"
-                                counter += 1
-                            
-                            print(f"[SYNC] ⚠️ Conflit SKU: {incoming_sku} appartient à ID={sku_owner.id}")
-                            print(f"[SYNC] → Nouveau SKU généré: {new_sku}")
-                            final_sku = new_sku
+                            if existing and existing.sku and existing.sku not in _batch_skus:
+                                final_sku = existing.sku
+                                print(f"[SYNC] ⚠️ Conflit → garde SKU existant: {final_sku}")
+                            elif wix_variant_id:
+                                final_sku = f"{incoming_sku}-V{wix_variant_id[:8]}"
+                                print(f"[SYNC] ⚠️ Conflit → nouveau SKU variante: {final_sku}")
+                            else:
+                                counter = 1
+                                final_sku = f"{incoming_sku}-{counter}"
+                                while final_sku in _batch_skus:
+                                    counter += 1
+                                    final_sku = f"{incoming_sku}-{counter}"
+                                print(f"[SYNC] ⚠️ Conflit → nouveau SKU: {final_sku}")
     
-    # Appliquer le SKU final (résolu)
+    # Enregistrer le SKU dans le batch
+    if final_sku:
+        _batch_skus.add(final_sku)
+    
+    # Appliquer le SKU final
     clean_data["sku"] = final_sku
 
     # ============================================================
     # UPDATE ou INSERT
     # ============================================================
     if existing:
-        print(f"[SYNC] UPDATE ID={existing.id}: SKU {existing.sku} → {final_sku}, wix_id={wix_id}")
+        print(f"[SYNC] UPDATE ID={existing.id}: SKU → {final_sku}")
         for field, value in clean_data.items():
             setattr(existing, field, value)
         return existing
 
-    print(f"[SYNC] INSERT nouveau produit: SKU={final_sku}, wix_id={wix_id}")
+    print(f"[SYNC] INSERT: SKU={final_sku}, wix_id={wix_id}")
     prod = Product(**clean_data)
     db.add(prod)
     return prod
 
 
 def main() -> None:
+    global _batch_skus
+    
     client = WixClient()
     version, raw_products = client.query_products(limit=100)
 
@@ -200,6 +211,9 @@ def main() -> None:
     synced_variants = 0
     skipped_variants = 0
     processed_since_commit = 0
+    
+    # Reset le tracking des SKUs au début
+    _batch_skus = set()
 
     with Session(engine) as db:
         for wp in raw_products:
@@ -258,9 +272,12 @@ def main() -> None:
                 if processed_since_commit >= BATCH_SIZE:
                     db.commit()
                     processed_since_commit = 0
+                    # Reset le tracking après commit (les SKUs sont maintenant en DB)
+                    _batch_skus = set()
 
         if processed_since_commit > 0:
             db.commit()
+            _batch_skus = set()
 
     print(
         f"[SYNC] Version catalogue: {version} | "
