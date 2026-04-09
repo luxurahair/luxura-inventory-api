@@ -210,80 +210,89 @@ def main() -> None:
     synced_parents = 0
     synced_variants = 0
     skipped_variants = 0
-    processed_since_commit = 0
+    errors = 0
     
     # Reset le tracking des SKUs au début
     _batch_skus = set()
 
+    print(f"[SYNC] Début synchronisation - {len(raw_products)} produits Wix")
+
+    # PHASE 1: Sync produits un par un avec commit individuel pour éviter les rollbacks
     with Session(engine) as db:
         for wp in raw_products:
-            parent_data = normalize_product(wp, version)
-            parent_wix_id = parent_data.get("wix_id")
-            parent_sku = parent_data.get("sku")
-
-            if not parent_wix_id and not parent_sku:
-                continue
-
-            with db.no_autoflush:
-                existing_parent = _find_existing_parent(
-                    db,
-                    str(parent_wix_id).strip() if parent_wix_id else None,
-                    str(parent_sku).strip() if parent_sku else None,
-                )
-
-            _upsert_product(db, existing_parent, parent_data)
-            synced_parents += 1
-            processed_since_commit += 1
-
             try:
-                variants = (
-                    client.query_variants_v1(
-                        product_id=str(parent_wix_id),
-                        limit=100,
-                    )
-                    if parent_wix_id
-                    else []
-                )
-            except Exception as e:
-                print(f"[WARN] Impossible de récupérer les variantes pour {parent_wix_id}: {e}")
-                variants = []
+                parent_data = normalize_product(wp, version)
+                parent_wix_id = parent_data.get("wix_id")
+                parent_sku = parent_data.get("sku")
 
-            for variant in variants:
-                variant_data = normalize_variant(wp, variant)
-                if not variant_data:
-                    skipped_variants += 1
+                if not parent_wix_id and not parent_sku:
                     continue
 
-                variant_options = _safe_options(variant_data.get("options"))
-                wix_variant_id = variant_options.get("wix_variant_id")
-                sku = variant_data.get("sku")
-
                 with db.no_autoflush:
-                    existing_variant = _find_existing_variant(
-                        db=db,
-                        sku=str(sku).strip() if sku else None,
-                        wix_variant_id=str(wix_variant_id).strip() if wix_variant_id else None,
+                    existing_parent = _find_existing_parent(
+                        db,
+                        str(parent_wix_id).strip() if parent_wix_id else None,
+                        str(parent_sku).strip() if parent_sku else None,
                     )
 
-                _upsert_product(db, existing_variant, variant_data)
-                synced_variants += 1
-                processed_since_commit += 1
+                _upsert_product(db, existing_parent, parent_data)
+                synced_parents += 1
 
-                if processed_since_commit >= BATCH_SIZE:
-                    db.commit()
-                    processed_since_commit = 0
-                    # Reset le tracking après commit (les SKUs sont maintenant en DB)
-                    _batch_skus = set()
+                # Commit après chaque parent pour éviter les erreurs en cascade
+                db.commit()
 
-        if processed_since_commit > 0:
-            db.commit()
-            _batch_skus = set()
+                # Variantes
+                try:
+                    variants = (
+                        client.query_variants_v1(
+                            product_id=str(parent_wix_id),
+                            limit=100,
+                        )
+                        if parent_wix_id
+                        else []
+                    )
+                except Exception as e:
+                    print(f"[WARN] Variantes {parent_wix_id}: {e}")
+                    variants = []
+
+                for variant in variants:
+                    try:
+                        variant_data = normalize_variant(wp, variant)
+                        if not variant_data:
+                            skipped_variants += 1
+                            continue
+
+                        variant_options = _safe_options(variant_data.get("options"))
+                        wix_variant_id = variant_options.get("wix_variant_id")
+                        sku = variant_data.get("sku")
+
+                        with db.no_autoflush:
+                            existing_variant = _find_existing_variant(
+                                db=db,
+                                sku=str(sku).strip() if sku else None,
+                                wix_variant_id=str(wix_variant_id).strip() if wix_variant_id else None,
+                            )
+
+                        _upsert_product(db, existing_variant, variant_data)
+                        synced_variants += 1
+                        db.commit()
+                        
+                    except Exception as e:
+                        print(f"[ERROR] Variante {sku}: {e}")
+                        db.rollback()
+                        errors += 1
+                        
+            except Exception as e:
+                print(f"[ERROR] Produit {parent_sku}: {e}")
+                db.rollback()
+                errors += 1
 
     print(
         f"[SYNC] Version catalogue: {version} | "
-        f"Parents synchronisés: {synced_parents} | "
-        f"Variantes synchronisées: {synced_variants} | "
-        f"Variantes ignorées: {skipped_variants}"
+        f"Parents: {synced_parents} | "
+        f"Variantes: {synced_variants} | "
+        f"Ignorées: {skipped_variants} | "
+        f"Erreurs: {errors}"
     )
     
     # ============================================================
