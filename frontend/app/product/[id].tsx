@@ -519,7 +519,9 @@ export default function ProductScreen() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/products/${id}`);
+        // URL-encode the id to handle special characters (é, à, etc.)
+        const encodedId = encodeURIComponent(id);
+        const response = await axios.get(`${API_URL}/api/products/${encodedId}`);
         setProduct(response.data);
         
         // Auto-select first in-stock variant if available

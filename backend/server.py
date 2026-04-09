@@ -1217,8 +1217,11 @@ async def get_products(
                     "clip-in": "Sophia"
                 }
                 
+                # IMPORTANT: Use handle as the product ID for frontend navigation
+                # This ensures consistency between list and detail pages
+                # The handle is unique per product color variant in Wix
                 product_data = {
-                    "id": parent.get('id') or hash(dedup_key) % 100000,  # Generate ID from dedup_key if missing
+                    "id": best_handle,  # Use handle as ID for consistent navigation
                     "name": clean_name,
                     "price": price,
                     "description": clean_html(parent.get('description', '')),
@@ -1233,7 +1236,8 @@ async def get_products(
                     "wix_url": wix_url,
                     "handle": best_handle,
                     "color_code": color_code,  # NEW: Expose color code
-                    "variant_count": len(sorted_variants)
+                    "variant_count": len(sorted_variants),
+                    "luxura_id": parent.get('id')  # Keep original Luxura ID for reference
                 }
                 
                 # Include variant details if requested
@@ -1254,30 +1258,41 @@ async def get_products(
         logger.error(f"Error fetching products: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.get("/products/{product_id}")
-async def get_product(product_id: int):
+@api_router.get("/products/{product_handle}")
+async def get_product(product_handle: str):
     """Get a single product with all its variants from Luxura Inventory API
+    Accepts handle (string) as identifier - this matches the ID used in /products list
     Fetches real inventory quantities from /inventory/view
     """
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            # Fetch product, all products (for variants), AND inventory in parallel
-            product_task = client.get(f"{LUXURA_API_URL}/products/{product_id}")
+            # Fetch all products AND inventory in parallel
+            # We search by handle instead of numeric ID
             all_products_task = client.get(f"{LUXURA_API_URL}/products")
             inventory_task = client.get(f"{LUXURA_API_URL}/inventory/view")
             
-            response, all_response, inventory_response = await asyncio.gather(
-                product_task, all_products_task, inventory_task, return_exceptions=True
+            all_response, inventory_response = await asyncio.gather(
+                all_products_task, inventory_task, return_exceptions=True
             )
             
-            if isinstance(response, Exception) or response.status_code == 404:
+            if isinstance(all_response, Exception) or all_response.status_code != 200:
+                raise HTTPException(status_code=502, detail="Unable to fetch products from Luxura API")
+            
+            all_products = all_response.json()
+            
+            # Find product by handle
+            p = None
+            matching_products = []
+            for prod in all_products:
+                if prod.get('handle') == product_handle:
+                    matching_products.append(prod)
+                    if p is None:
+                        p = prod
+            
+            if not matching_products:
                 raise HTTPException(status_code=404, detail="Product not found")
             
-            if response.status_code != 200:
-                raise HTTPException(status_code=502, detail="Unable to fetch product from Luxura API")
-            
-            p = response.json()
-            handle = p.get('handle', '')
+            handle = product_handle
             name = p.get('name', '')
             
             # Build inventory lookup by SKU AND by name for real quantities
