@@ -131,6 +131,69 @@ async def color_engine_info():
         "note": "L'application Streamlit tourne sur le port 8501. Pour y accéder localement: streamlit run /app/backend/color_engine_app.py"
     }
 
+# Color Library API
+COLOR_LIBRARY_DIR = Path(__file__).parent / "luxura_images" / "color_library"
+
+@app.get("/api/color-library/reference")
+async def get_reference_colors():
+    """Get all reference colors from the Elite color library"""
+    import json
+    
+    ref_dir = COLOR_LIBRARY_DIR / "reference"
+    mapping_file = ref_dir / "color_mapping.json"
+    
+    if mapping_file.exists():
+        with open(mapping_file, "r", encoding="utf-8") as f:
+            colors = json.load(f)
+        
+        # Add image URLs
+        for color in colors:
+            color["image_url"] = f"/api/color-library/reference/image/{color['code']}"
+        
+        return {"colors": colors, "total": len(colors)}
+    
+    return {"colors": [], "total": 0}
+
+@app.get("/api/color-library/reference/image/{color_code}")
+async def get_reference_color_image(color_code: str):
+    """Get a specific reference color image"""
+    ref_dir = COLOR_LIBRARY_DIR / "reference"
+    
+    # Find the file that starts with the color code
+    for file in ref_dir.glob(f"{color_code}*.jpg"):
+        return FileResponse(file, media_type="image/jpeg")
+    
+    raise HTTPException(status_code=404, detail=f"Color {color_code} not found")
+
+@app.get("/api/color-library/{category}")
+async def get_category_colors(category: str):
+    """Get all colors for a specific category (genius, halo, tape, i-tip)"""
+    cat_dir = COLOR_LIBRARY_DIR / category.lower()
+    
+    if not cat_dir.exists():
+        return {"colors": [], "total": 0}
+    
+    colors = []
+    for file in cat_dir.glob("*.jpg"):
+        colors.append({
+            "code": file.stem,
+            "name": file.stem.replace("_", " "),
+            "image_url": f"/api/color-library/{category}/image/{file.stem}"
+        })
+    
+    return {"colors": colors, "total": len(colors)}
+
+@app.get("/api/color-library/{category}/image/{color_code}")
+async def get_category_color_image(category: str, color_code: str):
+    """Get a specific category color image"""
+    cat_dir = COLOR_LIBRARY_DIR / category.lower()
+    file_path = cat_dir / f"{color_code}.jpg"
+    
+    if file_path.exists():
+        return FileResponse(file_path, media_type="image/jpeg")
+    
+    raise HTTPException(status_code=404, detail=f"Color {color_code} not found in {category}")
+
 @app.get("/api/products/image/{category}/{color_code}")
 async def serve_product_image(category: str, color_code: str):
     """

@@ -1,0 +1,289 @@
+[
+  {
+    "order": 1,
+    "code": "1",
+    "name": "Color #1",
+    "original_file": "01 #1.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/01 #1.jpg"
+  },
+  {
+    "order": 2,
+    "code": "1A",
+    "name": "Color #1A",
+    "original_file": "02 #1A.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/02 #1A.jpg"
+  },
+  {
+    "order": 3,
+    "code": "1B",
+    "name": "Color #1B",
+    "original_file": "03 #1B.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/03 #1B.jpg"
+  },
+  {
+    "order": 4,
+    "code": "2",
+    "name": "Color #2",
+    "original_file": "04 #2.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/04 #2.jpg"
+  },
+  {
+    "order": 5,
+    "code": "3",
+    "name": "Color #3",
+    "original_file": "05 #3.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/05 #3.jpg"
+  },
+  {
+    "order": 6,
+    "code": "4",
+    "name": "Color #4",
+    "original_file": "06 #4.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/06 #4.jpg"
+  },
+  {
+    "order": 7,
+    "code": "5",
+    "name": "Color #5",
+    "original_file": "07 #5.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/07 #5.jpg"
+  },
+  {
+    "order": 8,
+    "code": "6",
+    "name": "Color #6",
+    "original_file": "08 #6.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/08 #6.jpg"
+  },
+  {
+    "order": 9,
+    "code": "8",
+    "name": "Color #8",
+    "original_file": "09 #8.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/09 #8.jpg"
+  },
+  {
+    "order": 10,
+    "code": "10",
+    "name": "Color #10",
+    "original_file": "10 #10.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/10 #10.jpg"
+  },
+  {
+    "order": 11,
+    "code": "12",
+    "name": "Color #12",
+    "original_file": "11 #12.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/11 #12.jpg"
+  },
+  {
+    "order": 12,
+    "code": "14",
+    "name": "Color #14",
+    "original_file": "12 #14.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/12 #14.jpg"
+  },
+  {
+    "order": 13,
+    "code": "16",
+    "name": "Color #16",
+    "original_file": "13 #16.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/13 #16.jpg"
+  },
+  {
+    "order": 14,
+    "code": "18",
+    "name": "Color #18",
+    "original_file": "14 #18.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/14 #18.jpg"
+  },
+  {
+    "order": 15,
+    "code": "18A",
+    "name": "Color #18A",
+    "original_file": "15 #18A.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/15 #18A.jpg"
+  },
+  {
+    "order": 16,
+    "code": "20",
+    "name": "Color #20",
+    "original_file": "16 #20.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/16 #20.jpg"
+  },
+  {
+    "order": 17,
+    "code": "22",
+    "name": "Color #22",
+    "original_file": "17 #22.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/17 #22.jpg"
+  },
+  {
+    "order": 18,
+    "code": "22A",
+    "name": "Color #22A",
+    "original_file": "18 #22A.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/18 #22A.jpg"
+  },
+  {
+    "order": 19,
+    "code": "24",
+    "name": "Color #24",
+    "original_file": "19 #24.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/19 #24.jpg"
+  },
+  {
+    "order": 20,
+    "code": "27",
+    "name": "Color #27",
+    "original_file": "20 #27.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/20 #27.jpg"
+  },
+  {
+    "order": 21,
+    "code": "30",
+    "name": "Color #30",
+    "original_file": "21 #30.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/21 #30.jpg"
+  },
+  {
+    "order": 22,
+    "code": "33",
+    "name": "Color #33",
+    "original_file": "22 #33.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/22 #33.jpg"
+  },
+  {
+    "order": 23,
+    "code": "99J",
+    "name": "Color #99J",
+    "original_file": "23 #99J.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/23 #99J.jpg"
+  },
+  {
+    "order": 24,
+    "code": "530",
+    "name": "Color #530",
+    "original_file": "24 #530.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/24 #530.jpg"
+  },
+  {
+    "order": 25,
+    "code": "613",
+    "name": "Color #613",
+    "original_file": "25 #613.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/25 #613.jpg"
+  },
+  {
+    "order": 26,
+    "code": "60",
+    "name": "Color #60",
+    "original_file": "26 #60.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/26 #60.jpg"
+  },
+  {
+    "order": 27,
+    "code": "60A",
+    "name": "60A",
+    "original_file": "27 60A.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/27 60A.jpg"
+  },
+  {
+    "order": 28,
+    "code": "Silver",
+    "name": "Silver",
+    "original_file": "28 Silver.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/28 Silver.jpg"
+  },
+  {
+    "order": 29,
+    "code": "18-22T60",
+    "name": "18 22T60",
+    "original_file": "29 18_22T60.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/29 18_22T60.jpg"
+  },
+  {
+    "order": 30,
+    "code": "4-27T24",
+    "name": "4 27T24",
+    "original_file": "30 4_27T24.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/30 4_27T24.jpg"
+  },
+  {
+    "order": 32,
+    "code": "Scandinavian Blonde",
+    "name": "Scandinavian Blonde",
+    "original_file": "32 Scandinavian Blonde.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/32 Scandinavian Blonde.jpg"
+  },
+  {
+    "order": 33,
+    "code": "Bergen Blonde",
+    "name": "Bergen Blonde",
+    "original_file": "33 Bergen Blonde.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/33 Bergen Blonde.jpg"
+  },
+  {
+    "order": 34,
+    "code": "Caramelized",
+    "name": "Caramelized",
+    "original_file": "34 Caramelized.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/34 Caramelized.jpg"
+  },
+  {
+    "order": 35,
+    "code": "Mocha Melt",
+    "name": "Mocha Melt",
+    "original_file": "35 Mocha Melt.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/35 Mocha Melt.jpg"
+  },
+  {
+    "order": 36,
+    "code": "Brond-mbre",
+    "name": "Brond mbre",
+    "original_file": "36 Brond_mbre.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/36 Brond_mbre.jpg"
+  },
+  {
+    "order": 37,
+    "code": "Dubai",
+    "name": "Dubai",
+    "original_file": "37 Dubai.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/37 Dubai.jpg"
+  },
+  {
+    "order": 38,
+    "code": "Smoke",
+    "name": "Smoke",
+    "original_file": "38 Smoke.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/38 Smoke.jpg"
+  },
+  {
+    "order": 39,
+    "code": "Mauve Metalic",
+    "name": "Mauve Metalic",
+    "original_file": "39 Mauve Metalic.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/39 Mauve Metalic.jpg"
+  },
+  {
+    "order": 40,
+    "code": "Norwegian Blonde",
+    "name": "Norwegian Blonde",
+    "original_file": "40 Norwegian Blonde.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/40 Norwegian Blonde.jpg"
+  },
+  {
+    "order": 41,
+    "code": "Viking Blonde",
+    "name": "Viking Blonde",
+    "original_file": "41 Viking Blonde.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/41 Viking Blonde.jpg"
+  },
+  {
+    "order": 42,
+    "code": "Artic Blonde",
+    "name": "Artic Blonde",
+    "original_file": "42 Artic Blonde.jpg",
+    "source_path": "/app/backend/luxura_images/elite_colors/elite color pictures-2/42 Artic Blonde.jpg"
+  }
+]
