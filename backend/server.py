@@ -120,6 +120,17 @@ async def list_downloads():
             })
     return {"files": files}
 
+@app.get("/api/color-engine")
+async def color_engine_info():
+    """Info about the Color Engine Streamlit app"""
+    return {
+        "name": "Luxura Color Engine PRO",
+        "description": "Outil de recolorisation d'images d'extensions capillaires",
+        "status": "running",
+        "local_url": "http://localhost:8501",
+        "note": "L'application Streamlit tourne sur le port 8501. Pour y accéder localement: streamlit run /app/backend/color_engine_app.py"
+    }
+
 @app.get("/api/products/image/{category}/{color_code}")
 async def serve_product_image(category: str, color_code: str):
     """
