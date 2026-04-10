@@ -345,3 +345,12 @@ web/yarn.lock
 web/node_modules/
 *.log
 backend/backups/
+-e 
+# Environment and credential files
+.env
+.env.*
+*.env
+credentials.json
+*.pem
+*.key
+.credentials
