@@ -341,3 +341,7 @@ credentials.json
 *.pem
 *.key
 .credentials
+web/yarn.lock
+web/node_modules/
+*.log
+backend/backups/
