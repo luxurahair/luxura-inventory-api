@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --luxura-gold: #c9a050;
+  --luxura-dark: #0c0c0c;
+}
+
+body {
+  background-color: var(--luxura-dark);
+  color: white;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--luxura-gold);
+  border-radius: 4px;
+}
+
+/* Gold gradient text */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #c9a050 0%, #f5d998 50%, #c9a050 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
