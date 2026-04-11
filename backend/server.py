@@ -806,10 +806,10 @@ COLOR_CODE_IMAGES = {
 }
 
 # Images spécifiques par catégorie (pour les produits qui ont des photos distinctes)
-# MISE À JOUR 2025-04-11: Images corrigées depuis le site Wix officiel luxuradistribution.com
+# MISE À JOUR 2025-04-11: Images Genius synchronisées depuis Wix
 CATEGORY_SPECIFIC_IMAGES = {
     "genius": {
-        # NOUVELLES IMAGES WIX (Avril 2025)
+        # IMAGES WIX GENIUS (Mise à jour Avril 2025)
         "1": "https://static.wixstatic.com/media/f1b961_ebf51cc4c86346d8894294e7550cf082~mv2.jpg",  # Onyx Noir
         "1b": "https://static.wixstatic.com/media/f1b961_71de051f1f114c858d95f2a770eba544~mv2.jpg",  # Noir Soie
         "dc": "https://static.wixstatic.com/media/f1b961_be2093b37a7445fab7f8a23083c22f2d~mv2.jpg",  # Chocolat Profond
@@ -824,7 +824,7 @@ CATEGORY_SPECIFIC_IMAGES = {
         "18/22": "https://static.wixstatic.com/media/f1b961_b7d3eb648bf443cb8d30e3e23fa62ad8~mv2.png",  # Champagne Doré
         "613/18a": "https://static.wixstatic.com/media/f1b961_c15e5a01c6024a1699cb92a2be325f8f~mv2.png",  # Diamant Glacé
         "cb": "https://static.wixstatic.com/media/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png",  # Miel Sauvage Ombré
-        "bm": "https://static.wixstatic.com/media/f1b961_22ed1dd868004bca8afbe1a2b6e754c2~mv2.jpg",  # BM (nouveau)
+        "bm": "https://static.wixstatic.com/media/f1b961_22ed1dd868004bca8afbe1a2b6e754c2~mv2.jpg",  # BM
         "db": "https://static.wixstatic.com/media/f1b961_b049d0356ab04230a0291ddadc1dfbe8~mv2.png",  # Nuit Mystère
         "hps": "https://static.wixstatic.com/media/f1b961_46c106d70c154c34918e15ad23452fc4~mv2.png",  # Cendré Étoilé
         "pha": "https://static.wixstatic.com/media/f1b961_0fdc2ccdccc64d65bde5f1ceb6629ce6~mv2.jpg",  # Cendré Céleste
