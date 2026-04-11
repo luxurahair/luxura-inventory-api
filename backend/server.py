@@ -594,6 +594,41 @@ def generate_product_name_from_handle(handle: str, category: str) -> str:
     if not handle:
         return ""
     
+    # MAPPING DIRECT HANDLES GENIUS → NOMS OFFICIELS WIX (Avril 2025)
+    GENIUS_WIX_NAMES = {
+        "genius-ombré-blond-moka-6-6t24": "Genius Vivian Caramel Soleil #6/6T24",
+        "genius-série-vivian-brun-lumineux-blond-foncé-6": "Genius Vivian Caramel Doré #6",
+        "genius-trame-invisible-série-vivian-blanc-polar-ivory": "Genius Vivian IVORY #IVORY",
+        "genius-trame-invisible-série-vivian-brun-2": "Genius Vivian Espresso Intense #2",
+        "genius-trame-invisible-série-vivian-ombré-brun-cacao-3-3t24": "Genius Vivian Châtaigne Lumière #3/3T24",
+        "genius-sdd-série-vivian-ombré-2btp18-1006": "Genius Vivian Espresso Balayage Glacé #2BTP18/1006",
+        "genius-trame-invisible-série-vivian-balayage-blond-beige-18-22": "Genius Vivian Champagne Doré #18/22",
+        "genius-trame-invisible-série-vivian-brun-moyen-3": "Genius Vivian Châtaigne Douce #3",
+        "genius-trame-invisible-série-vivian-t14-p14-24": "Genius Vivian Blond Balayage Doré #T14/P14/24",
+        "genius-trame-invisible-série-vivian-ombré-brun-nuit-db": "Genius Vivian Nuit Mystère #DB",
+        "genius-trame-invisible-série-vivian-balayage-blond-foncé-6-24": "Genius Vivian Golden Hour #6/24",
+        "genius-ssd-trame-invisible-série-vivian-brun-cacao": "Genius Vivian Cacao Velours #CACAO",
+        "genius-trame-invisible-série-vivian-foochow": "Genius Vivian FOOCHOW #FOOCHOW",
+        "genius-trame-invisible-série-vivian-chengtu": "Genius Vivian Châtain Soyeux #CHENGTU",
+        "genius-trame-invisible-série-vivian-5atp18b62": "Genius Vivian Noisette Balayage Cendré #5ATP18B62",
+        "genius-ssd-série-vivian-ombré-blond-cendré-5at60": "Genius Vivian Noisette Ombré Platine #5AT60",
+        "genius-nouvelle-trame-invisible-série-vivian-cannelle-cinnamon": "Genius Vivian Cannelle Épicée #CINNAMON",
+        "genius-série-vivian-balayage-blond-cendré-613-18a": "Genius Vivian Diamant Glacé #613/18A",
+        "genius-série-vivian-ombré-blond-cendré-hps": "Genius Vivian Cendré Étoilé #HPS",
+        "genius-série-vivian-ombré-blond-miel-cb": "Genius Vivian Miel Sauvage Ombré #CB",
+        "ponytail-queue-de-cheval-série-everly-ombré-brun-moka-bm": "Genius Vivian BM #BM",  # Handle ponytail mais c'est un Genius
+        "genius-trame-invisible-série-vivian-blond-platine-60a": "Genius Vivian Platine Pur #60A",
+        "genius-trame-invisible-série-vivian-dark-chocolate-dc": "Genius Vivian Chocolat Profond #DC",
+        "genius-trame-invisible-série-vivian-perfect-highlift-ash-pha": "Genius Vivian Cendré Céleste #PHA",
+        "clips-série-everly-noir-doux-brun-foncé-1b": "Genius Vivian Noir Soie #1B",  # Handle clips mais c'est un Genius
+        "genius-trame-invisible-série-vivian-noir-foncé-1": "Genius Vivian Onyx Noir #1",
+    }
+    
+    # Si c'est un Genius avec un nom direct, utiliser le mapping Wix
+    handle_lower = handle.lower()
+    if handle_lower in GENIUS_WIX_NAMES:
+        return GENIUS_WIX_NAMES[handle_lower]
+    
     # Mapping des codes couleur vers noms de luxe
     # Format: code-handle → (nom_luxe, code_display)
     color_luxe_map = {
@@ -771,34 +806,36 @@ COLOR_CODE_IMAGES = {
 }
 
 # Images spécifiques par catégorie (pour les produits qui ont des photos distinctes)
-# MISE À JOUR: Images corrigées depuis le site Wix officiel luxuradistribution.com/genius
+# MISE À JOUR 2025-04-11: Images corrigées depuis le site Wix officiel luxuradistribution.com
 CATEGORY_SPECIFIC_IMAGES = {
     "genius": {
-        "1": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",  # Onyx Noir
-        "1b": "https://static.wixstatic.com/media/f1b961_0765bab9e407403289c86e98fcb27476~mv2.png",  # Noir Soie (pas de Genius 1B sur le site, utilise #1)
-        "dc": "https://static.wixstatic.com/media/f1b961_58c11630ff1349728c47e56190218422~mv2.png",  # Chocolat Profond
-        "cacao": "https://static.wixstatic.com/media/f1b961_11271a5d5d91485883888a201592829c~mv2.jpg",  # Cacao Velours
+        # NOUVELLES IMAGES WIX (Avril 2025)
+        "1": "https://static.wixstatic.com/media/f1b961_ebf51cc4c86346d8894294e7550cf082~mv2.jpg",  # Onyx Noir
+        "1b": "https://static.wixstatic.com/media/f1b961_71de051f1f114c858d95f2a770eba544~mv2.jpg",  # Noir Soie
+        "dc": "https://static.wixstatic.com/media/f1b961_be2093b37a7445fab7f8a23083c22f2d~mv2.jpg",  # Chocolat Profond
+        "cacao": "https://static.wixstatic.com/media/f1b961_80553585b8c14372907f1aefb8364ee3~mv2.jpg",  # Cacao Velours
         "2": "https://static.wixstatic.com/media/f1b961_2596437db6134f7bbdc1c5b2d72907fd~mv2.jpg",  # Espresso Intense
         "3": "https://static.wixstatic.com/media/f1b961_47ff485b2f674fdc9245cc856004cd46~mv2.png",  # Châtaigne Douce
-        "3/3t24": "https://static.wixstatic.com/media/f1b961_f7c08b4eeb9d454aa0da2db110ab359d~mv2.png",  # Châtaigne Lumière - CORRIGÉ
+        "3/3t24": "https://static.wixstatic.com/media/f1b961_f7c08b4eeb9d454aa0da2db110ab359d~mv2.png",  # Châtaigne Lumière
         "6": "https://static.wixstatic.com/media/f1b961_5769d9b826004a6f91eb9112dc140cfb~mv2.png",  # Caramel Doré
         "6/24": "https://static.wixstatic.com/media/f1b961_387bbe6d47cd4217a7b0157f398d9a63~mv2.png",  # Golden Hour
-        "6/6t24": "https://static.wixstatic.com/media/f1b961_b1da0ecc4ce04c86955047f5f172a44c~mv2.png",  # Caramel Soleil - CORRIGÉ
+        "6/6t24": "https://static.wixstatic.com/media/f1b961_b1da0ecc4ce04c86955047f5f172a44c~mv2.png",  # Caramel Soleil
         "60a": "https://static.wixstatic.com/media/f1b961_c3168b50e6d9464db8365cdef0b16557~mv2.png",  # Platine Pur
         "18/22": "https://static.wixstatic.com/media/f1b961_b7d3eb648bf443cb8d30e3e23fa62ad8~mv2.png",  # Champagne Doré
         "613/18a": "https://static.wixstatic.com/media/f1b961_c15e5a01c6024a1699cb92a2be325f8f~mv2.png",  # Diamant Glacé
         "cb": "https://static.wixstatic.com/media/f1b961_5e027a0d94d749e99ad76830129b42da~mv2.png",  # Miel Sauvage Ombré
-        "db": "https://static.wixstatic.com/media/f1b961_b049d0356ab04230a0291ddadc1dfbe8~mv2.png",  # Nuit Mystère - CORRIGÉ
-        "hps": "https://static.wixstatic.com/media/f1b961_46c106d70c154c34918e15ad23452fc4~mv2.png",  # Cendré Étoilé - CORRIGÉ
-        "pha": "https://static.wixstatic.com/media/f1b961_54514ba920d34aed9aa1f10c62f1759a~mv2.jpg",  # Cendré Céleste
-        "ivory": "https://static.wixstatic.com/media/f1b961_2dbcedc5036044b69e1ba01c58cc93d4~mv2.jpg",  # Ivoire Précieux
+        "bm": "https://static.wixstatic.com/media/f1b961_22ed1dd868004bca8afbe1a2b6e754c2~mv2.jpg",  # BM (nouveau)
+        "db": "https://static.wixstatic.com/media/f1b961_b049d0356ab04230a0291ddadc1dfbe8~mv2.png",  # Nuit Mystère
+        "hps": "https://static.wixstatic.com/media/f1b961_46c106d70c154c34918e15ad23452fc4~mv2.png",  # Cendré Étoilé
+        "pha": "https://static.wixstatic.com/media/f1b961_0fdc2ccdccc64d65bde5f1ceb6629ce6~mv2.jpg",  # Cendré Céleste
+        "ivory": "https://static.wixstatic.com/media/f1b961_2dbcedc5036044b69e1ba01c58cc93d4~mv2.jpg",  # IVORY
         "cinnamon": "https://static.wixstatic.com/media/f1b961_23960136c3df4e84852f5dde15475d17~mv2.jpg",  # Cannelle Épicée
-        "foochow": "https://static.wixstatic.com/media/f1b961_28d930f0f9924b229beb3be484bc1fbd~mv2.jpg",  # Cachemire Oriental
-        "chengtu": "https://static.wixstatic.com/media/f1b961_e440aecc44e44c69b0d56dad273a95e9~mv2.jpg",  # Soie d'Orient
-        "5at60": "https://static.wixstatic.com/media/f1b961_9f8115b4f7614340b0dc9aeba39bd699~mv2.jpg",  # Aurore Glaciale
-        "5atp18b62": "https://static.wixstatic.com/media/f1b961_0e7cf48e1d59418bbf1b562c21494176~mv2.jpg",  # Aurore Boréale
-        "2btp18/1006": "https://static.wixstatic.com/media/f1b961_75316de55cf441ecb82211cbc8d91010~mv2.jpg",  # Espresso Lumière
-        "t14/p14/24": "https://static.wixstatic.com/media/f1b961_9c2192c6fa5f4458913d46ea8a8f9dae~mv2.jpg",  # Venise Dorée
+        "foochow": "https://static.wixstatic.com/media/f1b961_1d56319f8a3c4e4dba09ce1c80385fbc~mv2.jpg",  # FOOCHOW
+        "chengtu": "https://static.wixstatic.com/media/f1b961_302097ceefaf4f69a608838f489b57a2~mv2.jpg",  # Châtain Soyeux
+        "5at60": "https://static.wixstatic.com/media/f1b961_5cab009ec1a64e689baa767cbf3bcb8e~mv2.jpg",  # Noisette Ombré Platine
+        "5atp18b62": "https://static.wixstatic.com/media/f1b961_0e7cf48e1d59418bbf1b562c21494176~mv2.jpg",  # Noisette Balayage Cendré
+        "2btp18/1006": "https://static.wixstatic.com/media/f1b961_75316de55cf441ecb82211cbc8d91010~mv2.jpg",  # Espresso Balayage Glacé
+        "t14/p14/24": "https://static.wixstatic.com/media/f1b961_9c2192c6fa5f4458913d46ea8a8f9dae~mv2.jpg",  # Blond Balayage Doré
     },
     "tape": {
         "1": "https://static.wixstatic.com/media/f1b961_8bed6fa0069a41c3971d7dcb51ab1cec~mv2.png",
