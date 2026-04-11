@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   Image,
   TextInput,
   Alert,
@@ -60,13 +61,19 @@ export default function AdminColorEngine() {
   const fetchEliteColors = async () => {
     setLoadingColors(true);
     try {
-      const response = await fetch(`${API_URL}/api/color-engine/colors`);
+      const url = `${API_URL}/api/color-engine/colors`;
+      console.log('🔍 Fetching elite colors from:', url);
+      const response = await fetch(url);
+      console.log('📡 Response status:', response.status);
       if (response.ok) {
         const data = await response.json();
+        console.log('📦 Colors data:', data);
         setEliteColors(data.colors || []);
+      } else {
+        console.error('❌ Fetch failed:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching elite colors:', error);
+      console.error('❌ Error fetching elite colors:', error);
     }
     setLoadingColors(false);
   };
@@ -101,17 +108,15 @@ export default function AdminColorEngine() {
   };
 
   const handleGenerate = async () => {
-    if (!gabarit && !selectedEliteColor) {
-      Alert.alert('Erreur', 'Veuillez charger un gabarit ou sélectionner une couleur Elite');
-      return;
-    }
-
-    if (!reference && !selectedEliteColor) {
-      Alert.alert('Erreur', 'Veuillez sélectionner une couleur de référence');
+    console.log('🎨 handleGenerate called', { selectedEliteColor, reference, gabarit });
+    
+    if (!selectedEliteColor && !reference) {
+      Alert.alert('Erreur', 'Veuillez sélectionner une couleur Elite ou charger une référence');
       return;
     }
 
     setLoading(true);
+    console.log('🚀 Starting generation...');
 
     try {
       const requestBody: any = {
@@ -369,10 +374,11 @@ export default function AdminColorEngine() {
             </View>
 
             {/* Generate Button */}
-            <TouchableOpacity
-              style={[styles.generateButton, (!gabarit || !reference) && styles.buttonDisabled]}
+            <Pressable
+              style={[styles.generateButton, (!selectedEliteColor && !reference) && styles.buttonDisabled]}
               onPress={handleGenerate}
-              disabled={!gabarit || !reference || loading}
+              disabled={(!selectedEliteColor && !reference) || loading}
+              testID="generate-button"
             >
               {loading ? (
                 <ActivityIndicator color="#000" />
@@ -382,7 +388,7 @@ export default function AdminColorEngine() {
                   <Text style={styles.generateButtonText}>Générer l'Image</Text>
                 </>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
             {/* Result */}
             {result && (
