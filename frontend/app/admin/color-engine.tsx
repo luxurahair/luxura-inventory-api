@@ -101,38 +101,59 @@ export default function AdminColorEngine() {
   };
 
   const handleGenerate = async () => {
-    if (!gabarit || !reference) {
-      Alert.alert('Erreur', 'Veuillez charger un gabarit et une couleur de référence');
+    if (!gabarit && !selectedEliteColor) {
+      Alert.alert('Erreur', 'Veuillez charger un gabarit ou sélectionner une couleur Elite');
+      return;
+    }
+
+    if (!reference && !selectedEliteColor) {
+      Alert.alert('Erreur', 'Veuillez sélectionner une couleur de référence');
       return;
     }
 
     setLoading(true);
 
     try {
+      const requestBody: any = {
+        series: selectedSeries,
+        intensity: intensity,
+      };
+
+      // Si on a une couleur Elite sélectionnée, utiliser son code
+      if (selectedEliteColor) {
+        requestBody.elite_color_code = selectedEliteColor.code;
+      } else if (reference) {
+        // Sinon utiliser l'image de référence en base64
+        requestBody.reference = reference;
+      }
+
+      // Si on a un gabarit uploadé, l'envoyer
+      if (gabarit) {
+        requestBody.gabarit = gabarit;
+      }
+
       const response = await fetch(`${API_URL}/api/color-engine/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          gabarit,
-          reference,
-          series: selectedSeries,
-          intensity,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
         const data = await response.json();
-        setResult(data.image);
-        Alert.alert('Succès', 'Image générée !');
+        if (data.success && data.image) {
+          setResult(data.image);
+          // Success notification (moins intrusif que Alert sur web)
+          console.log('✅ Image générée avec succès!');
+        } else {
+          Alert.alert('Erreur', data.detail || 'Échec de la génération');
+        }
       } else {
-        // Demo fallback
-        setResult(reference);
-        Alert.alert('Info', 'Mode démo - résultat simulé');
+        const errorData = await response.json().catch(() => ({}));
+        Alert.alert('Erreur', errorData.detail || `Erreur ${response.status}`);
       }
     } catch (error) {
-      // Demo fallback
-      setResult(reference);
-      Alert.alert('Info', 'Mode démo - API non connectée');
+      console.error('Generate error:', error);
+      Alert.alert('Erreur', 'Impossible de générer l\'image. Vérifiez votre connexion.');
     }
 
     setLoading(false);

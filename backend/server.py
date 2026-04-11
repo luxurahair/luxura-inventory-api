@@ -4546,6 +4546,191 @@ async def get_elite_color_image(color_code: str):
 
 # ==================== AUTO COLOR ENGINE (SIMPLIFIÉ) ====================
 
+class GenerateColorRequest(BaseModel):
+    """Requête pour la génération Color Engine depuis le frontend"""
+    gabarit: Optional[str] = Field(None, description="Image gabarit en base64 (optionnel si on utilise le template)")
+    reference: Optional[str] = Field(None, description="Image référence couleur en base64")
+    elite_color_code: Optional[str] = Field(None, description="Code couleur Elite (ex: '1A', '6', 'Silver')")
+    series: str = Field("genius", description="Série de produit (genius, halo, tape, i-tip)")
+    intensity: float = Field(0.75, ge=0.3, le=1.0, description="Intensité du mélange")
+
+
+@api_router.post("/color-engine/generate")
+async def color_engine_generate(request: GenerateColorRequest):
+    """
+    🎨 COLOR ENGINE GENERATE - Endpoint principal pour le frontend
+    
+    Recolorise une image de gabarit avec une couleur de référence.
+    Peut utiliser soit une image uploadée, soit une couleur Elite par son code.
+    
+    Args:
+        gabarit: Image gabarit en base64 (optionnel - utilise le template par défaut)
+        reference: Image référence en base64 (optionnel si elite_color_code est fourni)
+        elite_color_code: Code d'une couleur Elite (ex: "1A", "6", "Silver")
+        series: Série pour le watermark (genius, halo, tape, i-tip)
+        intensity: Intensité de la recolorisation (0.3-1.0)
+    
+    Returns:
+        image: Image résultante en base64 avec watermark
+        success: Boolean
+    """
+    import glob
+    from PIL import Image
+    import io
+    import numpy as np
+    
+    try:
+        logger.info(f"🎨 Color Engine Generate: series={request.series}, intensity={request.intensity}")
+        
+        # 1. Charger la référence couleur
+        reference_image = None
+        
+        if request.elite_color_code:
+            # Charger depuis les couleurs Elite
+            base_path = "/app/backend/luxura_images/color_library/reference"
+            code = request.elite_color_code
+            
+            # Chercher le fichier
+            patterns = [
+                f"{base_path}/{code}_*.jpg",
+                f"{base_path}/*_{code}.jpg",
+                f"{base_path}/*{code}*.jpg",
+            ]
+            
+            matches = []
+            for pattern in patterns:
+                matches.extend(glob.glob(pattern))
+            
+            if matches:
+                ref_path = matches[0]
+                reference_image = np.array(Image.open(ref_path).convert('RGB'))
+                logger.info(f"📷 Loaded Elite color: {code} from {ref_path}")
+            else:
+                raise HTTPException(status_code=404, detail=f"Elite color '{code}' not found")
+                
+        elif request.reference:
+            # Charger depuis base64
+            reference_image = base64_to_image(request.reference.split(',')[-1])
+            logger.info("📷 Loaded reference from base64")
+        else:
+            raise HTTPException(status_code=400, detail="Either 'reference' or 'elite_color_code' is required")
+        
+        # 2. Charger le gabarit
+        if request.gabarit:
+            gabarit_image = base64_to_image(request.gabarit.split(',')[-1])
+            logger.info("📐 Loaded gabarit from base64")
+        else:
+            # Utiliser le template par défaut
+            template_path = f"/app/backend/templates/gabarit_{request.series}.jpg"
+            if not os.path.exists(template_path):
+                # Fallback au template genius
+                template_path = "/app/backend/templates/gabarit_genius.jpg"
+            
+            if os.path.exists(template_path):
+                gabarit_image = np.array(Image.open(template_path).convert('RGB'))
+                logger.info(f"📐 Loaded default template: {template_path}")
+            else:
+                raise HTTPException(status_code=404, detail="No template available. Please upload a gabarit image.")
+        
+        # 3. Recoloriser
+        from color_engine_api import recolor_with_reference, image_to_base64
+        
+        result_image, hair_mask = recolor_with_reference(
+            gabarit_image, 
+            reference_image, 
+            blend=request.intensity
+        )
+        
+        # 4. Ajouter le watermark de la série
+        result_with_watermark = add_series_watermark(result_image, request.series)
+        
+        # 5. Convertir en base64
+        result_b64 = image_to_base64(result_with_watermark)
+        
+        logger.info("✅ Color Engine Generate: Success")
+        
+        return {
+            "success": True,
+            "image": f"data:image/png;base64,{result_b64}",
+            "series": request.series,
+            "intensity": request.intensity,
+            "elite_color": request.elite_color_code
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Color Engine Generate error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def add_series_watermark(image, series: str):
+    """Ajoute le watermark Luxura + série sur l'image."""
+    from PIL import Image, ImageDraw, ImageFont
+    import numpy as np
+    
+    pil_image = Image.fromarray(image)
+    draw = ImageDraw.Draw(pil_image)
+    
+    # Couleurs par série
+    series_colors = {
+        "genius": "#9333ea",  # Purple
+        "halo": "#3b82f6",    # Blue
+        "tape": "#22c55e",    # Green
+        "i-tip": "#f59e0b",   # Orange
+    }
+    
+    series_names = {
+        "genius": "Série Vivian",
+        "halo": "Série Everly", 
+        "tape": "Série Aurora",
+        "i-tip": "Série Eleanor",
+    }
+    
+    # Position du watermark (coin inférieur droit)
+    width, height = pil_image.size
+    
+    try:
+        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
+        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+    except:
+        font_large = ImageFont.load_default()
+        font_small = font_large
+    
+    # Textes
+    luxura_text = "LUXURA"
+    series_text = series_names.get(series, "Extensions")
+    
+    # Dessiner le fond semi-transparent
+    box_width = 150
+    box_height = 50
+    box_x = width - box_width - 10
+    box_y = height - box_height - 10
+    
+    # Rectangle semi-transparent
+    overlay = Image.new('RGBA', pil_image.size, (0, 0, 0, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
+    overlay_draw.rectangle(
+        [(box_x - 5, box_y - 5), (box_x + box_width + 5, box_y + box_height + 5)],
+        fill=(0, 0, 0, 150)
+    )
+    
+    pil_image = pil_image.convert('RGBA')
+    pil_image = Image.alpha_composite(pil_image, overlay)
+    draw = ImageDraw.Draw(pil_image)
+    
+    # Texte LUXURA en doré
+    draw.text((box_x + 10, box_y + 5), luxura_text, fill="#c9a050", font=font_large)
+    
+    # Texte série
+    series_color = series_colors.get(series, "#ffffff")
+    draw.text((box_x + 10, box_y + 30), series_text, fill=series_color, font=font_small)
+    
+    return np.array(pil_image.convert('RGB'))
+
+
 class AutoColorRequest(BaseModel):
     """Requête simplifiée - juste la référence couleur"""
     reference: str = Field(..., description="Image référence couleur en base64")
