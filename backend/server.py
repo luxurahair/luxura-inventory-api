@@ -598,7 +598,7 @@ def generate_product_name_from_handle(handle: str, category: str) -> str:
     GENIUS_WIX_NAMES = {
         "genius-ombré-blond-moka-6-6t24": "Genius Vivian Caramel Soleil #6/6T24",
         "genius-série-vivian-brun-lumineux-blond-foncé-6": "Genius Vivian Caramel Doré #6",
-        "genius-trame-invisible-série-vivian-blanc-polar-ivory": "Genius Vivian IVORY #IVORY",
+        "genius-trame-invisible-série-vivian-blanc-polar-ivory": "Genius Vivian Ivoire Précieux #IVORY",
         "genius-trame-invisible-série-vivian-brun-2": "Genius Vivian Espresso Intense #2",
         "genius-trame-invisible-série-vivian-ombré-brun-cacao-3-3t24": "Genius Vivian Châtaigne Lumière #3/3T24",
         "genius-sdd-série-vivian-ombré-2btp18-1006": "Genius Vivian Espresso Balayage Glacé #2BTP18/1006",
@@ -608,7 +608,7 @@ def generate_product_name_from_handle(handle: str, category: str) -> str:
         "genius-trame-invisible-série-vivian-ombré-brun-nuit-db": "Genius Vivian Nuit Mystère #DB",
         "genius-trame-invisible-série-vivian-balayage-blond-foncé-6-24": "Genius Vivian Golden Hour #6/24",
         "genius-ssd-trame-invisible-série-vivian-brun-cacao": "Genius Vivian Cacao Velours #CACAO",
-        "genius-trame-invisible-série-vivian-foochow": "Genius Vivian FOOCHOW #FOOCHOW",
+        "genius-trame-invisible-série-vivian-foochow": "Genius Vivian Cachemire Oriental #FOOCHOW",
         "genius-trame-invisible-série-vivian-chengtu": "Genius Vivian Châtain Soyeux #CHENGTU",
         "genius-trame-invisible-série-vivian-5atp18b62": "Genius Vivian Noisette Balayage Cendré #5ATP18B62",
         "genius-ssd-série-vivian-ombré-blond-cendré-5at60": "Genius Vivian Noisette Ombré Platine #5AT60",
