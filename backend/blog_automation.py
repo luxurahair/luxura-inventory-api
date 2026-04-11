@@ -2121,14 +2121,37 @@ async def publish_to_facebook_page(
         
         # Ajouter l'extrait s'il existe, sinon prendre le début du contenu
         if excerpt and len(excerpt) > 50:
-            message_parts.append(excerpt[:500])
+            # S'assurer que l'extrait se termine par une phrase complète
+            excerpt_text = excerpt
+            if len(excerpt_text) > 400:
+                # Trouver le dernier point avant 400 chars
+                cut_pos = -1
+                for i, char in enumerate(excerpt_text[:400]):
+                    if char in '.!?':
+                        cut_pos = i + 1
+                if cut_pos > 100:
+                    excerpt_text = excerpt_text[:cut_pos]
+                else:
+                    excerpt_text = excerpt_text[:400] + "..."
+            message_parts.append(excerpt_text)
         else:
             # Prendre le premier paragraphe significatif
             paragraphs = plain_text.split('\n\n')
             first_para = ""
             for para in paragraphs:
                 if len(para.strip()) > 100:
-                    first_para = para.strip()[:600]
+                    para_text = para.strip()
+                    # S'assurer que le paragraphe se termine par une phrase complète
+                    if len(para_text) > 500:
+                        cut_pos = -1
+                        for i, char in enumerate(para_text[:500]):
+                            if char in '.!?':
+                                cut_pos = i + 1
+                        if cut_pos > 100:
+                            para_text = para_text[:cut_pos]
+                        else:
+                            para_text = para_text[:500] + "..."
+                    first_para = para_text
                     break
             if first_para:
                 message_parts.append(first_para)
@@ -2136,11 +2159,34 @@ async def publish_to_facebook_page(
         message_parts.append("")
         
         # Ajouter quelques points clés du contenu
-        # Extraire les premiers points à puces
+        # Extraire les premiers points à puces - phrases COMPLÈTES uniquement
         bullet_points = []
         for line in plain_text.split('\n'):
-            if line.strip().startswith('•') and len(bullet_points) < 3:
-                bullet_points.append(line.strip()[:100])
+            line_clean = line.strip()
+            if line_clean.startswith('•') and len(bullet_points) < 3:
+                # S'assurer que la phrase est complète (se termine par un point ou est courte)
+                # Chercher le premier point ou fin de phrase
+                point_text = line_clean
+                
+                # Si le texte est trop long, couper à la fin d'une phrase
+                if len(point_text) > 120:
+                    # Trouver le dernier point, virgule ou deux-points avant 120 chars
+                    cut_pos = -1
+                    for i, char in enumerate(point_text[:120]):
+                        if char in '.!?':
+                            cut_pos = i + 1
+                    
+                    if cut_pos > 30:  # Si on a trouvé une fin de phrase raisonnable
+                        point_text = point_text[:cut_pos]
+                    else:
+                        # Sinon, couper au dernier espace avant 100 chars et ajouter "..."
+                        last_space = point_text[:100].rfind(' ')
+                        if last_space > 30:
+                            point_text = point_text[:last_space] + "..."
+                        else:
+                            point_text = point_text[:100] + "..."
+                
+                bullet_points.append(point_text)
         
         if bullet_points:
             message_parts.append("🎯 Points clés:")
