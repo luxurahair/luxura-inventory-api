@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,17 +27,56 @@ const SERIES = [
   { id: 'i-tip', name: 'Eleanor', color: '#f59e0b' },
 ];
 
+interface EliteColor {
+  code: string;
+  name: string;
+  order: number;
+  image_url: string;
+  filename: string;
+}
+
 export default function AdminColorEngine() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'create' | 'library' | 'add'>('create');
   const [gabarit, setGabarit] = useState<string | null>(null);
   const [reference, setReference] = useState<string | null>(null);
+  const [selectedEliteColor, setSelectedEliteColor] = useState<EliteColor | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedSeries, setSelectedSeries] = useState('genius');
   const [intensity, setIntensity] = useState(0.75);
   const [colorName, setColorName] = useState('');
   const [colorCode, setColorCode] = useState('');
+  
+  // Elite colors from API
+  const [eliteColors, setEliteColors] = useState<EliteColor[]>([]);
+  const [loadingColors, setLoadingColors] = useState(false);
+
+  // Charger les couleurs Elite au démarrage
+  useEffect(() => {
+    fetchEliteColors();
+  }, []);
+
+  const fetchEliteColors = async () => {
+    setLoadingColors(true);
+    try {
+      const response = await fetch(`${API_URL}/api/color-engine/colors`);
+      if (response.ok) {
+        const data = await response.json();
+        setEliteColors(data.colors || []);
+      }
+    } catch (error) {
+      console.error('Error fetching elite colors:', error);
+    }
+    setLoadingColors(false);
+  };
+
+  const selectEliteColor = (color: EliteColor) => {
+    setSelectedEliteColor(color);
+    // Construire l'URL complète de l'image
+    const imageUrl = `${API_URL}${color.image_url}`;
+    setReference(imageUrl);
+  };
 
   const pickImage = async (setter: (uri: string) => void) => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -189,22 +229,75 @@ export default function AdminColorEngine() {
               </TouchableOpacity>
             </View>
 
-            {/* Reference */}
+            {/* Reference - Now with Elite Colors Grid */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>🎨 Couleur de Référence</Text>
-              <TouchableOpacity
-                style={styles.uploadBox}
-                onPress={() => pickImage(setReference)}
-              >
-                {reference ? (
-                  <Image source={{ uri: reference }} style={styles.previewImage} />
+              
+              {/* Elite Colors Grid */}
+              <Text style={styles.subsectionTitle}>Couleurs Elite ({eliteColors.length})</Text>
+              {loadingColors ? (
+                <ActivityIndicator size="small" color="#c9a050" style={{ marginVertical: 20 }} />
+              ) : (
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.eliteColorsScroll}
+                  contentContainerStyle={styles.eliteColorsContainer}
+                >
+                  {eliteColors.map((color) => (
+                    <TouchableOpacity
+                      key={color.code}
+                      style={[
+                        styles.eliteColorItem,
+                        selectedEliteColor?.code === color.code && styles.eliteColorSelected
+                      ]}
+                      onPress={() => selectEliteColor(color)}
+                    >
+                      <Image
+                        source={{ uri: `${API_URL}${color.image_url}` }}
+                        style={styles.eliteColorImage}
+                      />
+                      <Text style={styles.eliteColorCode}>#{color.code}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+              
+              {/* Selected Color Preview or Manual Upload */}
+              <View style={styles.referencePreviewContainer}>
+                {selectedEliteColor ? (
+                  <View style={styles.selectedColorInfo}>
+                    <Image 
+                      source={{ uri: reference || '' }} 
+                      style={styles.selectedColorPreview} 
+                    />
+                    <View style={styles.selectedColorDetails}>
+                      <Text style={styles.selectedColorName}>{selectedEliteColor.name}</Text>
+                      <Text style={styles.selectedColorCodeLarge}>#{selectedEliteColor.code}</Text>
+                      <TouchableOpacity 
+                        style={styles.clearButton}
+                        onPress={() => { setSelectedEliteColor(null); setReference(null); }}
+                      >
+                        <Text style={styles.clearButtonText}>Changer</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 ) : (
-                  <>
-                    <Ionicons name="color-palette-outline" size={40} color="#666" />
-                    <Text style={styles.uploadText}>Charger la référence</Text>
-                  </>
+                  <TouchableOpacity
+                    style={styles.uploadBoxSmall}
+                    onPress={() => pickImage(setReference)}
+                  >
+                    {reference ? (
+                      <Image source={{ uri: reference }} style={styles.previewImage} />
+                    ) : (
+                      <>
+                        <Ionicons name="color-palette-outline" size={32} color="#666" />
+                        <Text style={styles.uploadText}>Ou charger manuellement</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
+              </View>
             </View>
 
             {/* Series Selection */}
@@ -284,23 +377,45 @@ export default function AdminColorEngine() {
         {activeTab === 'library' && (
           <View style={styles.libraryTab}>
             <Text style={styles.infoText}>
-              📚 Répertoire de Couleurs
+              📚 Répertoire des Couleurs Elite
             </Text>
-            {SERIES.map((serie) => (
-              <View key={serie.id} style={styles.librarySection}>
-                <Text style={styles.librarySectionTitle}>
-                  Série {serie.name} ({serie.id.toUpperCase()})
-                </Text>
-                <View style={styles.colorGrid}>
-                  <View style={styles.emptyColorBox}>
-                    <Ionicons name="add" size={24} color="#666" />
-                  </View>
+            
+            {loadingColors ? (
+              <ActivityIndicator size="large" color="#c9a050" style={{ marginVertical: 40 }} />
+            ) : (
+              <>
+                <Text style={styles.totalColors}>{eliteColors.length} couleurs disponibles</Text>
+                
+                {/* Grid of all Elite Colors */}
+                <View style={styles.libraryColorGrid}>
+                  {eliteColors.map((color) => (
+                    <TouchableOpacity
+                      key={color.code}
+                      style={styles.libraryColorItem}
+                      onPress={() => {
+                        selectEliteColor(color);
+                        setActiveTab('create');
+                      }}
+                    >
+                      <Image
+                        source={{ uri: `${API_URL}${color.image_url}` }}
+                        style={styles.libraryColorImage}
+                      />
+                      <Text style={styles.libraryColorName}>{color.name}</Text>
+                      <Text style={styles.libraryColorCode}>#{color.code}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              </View>
-            ))}
-            <Text style={styles.hintText}>
-              Ajoutez des couleurs dans l'onglet "➕ Ajouter"
-            </Text>
+              </>
+            )}
+            
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={fetchEliteColors}
+            >
+              <Ionicons name="refresh" size={20} color="#c9a050" />
+              <Text style={styles.refreshButtonText}>Actualiser</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -466,6 +581,100 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
+  // Elite Colors Styles
+  subsectionTitle: {
+    color: '#888',
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  eliteColorsScroll: {
+    marginBottom: 16,
+  },
+  eliteColorsContainer: {
+    paddingRight: 16,
+    gap: 10,
+  },
+  eliteColorItem: {
+    width: 70,
+    alignItems: 'center',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    padding: 4,
+    backgroundColor: '#1a1a1a',
+  },
+  eliteColorSelected: {
+    borderColor: '#c9a050',
+    backgroundColor: 'rgba(201, 160, 80, 0.15)',
+  },
+  eliteColorImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 6,
+    backgroundColor: '#333',
+  },
+  eliteColorCode: {
+    color: '#aaa',
+    fontSize: 10,
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  referencePreviewContainer: {
+    marginTop: 8,
+  },
+  selectedColorInfo: {
+    flexDirection: 'row',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#c9a050',
+  },
+  selectedColorPreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#333',
+  },
+  selectedColorDetails: {
+    marginLeft: 16,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  selectedColorName: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  selectedColorCodeLarge: {
+    color: '#c9a050',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  clearButton: {
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#333',
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  clearButtonText: {
+    color: '#888',
+    fontSize: 12,
+  },
+  uploadBoxSmall: {
+    height: 100,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#333',
+    backgroundColor: '#1a1a1a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
   seriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -553,6 +762,57 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
   },
   libraryTab: {},
+  totalColors: {
+    color: '#c9a050',
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  libraryColorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 20,
+  },
+  libraryColorItem: {
+    width: '30%',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    padding: 8,
+    alignItems: 'center',
+  },
+  libraryColorImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 8,
+    backgroundColor: '#333',
+  },
+  libraryColorName: {
+    color: '#fff',
+    fontSize: 11,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  libraryColorCode: {
+    color: '#c9a050',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginTop: 2,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#c9a050',
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  refreshButtonText: {
+    color: '#c9a050',
+    fontWeight: '600',
+  },
   infoText: {
     color: '#fff',
     fontSize: 18,

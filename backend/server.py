@@ -4426,6 +4426,124 @@ async def color_engine_status():
     }
 
 
+# ==================== COLOR ENGINE - ELITE COLORS LIBRARY ====================
+
+@api_router.get("/color-engine/colors")
+async def get_elite_colors():
+    """
+    Récupère la liste des couleurs Elite pour le Color Engine PRO
+    Returns: Liste de couleurs avec code, nom et URL de l'image
+    """
+    try:
+        import json
+        
+        mapping_path = "/app/backend/luxura_images/color_library/reference/color_mapping.json"
+        
+        if not os.path.exists(mapping_path):
+            return {"colors": [], "message": "Color mapping not found"}
+        
+        with open(mapping_path, "r") as f:
+            colors = json.load(f)
+        
+        # Construire les URLs pour chaque couleur
+        result = []
+        for color in colors:
+            code = color.get("code", "")
+            name = color.get("name", "")
+            order = color.get("order", 0)
+            
+            # Construire le nom de fichier standardisé
+            filename = f"{code}_{name.replace(' ', '_').replace('#', '')}.jpg"
+            
+            # Vérifier si le fichier existe
+            file_path = f"/app/backend/luxura_images/color_library/reference/{filename}"
+            
+            # Chercher le fichier avec différents patterns
+            possible_files = [
+                f"{code}_Color_{code}.jpg",
+                f"{code}_{code}.jpg",
+                f"{code}_{name.replace(' ', '_')}.jpg",
+            ]
+            
+            existing_file = None
+            for pf in possible_files:
+                check_path = f"/app/backend/luxura_images/color_library/reference/{pf}"
+                if os.path.exists(check_path):
+                    existing_file = pf
+                    break
+            
+            if not existing_file:
+                # Chercher dans le dossier
+                import glob
+                pattern = f"/app/backend/luxura_images/color_library/reference/*{code}*.jpg"
+                matches = glob.glob(pattern)
+                if matches:
+                    existing_file = os.path.basename(matches[0])
+            
+            if existing_file:
+                result.append({
+                    "code": code,
+                    "name": name,
+                    "order": order,
+                    "image_url": f"/api/color-engine/colors/{code}/image",
+                    "filename": existing_file
+                })
+        
+        # Trier par ordre
+        result.sort(key=lambda x: x.get("order", 999))
+        
+        return {
+            "colors": result,
+            "total": len(result)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting elite colors: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/color-engine/colors/{color_code}/image")
+async def get_elite_color_image(color_code: str):
+    """
+    Récupère l'image d'une couleur Elite spécifique
+    """
+    from fastapi.responses import FileResponse
+    import glob
+    
+    try:
+        base_path = "/app/backend/luxura_images/color_library/reference"
+        
+        # Chercher le fichier correspondant
+        pattern = f"{base_path}/*{color_code}*.jpg"
+        matches = glob.glob(pattern, recursive=False)
+        
+        # Aussi chercher avec le code exact
+        exact_patterns = [
+            f"{base_path}/{color_code}_*.jpg",
+            f"{base_path}/*_{color_code}.jpg",
+        ]
+        
+        for ep in exact_patterns:
+            matches.extend(glob.glob(ep))
+        
+        if matches:
+            # Prendre le premier match
+            file_path = matches[0]
+            return FileResponse(
+                file_path,
+                media_type="image/jpeg",
+                headers={"Cache-Control": "public, max-age=86400"}
+            )
+        
+        raise HTTPException(status_code=404, detail=f"Color {color_code} not found")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting color image {color_code}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== AUTO COLOR ENGINE (SIMPLIFIÉ) ====================
 
 class AutoColorRequest(BaseModel):
