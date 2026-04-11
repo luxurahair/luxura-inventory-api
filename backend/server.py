@@ -272,12 +272,14 @@ async def scheduled_blog_generation():
         openai_key = os.getenv("EMERGENT_LLM_KEY") or os.getenv("OPENAI_API_KEY")
         wix_api_key = os.getenv("WIX_API_KEY")
         wix_site_id = os.getenv("WIX_SITE_ID")
+        fb_access_token = os.getenv("FB_PAGE_ACCESS_TOKEN")
+        fb_page_id = os.getenv("FB_PAGE_ID")
         
         if not openai_key:
             logger.error("❌ CRON: Missing EMERGENT_LLM_KEY or OPENAI_API_KEY")
             return
         
-        # 1 seul brouillon, PAS de publication automatique
+        # 1 seul brouillon Wix + publication Facebook automatique
         results = await generate_daily_blogs(
             db=db,  # ✅ Passer la connexion MongoDB
             openai_key=openai_key,  # ✅ Passer la clé OpenAI
@@ -285,7 +287,10 @@ async def scheduled_blog_generation():
             wix_site_id=wix_site_id,
             count=1,
             send_email=True,
-            publish_to_wix=False,  # ❌ PAS DE PUBLICATION AUTO
+            publish_to_wix=False,  # ❌ PAS DE PUBLICATION AUTO WIX (validation humaine)
+            publish_to_facebook=True,  # ✅ PUBLICATION AUTO FACEBOOK
+            fb_access_token=fb_access_token,
+            fb_page_id=fb_page_id,
             force_category=category
         )
         
@@ -2398,7 +2403,7 @@ async def auto_generate_daily_blogs(
         
         wix_api_key = os.getenv("WIX_API_KEY")
         wix_site_id = os.getenv("WIX_SITE_ID")
-        fb_access_token = os.getenv("FB_ACCESS_TOKEN")
+        fb_access_token = os.getenv("FB_PAGE_ACCESS_TOKEN")
         fb_page_id = os.getenv("FB_PAGE_ID")
         
         results = await generate_daily_blogs(
@@ -2425,6 +2430,109 @@ async def auto_generate_daily_blogs(
     except Exception as e:
         logger.error(f"Error in auto-generate blogs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/cron/status")
+async def get_cron_status():
+    """Retourne le statut du scheduler CRON et les prochaines exécutions"""
+    global blog_scheduler
+    
+    try:
+        from editorial_calendar import (
+            get_current_rotation_week,
+            get_weekly_schedule,
+            get_cron_category,
+            should_publish_today
+        )
+        CALENDAR_AVAILABLE = True
+    except ImportError:
+        CALENDAR_AVAILABLE = False
+    
+    status = {
+        "scheduler_running": blog_scheduler.running if blog_scheduler else False,
+        "timezone": "America/Montreal",
+        "current_time": datetime.now(timezone.utc).isoformat(),
+        "facebook_enabled": bool(os.getenv("FB_PAGE_ACCESS_TOKEN")) and bool(os.getenv("FB_PAGE_ID")),
+        "wix_enabled": bool(os.getenv("WIX_API_KEY")) and bool(os.getenv("WIX_SITE_ID")),
+    }
+    
+    if CALENDAR_AVAILABLE:
+        should_pub, reason = should_publish_today()
+        status.update({
+            "calendar_available": True,
+            "rotation_week": get_current_rotation_week(),
+            "today_category": get_cron_category(),
+            "should_publish_today": should_pub,
+            "publish_reason": reason,
+            "weekly_schedule": get_weekly_schedule()
+        })
+    else:
+        status["calendar_available"] = False
+    
+    # Liste des jobs programmés
+    if blog_scheduler:
+        jobs = []
+        for job in blog_scheduler.get_jobs():
+            jobs.append({
+                "id": job.id,
+                "name": job.name,
+                "next_run": job.next_run_time.isoformat() if job.next_run_time else None
+            })
+        status["scheduled_jobs"] = jobs
+    
+    return status
+
+@api_router.post("/cron/trigger-now")
+async def trigger_blog_generation_now():
+    """Force la génération immédiate d'un blog avec publication Facebook"""
+    try:
+        from blog_automation import generate_daily_blogs
+        from editorial_calendar import get_cron_category
+        
+        # Récupérer la catégorie du jour ou fallback
+        try:
+            category = get_cron_category()
+        except:
+            category = 'entretien'
+        
+        openai_key = os.getenv("EMERGENT_LLM_KEY") or os.getenv("OPENAI_API_KEY")
+        wix_api_key = os.getenv("WIX_API_KEY")
+        wix_site_id = os.getenv("WIX_SITE_ID")
+        fb_access_token = os.getenv("FB_PAGE_ACCESS_TOKEN")
+        fb_page_id = os.getenv("FB_PAGE_ID")
+        
+        if not openai_key:
+            raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY ou OPENAI_API_KEY non configuré")
+        
+        results = await generate_daily_blogs(
+            db=db,
+            openai_key=openai_key,
+            wix_api_key=wix_api_key,
+            wix_site_id=wix_site_id,
+            count=1,
+            send_email=True,
+            publish_to_wix=False,  # Brouillon Wix uniquement (validation humaine)
+            publish_to_facebook=True,  # Publication Facebook automatique
+            fb_access_token=fb_access_token,
+            fb_page_id=fb_page_id,
+            force_category=category
+        )
+        
+        return {
+            "success": True,
+            "message": f"Blog généré avec succès - catégorie: {category}",
+            "blog_count": len(results),
+            "facebook_published": any(r.get("published_to_facebook") for r in results),
+            "wix_draft_created": any(r.get("wix_draft_id") for r in results),
+            "posts": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in trigger-now: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @api_router.get("/blog/wix-posts")

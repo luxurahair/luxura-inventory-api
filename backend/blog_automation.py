@@ -2067,10 +2067,13 @@ async def publish_to_facebook_page(
     title: str,
     content: str,
     image_url: str = None,
-    link: str = None
+    link: str = None,
+    excerpt: str = None,
+    category: str = None
 ) -> Optional[Dict]:
     """
     Publie un article sur la page Facebook Luxura Distribution.
+    Version améliorée avec contenu plus engageant et complet.
     
     Args:
         fb_access_token: Token d'accès de la page Facebook
@@ -2079,6 +2082,8 @@ async def publish_to_facebook_page(
         content: Contenu HTML (sera converti en texte)
         image_url: URL de l'image (optionnel)
         link: Lien vers l'article complet (optionnel)
+        excerpt: Résumé court du blog (optionnel)
+        category: Catégorie du blog pour les hashtags (optionnel)
     
     Returns:
         Dict avec l'ID du post Facebook si succès, None sinon
@@ -2087,47 +2092,135 @@ async def publish_to_facebook_page(
         # Convertir HTML en texte pour Facebook
         plain_text = html_to_plain_text(content)
         
-        # Créer le message avec le titre
-        message = f"✨ {title}\n\n{plain_text[:1500]}"  # Facebook limite à ~2000 caractères
+        # Créer un message Facebook engageant et complet
+        # Format: Accroche + Titre + Contenu principal + CTA + Hashtags
         
+        # Accroches par catégorie
+        hooks = {
+            "genius": "💫 Découvrez la révolution des trames invisibles !",
+            "halo": "✨ Un changement de look instantané et sans engagement !",
+            "tape": "🎀 La méthode préférée des coiffeuses professionnelles !",
+            "i-tip": "💎 L'option la plus naturelle pour un résultat durable !",
+            "entretien": "🌟 Conseils d'experts pour sublimer vos extensions !",
+            "comparatif": "🔍 Quel type d'extensions vous convient le mieux ?",
+            "b2b_salon": "💼 Professionnels : boostez vos revenus avec Luxura !",
+            "cheveux_fins": "🌸 Solutions adaptées pour les cheveux fins !",
+            "tendances": "💅 Les tendances capillaires du moment !",
+            "guide": "📖 Guide complet pour faire le bon choix !"
+        }
+        
+        hook = hooks.get(category, "✨ Nouveau article Luxura Distribution !")
+        
+        # Construire le message complet (max 2000 chars pour Facebook)
+        message_parts = [
+            hook,
+            "",
+            f"📌 {title}",
+            "",
+        ]
+        
+        # Ajouter l'extrait s'il existe, sinon prendre le début du contenu
+        if excerpt and len(excerpt) > 50:
+            message_parts.append(excerpt[:500])
+        else:
+            # Prendre le premier paragraphe significatif
+            paragraphs = plain_text.split('\n\n')
+            first_para = ""
+            for para in paragraphs:
+                if len(para.strip()) > 100:
+                    first_para = para.strip()[:600]
+                    break
+            if first_para:
+                message_parts.append(first_para)
+        
+        message_parts.append("")
+        
+        # Ajouter quelques points clés du contenu
+        # Extraire les premiers points à puces
+        bullet_points = []
+        for line in plain_text.split('\n'):
+            if line.strip().startswith('•') and len(bullet_points) < 3:
+                bullet_points.append(line.strip()[:100])
+        
+        if bullet_points:
+            message_parts.append("🎯 Points clés:")
+            message_parts.extend(bullet_points)
+            message_parts.append("")
+        
+        # Call to action
+        message_parts.append("👉 Envie d'en savoir plus ? Contactez-nous ou visitez notre site !")
+        message_parts.append("")
+        
+        # Lien vers l'article si disponible
         if link:
-            message += f"\n\n🔗 Lire l'article complet: {link}"
+            message_parts.append(f"🔗 {link}")
+            message_parts.append("")
         
-        message += "\n\n#LuxuraDistribution #ExtensionsCheveux #Québec #Montréal #HairExtensions"
+        # Hashtags personnalisés par catégorie
+        base_hashtags = "#LuxuraDistribution #ExtensionsCheveux #Québec #Montréal"
+        category_hashtags = {
+            "genius": "#GeniusWeft #TrameInvisible #Vivian",
+            "halo": "#HaloExtensions #Everly #SansEngagement",
+            "tape": "#TapeIn #BandesAdhésives #Aurora",
+            "i-tip": "#ITip #Kératine #Eleanor",
+            "entretien": "#EntretienExtensions #ConseilsBeauté",
+            "comparatif": "#GuideBeauté #ConseilsCoiffure",
+            "b2b_salon": "#SalonCoiffure #Professionnels #Partenariat",
+            "cheveux_fins": "#CheveuxFins #SolutionsCapillaires",
+            "tendances": "#TendancesCoiffure #StyleCapillaire",
+            "guide": "#GuideExtensions #ConseilsExperts"
+        }
         
-        async with httpx.AsyncClient() as client:
+        hashtags = f"{base_hashtags} {category_hashtags.get(category, '#HairExtensions #Beauté')}"
+        message_parts.append(hashtags)
+        
+        # Assembler le message
+        message = "\n".join(message_parts)
+        
+        # Tronquer si nécessaire (max 2000 chars)
+        if len(message) > 2000:
+            message = message[:1950] + "\n\n..." + "\n\n" + hashtags
+        
+        logger.info(f"📱 Publishing to Facebook: {title[:50]}... (image: {'Yes' if image_url else 'No'})")
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
             # Si on a une image, on publie un post avec photo
             if image_url:
+                logger.info(f"📷 Facebook post with image: {image_url[:80]}...")
                 response = await client.post(
                     f"https://graph.facebook.com/v19.0/{fb_page_id}/photos",
                     data={
                         "url": image_url,
                         "caption": message,
                         "access_token": fb_access_token
-                    },
-                    timeout=60
+                    }
                 )
             else:
                 # Sinon, on publie un post texte simple
+                logger.info("📝 Facebook post without image")
                 response = await client.post(
                     f"https://graph.facebook.com/v19.0/{fb_page_id}/feed",
                     data={
                         "message": message,
                         "access_token": fb_access_token
-                    },
-                    timeout=30
+                    }
                 )
             
             if response.status_code == 200:
                 result = response.json()
-                logger.info(f"Facebook post published: {result.get('id') or result.get('post_id')}")
+                post_id = result.get('id') or result.get('post_id')
+                logger.info(f"✅ Facebook post published: {post_id}")
                 return result
             else:
-                logger.error(f"Facebook publish failed: {response.status_code} - {response.text}")
+                error_data = response.json() if response.text else {}
+                error_msg = error_data.get('error', {}).get('message', response.text[:200])
+                logger.error(f"❌ Facebook publish failed: {response.status_code} - {error_msg}")
                 return None
                 
     except Exception as e:
-        logger.error(f"Error publishing to Facebook: {e}")
+        logger.error(f"❌ Error publishing to Facebook: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 # =====================================================
@@ -2661,7 +2754,9 @@ async def generate_daily_blogs(
                 title=blog_post["title"],
                 content=blog_post["content"],
                 image_url=fb_image,
-                link=None
+                link=None,
+                excerpt=blog_post.get("excerpt", ""),
+                category=category
             )
 
             if fb_result:
