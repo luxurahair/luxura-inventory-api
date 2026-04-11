@@ -1091,6 +1091,163 @@ def extract_variant_info(product: dict) -> dict:
         'is_in_stock': product.get('is_in_stock', False)
     }
 
+async def get_products_from_wix_fallback(
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    in_stock: Optional[bool] = None
+) -> List[Dict]:
+    """
+    Fallback: Récupère les produits directement depuis Wix API quand Luxura API est indisponible
+    """
+    try:
+        wix_api_key = os.getenv("WIX_API_KEY")
+        wix_site_id = os.getenv("WIX_SITE_ID")
+        
+        if not wix_api_key or not wix_site_id:
+            logger.error("WIX_API_KEY ou WIX_SITE_ID non configuré pour le fallback")
+            return []
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # Query all products from Wix
+            response = await client.post(
+                f"{WIX_API_BASE}/stores/v1/products/query",
+                headers={
+                    "Authorization": wix_api_key,
+                    "wix-site-id": wix_site_id,
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "query": {
+                        "paging": {"limit": 100}
+                    },
+                    "includeVariants": True
+                }
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"Wix fallback failed: {response.status_code} - {response.text[:200]}")
+                return []
+            
+            data = response.json()
+            wix_products = data.get("products", [])
+            
+            logger.info(f"📦 Wix fallback: {len(wix_products)} produits récupérés")
+            
+            result = []
+            seen_handles = set()
+            
+            for p in wix_products:
+                # Skip invisible products
+                if not p.get("visible", True):
+                    continue
+                
+                name = p.get("name", "")
+                slug = p.get("slug", "")
+                handle = slug  # Wix uses slug as handle
+                
+                # Skip duplicates
+                if handle in seen_handles:
+                    continue
+                seen_handles.add(handle)
+                
+                # Skip test products
+                if 'test' in name.lower():
+                    continue
+                
+                # Detect category
+                product_category = detect_category_from_handle(handle, name)
+                if product_category is None:
+                    continue
+                
+                # Filter by category if specified
+                if category and product_category != category:
+                    continue
+                
+                # Filter by search if specified
+                if search:
+                    search_lower = search.lower()
+                    if search_lower not in name.lower() and search_lower not in slug.lower():
+                        continue
+                
+                # Get price
+                price_data = p.get("price", {}) or p.get("priceData", {})
+                price = price_data.get("price", 0)
+                
+                # Get stock info
+                stock_data = p.get("stock", {})
+                is_in_stock = stock_data.get("inStock", True)
+                
+                # Filter by stock if specified
+                if in_stock is not None:
+                    if in_stock and not is_in_stock:
+                        continue
+                    if not in_stock and is_in_stock:
+                        continue
+                
+                # Get image
+                media = p.get("media", {})
+                main_media = media.get("mainMedia", {})
+                image_data = main_media.get("image", {})
+                image_url = image_data.get("url", "")
+                
+                # Fallback image from our mapping
+                if not image_url:
+                    color_code = extract_color_code_from_name(name)
+                    image_url = get_product_image(handle, product_category, color_code)
+                
+                # Get color code
+                color_code = extract_color_code_from_name(name)
+                
+                # Series mapping
+                series_map = {
+                    "halo": "Everly",
+                    "genius": "Vivian", 
+                    "tape": "Aurora",
+                    "i-tip": "Eleanor",
+                    "ponytail": "Victoria",
+                    "clip-in": "Sophia"
+                }
+                
+                # Build Wix URL
+                wix_url = f"https://www.luxuradistribution.com/product-page/{handle}" if handle else "https://www.luxuradistribution.com"
+                
+                product_data = {
+                    "id": handle,
+                    "name": name,
+                    "price": price,
+                    "description": clean_html(p.get("description", "")),
+                    "category": product_category,
+                    "series": series_map.get(product_category, "Luxura"),
+                    "images": [image_url] if image_url else [],
+                    "in_stock": is_in_stock,
+                    "is_in_stock": is_in_stock,
+                    "total_quantity": 10 if is_in_stock else 0,  # Estimate
+                    "quantity": 10 if is_in_stock else 0,
+                    "sku": p.get("sku", ""),
+                    "wix_url": wix_url,
+                    "handle": handle,
+                    "color_code": color_code,
+                    "variant_count": 0,
+                    "luxura_id": p.get("id"),
+                    "source": "wix_fallback"
+                }
+                
+                result.append(product_data)
+            
+            # Sort by category order, then by name
+            category_order = {'genius': 0, 'halo': 1, 'tape': 2, 'i-tip': 3, 'ponytail': 4, 'clip-in': 5, 'essentiels': 6}
+            result.sort(key=lambda x: (category_order.get(x['category'], 99), x['name']))
+            
+            logger.info(f"✅ Wix fallback: {len(result)} produits retournés")
+            return result
+            
+    except Exception as e:
+        logger.error(f"Error in Wix fallback: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+
+
 @api_router.get("/products")
 async def get_products(
     category: Optional[str] = None,
@@ -1099,8 +1256,8 @@ async def get_products(
     include_variants: Optional[bool] = True  # Include variant details
 ):
     """Get all products from Luxura Inventory API - grouped by handle with variants
-    ONLY returns: Genius, Tape (Bande Adhésive), I-Tip, Halo, Essentiels
-    EXCLUDES: Clips, Ponytails, test products
+    ONLY returns: Genius, Tape (Bande Adhésive), I-Tip, Halo, Essentiels, Ponytail, Clip-in
+    Falls back to Wix API if Luxura API is unavailable
     """
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -1112,8 +1269,10 @@ async def get_products(
                 products_task, inventory_task, return_exceptions=True
             )
             
+            # FALLBACK: If Luxura API fails, use Wix API directly
             if isinstance(products_response, Exception) or products_response.status_code != 200:
-                raise HTTPException(status_code=502, detail="Unable to fetch products from Luxura API")
+                logger.warning("⚠️ Luxura API unavailable, using Wix fallback")
+                return await get_products_from_wix_fallback(category, search, in_stock)
             
             products = products_response.json()
             
