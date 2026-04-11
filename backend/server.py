@@ -4644,7 +4644,26 @@ async def color_engine_generate(request: GenerateColorRequest):
         # 4. Ajouter le watermark de la série
         result_with_watermark = add_series_watermark(result_image, request.series)
         
-        # 5. Convertir en base64
+        # 5. Sauvegarder l'image générée
+        from datetime import datetime
+        import uuid
+        
+        save_dir = "/app/backend/luxura_images/color_engine_generated"
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # Générer un nom de fichier unique
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        color_code = request.elite_color_code or "custom"
+        unique_id = str(uuid.uuid4())[:8]
+        filename = f"{request.series}_{color_code}_{timestamp}_{unique_id}.png"
+        filepath = os.path.join(save_dir, filename)
+        
+        # Sauvegarder l'image
+        pil_result = Image.fromarray(result_with_watermark)
+        pil_result.save(filepath, "PNG", quality=95)
+        logger.info(f"💾 Image saved: {filename}")
+        
+        # 6. Convertir en base64
         result_b64 = image_to_base64(result_with_watermark)
         
         logger.info("✅ Color Engine Generate: Success")
@@ -4654,7 +4673,9 @@ async def color_engine_generate(request: GenerateColorRequest):
             "image": f"data:image/png;base64,{result_b64}",
             "series": request.series,
             "intensity": request.intensity,
-            "elite_color": request.elite_color_code
+            "elite_color": request.elite_color_code,
+            "saved_filename": filename,
+            "download_url": f"/api/color-engine/generated/{filename}"
         }
         
     except HTTPException:
@@ -4664,6 +4685,102 @@ async def color_engine_generate(request: GenerateColorRequest):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/color-engine/generated")
+async def list_generated_images():
+    """
+    Liste toutes les images générées par le Color Engine
+    """
+    import glob
+    from datetime import datetime
+    
+    save_dir = "/app/backend/luxura_images/color_engine_generated"
+    
+    if not os.path.exists(save_dir):
+        return {"images": [], "total": 0}
+    
+    files = glob.glob(f"{save_dir}/*.png")
+    
+    images = []
+    for filepath in files:
+        filename = os.path.basename(filepath)
+        # Parse filename: series_colorcode_timestamp_uuid.png
+        parts = filename.replace('.png', '').split('_')
+        
+        stat = os.stat(filepath)
+        file_size = stat.st_size
+        created_at = datetime.fromtimestamp(stat.st_mtime).isoformat()
+        
+        images.append({
+            "filename": filename,
+            "series": parts[0] if len(parts) > 0 else "unknown",
+            "color_code": parts[1] if len(parts) > 1 else "unknown",
+            "created_at": created_at,
+            "size_bytes": file_size,
+            "size_kb": round(file_size / 1024, 1),
+            "download_url": f"/api/color-engine/generated/{filename}",
+            "preview_url": f"/api/color-engine/generated/{filename}?preview=true"
+        })
+    
+    # Trier par date de création (plus récent en premier)
+    images.sort(key=lambda x: x['created_at'], reverse=True)
+    
+    return {
+        "images": images,
+        "total": len(images)
+    }
+
+
+@api_router.get("/color-engine/generated/{filename}")
+async def download_generated_image(filename: str, preview: bool = False):
+    """
+    Télécharge ou prévisualise une image générée
+    """
+    from fastapi.responses import FileResponse
+    
+    save_dir = "/app/backend/luxura_images/color_engine_generated"
+    filepath = os.path.join(save_dir, filename)
+    
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    # Sécurité: vérifier que le fichier est bien dans le dossier autorisé
+    if not os.path.abspath(filepath).startswith(os.path.abspath(save_dir)):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    return FileResponse(
+        filepath,
+        media_type="image/png",
+        filename=filename if not preview else None,
+        headers={
+            "Cache-Control": "public, max-age=3600",
+            "Content-Disposition": "inline" if preview else f"attachment; filename={filename}"
+        }
+    )
+
+
+@api_router.delete("/color-engine/generated/{filename}")
+async def delete_generated_image(filename: str):
+    """
+    Supprime une image générée
+    """
+    save_dir = "/app/backend/luxura_images/color_engine_generated"
+    filepath = os.path.join(save_dir, filename)
+    
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    # Sécurité
+    if not os.path.abspath(filepath).startswith(os.path.abspath(save_dir)):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    os.remove(filepath)
+    logger.info(f"🗑️ Deleted generated image: {filename}")
+    
+    return {"success": True, "message": f"Image {filename} deleted"}
+
+
 
 
 def add_series_watermark(image, series: str):

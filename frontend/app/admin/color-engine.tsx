@@ -52,10 +52,15 @@ export default function AdminColorEngine() {
   // Elite colors from API
   const [eliteColors, setEliteColors] = useState<EliteColor[]>([]);
   const [loadingColors, setLoadingColors] = useState(false);
+  
+  // Generated images history
+  const [generatedImages, setGeneratedImages] = useState<any[]>([]);
+  const [lastGeneratedUrl, setLastGeneratedUrl] = useState<string | null>(null);
 
   // Charger les couleurs Elite au démarrage
   useEffect(() => {
     fetchEliteColors();
+    fetchGeneratedHistory();
   }, []);
 
   const fetchEliteColors = async () => {
@@ -83,6 +88,53 @@ export default function AdminColorEngine() {
     // Construire l'URL complète de l'image
     const imageUrl = `${API_URL}${color.image_url}`;
     setReference(imageUrl);
+  };
+
+  const fetchGeneratedHistory = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/color-engine/generated`);
+      if (response.ok) {
+        const data = await response.json();
+        setGeneratedImages(data.images || []);
+      }
+    } catch (error) {
+      console.error('Error fetching generated history:', error);
+    }
+  };
+
+  const downloadImage = async (url: string, filename: string) => {
+    try {
+      if (Platform.OS === 'web') {
+        // Sur web, ouvrir dans un nouvel onglet ou télécharger
+        const link = document.createElement('a');
+        link.href = `${API_URL}${url}`;
+        link.download = filename;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // Sur mobile, partager ou sauvegarder
+        Alert.alert('Téléchargement', `Image: ${filename}\nURL: ${API_URL}${url}`);
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      Alert.alert('Erreur', 'Impossible de télécharger l\'image');
+    }
+  };
+
+  const deleteGeneratedImage = async (filename: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/color-engine/generated/${filename}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setGeneratedImages(prev => prev.filter(img => img.filename !== filename));
+        Alert.alert('Succès', 'Image supprimée');
+      }
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de supprimer l\'image');
+    }
   };
 
   const pickImage = async (setter: (uri: string) => void) => {
@@ -147,8 +199,11 @@ export default function AdminColorEngine() {
         const data = await response.json();
         if (data.success && data.image) {
           setResult(data.image);
+          setLastGeneratedUrl(data.download_url);
+          // Rafraîchir l'historique
+          fetchGeneratedHistory();
           // Success notification (moins intrusif que Alert sur web)
-          console.log('✅ Image générée avec succès!');
+          console.log('✅ Image générée avec succès!', data.saved_filename);
         } else {
           Alert.alert('Erreur', data.detail || 'Échec de la génération');
         }
@@ -395,6 +450,20 @@ export default function AdminColorEngine() {
               <View style={styles.resultSection}>
                 <Text style={styles.sectionTitle}>✨ Résultat</Text>
                 <Image source={{ uri: result }} style={styles.resultImage} />
+                
+                {/* Download Button */}
+                {lastGeneratedUrl && (
+                  <TouchableOpacity
+                    style={styles.downloadButton}
+                    onPress={() => {
+                      const filename = lastGeneratedUrl.split('/').pop() || 'image.png';
+                      downloadImage(lastGeneratedUrl, filename);
+                    }}
+                  >
+                    <Ionicons name="download-outline" size={20} color="#fff" />
+                    <Text style={styles.downloadButtonText}>Télécharger l'image</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
@@ -403,9 +472,54 @@ export default function AdminColorEngine() {
         {/* LIBRARY TAB */}
         {activeTab === 'library' && (
           <View style={styles.libraryTab}>
-            <Text style={styles.infoText}>
-              📚 Répertoire des Couleurs Elite
-            </Text>
+            {/* Section: Images Générées */}
+            <Text style={styles.sectionTitle}>📁 Images Générées</Text>
+            {generatedImages.length > 0 ? (
+              <>
+                <Text style={styles.totalColors}>{generatedImages.length} images sauvegardées</Text>
+                <View style={styles.generatedGrid}>
+                  {generatedImages.map((img) => (
+                    <View key={img.filename} style={styles.generatedItem}>
+                      <Image
+                        source={{ uri: `${API_URL}${img.preview_url}` }}
+                        style={styles.generatedImage}
+                      />
+                      <Text style={styles.generatedSeries}>{img.series}</Text>
+                      <Text style={styles.generatedColor}>#{img.color_code}</Text>
+                      <Text style={styles.generatedSize}>{img.size_kb} KB</Text>
+                      <View style={styles.generatedActions}>
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => downloadImage(img.download_url, img.filename)}
+                        >
+                          <Ionicons name="download-outline" size={16} color="#c9a050" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.actionButtonDelete}
+                          onPress={() => {
+                            Alert.alert(
+                              'Supprimer',
+                              `Voulez-vous supprimer ${img.filename}?`,
+                              [
+                                { text: 'Annuler', style: 'cancel' },
+                                { text: 'Supprimer', style: 'destructive', onPress: () => deleteGeneratedImage(img.filename) }
+                              ]
+                            );
+                          }}
+                        >
+                          <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </>
+            ) : (
+              <Text style={styles.emptyText}>Aucune image générée. Utilisez l'onglet "Créer" pour commencer.</Text>
+            )}
+            
+            {/* Section: Couleurs Elite */}
+            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>🎨 Couleurs Elite</Text>
             
             {loadingColors ? (
               <ActivityIndicator size="large" color="#c9a050" style={{ marginVertical: 40 }} />
@@ -438,7 +552,7 @@ export default function AdminColorEngine() {
             
             <TouchableOpacity 
               style={styles.refreshButton}
-              onPress={fetchEliteColors}
+              onPress={() => { fetchEliteColors(); fetchGeneratedHistory(); }}
             >
               <Ionicons name="refresh" size={20} color="#c9a050" />
               <Text style={styles.refreshButtonText}>Actualiser</Text>
@@ -839,6 +953,79 @@ const styles = StyleSheet.create({
   refreshButtonText: {
     color: '#c9a050',
     fontWeight: '600',
+  },
+  downloadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#c9a050',
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginTop: 16,
+  },
+  downloadButtonText: {
+    color: '#000',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  generatedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 20,
+  },
+  generatedItem: {
+    width: '30%',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    padding: 8,
+    alignItems: 'center',
+  },
+  generatedImage: {
+    width: '100%',
+    aspectRatio: 0.75,
+    borderRadius: 8,
+    backgroundColor: '#333',
+  },
+  generatedSeries: {
+    color: '#c9a050',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 6,
+    textTransform: 'uppercase',
+  },
+  generatedColor: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginTop: 2,
+  },
+  generatedSize: {
+    color: '#888',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  generatedActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  actionButton: {
+    padding: 8,
+    backgroundColor: '#333',
+    borderRadius: 6,
+  },
+  actionButtonDelete: {
+    padding: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderRadius: 6,
+  },
+  emptyText: {
+    color: '#888',
+    textAlign: 'center',
+    paddingVertical: 20,
+    fontStyle: 'italic',
   },
   infoText: {
     color: '#fff',
