@@ -124,14 +124,14 @@ def recolor_with_reference(
     """
     Recolorise un gabarit avec la couleur d'une référence.
     
-    VERSION 8: ULTRA HIGH QUALITY
-    =============================
-    Utilise une décomposition en fréquences:
-    1. Extraire les HAUTES FRÉQUENCES (détails, texture) de l'original
-    2. Modifier la COULEUR sur les basses fréquences uniquement
-    3. Réassembler: Color modifié + Détails originaux
+    VERSION 9: TRANSFERT DIRECT PRÉCIS
+    ==================================
+    Méthode: Remplacement DIRECT de la teinte (H) et saturation (S)
+    tout en préservant la luminosité relative (V) pour les reflets.
     
-    Résultat: Changement de couleur SANS perte de détails
+    Pour les couleurs foncées (#1, #1A, #1B):
+    - La luminosité cible est très basse (V < 50)
+    - On applique un assombrissement plus agressif
     
     Args:
         gabarit: Image RGB du gabarit
@@ -141,7 +141,7 @@ def recolor_with_reference(
     Returns:
         (image_recolorisée, masque_cheveux)
     """
-    logger.info(f"🎨 Color Engine V8 ULTRA - Recoloring with blend={blend}")
+    logger.info(f"🎨 Color Engine V9 DIRECT - Recoloring with blend={blend}")
     logger.info(f"📐 Input resolution: {gabarit.shape[1]}x{gabarit.shape[0]}")
     
     # ============================================
@@ -153,90 +153,81 @@ def recolor_with_reference(
     logger.info(f"🎭 Hair mask: {hair_pixels} pixels ({hair_pixels/total_pixels*100:.1f}%)")
     
     # ============================================
-    # ÉTAPE 2: Extraire la couleur cible
+    # ÉTAPE 2: Extraire la couleur cible de la référence
     # ============================================
     target_h, target_s, target_v = get_average_color_hsv(reference)
     logger.info(f"🎯 Target HSV: H={target_h:.1f}, S={target_s:.1f}, V={target_v:.1f}")
     
     # ============================================
-    # ÉTAPE 3: Extraire la couleur source (cheveux du gabarit)
+    # ÉTAPE 3: Extraire la couleur source du gabarit
     # ============================================
     source_h, source_s, source_v = get_average_color_hsv(gabarit, hair_mask)
     logger.info(f"📊 Source HSV: H={source_h:.1f}, S={source_s:.1f}, V={source_v:.1f}")
     
     # ============================================
-    # ÉTAPE 4: Extraire les détails (hautes fréquences) en grayscale
-    # ============================================
-    gray = cv2.cvtColor(gabarit, cv2.COLOR_RGB2GRAY)
-    high_freq, _ = extract_high_frequency(gray, kernel_size=15)
-    logger.info(f"📈 High frequency detail extracted")
-    
-    # ============================================
-    # ÉTAPE 5: Convertir en HSV et modifier la couleur
+    # ÉTAPE 4: Convertir en HSV
     # ============================================
     hsv = cv2.cvtColor(gabarit, cv2.COLOR_RGB2HSV).astype(np.float32)
     
     # Masque lissé pour transitions douces
     mask_float = hair_mask.astype(np.float32) / 255.0
-    mask_blur = cv2.GaussianBlur(mask_float, (21, 21), 0)
+    mask_blur = cv2.GaussianBlur(mask_float, (15, 15), 0)
     mask_blend = mask_blur * blend
     
-    # Calculer les transformations
-    h_shift = target_h - source_h
-    s_ratio = target_s / max(source_s, 1.0)
-    v_ratio = target_v / max(source_v, 1.0)
-    
-    logger.info(f"🔄 Transform: H_shift={h_shift:.1f}, S_ratio={s_ratio:.2f}, V_ratio={v_ratio:.2f}")
-    
-    # ============================================
-    # ÉTAPE 6: Appliquer les transformations HSV
-    # ============================================
     h_channel = hsv[:, :, 0]
     s_channel = hsv[:, :, 1]
     v_channel = hsv[:, :, 2]
     
-    # Nouvelle teinte
-    new_h = h_channel + h_shift * mask_blend
+    # ============================================
+    # ÉTAPE 5: TRANSFERT DIRECT DE LA TEINTE (H)
+    # ============================================
+    # Remplacer la teinte par la teinte cible
+    new_h = h_channel * (1 - mask_blend) + target_h * mask_blend
     new_h = np.mod(new_h, 180)
     
-    # Nouvelle saturation (préserver les variations)
-    # On scale vers la cible mais garde la variance originale
-    s_mean = np.mean(s_channel[hair_mask > 128])
-    s_std = np.std(s_channel[hair_mask > 128])
-    
-    # Normaliser, puis rescale vers la cible
-    new_s = target_s + (s_channel - source_s) * (target_s / max(source_s, 1.0)) * 0.5
-    new_s = s_channel * (1 - mask_blend) + new_s * mask_blend
+    # ============================================
+    # ÉTAPE 6: TRANSFERT DIRECT DE LA SATURATION (S)
+    # ============================================
+    # Remplacer la saturation par celle de la cible
+    new_s = s_channel * (1 - mask_blend) + target_s * mask_blend
     new_s = np.clip(new_s, 0, 255)
     
-    # Nouvelle luminosité (conserver les variations pour les reflets)
-    # On applique le ratio mais garde 60% de la variance originale
-    v_mean = np.mean(v_channel[hair_mask > 128])
-    v_deviation = v_channel - v_mean  # Écart par rapport à la moyenne
+    # ============================================
+    # ÉTAPE 7: TRANSFERT DE LA LUMINOSITÉ (V) - PRÉSERVER LES REFLETS
+    # ============================================
+    # Calculer la luminosité relative (pour garder les reflets)
+    v_min = np.min(v_channel[hair_mask > 128])
+    v_max = np.max(v_channel[hair_mask > 128])
+    v_range = max(v_max - v_min, 1)
     
-    # Nouvelle moyenne + variance conservée
-    new_v_mean = v_mean * v_ratio
-    new_v = new_v_mean + v_deviation * 0.8  # 80% de la variance originale
-    new_v = v_channel * (1 - mask_blend) + new_v * mask_blend
+    # Normaliser entre 0 et 1
+    v_normalized = (v_channel - v_min) / v_range
+    
+    # Calculer la plage de la cible
+    # Pour les couleurs foncées, on réduit la plage
+    target_v_min = max(5, target_v * 0.3)  # Minimum très sombre
+    target_v_max = min(target_v * 1.5, target_v + 40)  # Maximum limité
+    
+    if target_v < 60:  # Couleur foncée
+        # Pour les noirs/bruns foncés, réduire encore plus
+        target_v_min = max(5, target_v * 0.2)
+        target_v_max = min(target_v * 1.3, target_v + 25)
+        logger.info(f"🌑 Dark color detected: V range [{target_v_min:.0f}, {target_v_max:.0f}]")
+    
+    # Mapper sur la nouvelle plage
+    new_v_base = target_v_min + v_normalized * (target_v_max - target_v_min)
+    
+    # Appliquer avec le blend
+    new_v = v_channel * (1 - mask_blend) + new_v_base * mask_blend
     new_v = np.clip(new_v, 0, 255)
     
+    logger.info(f"🔄 Transform applied: H={target_h:.0f}, S={target_s:.0f}, V=[{target_v_min:.0f}-{target_v_max:.0f}]")
+    
     # ============================================
-    # ÉTAPE 7: Reconstruire l'image
+    # ÉTAPE 8: Reconstruire l'image
     # ============================================
     result_hsv = np.stack([new_h, new_s, new_v], axis=-1).astype(np.uint8)
-    result = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2RGB).astype(np.float32)
-    
-    # ============================================
-    # ÉTAPE 8: RÉINJECTER les détails haute fréquence
-    # ============================================
-    # On ajoute les hautes fréquences aux 3 canaux RGB
-    high_freq_3d = np.stack([high_freq, high_freq, high_freq], axis=-1)
-    
-    # Appliquer seulement sur la zone des cheveux (avec masque doux)
-    mask_hf = mask_blur[:, :, np.newaxis] * 0.7  # 70% des détails
-    
-    result = result + high_freq_3d * mask_hf
-    result = np.clip(result, 0, 255).astype(np.uint8)
+    result = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2RGB)
     
     # ============================================
     # ÉTAPE 9: Vérification finale
