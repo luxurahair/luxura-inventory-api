@@ -120,7 +120,7 @@ def recolor_with_reference(
     """
     Recolorise un gabarit avec la couleur d'une référence.
     
-    VERSION 4: Remplacement DIRECT de la teinte HSV.
+    VERSION 6: Opérations vectorielles pour qualité et rapidité.
     
     Args:
         gabarit: Image RGB du gabarit
@@ -130,12 +130,10 @@ def recolor_with_reference(
     Returns:
         (image_recolorisée, masque_cheveux)
     """
-    logger.info(f"🎨 Color Engine V4 - Recoloring with blend={blend}")
+    logger.info(f"🎨 Color Engine V6 - Recoloring with blend={blend}")
     
     # 1. Créer le masque des cheveux
     hair_mask = create_hair_mask(gabarit)
-    hair_pixels = np.sum(hair_mask > 128)
-    logger.info(f"📋 Hair mask: {hair_pixels} pixels")
     
     # 2. Extraire la couleur cible de la référence
     target_h, target_s, target_v = get_average_color_hsv(reference)
@@ -145,53 +143,50 @@ def recolor_with_reference(
     source_h, source_s, source_v = get_average_color_hsv(gabarit, hair_mask)
     logger.info(f"📊 Source color: H={source_h:.1f}, S={source_s:.1f}, V={source_v:.1f}")
     
-    # 4. Convertir le gabarit en HSV
-    hsv = cv2.cvtColor(gabarit, cv2.COLOR_RGB2HSV).astype(np.float64)
+    # 4. Convertir le gabarit en HSV (float pour précision)
+    hsv = cv2.cvtColor(gabarit, cv2.COLOR_RGB2HSV).astype(np.float32)
     
-    # 5. Créer un masque flou pour des transitions douces
-    mask_float = hair_mask.astype(np.float64) / 255.0
-    mask_blur = cv2.GaussianBlur(mask_float, (25, 25), 0)
+    # 5. Créer un masque flou pour des transitions douces (sans boucle)
+    mask_float = hair_mask.astype(np.float32) / 255.0
+    mask_blur = cv2.GaussianBlur(mask_float, (15, 15), 0)
     
-    # 6. Appliquer la transformation de couleur
-    # Pour chaque pixel dans la zone des cheveux:
-    # - Remplacer la teinte (H) par celle de la référence
-    # - Ajuster la saturation (S) proportionnellement
-    # - Garder la luminosité (V) relative pour préserver les détails
+    # Appliquer le blend
+    mask_blend = mask_blur * blend
     
+    # Expand mask to 3D pour broadcasting
+    mask_3d = mask_blend[:, :, np.newaxis]
+    
+    # 6. Calculer les transformations
+    h_shift = target_h - source_h
+    
+    # Ratio de saturation et luminosité (éviter division par zéro)
+    s_ratio = target_s / max(source_s, 1.0)
+    v_ratio = target_v / max(source_v, 1.0)
+    
+    logger.info(f"🔄 Transform: H_shift={h_shift:.1f}, S_ratio={s_ratio:.2f}, V_ratio={v_ratio:.2f}")
+    
+    # 7. Appliquer les transformations de manière vectorielle
     h_channel = hsv[:, :, 0]
     s_channel = hsv[:, :, 1]
     v_channel = hsv[:, :, 2]
     
-    # Calculer les ratios de changement
-    h_shift = target_h - source_h
-    s_ratio = target_s / max(source_s, 1)
-    v_ratio = target_v / max(source_v, 1)
+    # Nouvelle teinte = source + shift * mask
+    new_h = h_channel + h_shift * mask_blend
+    new_h = np.mod(new_h, 180)  # Wrap around 0-180
     
-    logger.info(f"🔄 Transform: H_shift={h_shift:.1f}, S_ratio={s_ratio:.2f}, V_ratio={v_ratio:.2f}")
+    # Nouvelle saturation = ajuster vers la cible
+    new_s = s_channel * (1.0 + (s_ratio - 1.0) * mask_blend)
+    new_s = np.clip(new_s, 0, 255)
     
-    # Appliquer les changements avec le masque
-    for y in range(hsv.shape[0]):
-        for x in range(hsv.shape[1]):
-            m = mask_blur[y, x] * blend
-            if m > 0.1:
-                # Nouvelle teinte = déplacer vers la cible
-                new_h = h_channel[y, x] + h_shift * m
-                h_channel[y, x] = new_h % 180
-                
-                # Nouvelle saturation = ajuster vers la cible
-                new_s = s_channel[y, x] * (1 + (s_ratio - 1) * m)
-                s_channel[y, x] = np.clip(new_s, 0, 255)
-                
-                # Nouvelle luminosité = légère ajustement
-                new_v = v_channel[y, x] * (1 + (v_ratio - 1) * m * 0.3)
-                v_channel[y, x] = np.clip(new_v, 0, 255)
+    # Nouvelle luminosité = ajuster vers la cible (moins agressif)
+    new_v = v_channel * (1.0 + (v_ratio - 1.0) * mask_blend * 0.7)
+    new_v = np.clip(new_v, 0, 255)
     
-    # 7. Reconvertir en RGB
-    hsv[:, :, 0] = h_channel
-    hsv[:, :, 1] = s_channel
-    hsv[:, :, 2] = v_channel
+    # 8. Reconstruire l'image HSV
+    result_hsv = np.stack([new_h, new_s, new_v], axis=-1).astype(np.uint8)
     
-    result = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
+    # 9. Convertir en RGB
+    result = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2RGB)
     
     # Vérifier le résultat
     result_h, result_s, result_v = get_average_color_hsv(result, hair_mask)
