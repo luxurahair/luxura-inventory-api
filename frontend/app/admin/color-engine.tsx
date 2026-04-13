@@ -56,6 +56,10 @@ export default function AdminColorEngine() {
   // Generated images history
   const [generatedImages, setGeneratedImages] = useState<any[]>([]);
   const [lastGeneratedUrl, setLastGeneratedUrl] = useState<string | null>(null);
+  
+  // Gabarit selection modal
+  const [showGabaritPicker, setShowGabaritPicker] = useState(false);
+  const [selectedGabaritFromHistory, setSelectedGabaritFromHistory] = useState<any>(null);
 
   // Charger les couleurs Elite au démarrage
   useEffect(() => {
@@ -104,21 +108,38 @@ export default function AdminColorEngine() {
 
   const downloadImage = async (url: string, filename: string) => {
     try {
-      const fullUrl = `${API_URL}${url}`;
-      console.log('📥 Downloading:', fullUrl);
+      // Construire l'URL complète pour le téléchargement
+      // Sur web, utiliser directement l'URL du backend (port 8001 via proxy)
+      const downloadUrl = url.startsWith('http') ? url : `/api${url.replace('/api', '')}`;
+      
+      console.log('📥 Downloading:', downloadUrl);
       
       if (Platform.OS === 'web') {
-        // Sur web, ouvrir l'URL directement dans un nouvel onglet
-        window.open(fullUrl, '_blank');
+        // Sur web, construire l'URL correcte
+        // Le proxy redirige /api/* vers le backend
+        window.open(downloadUrl, '_blank');
       } else {
-        // Sur mobile, utiliser Linking
+        // Sur mobile
         const { Linking } = await import('react-native');
-        Linking.openURL(fullUrl);
+        Linking.openURL(`${API_URL}${url}`);
       }
     } catch (error) {
       console.error('Download error:', error);
       Alert.alert('Erreur', 'Impossible de télécharger l\'image');
     }
+  };
+
+  const selectGabaritFromHistory = (img: any) => {
+    // Charger l'image comme gabarit
+    const imageUrl = `${API_URL}${img.preview_url}`;
+    setGabarit(imageUrl);
+    setSelectedGabaritFromHistory(img);
+    setShowGabaritPicker(false);
+    console.log('📐 Selected gabarit from history:', img.filename);
+  };
+
+  const getGabaritsForSeries = (seriesId: string) => {
+    return generatedImages.filter(img => img.series === seriesId);
   };
 
   const deleteGeneratedImage = async (filename: string) => {
@@ -379,30 +400,114 @@ export default function AdminColorEngine() {
               </View>
             </View>
 
-            {/* Series Selection */}
+            {/* Series Selection with Gabarit Picker */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Série & Watermark</Text>
               <View style={styles.seriesGrid}>
-                {SERIES.map((serie) => (
-                  <TouchableOpacity
-                    key={serie.id}
-                    style={[
-                      styles.seriesButton,
-                      selectedSeries === serie.id && { borderColor: '#c9a050', backgroundColor: 'rgba(201, 160, 80, 0.1)' }
-                    ]}
-                    onPress={() => setSelectedSeries(serie.id)}
-                  >
-                    <View style={[styles.seriesDot, { backgroundColor: serie.color }]} />
-                    <Text style={[
-                      styles.seriesText,
-                      selectedSeries === serie.id && { color: '#c9a050' }
-                    ]}>
-                      {serie.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {SERIES.map((serie) => {
+                  const seriesGabarits = getGabaritsForSeries(serie.id);
+                  return (
+                    <TouchableOpacity
+                      key={serie.id}
+                      style={[
+                        styles.seriesButton,
+                        selectedSeries === serie.id && { borderColor: '#c9a050', backgroundColor: 'rgba(201, 160, 80, 0.1)' }
+                      ]}
+                      onPress={() => {
+                        setSelectedSeries(serie.id);
+                        // Si des gabarits existent pour cette série, montrer le picker
+                        if (seriesGabarits.length > 0) {
+                          setShowGabaritPicker(true);
+                        }
+                      }}
+                    >
+                      <View style={[styles.seriesDot, { backgroundColor: serie.color }]} />
+                      <Text style={[
+                        styles.seriesText,
+                        selectedSeries === serie.id && { color: '#c9a050' }
+                      ]}>{serie.name}</Text>
+                      {seriesGabarits.length > 0 && (
+                        <View style={styles.gabaritBadge}>
+                          <Text style={styles.gabaritBadgeText}>{seriesGabarits.length}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
+              
+              {/* Gabarit from history indicator */}
+              {selectedGabaritFromHistory && (
+                <View style={styles.selectedGabaritInfo}>
+                  <Image 
+                    source={{ uri: `${API_URL}${selectedGabaritFromHistory.preview_url}` }}
+                    style={styles.selectedGabaritThumb}
+                  />
+                  <View style={styles.selectedGabaritDetails}>
+                    <Text style={styles.selectedGabaritText}>
+                      Gabarit: #{selectedGabaritFromHistory.color_code}
+                    </Text>
+                    <TouchableOpacity onPress={() => {
+                      setGabarit(null);
+                      setSelectedGabaritFromHistory(null);
+                    }}>
+                      <Text style={styles.clearGabaritText}>Retirer</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
+            
+            {/* Gabarit Picker Modal */}
+            {showGabaritPicker && (
+              <View style={styles.gabaritPickerOverlay}>
+                <View style={styles.gabaritPickerModal}>
+                  <View style={styles.gabaritPickerHeader}>
+                    <Text style={styles.gabaritPickerTitle}>
+                      Choisir un gabarit {SERIES.find(s => s.id === selectedSeries)?.name}
+                    </Text>
+                    <TouchableOpacity onPress={() => setShowGabaritPicker(false)}>
+                      <Ionicons name="close" size={24} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <ScrollView style={styles.gabaritPickerList}>
+                    {getGabaritsForSeries(selectedSeries).map((img) => (
+                      <TouchableOpacity
+                        key={img.filename}
+                        style={styles.gabaritPickerItem}
+                        onPress={() => selectGabaritFromHistory(img)}
+                      >
+                        <Image 
+                          source={{ uri: `${API_URL}${img.preview_url}` }}
+                          style={styles.gabaritPickerImage}
+                        />
+                        <View style={styles.gabaritPickerInfo}>
+                          <Text style={styles.gabaritPickerColor}>#{img.color_code}</Text>
+                          <Text style={styles.gabaritPickerSize}>{img.size_kb} KB</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                    
+                    {/* Option pour utiliser le template par défaut */}
+                    <TouchableOpacity
+                      style={[styles.gabaritPickerItem, styles.gabaritPickerDefault]}
+                      onPress={() => {
+                        setGabarit(null);
+                        setSelectedGabaritFromHistory(null);
+                        setShowGabaritPicker(false);
+                      }}
+                    >
+                      <Ionicons name="image-outline" size={40} color="#666" />
+                      <View style={styles.gabaritPickerInfo}>
+                        <Text style={styles.gabaritPickerColor}>Template par défaut</Text>
+                        <Text style={styles.gabaritPickerSize}>Utiliser le gabarit système</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </ScrollView>
+                </View>
+              </View>
+            )}
 
             {/* Intensity Slider */}
             <View style={styles.section}>
@@ -840,6 +945,118 @@ const styles = StyleSheet.create({
   seriesText: {
     color: '#888',
     fontWeight: '500',
+    flex: 1,
+  },
+  gabaritBadge: {
+    backgroundColor: '#c9a050',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 4,
+  },
+  gabaritBadgeText: {
+    color: '#000',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  selectedGabaritInfo: {
+    flexDirection: 'row',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#c9a050',
+  },
+  selectedGabaritThumb: {
+    width: 50,
+    height: 60,
+    borderRadius: 6,
+    backgroundColor: '#333',
+  },
+  selectedGabaritDetails: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  selectedGabaritText: {
+    color: '#c9a050',
+    fontWeight: '600',
+  },
+  clearGabaritText: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  gabaritPickerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  gabaritPickerModal: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
+    padding: 16,
+  },
+  gabaritPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    paddingBottom: 12,
+  },
+  gabaritPickerTitle: {
+    color: '#c9a050',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  gabaritPickerList: {
+    maxHeight: 400,
+  },
+  gabaritPickerItem: {
+    flexDirection: 'row',
+    backgroundColor: '#222',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  gabaritPickerDefault: {
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: '#444',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+  },
+  gabaritPickerImage: {
+    width: 60,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#333',
+  },
+  gabaritPickerInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  gabaritPickerColor: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  gabaritPickerSize: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 2,
   },
   sliderContainer: {
     flexDirection: 'row',
