@@ -104,18 +104,16 @@ export default function AdminColorEngine() {
 
   const downloadImage = async (url: string, filename: string) => {
     try {
+      const fullUrl = `${API_URL}${url}`;
+      console.log('📥 Downloading:', fullUrl);
+      
       if (Platform.OS === 'web') {
-        // Sur web, ouvrir dans un nouvel onglet ou télécharger
-        const link = document.createElement('a');
-        link.href = `${API_URL}${url}`;
-        link.download = filename;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Sur web, ouvrir l'URL directement dans un nouvel onglet
+        window.open(fullUrl, '_blank');
       } else {
-        // Sur mobile, partager ou sauvegarder
-        Alert.alert('Téléchargement', `Image: ${filename}\nURL: ${API_URL}${url}`);
+        // Sur mobile, utiliser Linking
+        const { Linking } = await import('react-native');
+        Linking.openURL(fullUrl);
       }
     } catch (error) {
       console.error('Download error:', error);
