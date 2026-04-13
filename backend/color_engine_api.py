@@ -1,14 +1,16 @@
 """
-Luxura Color Engine V4
-======================
-Module de recolorisation simplifié et efficace.
-Utilise un transfert de couleur direct en HSV.
+Luxura Color Engine V8 - ULTRA HIGH RESOLUTION
+===============================================
+Module de recolorisation haute qualité professionnelle.
+- Préserve 100% de la résolution originale
+- Décomposition en fréquences pour préserver les détails
+- Transfert de couleur HSV précis
+- Aucune perte de netteté
 """
 
 import numpy as np
 import cv2
-from PIL import Image
-from rembg import remove
+from PIL import Image, ImageFilter, ImageEnhance
 import io
 import base64
 from typing import Tuple, Optional
@@ -21,10 +23,6 @@ def create_hair_mask(image: np.ndarray) -> np.ndarray:
     """
     Crée un masque des cheveux.
     VERSION 5: Détection basée sur la luminosité et la saturation.
-    
-    Pour un gabarit avec fond blanc:
-    - Cheveux = pixels foncés (V<150) OU très saturés (S>100)
-    - Exclure le fond blanc (V>220 AND S<30)
     """
     try:
         height, width = image.shape[:2]
@@ -37,7 +35,6 @@ def create_hair_mask(image: np.ndarray) -> np.ndarray:
         is_white = (s < 40) & (v > 200)
         
         # 2. Détecter les pixels qui pourraient être des cheveux
-        # Cheveux = soit foncés, soit colorés
         is_dark = v < 150  # Pixels foncés
         is_colored = s > 80  # Pixels avec bonne saturation
         is_hair_candidate = is_dark | is_colored
@@ -51,12 +48,12 @@ def create_hair_mask(image: np.ndarray) -> np.ndarray:
         hair_mask = cv2.morphologyEx(hair_mask, cv2.MORPH_CLOSE, kernel, iterations=2)
         hair_mask = cv2.morphologyEx(hair_mask, cv2.MORPH_OPEN, kernel, iterations=1)
         
-        # 5. Garder seulement les régions d'au moins 0.5% de l'image
+        # 5. Garder seulement les régions significatives
         contours, _ = cv2.findContours(hair_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         if contours:
             final_mask = np.zeros_like(hair_mask)
-            min_area = (width * height) * 0.005  # 0.5% minimum
+            min_area = (width * height) * 0.005
             
             for contour in contours:
                 if cv2.contourArea(contour) >= min_area:
@@ -74,7 +71,6 @@ def create_hair_mask(image: np.ndarray) -> np.ndarray:
         logger.error(f"Error creating hair mask: {e}")
         import traceback
         traceback.print_exc()
-        # Fallback: tout ce qui est foncé
         hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
         mask = (hsv[:, :, 2] < 150).astype(np.uint8) * 255
         return mask
@@ -83,26 +79,20 @@ def create_hair_mask(image: np.ndarray) -> np.ndarray:
 def get_average_color_hsv(image: np.ndarray, mask: np.ndarray = None) -> Tuple[float, float, float]:
     """
     Calcule la couleur moyenne HSV d'une image (ou région masquée).
-    Exclut automatiquement les pixels trop clairs (fond blanc) et trop sombres.
     """
     hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV).astype(np.float32)
     
-    # Créer un masque pour exclure le fond blanc et les pixels très sombres
     v_channel = hsv[:, :, 2]
     s_channel = hsv[:, :, 1]
     
-    # Pixels valides: pas trop clair (V < 245), pas trop sombre (V > 20), avec saturation
     valid_mask = (v_channel > 20) & (v_channel < 245) & (s_channel > 10)
     
     if mask is not None:
-        # Combiner avec le masque fourni
         valid_mask = valid_mask & (mask > 128)
     
     if np.sum(valid_mask) < 100:
-        # Fallback: utiliser tous les pixels non-blancs
         valid_mask = v_channel < 250
         if np.sum(valid_mask) < 100:
-            # Dernier recours: moyenne de tout
             return float(np.median(hsv[:, :, 0])), float(np.median(hsv[:, :, 1])), float(np.median(hsv[:, :, 2]))
     
     h_vals = hsv[:, :, 0][valid_mask]
@@ -112,15 +102,36 @@ def get_average_color_hsv(image: np.ndarray, mask: np.ndarray = None) -> Tuple[f
     return float(np.median(h_vals)), float(np.median(s_vals)), float(np.median(v_vals))
 
 
+def extract_high_frequency(image: np.ndarray, kernel_size: int = 21) -> np.ndarray:
+    """
+    Extrait les hautes fréquences (détails, texture) de l'image.
+    High freq = Original - Low freq (blurred)
+    """
+    # Blur pour obtenir les basses fréquences
+    low_freq = cv2.GaussianBlur(image.astype(np.float32), (kernel_size, kernel_size), 0)
+    
+    # Hautes fréquences = différence
+    high_freq = image.astype(np.float32) - low_freq
+    
+    return high_freq, low_freq
+
+
 def recolor_with_reference(
     gabarit: np.ndarray, 
     reference: np.ndarray, 
-    blend: float = 0.85
+    blend: float = 0.95
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Recolorise un gabarit avec la couleur d'une référence.
     
-    VERSION 6: Opérations vectorielles pour qualité et rapidité.
+    VERSION 8: ULTRA HIGH QUALITY
+    =============================
+    Utilise une décomposition en fréquences:
+    1. Extraire les HAUTES FRÉQUENCES (détails, texture) de l'original
+    2. Modifier la COULEUR sur les basses fréquences uniquement
+    3. Réassembler: Color modifié + Détails originaux
+    
+    Résultat: Changement de couleur SANS perte de détails
     
     Args:
         gabarit: Image RGB du gabarit
@@ -130,78 +141,120 @@ def recolor_with_reference(
     Returns:
         (image_recolorisée, masque_cheveux)
     """
-    logger.info(f"🎨 Color Engine V6 - Recoloring with blend={blend}")
+    logger.info(f"🎨 Color Engine V8 ULTRA - Recoloring with blend={blend}")
+    logger.info(f"📐 Input resolution: {gabarit.shape[1]}x{gabarit.shape[0]}")
     
-    # 1. Créer le masque des cheveux
+    # ============================================
+    # ÉTAPE 1: Créer le masque des cheveux
+    # ============================================
     hair_mask = create_hair_mask(gabarit)
+    hair_pixels = np.sum(hair_mask > 128)
+    total_pixels = hair_mask.shape[0] * hair_mask.shape[1]
+    logger.info(f"🎭 Hair mask: {hair_pixels} pixels ({hair_pixels/total_pixels*100:.1f}%)")
     
-    # 2. Extraire la couleur cible de la référence
+    # ============================================
+    # ÉTAPE 2: Extraire la couleur cible
+    # ============================================
     target_h, target_s, target_v = get_average_color_hsv(reference)
-    logger.info(f"🎯 Target color: H={target_h:.1f}, S={target_s:.1f}, V={target_v:.1f}")
+    logger.info(f"🎯 Target HSV: H={target_h:.1f}, S={target_s:.1f}, V={target_v:.1f}")
     
-    # 3. Extraire la couleur source du gabarit (zone cheveux)
+    # ============================================
+    # ÉTAPE 3: Extraire la couleur source (cheveux du gabarit)
+    # ============================================
     source_h, source_s, source_v = get_average_color_hsv(gabarit, hair_mask)
-    logger.info(f"📊 Source color: H={source_h:.1f}, S={source_s:.1f}, V={source_v:.1f}")
+    logger.info(f"📊 Source HSV: H={source_h:.1f}, S={source_s:.1f}, V={source_v:.1f}")
     
-    # 4. Convertir le gabarit en HSV (float pour précision)
+    # ============================================
+    # ÉTAPE 4: Extraire les détails (hautes fréquences) en grayscale
+    # ============================================
+    gray = cv2.cvtColor(gabarit, cv2.COLOR_RGB2GRAY)
+    high_freq, _ = extract_high_frequency(gray, kernel_size=15)
+    logger.info(f"📈 High frequency detail extracted")
+    
+    # ============================================
+    # ÉTAPE 5: Convertir en HSV et modifier la couleur
+    # ============================================
     hsv = cv2.cvtColor(gabarit, cv2.COLOR_RGB2HSV).astype(np.float32)
     
-    # 5. Créer un masque flou pour des transitions douces (sans boucle)
+    # Masque lissé pour transitions douces
     mask_float = hair_mask.astype(np.float32) / 255.0
-    mask_blur = cv2.GaussianBlur(mask_float, (15, 15), 0)
-    
-    # Appliquer le blend
+    mask_blur = cv2.GaussianBlur(mask_float, (21, 21), 0)
     mask_blend = mask_blur * blend
     
-    # Expand mask to 3D pour broadcasting
-    mask_3d = mask_blend[:, :, np.newaxis]
-    
-    # 6. Calculer les transformations
+    # Calculer les transformations
     h_shift = target_h - source_h
-    
-    # Ratio de saturation et luminosité (éviter division par zéro)
     s_ratio = target_s / max(source_s, 1.0)
     v_ratio = target_v / max(source_v, 1.0)
     
     logger.info(f"🔄 Transform: H_shift={h_shift:.1f}, S_ratio={s_ratio:.2f}, V_ratio={v_ratio:.2f}")
     
-    # 7. Appliquer les transformations de manière vectorielle
+    # ============================================
+    # ÉTAPE 6: Appliquer les transformations HSV
+    # ============================================
     h_channel = hsv[:, :, 0]
     s_channel = hsv[:, :, 1]
     v_channel = hsv[:, :, 2]
     
-    # Nouvelle teinte = source + shift * mask
+    # Nouvelle teinte
     new_h = h_channel + h_shift * mask_blend
-    new_h = np.mod(new_h, 180)  # Wrap around 0-180
+    new_h = np.mod(new_h, 180)
     
-    # Nouvelle saturation = ajuster vers la cible
-    new_s = s_channel * (1.0 + (s_ratio - 1.0) * mask_blend)
+    # Nouvelle saturation (préserver les variations)
+    # On scale vers la cible mais garde la variance originale
+    s_mean = np.mean(s_channel[hair_mask > 128])
+    s_std = np.std(s_channel[hair_mask > 128])
+    
+    # Normaliser, puis rescale vers la cible
+    new_s = target_s + (s_channel - source_s) * (target_s / max(source_s, 1.0)) * 0.5
+    new_s = s_channel * (1 - mask_blend) + new_s * mask_blend
     new_s = np.clip(new_s, 0, 255)
     
-    # Nouvelle luminosité = ajuster vers la cible (moins agressif)
-    new_v = v_channel * (1.0 + (v_ratio - 1.0) * mask_blend * 0.7)
+    # Nouvelle luminosité (conserver les variations pour les reflets)
+    # On applique le ratio mais garde 60% de la variance originale
+    v_mean = np.mean(v_channel[hair_mask > 128])
+    v_deviation = v_channel - v_mean  # Écart par rapport à la moyenne
+    
+    # Nouvelle moyenne + variance conservée
+    new_v_mean = v_mean * v_ratio
+    new_v = new_v_mean + v_deviation * 0.8  # 80% de la variance originale
+    new_v = v_channel * (1 - mask_blend) + new_v * mask_blend
     new_v = np.clip(new_v, 0, 255)
     
-    # 8. Reconstruire l'image HSV
+    # ============================================
+    # ÉTAPE 7: Reconstruire l'image
+    # ============================================
     result_hsv = np.stack([new_h, new_s, new_v], axis=-1).astype(np.uint8)
+    result = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2RGB).astype(np.float32)
     
-    # 9. Convertir en RGB
-    result = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2RGB)
+    # ============================================
+    # ÉTAPE 8: RÉINJECTER les détails haute fréquence
+    # ============================================
+    # On ajoute les hautes fréquences aux 3 canaux RGB
+    high_freq_3d = np.stack([high_freq, high_freq, high_freq], axis=-1)
     
-    # Vérifier le résultat
+    # Appliquer seulement sur la zone des cheveux (avec masque doux)
+    mask_hf = mask_blur[:, :, np.newaxis] * 0.7  # 70% des détails
+    
+    result = result + high_freq_3d * mask_hf
+    result = np.clip(result, 0, 255).astype(np.uint8)
+    
+    # ============================================
+    # ÉTAPE 9: Vérification finale
+    # ============================================
     result_h, result_s, result_v = get_average_color_hsv(result, hair_mask)
-    logger.info(f"✅ Result color: H={result_h:.1f}, S={result_s:.1f}, V={result_v:.1f}")
+    logger.info(f"✅ Result HSV: H={result_h:.1f}, S={result_s:.1f}, V={result_v:.1f}")
+    logger.info(f"📐 Output resolution: {result.shape[1]}x{result.shape[0]} (100% preserved)")
     
     return result, hair_mask
 
 
 def extract_dominant_color_hsv(image: np.ndarray) -> Tuple[float, float, float]:
-    """Alias pour compatibilité avec l'ancien code."""
+    """Alias pour compatibilité."""
     return get_average_color_hsv(image)
 
 
 def improve_hair_mask(image: np.ndarray) -> np.ndarray:
-    """Alias pour compatibilité avec l'ancien code."""
+    """Alias pour compatibilité."""
     return create_hair_mask(image)
 
 
@@ -209,7 +262,7 @@ def image_to_base64(image: np.ndarray, format: str = "PNG") -> str:
     """Convertit une image numpy en base64."""
     pil_image = Image.fromarray(image)
     buffer = io.BytesIO()
-    pil_image.save(buffer, format=format)
+    pil_image.save(buffer, format=format, optimize=False)
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 
@@ -224,7 +277,7 @@ async def process_color_engine(
     gabarit1_b64: str,
     gabarit2_b64: Optional[str],
     reference_b64: str,
-    blend: float = 0.85
+    blend: float = 0.95
 ) -> dict:
     """
     Fonction principale pour le traitement Color Engine.
