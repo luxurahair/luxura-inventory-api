@@ -129,13 +129,30 @@ export default function AdminColorEngine() {
     }
   };
 
-  const selectGabaritFromHistory = (img: any) => {
-    // Charger l'image comme gabarit
-    const imageUrl = `${API_URL}${img.preview_url}`;
-    setGabarit(imageUrl);
-    setSelectedGabaritFromHistory(img);
-    setShowGabaritPicker(false);
-    console.log('📐 Selected gabarit from history:', img.filename);
+  const selectGabaritFromHistory = async (img: any) => {
+    // Télécharger l'image et la convertir en base64
+    try {
+      const imageUrl = `${API_URL}${img.download_url}`;
+      console.log('📐 Loading gabarit from:', imageUrl);
+      
+      // Télécharger l'image
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      
+      // Convertir en base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setGabarit(base64);
+        setSelectedGabaritFromHistory(img);
+        setShowGabaritPicker(false);
+        console.log('📐 Gabarit loaded as base64:', base64.substring(0, 50) + '...');
+      };
+      reader.readAsDataURL(blob);
+    } catch (error) {
+      console.error('Error loading gabarit:', error);
+      Alert.alert('Erreur', 'Impossible de charger le gabarit');
+    }
   };
 
   const getGabaritsForSeries = (seriesId: string) => {

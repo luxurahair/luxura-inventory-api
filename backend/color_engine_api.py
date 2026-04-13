@@ -1,8 +1,8 @@
 """
-Luxura Color Engine V3
+Luxura Color Engine V4
 ======================
-Module de recolorisation intelligente des extensions capillaires.
-Version améliorée avec vrai transfert de couleur.
+Module de recolorisation simplifié et efficace.
+Utilise un transfert de couleur direct en HSV.
 """
 
 import numpy as np
@@ -17,130 +17,189 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def improve_hair_mask(image: np.ndarray) -> np.ndarray:
+def create_hair_mask(image: np.ndarray) -> np.ndarray:
     """
-    Crée un masque cheveux précis en:
-    1. Supprimant le background avec rembg
-    2. Détectant et excluant la peau
-    3. Nettoyant avec morphologie
+    Crée un masque des cheveux en utilisant rembg + détection de peau.
+    Version simplifiée et robuste.
     """
     try:
-        # 1. Person mask ultra propre
-        person = remove(image)
-        gray = cv2.cvtColor(np.array(person), cv2.COLOR_RGBA2GRAY)
-        _, person_mask = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
-
-        # 2. Détection peau (pour enlever visage/cou)
+        # 1. Supprimer le background avec rembg
+        pil_img = Image.fromarray(image)
+        removed = remove(pil_img)
+        
+        # Convertir en numpy et extraire le canal alpha
+        removed_np = np.array(removed)
+        if removed_np.shape[2] == 4:
+            alpha = removed_np[:, :, 3]
+            person_mask = (alpha > 128).astype(np.uint8) * 255
+        else:
+            # Pas de canal alpha, utiliser la luminosité
+            gray = cv2.cvtColor(removed_np, cv2.COLOR_RGB2GRAY)
+            _, person_mask = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
+        
+        # 2. Détecter la peau pour l'exclure
         hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-        skin_mask1 = cv2.inRange(hsv, (0, 20, 70), (20, 255, 255))
-        skin_mask2 = cv2.inRange(hsv, (160, 20, 70), (180, 255, 255))
-        skin_mask = skin_mask1 | skin_mask2
-
-        # 3. Masque cheveux = person - peau + nettoyage
+        
+        # Plage de couleur peau (étendue)
+        lower_skin1 = np.array([0, 20, 60])
+        upper_skin1 = np.array([25, 180, 255])
+        lower_skin2 = np.array([160, 20, 60])
+        upper_skin2 = np.array([180, 180, 255])
+        
+        skin1 = cv2.inRange(hsv, lower_skin1, upper_skin1)
+        skin2 = cv2.inRange(hsv, lower_skin2, upper_skin2)
+        skin_mask = cv2.bitwise_or(skin1, skin2)
+        
+        # Dilater le masque de peau pour couvrir les bords
+        kernel = np.ones((7, 7), np.uint8)
+        skin_mask = cv2.dilate(skin_mask, kernel, iterations=2)
+        
+        # 3. Masque cheveux = personne - peau
         hair_mask = cv2.bitwise_and(person_mask, cv2.bitwise_not(skin_mask))
         
-        # Nettoyage morphologique (bords propres)
+        # 4. Nettoyer le masque
         kernel = np.ones((5, 5), np.uint8)
         hair_mask = cv2.morphologyEx(hair_mask, cv2.MORPH_CLOSE, kernel)
         hair_mask = cv2.morphologyEx(hair_mask, cv2.MORPH_OPEN, kernel)
         
         return hair_mask
+        
     except Exception as e:
         logger.error(f"Error creating hair mask: {e}")
-        # Fallback: masque basé sur la luminosité
+        # Fallback: masque simple basé sur la luminosité
         gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        _, mask = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY)
+        _, mask = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)
         return mask
 
 
-def extract_dominant_color_hsv(image: np.ndarray) -> Tuple[float, float, float]:
+def get_average_color_hsv(image: np.ndarray, mask: np.ndarray = None) -> Tuple[float, float, float]:
     """
-    Extrait la couleur dominante d'une image en HSV.
-    Retourne (H, S, V) moyens.
+    Calcule la couleur moyenne HSV d'une image (ou région masquée).
+    Exclut automatiquement les pixels trop clairs (fond blanc) et trop sombres.
     """
-    # Convertir en HSV
-    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV).astype(np.float32)
     
-    # Masquer les pixels trop clairs ou trop foncés
+    # Créer un masque pour exclure le fond blanc et les pixels très sombres
     v_channel = hsv[:, :, 2]
-    valid_mask = (v_channel > 30) & (v_channel < 240)
+    s_channel = hsv[:, :, 1]
+    
+    # Pixels valides: pas trop clair (V < 245), pas trop sombre (V > 20), avec saturation
+    valid_mask = (v_channel > 20) & (v_channel < 245) & (s_channel > 10)
+    
+    if mask is not None:
+        # Combiner avec le masque fourni
+        valid_mask = valid_mask & (mask > 128)
     
     if np.sum(valid_mask) < 100:
-        # Fallback si pas assez de pixels valides
-        return float(np.mean(hsv[:, :, 0])), float(np.mean(hsv[:, :, 1])), float(np.mean(hsv[:, :, 2]))
+        # Fallback: utiliser tous les pixels non-blancs
+        valid_mask = v_channel < 250
+        if np.sum(valid_mask) < 100:
+            # Dernier recours: moyenne de tout
+            return float(np.median(hsv[:, :, 0])), float(np.median(hsv[:, :, 1])), float(np.median(hsv[:, :, 2]))
     
-    h_mean = float(np.mean(hsv[:, :, 0][valid_mask]))
-    s_mean = float(np.mean(hsv[:, :, 1][valid_mask]))
-    v_mean = float(np.mean(hsv[:, :, 2][valid_mask]))
+    h_vals = hsv[:, :, 0][valid_mask]
+    s_vals = hsv[:, :, 1][valid_mask]
+    v_vals = hsv[:, :, 2][valid_mask]
     
-    return h_mean, s_mean, v_mean
+    return float(np.median(h_vals)), float(np.median(s_vals)), float(np.median(v_vals))
 
 
 def recolor_with_reference(
     gabarit: np.ndarray, 
     reference: np.ndarray, 
-    blend: float = 0.75
+    blend: float = 0.85
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Recolorise un gabarit avec les couleurs d'une référence.
-    VERSION 3.1: Transfert de couleur HSV DIRECT plus visible.
+    Recolorise un gabarit avec la couleur d'une référence.
+    
+    VERSION 4: Remplacement DIRECT de la teinte HSV.
     
     Args:
-        gabarit: Image du gabarit à recoloriser (RGB)
-        reference: Image de référence pour la couleur (RGB)
-        blend: Intensité du mélange (0.3-1.0)
+        gabarit: Image RGB du gabarit
+        reference: Image RGB de la couleur de référence
+        blend: Intensité (0.5-1.0)
     
     Returns:
-        Tuple[image_recolorisée, masque_cheveux]
+        (image_recolorisée, masque_cheveux)
     """
-    logger.info(f"🎨 Recoloring with blend={blend}")
+    logger.info(f"🎨 Color Engine V4 - Recoloring with blend={blend}")
     
     # 1. Créer le masque des cheveux
-    hair_mask = improve_hair_mask(gabarit)
-    logger.info(f"📋 Hair mask created: {np.sum(hair_mask > 0)} pixels")
+    hair_mask = create_hair_mask(gabarit)
+    hair_pixels = np.sum(hair_mask > 128)
+    logger.info(f"📋 Hair mask: {hair_pixels} pixels")
     
-    # 2. Extraire les couleurs de la référence
-    ref_h, ref_s, ref_v = extract_dominant_color_hsv(reference)
-    logger.info(f"🎯 Reference color HSV: H={ref_h:.1f}, S={ref_s:.1f}, V={ref_v:.1f}")
+    # 2. Extraire la couleur cible de la référence
+    target_h, target_s, target_v = get_average_color_hsv(reference)
+    logger.info(f"🎯 Target color: H={target_h:.1f}, S={target_s:.1f}, V={target_v:.1f}")
     
-    # 3. Convertir le gabarit en HSV
-    gabarit_hsv = cv2.cvtColor(gabarit, cv2.COLOR_RGB2HSV).astype(np.float32)
+    # 3. Extraire la couleur source du gabarit (zone cheveux)
+    source_h, source_s, source_v = get_average_color_hsv(gabarit, hair_mask)
+    logger.info(f"📊 Source color: H={source_h:.1f}, S={source_s:.1f}, V={source_v:.1f}")
     
-    # 4. Créer un masque flou pour des transitions douces
-    hair_mask_float = hair_mask.astype(np.float32) / 255.0
-    hair_mask_blur = cv2.GaussianBlur(hair_mask_float, (31, 31), 0)
+    # 4. Convertir le gabarit en HSV
+    hsv = cv2.cvtColor(gabarit, cv2.COLOR_RGB2HSV).astype(np.float64)
     
-    # 5. TRANSFERT DIRECT: Remplacer la teinte par celle de la référence
-    result_hsv = gabarit_hsv.copy()
+    # 5. Créer un masque flou pour des transitions douces
+    mask_float = hair_mask.astype(np.float64) / 255.0
+    mask_blur = cv2.GaussianBlur(mask_float, (25, 25), 0)
     
-    for y in range(gabarit_hsv.shape[0]):
-        for x in range(gabarit_hsv.shape[1]):
-            mask_val = hair_mask_blur[y, x] * blend
-            if mask_val > 0.1:
-                # Remplacer directement la teinte (H) par celle de la référence
-                # Mais garder un peu de la teinte originale pour les variations
-                original_h = gabarit_hsv[y, x, 0]
-                new_h = ref_h * mask_val + original_h * (1 - mask_val)
-                result_hsv[y, x, 0] = new_h % 180
+    # 6. Appliquer la transformation de couleur
+    # Pour chaque pixel dans la zone des cheveux:
+    # - Remplacer la teinte (H) par celle de la référence
+    # - Ajuster la saturation (S) proportionnellement
+    # - Garder la luminosité (V) relative pour préserver les détails
+    
+    h_channel = hsv[:, :, 0]
+    s_channel = hsv[:, :, 1]
+    v_channel = hsv[:, :, 2]
+    
+    # Calculer les ratios de changement
+    h_shift = target_h - source_h
+    s_ratio = target_s / max(source_s, 1)
+    v_ratio = target_v / max(source_v, 1)
+    
+    logger.info(f"🔄 Transform: H_shift={h_shift:.1f}, S_ratio={s_ratio:.2f}, V_ratio={v_ratio:.2f}")
+    
+    # Appliquer les changements avec le masque
+    for y in range(hsv.shape[0]):
+        for x in range(hsv.shape[1]):
+            m = mask_blur[y, x] * blend
+            if m > 0.1:
+                # Nouvelle teinte = déplacer vers la cible
+                new_h = h_channel[y, x] + h_shift * m
+                h_channel[y, x] = new_h % 180
                 
-                # Ajuster la saturation vers celle de la référence
-                original_s = gabarit_hsv[y, x, 1]
-                new_s = ref_s * mask_val + original_s * (1 - mask_val)
-                result_hsv[y, x, 1] = np.clip(new_s, 0, 255)
+                # Nouvelle saturation = ajuster vers la cible
+                new_s = s_channel[y, x] * (1 + (s_ratio - 1) * m)
+                s_channel[y, x] = np.clip(new_s, 0, 255)
                 
-                # Ajuster légèrement la luminosité (garder les ombres/reflets)
-                original_v = gabarit_hsv[y, x, 2]
-                v_ratio = ref_v / max(gabarit_hsv[:, :, 2][hair_mask > 0].mean(), 1)
-                new_v = original_v * (1 + (v_ratio - 1) * mask_val * 0.5)
-                result_hsv[y, x, 2] = np.clip(new_v, 0, 255)
+                # Nouvelle luminosité = légère ajustement
+                new_v = v_channel[y, x] * (1 + (v_ratio - 1) * m * 0.3)
+                v_channel[y, x] = np.clip(new_v, 0, 255)
     
-    # 6. Reconvertir en RGB
-    result_hsv = result_hsv.astype(np.uint8)
-    result_rgb = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2RGB)
+    # 7. Reconvertir en RGB
+    hsv[:, :, 0] = h_channel
+    hsv[:, :, 1] = s_channel
+    hsv[:, :, 2] = v_channel
     
-    logger.info("✅ Recoloring complete")
+    result = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
     
-    return result_rgb, hair_mask
+    # Vérifier le résultat
+    result_h, result_s, result_v = get_average_color_hsv(result, hair_mask)
+    logger.info(f"✅ Result color: H={result_h:.1f}, S={result_s:.1f}, V={result_v:.1f}")
+    
+    return result, hair_mask
+
+
+def extract_dominant_color_hsv(image: np.ndarray) -> Tuple[float, float, float]:
+    """Alias pour compatibilité avec l'ancien code."""
+    return get_average_color_hsv(image)
+
+
+def improve_hair_mask(image: np.ndarray) -> np.ndarray:
+    """Alias pour compatibilité avec l'ancien code."""
+    return create_hair_mask(image)
 
 
 def image_to_base64(image: np.ndarray, format: str = "PNG") -> str:
@@ -162,25 +221,14 @@ async def process_color_engine(
     gabarit1_b64: str,
     gabarit2_b64: Optional[str],
     reference_b64: str,
-    blend: float = 0.75
+    blend: float = 0.85
 ) -> dict:
     """
     Fonction principale pour le traitement Color Engine.
-    
-    Args:
-        gabarit1_b64: Gabarit 1 en base64
-        gabarit2_b64: Gabarit 2 en base64 (optionnel)
-        reference_b64: Image référence en base64
-        blend: Intensité du mélange
-    
-    Returns:
-        Dict avec les images résultantes en base64
     """
-    # Charger les images
     gabarit1 = base64_to_image(gabarit1_b64)
     reference = base64_to_image(reference_b64)
     
-    # Traiter gabarit 1
     result1, mask1 = recolor_with_reference(gabarit1, reference, blend)
     
     results = {
@@ -189,7 +237,6 @@ async def process_color_engine(
         "success": True
     }
     
-    # Traiter gabarit 2 si fourni
     if gabarit2_b64:
         gabarit2 = base64_to_image(gabarit2_b64)
         result2, mask2 = recolor_with_reference(gabarit2, reference, blend)
