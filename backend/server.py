@@ -4451,42 +4451,18 @@ async def get_elite_colors():
             code = color.get("code", "")
             name = color.get("name", "")
             order = color.get("order", 0)
-            
-            # Construire le nom de fichier standardisé
-            filename = f"{code}_{name.replace(' ', '_').replace('#', '')}.jpg"
+            filename = color.get("filename", "")
             
             # Vérifier si le fichier existe
             file_path = f"/app/backend/luxura_images/color_library/reference/{filename}"
             
-            # Chercher le fichier avec différents patterns
-            possible_files = [
-                f"{code}_Color_{code}.jpg",
-                f"{code}_{code}.jpg",
-                f"{code}_{name.replace(' ', '_')}.jpg",
-            ]
-            
-            existing_file = None
-            for pf in possible_files:
-                check_path = f"/app/backend/luxura_images/color_library/reference/{pf}"
-                if os.path.exists(check_path):
-                    existing_file = pf
-                    break
-            
-            if not existing_file:
-                # Chercher dans le dossier
-                import glob
-                pattern = f"/app/backend/luxura_images/color_library/reference/*{code}*.jpg"
-                matches = glob.glob(pattern)
-                if matches:
-                    existing_file = os.path.basename(matches[0])
-            
-            if existing_file:
+            if os.path.exists(file_path):
                 result.append({
                     "code": code,
                     "name": name,
                     "order": order,
                     "image_url": f"/api/color-engine/colors/{code}/image",
-                    "filename": existing_file
+                    "filename": filename
                 })
         
         # Trier par ordre
@@ -4508,32 +4484,32 @@ async def get_elite_color_image(color_code: str):
     Récupère l'image d'une couleur Elite spécifique
     """
     from fastapi.responses import FileResponse
-    import glob
+    import json
     
     try:
         base_path = "/app/backend/luxura_images/color_library/reference"
         
-        # Chercher le fichier correspondant
-        pattern = f"{base_path}/*{color_code}*.jpg"
-        matches = glob.glob(pattern, recursive=False)
-        
-        # Aussi chercher avec le code exact
-        exact_patterns = [
-            f"{base_path}/{color_code}_*.jpg",
-            f"{base_path}/*_{color_code}.jpg",
-        ]
-        
-        for ep in exact_patterns:
-            matches.extend(glob.glob(ep))
-        
-        if matches:
-            # Prendre le premier match
-            file_path = matches[0]
-            return FileResponse(
-                file_path,
-                media_type="image/jpeg",
-                headers={"Cache-Control": "public, max-age=86400"}
-            )
+        # Charger le mapping pour trouver le bon fichier
+        mapping_path = f"{base_path}/color_mapping.json"
+        if os.path.exists(mapping_path):
+            with open(mapping_path, "r") as f:
+                colors = json.load(f)
+            
+            # Chercher la couleur par code
+            # Le code peut être encodé différemment (/ -> -)
+            search_code = color_code.replace('-', '/')
+            
+            for color in colors:
+                if color.get("code") == search_code or color.get("code") == color_code:
+                    filename = color.get("filename")
+                    if filename:
+                        file_path = f"{base_path}/{filename}"
+                        if os.path.exists(file_path):
+                            return FileResponse(
+                                file_path,
+                                media_type="image/jpeg",
+                                headers={"Cache-Control": "public, max-age=86400"}
+                            )
         
         raise HTTPException(status_code=404, detail=f"Color {color_code} not found")
         
