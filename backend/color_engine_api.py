@@ -19,56 +19,64 @@ logger = logging.getLogger(__name__)
 
 def create_hair_mask(image: np.ndarray) -> np.ndarray:
     """
-    Crée un masque des cheveux en utilisant rembg + détection de peau.
-    Version simplifiée et robuste.
+    Crée un masque des cheveux.
+    VERSION 5: Détection basée sur la luminosité et la saturation.
+    
+    Pour un gabarit avec fond blanc:
+    - Cheveux = pixels foncés (V<150) OU très saturés (S>100)
+    - Exclure le fond blanc (V>220 AND S<30)
     """
     try:
-        # 1. Supprimer le background avec rembg
-        pil_img = Image.fromarray(image)
-        removed = remove(pil_img)
+        height, width = image.shape[:2]
         
-        # Convertir en numpy et extraire le canal alpha
-        removed_np = np.array(removed)
-        if removed_np.shape[2] == 4:
-            alpha = removed_np[:, :, 3]
-            person_mask = (alpha > 128).astype(np.uint8) * 255
-        else:
-            # Pas de canal alpha, utiliser la luminosité
-            gray = cv2.cvtColor(removed_np, cv2.COLOR_RGB2GRAY)
-            _, person_mask = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
-        
-        # 2. Détecter la peau pour l'exclure
+        # Convertir en HSV
         hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        h, s, v = hsv[:,:,0], hsv[:,:,1], hsv[:,:,2]
         
-        # Plage de couleur peau (étendue)
-        lower_skin1 = np.array([0, 20, 60])
-        upper_skin1 = np.array([25, 180, 255])
-        lower_skin2 = np.array([160, 20, 60])
-        upper_skin2 = np.array([180, 180, 255])
+        # 1. Détecter le fond blanc
+        is_white = (s < 40) & (v > 200)
         
-        skin1 = cv2.inRange(hsv, lower_skin1, upper_skin1)
-        skin2 = cv2.inRange(hsv, lower_skin2, upper_skin2)
-        skin_mask = cv2.bitwise_or(skin1, skin2)
+        # 2. Détecter les pixels qui pourraient être des cheveux
+        # Cheveux = soit foncés, soit colorés
+        is_dark = v < 150  # Pixels foncés
+        is_colored = s > 80  # Pixels avec bonne saturation
+        is_hair_candidate = is_dark | is_colored
         
-        # Dilater le masque de peau pour couvrir les bords
-        kernel = np.ones((7, 7), np.uint8)
-        skin_mask = cv2.dilate(skin_mask, kernel, iterations=2)
+        # 3. Exclure le blanc
+        hair_mask = is_hair_candidate & ~is_white
+        hair_mask = hair_mask.astype(np.uint8) * 255
         
-        # 3. Masque cheveux = personne - peau
-        hair_mask = cv2.bitwise_and(person_mask, cv2.bitwise_not(skin_mask))
-        
-        # 4. Nettoyer le masque
+        # 4. Morphologie pour nettoyer
         kernel = np.ones((5, 5), np.uint8)
-        hair_mask = cv2.morphologyEx(hair_mask, cv2.MORPH_CLOSE, kernel)
-        hair_mask = cv2.morphologyEx(hair_mask, cv2.MORPH_OPEN, kernel)
+        hair_mask = cv2.morphologyEx(hair_mask, cv2.MORPH_CLOSE, kernel, iterations=2)
+        hair_mask = cv2.morphologyEx(hair_mask, cv2.MORPH_OPEN, kernel, iterations=1)
+        
+        # 5. Garder seulement les régions d'au moins 0.5% de l'image
+        contours, _ = cv2.findContours(hair_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        if contours:
+            final_mask = np.zeros_like(hair_mask)
+            min_area = (width * height) * 0.005  # 0.5% minimum
+            
+            for contour in contours:
+                if cv2.contourArea(contour) >= min_area:
+                    cv2.drawContours(final_mask, [contour], -1, 255, -1)
+            
+            if np.sum(final_mask > 0) > 0:
+                hair_mask = final_mask
+        
+        hair_pixels = np.sum(hair_mask > 128)
+        logger.info(f"Hair mask created: {hair_pixels} pixels ({hair_pixels / (width * height) * 100:.1f}%)")
         
         return hair_mask
         
     except Exception as e:
         logger.error(f"Error creating hair mask: {e}")
-        # Fallback: masque simple basé sur la luminosité
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        _, mask = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)
+        import traceback
+        traceback.print_exc()
+        # Fallback: tout ce qui est foncé
+        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        mask = (hsv[:, :, 2] < 150).astype(np.uint8) * 255
         return mask
 
 
