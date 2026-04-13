@@ -11,13 +11,26 @@ Fonctionnement:
 3. Envoie un email d'approbation
 4. Ne publie PAS automatiquement
 
-Configuration Render:
-  - Build Command: pip install requests
-  - Start Command: python scripts/blog_cron.py
-  - Schedule: 0 7,12,19 * * * (7h, 12h, 19h Montréal)
+=== CONFIGURATION RENDER CRON JOB ===
 
-Variables d'environnement:
-  - API_URL: https://luxura-inventory-api.onrender.com (ou votre URL)
+Build Command: pip install requests
+Start Command: python scripts/blog_cron.py
+Schedule: 0 7,12,19 * * * (7h, 12h, 19h Montréal)
+
+=== VARIABLES D'ENVIRONNEMENT (CRON) ===
+
+API_URL = https://luxura-inventory-api.onrender.com
+
+=== VARIABLES REQUISES SUR L'API luxura-inventory-api ===
+(Ces variables doivent être sur le service API, pas sur le cron)
+
+- EMERGENT_LLM_KEY ou OPENAI_API_KEY : Pour générer le contenu du blog
+- WIX_API_KEY : Token OAuth Wix pour créer les brouillons
+- WIX_SITE_ID : ID de votre site Wix
+- LUXURA_APP_USER : Email Gmail pour envoyer les approbations
+- LUXURA_APP_PASSWORD : Mot de passe app Gmail
+- BLOG_APPROVAL_EMAIL : Email qui recevra les demandes d'approbation
+
 """
 
 import os
