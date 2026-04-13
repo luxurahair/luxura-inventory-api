@@ -124,24 +124,15 @@ def recolor_with_reference(
     """
     Recolorise un gabarit avec la couleur d'une référence.
     
-    VERSION 9: TRANSFERT DIRECT PRÉCIS
-    ==================================
-    Méthode: Remplacement DIRECT de la teinte (H) et saturation (S)
-    tout en préservant la luminosité relative (V) pour les reflets.
+    VERSION 10: NOIR NATUREL
+    ========================
+    Détection intelligente des couleurs noires:
+    - Si la cible est NOIR (V < 50, S < 50): on assombrit SANS changer la teinte
+    - Sinon: transfert normal HSV
     
-    Pour les couleurs foncées (#1, #1A, #1B):
-    - La luminosité cible est très basse (V < 50)
-    - On applique un assombrissement plus agressif
-    
-    Args:
-        gabarit: Image RGB du gabarit
-        reference: Image RGB de la couleur de référence
-        blend: Intensité (0.5-1.0)
-    
-    Returns:
-        (image_recolorisée, masque_cheveux)
+    Ceci produit un noir naturel au lieu d'un noir verdâtre.
     """
-    logger.info(f"🎨 Color Engine V9 DIRECT - Recoloring with blend={blend}")
+    logger.info(f"🎨 Color Engine V10 - Recoloring with blend={blend}")
     logger.info(f"📐 Input resolution: {gabarit.shape[1]}x{gabarit.shape[0]}")
     
     # ============================================
@@ -159,13 +150,22 @@ def recolor_with_reference(
     logger.info(f"🎯 Target HSV: H={target_h:.1f}, S={target_s:.1f}, V={target_v:.1f}")
     
     # ============================================
-    # ÉTAPE 3: Extraire la couleur source du gabarit
+    # ÉTAPE 3: Détecter si c'est une couleur NOIRE
+    # ============================================
+    # Noir = très sombre (V < 50) ET faible saturation (S < 60)
+    is_black_target = (target_v < 50) and (target_s < 60)
+    
+    if is_black_target:
+        logger.info(f"🌑 NOIR détecté - Mode assombrissement naturel")
+    
+    # ============================================
+    # ÉTAPE 4: Extraire la couleur source du gabarit
     # ============================================
     source_h, source_s, source_v = get_average_color_hsv(gabarit, hair_mask)
     logger.info(f"📊 Source HSV: H={source_h:.1f}, S={source_s:.1f}, V={source_v:.1f}")
     
     # ============================================
-    # ÉTAPE 4: Convertir en HSV
+    # ÉTAPE 5: Convertir en HSV
     # ============================================
     hsv = cv2.cvtColor(gabarit, cv2.COLOR_RGB2HSV).astype(np.float32)
     
@@ -179,58 +179,68 @@ def recolor_with_reference(
     v_channel = hsv[:, :, 2]
     
     # ============================================
-    # ÉTAPE 5: TRANSFERT DIRECT DE LA TEINTE (H)
+    # ÉTAPE 6: Appliquer la transformation
     # ============================================
-    # Remplacer la teinte par la teinte cible
-    new_h = h_channel * (1 - mask_blend) + target_h * mask_blend
-    new_h = np.mod(new_h, 180)
+    
+    if is_black_target:
+        # MODE NOIR: Conserver la teinte originale, juste assombrir
+        new_h = h_channel  # PAS de changement de teinte
+        
+        # Réduire légèrement la saturation pour un noir naturel
+        new_s = s_channel * (1 - mask_blend * 0.3)  # 30% de désaturation
+        new_s = np.clip(new_s, 0, 255)
+        
+        # Assombrir fortement
+        # Calculer la nouvelle luminosité relative
+        v_min = np.min(v_channel[hair_mask > 128])
+        v_max = np.max(v_channel[hair_mask > 128])
+        v_range = max(v_max - v_min, 1)
+        v_normalized = (v_channel - v_min) / v_range
+        
+        # Plage très sombre pour le noir: V de 5 à 45
+        target_v_min = 5
+        target_v_max = 45
+        
+        new_v_base = target_v_min + v_normalized * (target_v_max - target_v_min)
+        new_v = v_channel * (1 - mask_blend) + new_v_base * mask_blend
+        new_v = np.clip(new_v, 0, 255)
+        
+        logger.info(f"🔄 Mode NOIR: V range [{target_v_min}, {target_v_max}], pas de changement de teinte")
+        
+    else:
+        # MODE COULEUR: Transfert normal HSV
+        # Teinte: remplacement direct
+        new_h = h_channel * (1 - mask_blend) + target_h * mask_blend
+        new_h = np.mod(new_h, 180)
+        
+        # Saturation: remplacement direct
+        new_s = s_channel * (1 - mask_blend) + target_s * mask_blend
+        new_s = np.clip(new_s, 0, 255)
+        
+        # Luminosité: mapper sur la plage cible
+        v_min = np.min(v_channel[hair_mask > 128])
+        v_max = np.max(v_channel[hair_mask > 128])
+        v_range = max(v_max - v_min, 1)
+        v_normalized = (v_channel - v_min) / v_range
+        
+        # Plage basée sur la cible
+        target_v_min = max(10, target_v * 0.4)
+        target_v_max = min(target_v * 1.4, target_v + 50)
+        
+        new_v_base = target_v_min + v_normalized * (target_v_max - target_v_min)
+        new_v = v_channel * (1 - mask_blend) + new_v_base * mask_blend
+        new_v = np.clip(new_v, 0, 255)
+        
+        logger.info(f"🔄 Mode COULEUR: H={target_h:.0f}, S={target_s:.0f}, V=[{target_v_min:.0f}-{target_v_max:.0f}]")
     
     # ============================================
-    # ÉTAPE 6: TRANSFERT DIRECT DE LA SATURATION (S)
-    # ============================================
-    # Remplacer la saturation par celle de la cible
-    new_s = s_channel * (1 - mask_blend) + target_s * mask_blend
-    new_s = np.clip(new_s, 0, 255)
-    
-    # ============================================
-    # ÉTAPE 7: TRANSFERT DE LA LUMINOSITÉ (V) - PRÉSERVER LES REFLETS
-    # ============================================
-    # Calculer la luminosité relative (pour garder les reflets)
-    v_min = np.min(v_channel[hair_mask > 128])
-    v_max = np.max(v_channel[hair_mask > 128])
-    v_range = max(v_max - v_min, 1)
-    
-    # Normaliser entre 0 et 1
-    v_normalized = (v_channel - v_min) / v_range
-    
-    # Calculer la plage de la cible
-    # Pour les couleurs foncées, on réduit la plage
-    target_v_min = max(5, target_v * 0.3)  # Minimum très sombre
-    target_v_max = min(target_v * 1.5, target_v + 40)  # Maximum limité
-    
-    if target_v < 60:  # Couleur foncée
-        # Pour les noirs/bruns foncés, réduire encore plus
-        target_v_min = max(5, target_v * 0.2)
-        target_v_max = min(target_v * 1.3, target_v + 25)
-        logger.info(f"🌑 Dark color detected: V range [{target_v_min:.0f}, {target_v_max:.0f}]")
-    
-    # Mapper sur la nouvelle plage
-    new_v_base = target_v_min + v_normalized * (target_v_max - target_v_min)
-    
-    # Appliquer avec le blend
-    new_v = v_channel * (1 - mask_blend) + new_v_base * mask_blend
-    new_v = np.clip(new_v, 0, 255)
-    
-    logger.info(f"🔄 Transform applied: H={target_h:.0f}, S={target_s:.0f}, V=[{target_v_min:.0f}-{target_v_max:.0f}]")
-    
-    # ============================================
-    # ÉTAPE 8: Reconstruire l'image
+    # ÉTAPE 7: Reconstruire l'image
     # ============================================
     result_hsv = np.stack([new_h, new_s, new_v], axis=-1).astype(np.uint8)
     result = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2RGB)
     
     # ============================================
-    # ÉTAPE 9: Vérification finale
+    # ÉTAPE 8: Vérification finale
     # ============================================
     result_h, result_s, result_v = get_average_color_hsv(result, hair_mask)
     logger.info(f"✅ Result HSV: H={result_h:.1f}, S={result_s:.1f}, V={result_v:.1f}")
