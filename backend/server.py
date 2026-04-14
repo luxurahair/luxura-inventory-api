@@ -310,17 +310,16 @@ async def scheduled_blog_generation():
 # Startup event - ping Luxura API to wake it up
 @app.on_event("startup")
 async def startup_event():
-    """Au démarrage, réveiller l'API Luxura et lancer le CRON"""
+    """Au démarrage, lancer seulement les tâches internes non bloquantes"""
     global blog_scheduler
     
     logger.info("🚀 Starting Luxura Distribution API...")
     
-    # Wake up Luxura API
-    await ping_luxura_api()
-    
-    # Start background task to keep it awake
-    asyncio.create_task(keep_luxura_awake())
-    logger.info("✅ Background ping task started")
+    # ⚠️ DÉSACTIVÉ: Le self-ping bloque le démarrage sur Render
+    # Le service essaie de se pinger lui-même avant d'avoir ouvert le port
+    # await ping_luxura_api()
+    # asyncio.create_task(keep_luxura_awake())
+    logger.info("⏭️ Self-ping disabled (prevents Render startup deadlock)")
     
     # 🛡️ CRON OPTIMISÉ FEMMES QUÉBEC: 1 article/jour aux heures de pointe
     try:
