@@ -23,9 +23,16 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection for local data (auth, cart, etc.)
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Rendu optionnel pour Render deployment
+mongo_url = os.environ.get('MONGO_URL', '')
+if mongo_url:
+    client = AsyncIOMotorClient(mongo_url)
+    db = client[os.environ.get('DB_NAME', 'luxura')]
+    logger.info("✅ MongoDB connected")
+else:
+    client = None
+    db = None
+    logger.warning("⚠️ MONGO_URL not set - MongoDB features disabled")
 
 # Luxura Inventory API (Render)
 LUXURA_API_URL = "https://luxura-inventory-api.onrender.com"
