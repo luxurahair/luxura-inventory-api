@@ -3,7 +3,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import re
@@ -22,17 +21,98 @@ from auto_color_engine import auto_recolor
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection for local data (auth, cart, etc.)
-# Rendu optionnel pour Render deployment
-mongo_url = os.environ.get('MONGO_URL', '')
-if mongo_url:
-    client = AsyncIOMotorClient(mongo_url)
-    db = client[os.environ.get('DB_NAME', 'luxura')]
-    logger.info("✅ MongoDB connected")
+# Setup logging FIRST
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# ============================================
+# DATABASE: SUPABASE (PostgreSQL)
+# ============================================
+# On utilise SQLAlchemy pour PostgreSQL au lieu de MongoDB
+
+from sqlalchemy import create_engine, Column, String, Integer, Text, Boolean, DateTime, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.sql import func
+
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
+if DATABASE_URL:
+    # Fix pour Render/Supabase: remplacer postgres:// par postgresql://
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base = declarative_base()
+    
+    # Définition des modèles SQLAlchemy
+    class UserDB(Base):
+        __tablename__ = "users"
+        user_id = Column(String, primary_key=True)
+        email = Column(String, unique=True, nullable=False)
+        name = Column(String, nullable=False)
+        picture = Column(String, nullable=True)
+        created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    class UserSessionDB(Base):
+        __tablename__ = "user_sessions"
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        session_token = Column(String, unique=True, nullable=False)
+        user_id = Column(String, ForeignKey("users.user_id", ondelete="CASCADE"))
+        expires_at = Column(DateTime(timezone=True), nullable=False)
+        created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    class CartItemDB(Base):
+        __tablename__ = "cart_items"
+        id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+        user_id = Column(String, ForeignKey("users.user_id", ondelete="CASCADE"))
+        product_id = Column(Integer, nullable=False)
+        quantity = Column(Integer, default=1)
+        created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    class BlogPostDB(Base):
+        __tablename__ = "blog_posts"
+        id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+        title = Column(String, nullable=False)
+        content = Column(Text, nullable=False)
+        excerpt = Column(Text, nullable=True)
+        image = Column(String, nullable=True)
+        author = Column(String, default="Luxura Distribution")
+        wix_post_id = Column(String, nullable=True)
+        published_to_wix = Column(Boolean, default=False)
+        published_to_facebook = Column(Boolean, default=False)
+        category = Column(String, nullable=True)
+        created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    class SEOLogDB(Base):
+        __tablename__ = "seo_generation_log"
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        blog_id = Column(String, nullable=True)
+        title = Column(String, nullable=True)
+        category = Column(String, nullable=True)
+        generated_at = Column(DateTime(timezone=True), server_default=func.now())
+        status = Column(String, default="generated")
+    
+    # Créer les tables si elles n'existent pas
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("✅ Supabase/PostgreSQL connected")
+    except Exception as e:
+        logger.error(f"❌ Database error: {e}")
 else:
-    client = None
-    db = None
-    logger.warning("⚠️ MONGO_URL not set - MongoDB features disabled")
+    engine = None
+    SessionLocal = None
+    logger.warning("⚠️ DATABASE_URL not set - Database features disabled")
+
+def get_db():
+    """Dependency pour obtenir une session de base de données"""
+    if SessionLocal is None:
+        return None
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # Luxura Inventory API (Render)
 LUXURA_API_URL = "https://luxura-inventory-api.onrender.com"
