@@ -18,6 +18,19 @@ from color_system import COLOR_SYSTEM, get_color_info, get_seo_description, get_
 from color_engine_api import process_color_engine, base64_to_image, image_to_base64
 from auto_color_engine import auto_recolor
 
+# Import Supabase database functions
+from database import (
+    db_get_user_by_email, db_get_user_by_id, db_create_user, db_update_user,
+    db_get_session, db_create_session, db_delete_user_sessions, db_delete_session,
+    db_get_cart_items, db_get_cart_item, db_add_cart_item, db_update_cart_item,
+    db_update_cart_item_by_product, db_delete_cart_item, db_clear_cart,
+    db_get_blog_posts, db_get_blog_post, db_get_blog_titles, db_create_blog_post,
+    db_update_blog_post, db_delete_blog_post, db_count_blog_posts,
+    db_create_seo_log, db_get_seo_logs,
+    db_create_backlink_run, db_get_backlink_runs,
+    db_get_salons
+)
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -368,7 +381,7 @@ async def scheduled_blog_generation():
         
         # 1 seul brouillon Wix + publication Facebook automatique
         results = await generate_daily_blogs(
-            db=db,  # ✅ Passer la connexion MongoDB
+            db=None,  # Migration Supabase: le paramètre db n'est plus utilisé
             openai_key=openai_key,  # ✅ Passer la clé OpenAI
             wix_api_key=wix_api_key,
             wix_site_id=wix_site_id,
@@ -1054,10 +1067,8 @@ async def get_current_user(request: Request) -> Optional[User]:
     if not session_token:
         return None
     
-    session_doc = await db.user_sessions.find_one(
-        {"session_token": session_token},
-        {"_id": 0}
-    )
+    # Supabase: Récupérer la session
+    session_doc = await db_get_session(session_token)
     
     if not session_doc:
         return None
@@ -1070,10 +1081,8 @@ async def get_current_user(request: Request) -> Optional[User]:
     if expires_at < datetime.now(timezone.utc):
         return None
     
-    user_doc = await db.users.find_one(
-        {"user_id": session_doc["user_id"]},
-        {"_id": 0}
-    )
+    # Supabase: Récupérer l'utilisateur
+    user_doc = await db_get_user_by_id(session_doc["user_id"])
     
     if not user_doc:
         return None
@@ -1114,35 +1123,21 @@ async def exchange_session(request: Request, response: Response):
     picture = auth_data.get("picture")
     session_token = auth_data.get("session_token")
     
-    # Find or create user
-    existing_user = await db.users.find_one({"email": email}, {"_id": 0})
+    # Supabase: Find or create user
+    existing_user = await db_get_user_by_email(email)
     
     if existing_user:
         user_id = existing_user["user_id"]
-        await db.users.update_one(
-            {"email": email},
-            {"$set": {"name": name, "picture": picture}}
-        )
+        await db_update_user(email, name, picture)
     else:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
-        user = User(
-            user_id=user_id,
-            email=email,
-            name=name,
-            picture=picture
-        )
-        await db.users.insert_one(user.model_dump())
+        await db_create_user(user_id, email, name, picture)
     
-    # Create session
+    # Supabase: Create session
     expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    session = UserSession(
-        session_token=session_token,
-        user_id=user_id,
-        expires_at=expires_at
-    )
     
-    await db.user_sessions.delete_many({"user_id": user_id})
-    await db.user_sessions.insert_one(session.model_dump())
+    await db_delete_user_sessions(user_id)
+    await db_create_session(session_token, user_id, expires_at)
     
     response.set_cookie(
         key="session_token",
@@ -1154,7 +1149,7 @@ async def exchange_session(request: Request, response: Response):
         max_age=7 * 24 * 60 * 60
     )
     
-    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    user_doc = await db_get_user_by_id(user_id)
     return user_doc
 
 @api_router.get("/auth/me")
@@ -1170,7 +1165,7 @@ async def logout(request: Request, response: Response):
     """Logout user"""
     session_token = request.cookies.get("session_token")
     if session_token:
-        await db.user_sessions.delete_many({"session_token": session_token})
+        await db_delete_session(session_token)
     
     response.delete_cookie(key="session_token", path="/")
     return {"message": "Logged out successfully"}
@@ -2237,10 +2232,8 @@ async def get_cart(request: Request):
     """Get user's cart with product details"""
     user = await require_auth(request)
     
-    cart_items = await db.cart_items.find(
-        {"user_id": user.user_id},
-        {"_id": 0}
-    ).to_list(100)
+    # Supabase: Récupérer les items du panier
+    cart_items = await db_get_cart_items(user.user_id)
     
     result = []
     total = 0
@@ -2289,27 +2282,16 @@ async def add_to_cart(item: CartItemCreate, request: Request):
         if response.status_code != 200:
             raise HTTPException(status_code=404, detail="Product not found")
     
-    # Check if item already in cart
-    existing = await db.cart_items.find_one(
-        {"user_id": user.user_id, "product_id": item.product_id},
-        {"_id": 0}
-    )
+    # Supabase: Check if item already in cart
+    existing = await db_get_cart_item(user.user_id, item.product_id)
     
     if existing:
         new_quantity = existing["quantity"] + item.quantity
-        await db.cart_items.update_one(
-            {"id": existing["id"]},
-            {"$set": {"quantity": new_quantity}}
-        )
+        await db_update_cart_item_by_product(user.user_id, item.product_id, new_quantity)
         return {"message": "Cart updated", "quantity": new_quantity}
     else:
-        cart_item = CartItem(
-            user_id=user.user_id,
-            product_id=item.product_id,
-            quantity=item.quantity
-        )
-        await db.cart_items.insert_one(cart_item.model_dump())
-        return {"message": "Added to cart", "id": cart_item.id}
+        item_id = await db_add_cart_item(user.user_id, item.product_id, item.quantity)
+        return {"message": "Added to cart", "id": item_id}
 
 @api_router.put("/cart/{item_id}")
 async def update_cart_item(item_id: str, update: CartItemUpdate, request: Request):
@@ -2317,15 +2299,12 @@ async def update_cart_item(item_id: str, update: CartItemUpdate, request: Reques
     user = await require_auth(request)
     
     if update.quantity <= 0:
-        await db.cart_items.delete_one({"id": item_id, "user_id": user.user_id})
+        await db_delete_cart_item(item_id, user.user_id)
         return {"message": "Item removed"}
     
-    result = await db.cart_items.update_one(
-        {"id": item_id, "user_id": user.user_id},
-        {"$set": {"quantity": update.quantity}}
-    )
+    result = await db_update_cart_item(item_id, user.user_id, update.quantity)
     
-    if result.matched_count == 0:
+    if not result:
         raise HTTPException(status_code=404, detail="Cart item not found")
     
     return {"message": "Cart updated"}
@@ -2335,9 +2314,9 @@ async def remove_from_cart(item_id: str, request: Request):
     """Remove item from cart"""
     user = await require_auth(request)
     
-    result = await db.cart_items.delete_one({"id": item_id, "user_id": user.user_id})
+    result = await db_delete_cart_item(item_id, user.user_id)
     
-    if result.deleted_count == 0:
+    if not result:
         raise HTTPException(status_code=404, detail="Cart item not found")
     
     return {"message": "Item removed"}
@@ -2346,7 +2325,7 @@ async def remove_from_cart(item_id: str, request: Request):
 async def clear_cart(request: Request):
     """Clear all items from cart"""
     user = await require_auth(request)
-    await db.cart_items.delete_many({"user_id": user.user_id})
+    await db_clear_cart(user.user_id)
     return {"message": "Cart cleared"}
 
 # ==================== BLOG ENDPOINTS ====================
@@ -2528,9 +2507,9 @@ async def generate_seo_blog():
         if not emergent_key:
             raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
         
-        # Get existing blog posts to avoid duplicates
-        existing_posts = await db.blog_posts.find({}, {"title": 1}).to_list(100)
-        existing_titles = [p.get("title", "").lower() for p in existing_posts]
+        # Get existing blog posts to avoid duplicates - Supabase
+        existing_titles = await db_get_blog_titles()
+        existing_titles = [t.lower() for t in existing_titles]
         
         # Select a topic that hasn't been covered
         available_topics = [t for t in BLOG_TOPICS if t["topic"].lower() not in existing_titles]
@@ -2630,9 +2609,9 @@ FORMAT DE RÉPONSE (JSON):
             "auto_generated": True
         }
         
-        await db.blog_posts.insert_one(blog_post)
+        # Supabase: Create blog post
+        await db_create_blog_post(blog_post)
         
-        blog_post.pop("_id", None)
         if isinstance(blog_post.get("created_at"), datetime):
             blog_post["created_at"] = blog_post["created_at"].isoformat()
         
@@ -2647,10 +2626,10 @@ FORMAT DE RÉPONSE (JSON):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.delete("/blog/{post_id}")
-async def delete_blog_post(post_id: str):
+async def delete_blog_post_endpoint(post_id: str):
     """Delete a blog post"""
-    result = await db.blog_posts.delete_one({"id": post_id})
-    if result.deleted_count == 0:
+    result = await db_delete_blog_post(post_id)
+    if not result:
         raise HTTPException(status_code=404, detail="Post not found")
     return {"message": "Post deleted successfully"}
 
@@ -2689,7 +2668,7 @@ async def auto_generate_daily_blogs(
         fb_page_id = os.getenv("FB_PAGE_ID")
         
         results = await generate_daily_blogs(
-            db=db,
+            db=None,  # Migration Supabase: le paramètre db n'est plus utilisé
             openai_key=openai_key,
             wix_api_key=wix_api_key,
             wix_site_id=wix_site_id,
@@ -2787,7 +2766,7 @@ async def trigger_blog_generation_now():
             raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY ou OPENAI_API_KEY non configuré")
         
         results = await generate_daily_blogs(
-            db=db,
+            db=None,  # Migration Supabase: le paramètre db n'est plus utilisé
             openai_key=openai_key,
             wix_api_key=wix_api_key,
             wix_site_id=wix_site_id,
@@ -3103,8 +3082,8 @@ async def publish_blog_to_wix(post_id: str):
     try:
         from blog_automation import create_wix_draft_post, publish_wix_draft
         
-        # Récupérer le blog
-        post = await db.blog_posts.find_one({"id": post_id})
+        # Supabase: Récupérer le blog
+        post = await db_get_blog_post(post_id)
         if not post:
             raise HTTPException(status_code=404, detail="Blog non trouvé")
         
@@ -3133,10 +3112,7 @@ async def publish_blog_to_wix(post_id: str):
             if draft_id:
                 published = await publish_wix_draft(wix_api_key, wix_site_id, draft_id)
                 if published:
-                    await db.blog_posts.update_one(
-                        {"id": post_id},
-                        {"$set": {"published_to_wix": True, "wix_post_id": draft_id}}
-                    )
+                    await db_update_blog_post(post_id, {"published_to_wix": True, "wix_post_id": draft_id})
                     return {"success": True, "message": "Blog publié sur Wix", "wix_post_id": draft_id}
         
         raise HTTPException(status_code=500, detail="Échec de la publication sur Wix")
@@ -3148,11 +3124,12 @@ async def publish_blog_to_wix(post_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/blog")
-async def get_blog_posts():
+async def get_blog_posts_endpoint():
     """Get all blog posts with varied images"""
     import random
     
-    posts = await db.blog_posts.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    # Supabase: Récupérer les posts
+    posts = await db_get_blog_posts(100)
     
     # Update any posts that have the old static image
     old_static_image = "https://static.wixstatic.com/media/de6cdb_ed493ddeab524054935dfbf0714b7e29~mv2.jpg"
@@ -3163,10 +3140,7 @@ async def get_blog_posts():
             new_image = get_blog_image_for_topic(post.get("title", ""))
             post["image"] = new_image
             # Update in database
-            await db.blog_posts.update_one(
-                {"id": post["id"]},
-                {"$set": {"image": new_image}}
-            )
+            await db_update_blog_post(post["id"], {"image": new_image})
     
     if not posts:
         # Default posts with varied images
@@ -3204,9 +3178,9 @@ async def get_blog_posts():
     return posts
 
 @api_router.get("/blog/{post_id}")
-async def get_blog_post(post_id: str):
+async def get_blog_post_by_id(post_id: str):
     """Get a single blog post"""
-    post = await db.blog_posts.find_one({"id": post_id}, {"_id": 0})
+    post = await db_get_blog_post(post_id)
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return post
@@ -3323,8 +3297,8 @@ async def push_blog_to_wix(post_id: str):
     if not WIX_API_KEY or not WIX_SITE_ID:
         raise HTTPException(status_code=500, detail="Wix API not configured")
     
-    # Get the blog post from our DB
-    post = await db.blog_posts.find_one({"id": post_id}, {"_id": 0})
+    # Supabase: Get the blog post from our DB
+    post = await db_get_blog_post(post_id)
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     
@@ -3362,11 +3336,11 @@ async def push_blog_to_wix(post_id: str):
             
             if response.status_code in [200, 201]:
                 wix_response = response.json()
-                # Update our record with Wix ID
-                await db.blog_posts.update_one(
-                    {"id": post_id},
-                    {"$set": {"wix_post_id": wix_response.get("draftPost", {}).get("id"), "pushed_to_wix": True}}
-                )
+                # Supabase: Update our record with Wix ID
+                await db_update_blog_post(post_id, {
+                    "wix_post_id": wix_response.get("draftPost", {}).get("id"),
+                    "pushed_to_wix": True
+                })
                 return {
                     "success": True,
                     "message": "Article publié sur Wix (brouillon)",
@@ -3400,9 +3374,9 @@ async def trigger_daily_seo_generation(background_tasks: BackgroundTasks):
                 logger.error("EMERGENT_LLM_KEY not configured")
                 return
             
-            # Get existing posts to avoid duplicates
-            existing_posts = await db.blog_posts.find({}, {"title": 1}).to_list(100)
-            existing_titles = [p.get("title", "").lower() for p in existing_posts]
+            # Supabase: Get existing posts to avoid duplicates
+            existing_titles = await db_get_blog_titles()
+            existing_titles = [t.lower() for t in existing_titles]
             
             # Extended topics for B2B focus (salons as partners)
             EXTENDED_TOPICS = [
@@ -3546,24 +3520,23 @@ FORMAT JSON:
                 "generation_type": "daily_cron"
             }
             
-            await db.blog_posts.insert_one(blog_post)
+            # Supabase: Create blog post
+            await db_create_blog_post(blog_post)
             logger.info(f"Daily SEO blog generated: {blog_post['title']}")
             
-            # Log to SEO history
-            await db.seo_generation_log.insert_one({
-                "date": datetime.now(timezone.utc),
-                "post_id": post_id,
+            # Supabase: Log to SEO history
+            await db_create_seo_log({
+                "blog_id": post_id,
                 "title": blog_post["title"],
-                "keywords": keywords_to_use,
-                "success": True
+                "category": topic_data.get("keywords", ["general"])[0] if topic_data.get("keywords") else "general",
+                "status": "generated"
             })
             
         except Exception as e:
             logger.error(f"Daily SEO generation error: {e}")
-            await db.seo_generation_log.insert_one({
-                "date": datetime.now(timezone.utc),
-                "error": str(e),
-                "success": False
+            await db_create_seo_log({
+                "title": "Error",
+                "status": f"error: {str(e)[:100]}"
             })
     
     # Run in background
@@ -3626,21 +3599,13 @@ async def get_backlink_opportunities():
 async def get_seo_stats():
     """Get SEO generation statistics"""
     
-    total_posts = await db.blog_posts.count_documents({})
-    auto_generated = await db.blog_posts.count_documents({"auto_generated": True})
-    pushed_to_wix = await db.blog_posts.count_documents({"pushed_to_wix": True})
+    # Supabase: Get counts
+    total_posts = await db_count_blog_posts()
+    auto_generated = await db_count_blog_posts({"auto_generated": True})
+    pushed_to_wix = await db_count_blog_posts({"pushed_to_wix": True})
     
-    # Get recent generation logs
-    recent_logs = await db.seo_generation_log.find({}).sort("date", -1).to_list(10)
-    
-    # Calculate keywords coverage
-    all_keywords = []
-    async for post in db.blog_posts.find({"seo_keywords": {"$exists": True}}):
-        all_keywords.extend(post.get("seo_keywords", []))
-    
-    keyword_counts = {}
-    for kw in all_keywords:
-        keyword_counts[kw] = keyword_counts.get(kw, 0) + 1
+    # Supabase: Get recent generation logs
+    recent_logs = await db_get_seo_logs(10)
     
     return {
         "total_blog_posts": total_posts,
@@ -3650,10 +3615,10 @@ async def get_seo_stats():
             {
                 "date": log.get("date").isoformat() if log.get("date") else None,
                 "title": log.get("title"),
-                "success": log.get("success")
+                "status": log.get("status")
             } for log in recent_logs
         ],
-        "top_keywords_used": sorted(keyword_counts.items(), key=lambda x: x[1], reverse=True)[:10],
+        "top_keywords_used": [],  # Simplified - no keyword tracking in new schema
         "recommendation": "Configure un CRON pour appeler POST /api/seo/daily-generation chaque jour"
     }
 
@@ -3741,28 +3706,26 @@ async def run_backlink_automation(background_tasks: BackgroundTasks):
                 cwd="/app/backend"
             )
             
-            # Log results
-            await db.backlink_runs.insert_one({
-                "date": datetime.now(timezone.utc),
-                "stdout": result.stdout[:5000] if result.stdout else None,
-                "stderr": result.stderr[:5000] if result.stderr else None,
-                "return_code": result.returncode,
-                "success": result.returncode == 0
+            # Supabase: Log results
+            await db_create_backlink_run({
+                "directory": "backlink_automation",
+                "status": "success" if result.returncode == 0 else f"exit_code_{result.returncode}",
+                "message": result.stdout[:500] if result.stdout else None
             })
             
             logger.info(f"Backlink automation completed with code {result.returncode}")
             
         except subprocess.TimeoutExpired:
-            await db.backlink_runs.insert_one({
-                "date": datetime.now(timezone.utc),
-                "error": "Timeout after 5 minutes",
-                "success": False
+            await db_create_backlink_run({
+                "directory": "backlink_automation",
+                "status": "timeout",
+                "message": "Timeout after 5 minutes"
             })
         except Exception as e:
-            await db.backlink_runs.insert_one({
-                "date": datetime.now(timezone.utc),
-                "error": str(e),
-                "success": False
+            await db_create_backlink_run({
+                "directory": "backlink_automation",
+                "status": "error",
+                "message": str(e)[:500]
             })
     
     background_tasks.add_task(run_automation)
@@ -3777,7 +3740,8 @@ async def run_backlink_automation(background_tasks: BackgroundTasks):
 async def get_backlink_status():
     """Get status of backlink automation runs"""
     
-    runs = await db.backlink_runs.find({}).sort("date", -1).to_list(10)
+    # Supabase: Get backlink runs
+    runs = await db_get_backlink_runs(10)
     
     # Get screenshots if any
     screenshots = []
@@ -3798,9 +3762,9 @@ async def get_backlink_status():
         "recent_runs": [
             {
                 "date": run.get("date").isoformat() if run.get("date") else None,
-                "success": run.get("success"),
-                "error": run.get("error"),
-                "return_code": run.get("return_code")
+                "status": run.get("status"),
+                "message": run.get("message"),
+                "directory": run.get("directory")
             } for run in runs
         ],
         "screenshots": screenshots,
@@ -3824,27 +3788,23 @@ async def start_auto_verification(background_tasks: BackgroundTasks):
                 cwd="/app/backend"
             )
             
-            await db.backlink_runs.insert_one({
-                "date": datetime.now(timezone.utc),
-                "type": "auto_verify_loop",
-                "stdout": result.stdout[-5000:] if result.stdout else None,
-                "return_code": result.returncode,
-                "success": result.returncode == 0
+            await db_create_backlink_run({
+                "directory": "auto_verify_loop",
+                "status": "success" if result.returncode == 0 else f"exit_code_{result.returncode}",
+                "message": result.stdout[-500:] if result.stdout else None
             })
             
         except subprocess.TimeoutExpired:
-            await db.backlink_runs.insert_one({
-                "date": datetime.now(timezone.utc),
-                "type": "auto_verify_loop",
-                "error": "Loop completed after 5 hours",
-                "success": True
+            await db_create_backlink_run({
+                "directory": "auto_verify_loop",
+                "status": "completed",
+                "message": "Loop completed after 5 hours"
             })
         except Exception as e:
-            await db.backlink_runs.insert_one({
-                "date": datetime.now(timezone.utc),
-                "type": "auto_verify_loop",
-                "error": str(e),
-                "success": False
+            await db_create_backlink_run({
+                "directory": "auto_verify_loop",
+                "status": "error",
+                "message": str(e)[:500]
             })
     
     background_tasks.add_task(run_auto_verify)
@@ -4283,12 +4243,8 @@ async def get_salons(city: Optional[str] = None):
     except Exception as e:
         logger.error(f"Error fetching salons from Luxura API: {e}")
     
-    # Fallback to local DB
-    query = {}
-    if city:
-        query["city"] = {"$regex": city, "$options": "i"}
-    
-    salons = await db.salons.find(query, {"_id": 0}).to_list(100)
+    # Fallback to local DB - Supabase
+    salons = await db_get_salons(city)
     if not salons:
         return [
             {"id": "salon-1", "name": "Salon Carouso", "address": "123 Rue Principale", "city": "Montréal", "phone": "514-555-0001"},
@@ -5212,6 +5168,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+# Note: La fonction shutdown_db_client a été supprimée car MongoDB n'est plus utilisé.
+# Supabase/PostgreSQL utilise une pool de connexions SQLAlchemy gérée automatiquement.
