@@ -7,6 +7,7 @@ import {
   Image,
   ActivityIndicator,
   TouchableOpacity,
+  Pressable,
   useWindowDimensions,
   Share,
   Alert,
@@ -204,21 +205,45 @@ export default function BlogPostScreen() {
     <View style={styles.container}>
       {/* Header avec logo */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity 
-          onPress={handleGoBack} 
-          style={styles.headerButton}
-          activeOpacity={0.7}
+        <Pressable 
+          onPress={() => {
+            console.log('Back button pressed');
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.push('/(tabs)/blog');
+            }
+          }} 
+          style={({ pressed }) => [
+            styles.headerButton,
+            pressed && styles.headerButtonPressed
+          ]}
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
+        </Pressable>
         <Image source={{ uri: LUXURA_LOGO }} style={styles.logoImage} resizeMode="contain" />
-        <TouchableOpacity 
-          style={styles.headerButton}
-          onPress={handleShare}
-          activeOpacity={0.7}
+        <Pressable 
+          style={({ pressed }) => [
+            styles.headerButton,
+            pressed && styles.headerButtonPressed
+          ]}
+          onPress={async () => {
+            console.log('Share button pressed');
+            if (!post) return;
+            try {
+              const shareUrl = `https://www.luxuradistribution.com/blog/${id}`;
+              await Share.share({
+                title: post.title,
+                message: `${post.title}\n\n${post.excerpt}\n\nLire: ${shareUrl}`,
+                url: Platform.OS === 'ios' ? shareUrl : undefined,
+              });
+            } catch (error) {
+              Alert.alert('Partage', 'Article copié !');
+            }
+          }}
         >
           <Ionicons name="share-outline" size={24} color="#fff" />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -317,6 +342,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    cursor: 'pointer',
+  },
+  headerButtonPressed: {
+    backgroundColor: 'rgba(201,160,80,0.3)',
+    transform: [{ scale: 0.95 }],
   },
   scrollView: {
     flex: 1,
