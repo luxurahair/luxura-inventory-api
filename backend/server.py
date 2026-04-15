@@ -5243,6 +5243,22 @@ except Exception as e:
     async def wix_sync_fallback(limit: int = 500, dry_run: bool = False):
         return {"ok": False, "error": f"Wix router not available: {e}"}
 
+# ==================== INVENTORY API ROUTES (Products & Inventory from app/routes/) ====================
+# These are the core routes that luxura-inventory-api needs to serve /products and /inventory/view
+try:
+    from app.routes.products import router as products_router
+    app.include_router(products_router)
+    logger.info("✅ Mounted app/routes/products.py router (/products)")
+except Exception as e:
+    logger.warning(f"⚠️ Could not mount products router: {e}")
+
+try:
+    from app.routes.inventory import router as inventory_router
+    app.include_router(inventory_router)
+    logger.info("✅ Mounted app/routes/inventory.py router (/inventory)")
+except Exception as e:
+    logger.warning(f"⚠️ Could not mount inventory router: {e}")
+
 # ==================== WIX TOKEN ROUTES (compatibilité avec anciennes versions) ====================
 
 @app.post("/wix/token")
