@@ -197,6 +197,16 @@ async def openapi_redirect():
     """Redirige /openapi.json vers /api/openapi.json"""
     return RedirectResponse(url="/api/openapi.json", status_code=307)
 
+# ==================== ALIAS ROUTES (compatibilité) ====================
+
+@app.get("/seo/by_wix_id", include_in_schema=False)
+async def seo_by_wix_id_alias(wix_id: str, lang: str = "fr"):
+    """Redirige /seo/by_wix_id vers /api/seo/by_wix_id"""
+    return RedirectResponse(
+        url=f"/api/seo/by_wix_id?wix_id={wix_id}&lang={lang}",
+        status_code=307,
+    )
+
 # Servir les fichiers statiques (images générées)
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
@@ -5269,12 +5279,16 @@ try:
     from app.routes.wix import router as wix_router
     app.include_router(wix_router)
     logger.info("✅ Mounted app/routes/wix.py router (real sync implementation)")
-except Exception as e:
-    logger.warning(f"⚠️ Could not mount wix router: {e}")
-    # Fallback routes if the real router fails to load
-    @app.post("/wix/sync")
-    async def wix_sync_fallback(limit: int = 500, dry_run: bool = False):
-        return {"ok": False, "error": f"Wix router not available: {e}"}
+except Exception:
+    logger.exception("❌ Failed to mount app.routes.wix router")
+
+# ==================== SEO ROUTES ====================
+try:
+    from app.routes.seo import router as seo_router
+    app.include_router(seo_router, prefix="/api")
+    logger.info("✅ Mounted SEO router under /api")
+except Exception:
+    logger.exception("❌ Failed to mount SEO router")
 
 # ==================== INVENTORY API ROUTES (Products & Inventory from app/routes/) ====================
 # These are the core routes that luxura-inventory-api needs to serve /products and /inventory/view
@@ -5282,15 +5296,15 @@ try:
     from app.routes.products import router as products_router
     app.include_router(products_router)
     logger.info("✅ Mounted app/routes/products.py router (/products)")
-except Exception as e:
-    logger.warning(f"⚠️ Could not mount products router: {e}")
+except Exception:
+    logger.exception("❌ Failed to mount products router")
 
 try:
     from app.routes.inventory import router as inventory_router
     app.include_router(inventory_router)
     logger.info("✅ Mounted app/routes/inventory.py router (/inventory)")
-except Exception as e:
-    logger.warning(f"⚠️ Could not mount inventory router: {e}")
+except Exception:
+    logger.exception("❌ Failed to mount inventory router")
 
 # ==================== WIX TOKEN ROUTES (compatibilité avec anciennes versions) ====================
 
