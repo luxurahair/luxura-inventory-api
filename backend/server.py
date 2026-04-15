@@ -4037,16 +4037,16 @@ async def sync_wix_inventory(
             logger.info(f"🔄 Syncing from Wix (limit: {limit})...")
             
             # Use the internal Wix fallback function
-            wix_response = await get_products_from_wix_fallback(
-                skip=0, 
-                limit=limit, 
+            wix_products = await get_products_from_wix_fallback(
                 category=None, 
                 search=None, 
-                min_price=None, 
-                max_price=None
+                in_stock=None
             )
             
-            wix_products = wix_response.get("products", [])
+            # Limit the results
+            if limit and len(wix_products) > limit:
+                wix_products = wix_products[:limit]
+            
             total_from_wix = len(wix_products)
             
             if dry_run:
