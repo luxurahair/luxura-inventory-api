@@ -1212,10 +1212,13 @@ def extract_variant_info(product: dict) -> dict:
 async def get_products_from_wix_fallback(
     category: Optional[str] = None,
     search: Optional[str] = None,
-    in_stock: Optional[bool] = None
+    in_stock: Optional[bool] = None,
+    skip: int = 0,  # Accepte skip pour compatibilité avec anciens appels
+    limit: int = 100  # Accepte limit pour compatibilité
 ) -> List[Dict]:
     """
     Fallback: Récupère les produits directement depuis Wix API quand Luxura API est indisponible
+    Note: skip et limit sont acceptés pour compatibilité mais Wix API gère la pagination différemment
     """
     try:
         wix_api_key = os.getenv("WIX_API_KEY")
@@ -3188,21 +3191,27 @@ async def get_blog_post_by_id(post_id: str):
 # ==================== WIX INTEGRATION & SEO MACHINE ====================
 
 async def get_wix_access_token():
-    """Get OAuth access token from Luxura API"""
-    if not WIX_INSTANCE_ID:
-        return None
+    """Get OAuth access token - utilise le service local au lieu d'appel HTTP externe"""
     try:
-        async with httpx.AsyncClient(timeout=15.0) as http_client:
-            response = await http_client.post(
-                f"{LUXURA_RENDER_API}/wix/token",
-                params={"instance_id": WIX_INSTANCE_ID}
-            )
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("access_token")
+        # Utiliser directement le service wix_cron_service au lieu d'appel HTTP
+        from wix_cron_service import token_cache, refresh_wix_token
+        
+        token = token_cache.get_token()
+        if token:
+            return token
+        
+        # Essayer de rafraîchir
+        result = await refresh_wix_token()
+        if result.get("ok"):
+            return token_cache.get_token()
+        
+        return None
+    except ImportError:
+        # Fallback: utiliser WIX_API_KEY directement si disponible
+        return os.getenv("WIX_API_KEY")
     except Exception as e:
         logger.error(f"Error getting Wix token: {e}")
-    return None
+        return os.getenv("WIX_API_KEY")  # Fallback
 
 def get_wix_headers():
     """Get Wix API headers (for simple API key auth)"""
@@ -3877,25 +3886,13 @@ async def patch_wix_variant_skus(data: WixVariantSkuPatch, secret: str = ""):
         raise HTTPException(status_code=401, detail="Invalid secret")
     
     try:
-        # Obtenir le token OAuth depuis l'API Render
+        # Obtenir le token OAuth directement du service local
+        access_token = await get_wix_access_token()
+        
+        if not access_token:
+            raise HTTPException(status_code=502, detail="No access token available")
+        
         async with httpx.AsyncClient(timeout=60.0) as client:
-            # D'abord obtenir un token frais
-            token_response = await client.post(
-                f"{LUXURA_RENDER_API}/wix/token",
-                params={"instance_id": "ab8a5a88-69a5-4348-ad2e-06017de46f57"}
-            )
-            
-            if token_response.status_code != 200:
-                raise HTTPException(
-                    status_code=502, 
-                    detail=f"Failed to get Wix token: {token_response.text}"
-                )
-            
-            token_data = token_response.json()
-            access_token = token_data.get("access_token", "")
-            
-            if not access_token:
-                raise HTTPException(status_code=502, detail="No access token returned")
             
             # Construire le payload avec le format CHOICES (LA SOLUTION AU BUG!)
             wix_variants = []
@@ -3962,33 +3959,34 @@ async def patch_wix_variant_skus(data: WixVariantSkuPatch, secret: str = ""):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/wix/token/refresh")
-async def refresh_wix_token():
+async def refresh_wix_token_endpoint():
     """
-    Rafraîchir le token Wix OAuth via l'API Render.
+    Rafraîchir le token Wix OAuth - utilise le service local.
     Utile pour les CRON jobs qui ont besoin d'un token actif.
     """
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                f"{LUXURA_RENDER_API}/wix/token",
-                params={"instance_id": "ab8a5a88-69a5-4348-ad2e-06017de46f57"}
-            )
-            
-            if response.status_code != 200:
-                return {
-                    "ok": False,
-                    "error": f"Token refresh failed: {response.status_code}",
-                    "detail": response.text[:200]
-                }
-            
-            token_data = response.json()
-            
+        from wix_cron_service import refresh_wix_token, token_cache
+        
+        result = await refresh_wix_token()
+        
+        if result.get("ok"):
             return {
                 "ok": True,
                 "message": "Token refreshed successfully",
-                "has_access_token": bool(token_data.get("access_token")),
-                "expires_in": token_data.get("expires_in")
+                "has_access_token": True,
+                "expires_in": result.get("expires_in")
             }
+        else:
+            return {
+                "ok": False,
+                "error": result.get("error", "Token refresh failed")
+            }
+            
+    except ImportError:
+        return {
+            "ok": False,
+            "error": "wix_cron_service not available"
+        }
             
     except Exception as e:
         logger.error(f"Error refreshing Wix token: {e}")
