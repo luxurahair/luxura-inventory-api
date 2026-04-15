@@ -3192,10 +3192,102 @@ async def get_blog_posts_endpoint():
 @api_router.get("/blog/{post_id}")
 async def get_blog_post_by_id(post_id: str):
     """Get a single blog post"""
+    # Essayer d'abord depuis la base de données
     post = await db_get_blog_post(post_id)
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-    return post
+    if post:
+        return post
+    
+    # Si pas trouvé en BD, vérifier les articles par défaut
+    default_posts = {
+        "entretien-extensions": {
+            "id": "entretien-extensions",
+            "title": "Comment entretenir vos extensions capillaires",
+            "content": """<h2>L'entretien des extensions capillaires : Guide complet</h2>
+<p>Les extensions capillaires nécessitent un entretien régulier pour maintenir leur beauté et leur durabilité. Voici nos conseils d'experts pour prendre soin de vos extensions <strong>Luxura Distribution</strong>.</p>
+
+<h3>1. Le brossage quotidien</h3>
+<p>Utilisez une brosse spéciale extensions, en commençant par les pointes et en remontant progressivement vers les racines. Brossez vos extensions <strong>au moins 2 fois par jour</strong> pour éviter les nœuds.</p>
+
+<h3>2. Le lavage adapté</h3>
+<p>Lavez vos extensions <strong>1 à 2 fois par semaine</strong> maximum avec un shampooing sans sulfate. L'eau tiède est recommandée - jamais d'eau trop chaude qui peut endommager les liaisons.</p>
+
+<h3>3. Le séchage en douceur</h3>
+<p>Tamponnez délicatement avec une serviette microfibre. Évitez de frotter vigoureusement. Laissez sécher naturellement ou utilisez un sèche-cheveux à température basse.</p>
+
+<h3>4. Protection thermique</h3>
+<p>Avant tout coiffage à chaud (fer à lisser, fer à boucler), appliquez toujours un <strong>spray protecteur thermique</strong>. Ne dépassez pas 180°C pour préserver la qualité des cheveux.</p>
+
+<h3>5. Soins nocturnes</h3>
+<p>Attachez vos cheveux en tresse lâche ou queue de cheval basse avant de dormir. Utilisez une taie d'oreiller en <strong>soie ou satin</strong> pour réduire la friction.</p>
+
+<p>Avec ces conseils, vos extensions <strong>Luxura</strong> conserveront leur éclat pendant 12 à 18 mois. Pour plus de conseils personnalisés, contactez nos experts.</p>""",
+            "excerpt": "Découvrez nos conseils d'experts pour maintenir vos extensions et prolonger leur durée de vie.",
+            "image": "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=800&q=80",
+            "author": "Luxura Distribution",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        "guide-genius-weft": {
+            "id": "guide-genius-weft",
+            "title": "Extensions Genius Weft : Guide complet pour professionnels",
+            "content": """<h2>La révolution Genius Weft : Trame invisible pour professionnels</h2>
+<p>La technique <strong>Genius Weft</strong> révolutionne l'industrie des extensions capillaires au Québec. Découvrez pourquoi les salons professionnels choisissent cette méthode innovante.</p>
+
+<h3>Qu'est-ce que le Genius Weft ?</h3>
+<p>Le Genius Weft est une <strong>trame ultra-fine</strong> cousue main qui s'applique par la méthode couture sur tresse. Sa finesse exceptionnelle (moins de 1mm) la rend pratiquement invisible une fois posée.</p>
+
+<h3>Avantages pour vos clientes</h3>
+<ul>
+<li><strong>Confort absolu</strong> : Légère et plate, elle ne crée aucune gêne</li>
+<li><strong>Naturel parfait</strong> : Épouse parfaitement le cuir chevelu</li>
+<li><strong>Durabilité</strong> : 9 à 12 mois avec un bon entretien</li>
+<li><strong>Polyvalence</strong> : Idéal pour cheveux fins ou épais</li>
+</ul>
+
+<h3>Technique d'application</h3>
+<p>L'application se fait en salon par un professionnel formé. La trame est cousue sur une tresse plate, créant une base stable et discrète. Le temps de pose est d'environ <strong>1h30 à 2h</strong> selon le volume souhaité.</p>
+
+<h3>La collection Vivian by Luxura</h3>
+<p>Notre série <strong>Genius Vivian</strong> offre 25+ teintes naturelles en cheveux 100% Remy russes. Disponible en longueurs 18", 20" et 24" pour répondre à tous les besoins.</p>
+
+<p><strong>Luxura Distribution</strong> forme gratuitement les salons partenaires à cette technique. Contactez-nous pour devenir salon affilié.</p>""",
+            "excerpt": "Tout savoir sur les extensions Genius Weft - la trame invisible révolutionnaire pour professionnels.",
+            "image": "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&q=80",
+            "author": "Luxura Distribution",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        "tendances-2025": {
+            "id": "tendances-2025",
+            "title": "Tendances coiffure 2025 : Balayage et extensions naturelles",
+            "content": """<h2>Les tendances capillaires 2025 au Québec</h2>
+<p>Les tendances capillaires évoluent vers plus de naturel et de sophistication. Découvrez les couleurs et styles qui domineront <strong>2025</strong> dans les salons québécois.</p>
+
+<h3>1. Le Balayage Champagne Doré</h3>
+<p>La teinte <strong>#18/22 Champagne Doré</strong> reste incontournable. Ce mélange subtil de blond cendré et doré apporte luminosité et dimension. Idéal avec nos extensions <strong>Tape Aurora</strong> ou <strong>Genius Vivian</strong>.</p>
+
+<h3>2. L'effet "Glass Hair"</h3>
+<p>Cheveux ultra-brillants et lisses comme du verre. Cette tendance met en valeur les extensions de qualité premium avec cuticules intactes, comme nos produits <strong>100% Remy russes</strong>.</p>
+
+<h3>3. Les longueurs XXL</h3>
+<p>Le retour des cheveux très longs, style années 70 modernisé. Nos extensions 24" permettent d'obtenir ce look spectaculaire instantanément.</p>
+
+<h3>4. Le Châtaigne Lumière</h3>
+<p>Notre teinte signature <strong>#3/3T24 Châtaigne Lumière</strong> - un brun châtain avec reflets dorés subtils - sera partout en 2025. Parfait pour les transitions naturelles.</p>
+
+<h3>5. Le retour du volume</h3>
+<p>Fini les looks plats ! Le volume revient en force. Nos extensions <strong>Halo Everly</strong> permettent d'ajouter du volume instantanément, sans engagement.</p>
+
+<p>Restez à la pointe des tendances avec <strong>Luxura Distribution</strong> - votre partenaire beauté au Québec.</p>""",
+            "excerpt": "Les couleurs et styles qui domineront 2025 au Québec - du balayage champagne au glass hair.",
+            "image": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&q=80",
+            "author": "Luxura Distribution",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    }
+    
+    if post_id in default_posts:
+        return default_posts[post_id]
+    
+    raise HTTPException(status_code=404, detail="Post not found")
 
 # ==================== WIX INTEGRATION & SEO MACHINE ====================
 
