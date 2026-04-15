@@ -4154,6 +4154,17 @@ async def sync_wix_inventory(
         logger.error(f"❌ Wix sync error: {e}")
         return {"ok": False, "error": str(e)}
 
+@api_router.post("/inventory/sync")
+async def sync_inventory_alias(
+    limit: int = 500, 
+    dry_run: bool = False,
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Alias pour /wix/sync - utilisé par le cron job luxura-inventory-sync-cron
+    """
+    return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
+
 # ==================== FACEBOOK ENDPOINTS ====================
 # Ces endpoints utilisent Render comme source de vérité si disponible
 
