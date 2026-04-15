@@ -39,16 +39,23 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ============================================
-# IMPORT WIX SYNC ROUTES (from app/routes/wix.py)
+# WIX SYNC ROUTES - LAZY IMPORT (to not block startup)
 # ============================================
-try:
-    from app.routes.wix import router as wix_sync_router
-    WIX_SYNC_AVAILABLE = True
-    logger.info("✅ Wix sync routes loaded from app/routes/wix.py")
-except Exception as e:
-    WIX_SYNC_AVAILABLE = False
-    wix_sync_router = None
-    logger.warning(f"⚠️ Wix sync routes not available: {e}")
+WIX_SYNC_AVAILABLE = False
+wix_sync_router = None
+
+def load_wix_sync_router():
+    """Load wix sync router lazily after startup"""
+    global WIX_SYNC_AVAILABLE, wix_sync_router
+    try:
+        from app.routes.wix import router as wix_router
+        wix_sync_router = wix_router
+        WIX_SYNC_AVAILABLE = True
+        logger.info("✅ Wix sync routes loaded from app/routes/wix.py")
+        return wix_router
+    except Exception as e:
+        logger.warning(f"⚠️ Wix sync routes not available: {e}")
+        return None
 
 # ============================================
 # DATABASE: SUPABASE (PostgreSQL)

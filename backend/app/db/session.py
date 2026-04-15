@@ -16,36 +16,54 @@ def mask_db_url(url: str) -> str:
     return f"{scheme}://{user}:***@{tail}"
 
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is missing in environment variables")
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
-print("[DB] Using DATABASE_URL =", mask_db_url(DATABASE_URL))
+# Fix URL format: postgresql+psycopg:// -> postgresql://
+if DATABASE_URL.startswith("postgresql+psycopg://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql+psycopg://", "postgresql://", 1)
 
-# Configuration optimisée pour Supabase + Render
-engine = create_engine(
-    DATABASE_URL,
-    poolclass=QueuePool,
-    pool_pre_ping=True,       # Vérifie la connexion avant utilisation
-    pool_recycle=300,         # Recycle toutes les 5 minutes
-    pool_size=2,              # Seulement 2 connexions permanentes
-    max_overflow=3,           # Jusqu'à 5 total en pic
-    pool_timeout=30,          # Attendre max 30s pour une connexion
-    connect_args={
-        "connect_timeout": 10,
-        "keepalives": 1,
-        "keepalives_idle": 30,
-        "keepalives_interval": 10,
-        "keepalives_count": 5,
-    }
-)
+if DATABASE_URL:
+    print("[DB] Using DATABASE_URL =", mask_db_url(DATABASE_URL))
+else:
+    print("[DB] WARNING: DATABASE_URL not set - database operations will fail")
+
+# Lazy engine creation
+_engine = None
+
+def get_engine():
+    global _engine
+    if _engine is None:
+        if not DATABASE_URL:
+            raise RuntimeError("DATABASE_URL is missing in environment variables")
+        _engine = create_engine(
+            DATABASE_URL,
+            poolclass=QueuePool,
+            pool_pre_ping=True,
+            pool_recycle=300,
+            pool_size=2,
+            max_overflow=3,
+            pool_timeout=30,
+            connect_args={
+                "connect_timeout": 10,
+                "keepalives": 1,
+                "keepalives_idle": 30,
+                "keepalives_interval": 10,
+                "keepalives_count": 5,
+            }
+        )
+    return _engine
+
+# For backwards compatibility
+@property
+def engine():
+    return get_engine()
 
 
 def get_session() -> Generator[Session, None, None]:
     """
     Générateur de session avec gestion propre des connexions.
     """
-    session = Session(engine)
+    session = Session(get_engine())
     try:
         yield session
         session.commit()
@@ -61,7 +79,7 @@ def get_db_session():
     """
     Context manager alternatif pour utilisation manuelle.
     """
-    session = Session(engine)
+    session = Session(get_engine())
     try:
         yield session
         session.commit()
