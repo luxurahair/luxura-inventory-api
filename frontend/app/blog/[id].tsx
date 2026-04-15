@@ -8,6 +8,9 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   useWindowDimensions,
+  Share,
+  Alert,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,6 +57,41 @@ export default function BlogPostScreen() {
       fetchPost();
     }
   }, [id]);
+
+  const handleGoBack = () => {
+    try {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/blog');
+      }
+    } catch (error) {
+      // Fallback si erreur
+      router.replace('/(tabs)/blog');
+    }
+  };
+
+  const handleShare = async () => {
+    if (!post) return;
+    
+    try {
+      const shareUrl = `https://www.luxuradistribution.com/blog/${id}`;
+      const result = await Share.share({
+        title: post.title,
+        message: Platform.select({
+          ios: post.title,
+          default: `${post.title}\n\n${post.excerpt}\n\nLire l'article: ${shareUrl}`,
+        }),
+        url: Platform.OS === 'ios' ? shareUrl : undefined,
+      });
+      
+      if (result.action === Share.sharedAction) {
+        // Article partagé avec succès
+      }
+    } catch (error: any) {
+      Alert.alert('Erreur', 'Impossible de partager cet article.');
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -167,19 +205,18 @@ export default function BlogPostScreen() {
       {/* Header avec logo */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity 
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace('/(tabs)/blog');
-            }
-          }} 
+          onPress={handleGoBack} 
           style={styles.headerButton}
+          activeOpacity={0.7}
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Image source={{ uri: LUXURA_LOGO }} style={styles.logoImage} resizeMode="contain" />
-        <TouchableOpacity style={styles.headerButton}>
+        <TouchableOpacity 
+          style={styles.headerButton}
+          onPress={handleShare}
+          activeOpacity={0.7}
+        >
           <Ionicons name="share-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>

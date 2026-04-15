@@ -2344,44 +2344,48 @@ async def clear_cart(request: Request):
 
 # Blog images variées basées sur le sujet - Extensions cheveux professionnelles
 BLOG_IMAGES = {
-    # Images de salons et stylistes
+    # Images de salons et stylistes - coiffure professionnelle
     "salon": [
         "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",  # Salon moderne
         "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80",  # Coiffeuse professionnelle
         "https://images.unsplash.com/photo-1595475884562-073c30d45670?w=800&q=80",  # Salon luxe
-        "https://images.unsplash.com/photo-1633681926035-ec1ac984418a?w=800&q=80",  # Styling
+        "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&q=80",  # Coiffure en action
     ],
-    # Images de cheveux et extensions
+    # Images de cheveux et extensions - FOCUS cheveux longs magnifiques
     "hair": [
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",  # Cheveux longs blonds
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800&q=80",  # Cheveux bruns luxueux
-        "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=800&q=80",  # Cheveux ondulés
-        "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=800&q=80",  # Cheveux brillants
-        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=800&q=80",  # Portrait femme cheveux
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800&q=80",  # Cheveux bruns luxueux brillants
+        "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=800&q=80",  # Cheveux brillants lisses
+        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=800&q=80",  # Portrait femme longs cheveux
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&q=80",  # Femme cheveux volumineux
+        "https://images.unsplash.com/photo-1596704017254-9b121068fb7e?w=800&q=80",  # Femme longs cheveux bruns
+        "https://images.unsplash.com/photo-1589271243958-d61e12b61b97?w=800&q=80",  # Cheveux ondulés
     ],
     # Images mariage et événements
     "wedding": [
         "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80",  # Mariée coiffure
         "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&q=80",  # Préparation mariée
-        "https://images.unsplash.com/photo-1595981234058-a9302fb97620?w=800&q=80",  # Coiffure élégante
+        "https://images.unsplash.com/photo-1595981234058-a9302fb97620?w=800&q=80",  # Coiffure élégante mariée
+        "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=800&q=80",  # Mariée vue de dos cheveux
     ],
-    # Images tendances et mode
+    # Images tendances et mode - focus cheveux glamour
     "trends": [
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80",  # Portrait mode
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&q=80",  # Femme stylée
-        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80",  # Cheveux colorés
+        "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?w=800&q=80",  # Femme glamour cheveux
+        "https://images.unsplash.com/photo-1541216970279-affbfdd55aa8?w=800&q=80",  # Cheveux balayage tendance
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",  # Cheveux colorés stylés
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800&q=80",  # Cheveux tendance bruns
     ],
-    # Images soins et entretien
+    # Images soins et entretien - FOCUS CHEVEUX soignés pas soins visage
     "care": [
-        "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=800&q=80",  # Produits capillaires
-        "https://images.unsplash.com/photo-1522338140262-f46f5913618a?w=800&q=80",  # Soins cheveux
-        "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=800&q=80",  # Brossage
+        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800&q=80",  # Cheveux brillants soignés
+        "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=800&q=80",  # Cheveux lisses parfaits
+        "https://images.unsplash.com/photo-1596704017254-9b121068fb7e?w=800&q=80",  # Cheveux sains longs
+        "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&q=80",  # Soins cheveux salon
     ],
     # Images B2B et professionnelles
     "b2b": [
         "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80",  # Business meeting
         "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&q=80",  # Équipe pro
-        "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80",  # Partenariat
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",  # Salon professionnel
     ],
 }
 
@@ -3222,7 +3226,7 @@ async def get_blog_post_by_id(post_id: str):
 
 <p>Avec ces conseils, vos extensions <strong>Luxura</strong> conserveront leur éclat pendant 12 à 18 mois. Pour plus de conseils personnalisés, contactez nos experts.</p>""",
             "excerpt": "Découvrez nos conseils d'experts pour maintenir vos extensions et prolonger leur durée de vie.",
-            "image": "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=800&q=80",
+            "image": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800&q=80",
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc).isoformat()
         },
@@ -3251,7 +3255,7 @@ async def get_blog_post_by_id(post_id: str):
 
 <p><strong>Luxura Distribution</strong> forme gratuitement les salons partenaires à cette technique. Contactez-nous pour devenir salon affilié.</p>""",
             "excerpt": "Tout savoir sur les extensions Genius Weft - la trame invisible révolutionnaire pour professionnels.",
-            "image": "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&q=80",
+            "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80",
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc).isoformat()
         },
@@ -3278,7 +3282,7 @@ async def get_blog_post_by_id(post_id: str):
 
 <p>Restez à la pointe des tendances avec <strong>Luxura Distribution</strong> - votre partenaire beauté au Québec.</p>""",
             "excerpt": "Les couleurs et styles qui domineront 2025 au Québec - du balayage champagne au glass hair.",
-            "image": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&q=80",
+            "image": "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=800&q=80",
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc).isoformat()
         }
