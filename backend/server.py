@@ -207,6 +207,11 @@ async def seo_by_wix_id_alias(wix_id: str, lang: str = "fr"):
         status_code=307,
     )
 
+@app.get("/cors/ping", include_in_schema=False)
+async def cors_ping():
+    """Endpoint pour tester CORS - utilisé par luxura-inventory-frontend"""
+    return {"ok": True, "message": "pong"}
+
 # Servir les fichiers statiques (images générées)
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
@@ -5305,6 +5310,22 @@ try:
     logger.info("✅ Mounted app/routes/inventory.py router (/inventory)")
 except Exception:
     logger.exception("❌ Failed to mount inventory router")
+
+# ==================== SALONS ROUTES ====================
+try:
+    from app.routes.salons import router as salons_router
+    app.include_router(salons_router)
+    logger.info("✅ Mounted app/routes/salons.py router (/salons)")
+except Exception:
+    logger.exception("❌ Failed to mount salons router")
+
+# ==================== MOVEMENT ROUTES ====================
+try:
+    from app.routes.movement import router as movement_router
+    app.include_router(movement_router)
+    logger.info("✅ Mounted app/routes/movement.py router (/movement)")
+except Exception:
+    logger.exception("❌ Failed to mount movement router")
 
 # ==================== WIX TOKEN ROUTES (compatibilité avec anciennes versions) ====================
 
