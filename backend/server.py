@@ -5331,33 +5331,6 @@ async def wix_cron_refresh():
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
-# ==================== WIX SYNC ROUTES (FALLBACK) ====================
-# Routes pour le cron job - utilisent notre implémentation sync_wix_inventory
-
-@app.post("/wix/sync")
-async def wix_sync_endpoint(
-    limit: int = 500, 
-    dry_run: bool = False,
-    background_tasks: BackgroundTasks = None
-):
-    """
-    Endpoint principal pour synchroniser l'inventaire Wix → Supabase.
-    Utilisé par le cron job luxura-inventory-sync-cron.
-    """
-    return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
-
-@app.post("/inventory/sync")
-async def inventory_sync_endpoint(
-    limit: int = 500, 
-    dry_run: bool = False,
-    background_tasks: BackgroundTasks = None
-):
-    """
-    Alias pour /wix/sync - compatibilité avec anciennes versions.
-    """
-    return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
-
-@app.get("/wix/sync/last")
-async def wix_sync_last():
-    """Retourne le statut de la dernière sync (stub pour compatibilité)"""
-    return {"ok": True, "exists": False, "message": "Sync history not implemented in this version"}
+# ==================== WIX SYNC ROUTES ====================
+# Les routes /wix/sync et /wix/sync/last sont maintenant servies par app/routes/wix.py
+# qui utilise SQLModel et la vraie logique de synchronisation (voir ligne ~5237)
