@@ -497,6 +497,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ==================== MARQUEUR DE VERSION ====================
+BUILD_VERSION = "EMERGENT-FIX-2026-04-15-V1"
+logger.info(f"🚨🚨🚨 STARTING SERVER BUILD: {BUILD_VERSION} 🚨🚨🚨")
+logger.info("📍 Ce serveur a le fix skip=, /products, /inventory monté via app/routes/")
+print(f"\n{'='*60}\n🚀 LUXURA API - BUILD: {BUILD_VERSION}\n{'='*60}\n")
+
 # ==================== MODELS ====================
 
 class User(BaseModel):
