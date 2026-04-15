@@ -4588,6 +4588,38 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+@api_router.get("/health/full")
+async def full_health_check():
+    """
+    Vérification complète de santé de tous les endpoints critiques.
+    Retourne un rapport détaillé avec recommandations.
+    """
+    try:
+        from health_monitor import run_health_check, CRITICAL_ENDPOINTS
+        
+        # Run health check against ourselves (localhost)
+        report = await run_health_check("http://localhost:8001")
+        return report
+    except Exception as e:
+        logger.error(f"Health check error: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "message": "Could not run full health check"
+        }
+
+@api_router.get("/health/endpoints")
+async def list_endpoints():
+    """Liste tous les endpoints qui DOIVENT exister pour que le système fonctionne"""
+    try:
+        from health_monitor import CRITICAL_ENDPOINTS
+        return {
+            "total": len(CRITICAL_ENDPOINTS),
+            "endpoints": CRITICAL_ENDPOINTS
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 
 # ==================== COLOR ENGINE API ====================
 
