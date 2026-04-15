@@ -37,7 +37,9 @@ WIX_ACCOUNT_ID = os.getenv("WIX_ACCOUNT_ID", "")
 WIX_INSTANCE_ID = os.getenv("WIX_INSTANCE_ID", "")
 WIX_REDIRECT_URL = os.getenv("WIX_REDIRECT_URL", "")
 WIX_PUSH_SECRET = os.getenv("WIX_PUSH_SECRET", os.getenv("SEO_SECRET", ""))
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+_raw_db_url = os.getenv("DATABASE_URL", "")
+# Normaliser DATABASE_URL pour asyncpg (doit être postgresql:// pas postgresql+psycopg://)
+DATABASE_URL = _raw_db_url.replace("postgresql+psycopg://", "postgresql://").replace("postgresql+asyncpg://", "postgresql://")
 
 # Logging
 logging.basicConfig(
