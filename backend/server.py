@@ -1,9 +1,4 @@
-import sys
-print("=== LUXURA SERVER STARTING ===", flush=True)
-print(f"Python version: {sys.version}", flush=True)
-
 from fastapi import FastAPI, APIRouter, HTTPException, Response, Request, Depends, BackgroundTasks
-print("[1/10] FastAPI imported", flush=True)
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
@@ -12,7 +7,6 @@ import os
 import logging
 import re
 from pathlib import Path
-print("[2/10] Basic imports done", flush=True)
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uuid
@@ -20,17 +14,11 @@ from datetime import datetime, timezone, timedelta
 import httpx
 import json
 import asyncio
-print("[3/10] More imports done", flush=True)
-
 from color_system import COLOR_SYSTEM, get_color_info, get_seo_description, get_all_colors_for_filter, get_colors_by_category, get_colors_by_type
-print("[4/10] color_system imported", flush=True)
 from color_engine_api import process_color_engine, base64_to_image, image_to_base64
-print("[5/10] color_engine_api imported", flush=True)
 from auto_color_engine import auto_recolor
-print("[6/10] auto_color_engine imported", flush=True)
 
 # Import Supabase database functions
-print("[7/10] About to import database...", flush=True)
 from database import (
     db_get_user_by_email, db_get_user_by_id, db_create_user, db_update_user,
     db_get_session, db_create_session, db_delete_user_sessions, db_delete_session,
@@ -42,7 +30,6 @@ from database import (
     db_create_backlink_run, db_get_backlink_runs,
     db_get_salons
 )
-print("[8/10] database imported successfully!", flush=True)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
