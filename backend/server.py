@@ -3994,176 +3994,32 @@ async def refresh_wix_token():
         logger.error(f"Error refreshing Wix token: {e}")
         return {"ok": False, "error": str(e)}
 
-# ==================== WIX INVENTORY SYNC (Supabase) ====================
-
-@api_router.post("/wix/sync")
-async def sync_wix_inventory(
-    limit: int = 500, 
-    dry_run: bool = False,
-    background_tasks: BackgroundTasks = None
-):
-    """
-    Synchronise les produits et l'inventaire depuis Wix vers Supabase.
-    
-    Args:
-        limit: Nombre maximum de produits à synchroniser (default: 500)
-        dry_run: Si True, ne fait que lister les produits sans les sauvegarder
-    
-    Returns:
-        Résumé de la synchronisation
-    """
-    try:
-        from database import DATABASE_URL
-        from sqlalchemy import create_engine, text
-        from sqlalchemy.orm import sessionmaker
-        
-        if not DATABASE_URL:
-            return {"ok": False, "error": "DATABASE_URL not configured"}
-        
-        # Fix URL format for SQLAlchemy
-        db_url = DATABASE_URL
-        if db_url.startswith("postgres://"):
-            db_url = db_url.replace("postgres://", "postgresql://", 1)
-        
-        engine = create_engine(db_url, pool_pre_ping=True)
-        Session = sessionmaker(bind=engine)
-        
-        # Fetch products from Wix
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            wix_products = []
-            wix_inventory = []
-            
-            # Get Wix products via our Wix fallback
-            logger.info(f"🔄 Syncing from Wix (limit: {limit})...")
-            
-            # Use the internal Wix fallback function
-            wix_products = await get_products_from_wix_fallback(
-                category=None, 
-                search=None, 
-                in_stock=None
-            )
-            
-            # Limit the results
-            if limit and len(wix_products) > limit:
-                wix_products = wix_products[:limit]
-            
-            total_from_wix = len(wix_products)
-            
-            if dry_run:
-                return {
-                    "ok": True,
-                    "dry_run": True,
-                    "products_found": total_from_wix,
-                    "sample_products": [
-                        {
-                            "id": p.get("id"),
-                            "name": p.get("name"),
-                            "sku": p.get("sku"),
-                            "price": p.get("price"),
-                            "quantity": p.get("quantity", 0)
-                        } for p in wix_products[:5]
-                    ]
-                }
-            
-            # Insert/Update products in Supabase
-            synced_count = 0
-            errors = []
-            
-            with Session() as session:
-                for product in wix_products:
-                    try:
-                        # Upsert product
-                        product_id = product.get("id")
-                        if not product_id:
-                            continue
-                        
-                        # Check if product exists
-                        existing = session.execute(
-                            text("SELECT id FROM product WHERE wix_id = :wix_id"),
-                            {"wix_id": product_id}
-                        ).fetchone()
-                        
-                        product_data = {
-                            "wix_id": product_id,
-                            "name": product.get("name", ""),
-                            "sku": product.get("sku", ""),
-                            "price": product.get("price", 0),
-                            "handle": product.get("handle", ""),
-                            "category": product.get("category", ""),
-                            "is_in_stock": product.get("in_stock", False),
-                            "quantity": product.get("quantity", 0)
-                        }
-                        
-                        if existing:
-                            # Update
-                            session.execute(
-                                text("""
-                                    UPDATE product SET 
-                                        name = :name, 
-                                        sku = :sku, 
-                                        price = :price, 
-                                        handle = :handle,
-                                        category = :category,
-                                        is_in_stock = :is_in_stock,
-                                        quantity = :quantity,
-                                        updated_at = NOW()
-                                    WHERE wix_id = :wix_id
-                                """),
-                                product_data
-                            )
-                        else:
-                            # Insert
-                            session.execute(
-                                text("""
-                                    INSERT INTO product (wix_id, name, sku, price, handle, category, is_in_stock, quantity, created_at)
-                                    VALUES (:wix_id, :name, :sku, :price, :handle, :category, :is_in_stock, :quantity, NOW())
-                                    ON CONFLICT (wix_id) DO UPDATE SET
-                                        name = EXCLUDED.name,
-                                        sku = EXCLUDED.sku,
-                                        price = EXCLUDED.price,
-                                        handle = EXCLUDED.handle,
-                                        category = EXCLUDED.category,
-                                        is_in_stock = EXCLUDED.is_in_stock,
-                                        quantity = EXCLUDED.quantity,
-                                        updated_at = NOW()
-                                """),
-                                product_data
-                            )
-                        
-                        synced_count += 1
-                        
-                    except Exception as e:
-                        errors.append({
-                            "product_id": product.get("id"),
-                            "error": str(e)[:100]
-                        })
-                
-                session.commit()
-            
-            logger.info(f"✅ Wix sync complete: {synced_count}/{total_from_wix} products synced")
-            
-            return {
-                "ok": True,
-                "synced": synced_count,
-                "total_from_wix": total_from_wix,
-                "errors": errors[:10] if errors else [],
-                "error_count": len(errors)
-            }
-            
-    except Exception as e:
-        logger.error(f"❌ Wix sync error: {e}")
-        return {"ok": False, "error": str(e)}
+# ==================== WIX INVENTORY SYNC ====================
+# NOTE: The real sync is now handled by app/routes/wix.py mounted at /wix/*
+# These routes under /api/* are kept for backwards compatibility
 
 @api_router.post("/inventory/sync")
-async def sync_inventory_alias(
+async def sync_inventory_api_alias(
     limit: int = 500, 
     dry_run: bool = False,
-    background_tasks: BackgroundTasks = None
 ):
     """
-    Alias pour /wix/sync - utilisé par le cron job luxura-inventory-sync-cron
+    Alias pour /wix/sync - redirige vers le vrai endpoint.
+    Pour la vraie sync, utilisez POST /wix/sync avec header X-SEO-SECRET
     """
-    return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
+    import httpx
+    try:
+        seo_secret = os.getenv("SEO_SECRET", "")
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(
+                "http://localhost:8001/wix/sync",
+                params={"limit": limit, "dry_run": str(dry_run).lower()},
+                headers={"X-SEO-SECRET": seo_secret}
+            )
+            return response.json()
+    except Exception as e:
+        logger.error(f"Inventory sync alias error: {e}")
+        return {"ok": False, "error": str(e)}
 
 # ==================== FACEBOOK ENDPOINTS ====================
 # Ces endpoints utilisent Render comme source de vérité si disponible
@@ -5373,6 +5229,19 @@ app.add_middleware(
 
 # Note: La fonction shutdown_db_client a été supprimée car MongoDB n'est plus utilisé.
 # Supabase/PostgreSQL utilise une pool de connexions SQLAlchemy gérée automatiquement.
+
+# ==================== WIX ROUTES (from app/routes/wix.py - April 9th version) ====================
+# Mount the real wix router from app/routes/wix.py instead of our fallback
+try:
+    from app.routes.wix import router as wix_router
+    app.include_router(wix_router)
+    logger.info("✅ Mounted app/routes/wix.py router (real sync implementation)")
+except Exception as e:
+    logger.warning(f"⚠️ Could not mount wix router: {e}")
+    # Fallback routes if the real router fails to load
+    @app.post("/wix/sync")
+    async def wix_sync_fallback(limit: int = 500, dry_run: bool = False):
+        return {"ok": False, "error": f"Wix router not available: {e}"}
 
 # ==================== WIX TOKEN ROUTES (compatibilité avec anciennes versions) ====================
 
