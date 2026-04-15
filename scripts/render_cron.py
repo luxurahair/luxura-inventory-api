@@ -108,7 +108,7 @@ def sync_wix_inventory():
         log("❌ SEO_SECRET manquant - sync impossible")
         return False
     
-    url = f"{API_URL}/wix/sync"
+    url = f"{API_URL}/api/wix/sync"
     headers = {"X-SEO-SECRET": SEO_SECRET, "Accept": "application/json", "Content-Type": "application/json"}
     
     log(f"Appel de {url}...")
