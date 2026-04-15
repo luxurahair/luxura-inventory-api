@@ -5374,6 +5374,78 @@ app.add_middleware(
 # Note: La fonction shutdown_db_client a été supprimée car MongoDB n'est plus utilisé.
 # Supabase/PostgreSQL utilise une pool de connexions SQLAlchemy gérée automatiquement.
 
+# ==================== WIX TOKEN ROUTES (compatibilité avec anciennes versions) ====================
+
+@app.post("/wix/token")
+async def wix_token_endpoint(instance_id: str = None):
+    """
+    Endpoint pour obtenir/rafraîchir le token Wix OAuth.
+    Utilisé par le système de sync Wix.
+    """
+    try:
+        from wix_cron_service import refresh_wix_token, token_cache
+        
+        # Essayer de récupérer le token du cache
+        token = token_cache.get_token()
+        
+        if token:
+            return {
+                "ok": True,
+                "access_token": token,
+                "source": "cache"
+            }
+        
+        # Sinon, rafraîchir
+        result = await refresh_wix_token()
+        
+        if result.get("ok"):
+            token = token_cache.get_token()
+            return {
+                "ok": True,
+                "access_token": token,
+                "source": "refreshed",
+                "expires_in": result.get("expires_in")
+            }
+        else:
+            return {"ok": False, "error": result.get("error")}
+            
+    except ImportError:
+        # Si wix_cron_service n'est pas disponible, retourner une erreur plus claire
+        return {
+            "ok": False,
+            "error": "Wix OAuth service not configured. Need WIX_CLIENT_ID and WIX_CLIENT_SECRET."
+        }
+    except Exception as e:
+        logger.error(f"Wix token error: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.get("/wix/token")
+async def wix_token_get(instance_id: str = None):
+    """Alias GET pour le token Wix"""
+    return await wix_token_endpoint(instance_id)
+
+@app.get("/wix/cron/status")
+async def wix_cron_status():
+    """Vérifier l'état du token Wix en cache"""
+    try:
+        from wix_cron_service import token_cache
+        return {
+            "ok": True,
+            "cache": token_cache.get_status()
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+@app.get("/wix/cron/refresh-token")
+async def wix_cron_refresh():
+    """Endpoint pour le CRON de rafraîchissement du token"""
+    try:
+        from wix_cron_service import refresh_wix_token
+        result = await refresh_wix_token()
+        return result
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
 # ==================== WIX SYNC ROUTES (FALLBACK) ====================
 # Routes pour le cron job - utilisent notre implémentation sync_wix_inventory
 
