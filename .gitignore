@@ -732,3 +732,4 @@ credentials.json
 *.pem
 *.key
 .credentials
+luxura-inventory-api/.git/objects/pack/pack-c3c6f4d6f368dbfe4d48707c1bcae86ff2760410.pack
