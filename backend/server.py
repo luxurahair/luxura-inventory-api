@@ -1,6 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Response, Request, Depends, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 import os
@@ -174,6 +174,28 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json"
 )
+
+# ==================== ROUTES UTILITAIRES (favicon, redirects) ====================
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Évite les 404 sur favicon.ico - retourne 204 No Content"""
+    return Response(status_code=204)
+
+@app.get("/docs", include_in_schema=False)
+async def docs_redirect():
+    """Redirige /docs vers /api/docs"""
+    return RedirectResponse(url="/api/docs", status_code=307)
+
+@app.get("/redoc", include_in_schema=False)
+async def redoc_redirect():
+    """Redirige /redoc vers /api/redoc"""
+    return RedirectResponse(url="/api/redoc", status_code=307)
+
+@app.get("/openapi.json", include_in_schema=False)
+async def openapi_redirect():
+    """Redirige /openapi.json vers /api/openapi.json"""
+    return RedirectResponse(url="/api/openapi.json", status_code=307)
 
 # Servir les fichiers statiques (images générées)
 STATIC_DIR = Path(__file__).parent / "static"
@@ -5226,7 +5248,14 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://www.luxuradistribution.com",
+        "https://luxuradistribution.com",
+        "https://luxura-inventory-api.onrender.com",
+        "http://localhost:3000",
+        "http://localhost:8081",
+        "http://localhost:8001",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
