@@ -5341,3 +5341,29 @@ app.add_middleware(
 
 # Note: La fonction shutdown_db_client a été supprimée car MongoDB n'est plus utilisé.
 # Supabase/PostgreSQL utilise une pool de connexions SQLAlchemy gérée automatiquement.
+
+# ==================== ROUTES SANS PRÉFIXE /api (pour compatibilité cron) ====================
+# Le cron luxura-inventory-sync-cron appelle /wix/sync sans le préfixe /api/
+
+@app.post("/wix/sync")
+async def wix_sync_no_prefix(
+    limit: int = 500, 
+    dry_run: bool = False,
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Route de compatibilité pour le cron job qui appelle /wix/sync sans /api/
+    Redirige vers la vraie fonction sync_wix_inventory
+    """
+    return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
+
+@app.post("/inventory/sync")
+async def inventory_sync_no_prefix(
+    limit: int = 500, 
+    dry_run: bool = False,
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Route de compatibilité pour le cron job qui appelle /inventory/sync sans /api/
+    """
+    return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
