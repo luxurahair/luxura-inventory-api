@@ -39,6 +39,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ============================================
+# IMPORT WIX SYNC ROUTES (from app/routes/wix.py)
+# ============================================
+try:
+    from app.routes.wix import router as wix_sync_router
+    WIX_SYNC_AVAILABLE = True
+    logger.info("✅ Wix sync routes loaded from app/routes/wix.py")
+except Exception as e:
+    WIX_SYNC_AVAILABLE = False
+    wix_sync_router = None
+    logger.warning(f"⚠️ Wix sync routes not available: {e}")
+
+# ============================================
 # DATABASE: SUPABASE (PostgreSQL)
 # ============================================
 # On utilise SQLAlchemy pour PostgreSQL au lieu de MongoDB
@@ -5342,28 +5354,32 @@ app.add_middleware(
 # Note: La fonction shutdown_db_client a été supprimée car MongoDB n'est plus utilisé.
 # Supabase/PostgreSQL utilise une pool de connexions SQLAlchemy gérée automatiquement.
 
-# ==================== ROUTES SANS PRÉFIXE /api (pour compatibilité cron) ====================
-# Le cron luxura-inventory-sync-cron appelle /wix/sync sans le préfixe /api/
+# ==================== WIX SYNC ROUTES (from app/routes/wix.py) ====================
+# Include the original wix sync router if available
+if WIX_SYNC_AVAILABLE and wix_sync_router:
+    app.include_router(wix_sync_router)
+    logger.info("✅ Wix sync router mounted at /wix/*")
+else:
+    # Fallback routes for compatibility
+    @app.post("/wix/sync")
+    async def wix_sync_no_prefix(
+        limit: int = 500, 
+        dry_run: bool = False,
+        background_tasks: BackgroundTasks = None
+    ):
+        """
+        Route de compatibilité pour le cron job qui appelle /wix/sync sans /api/
+        Redirige vers la vraie fonction sync_wix_inventory
+        """
+        return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
 
-@app.post("/wix/sync")
-async def wix_sync_no_prefix(
-    limit: int = 500, 
-    dry_run: bool = False,
-    background_tasks: BackgroundTasks = None
-):
-    """
-    Route de compatibilité pour le cron job qui appelle /wix/sync sans /api/
-    Redirige vers la vraie fonction sync_wix_inventory
-    """
-    return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
-
-@app.post("/inventory/sync")
-async def inventory_sync_no_prefix(
-    limit: int = 500, 
-    dry_run: bool = False,
-    background_tasks: BackgroundTasks = None
-):
-    """
-    Route de compatibilité pour le cron job qui appelle /inventory/sync sans /api/
-    """
-    return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
+    @app.post("/inventory/sync")
+    async def inventory_sync_no_prefix(
+        limit: int = 500, 
+        dry_run: bool = False,
+        background_tasks: BackgroundTasks = None
+    ):
+        """
+        Route de compatibilité pour le cron job qui appelle /inventory/sync sans /api/
+        """
+        return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
