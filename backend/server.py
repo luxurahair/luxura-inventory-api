@@ -39,6 +39,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ============================================
+# CONFIG FLAGS
+# ============================================
+ENABLE_SCHEDULER = os.getenv("ENABLE_SCHEDULER", "false").lower() == "true"
+
+# ============================================
 # DATABASE: SUPABASE (PostgreSQL)
 # ============================================
 # On utilise SQLAlchemy pour PostgreSQL au lieu de MongoDB
@@ -139,31 +144,9 @@ WIX_INSTANCE_ID = os.getenv("WIX_INSTANCE_ID", "")
 # Luxura API - pour utiliser l'OAuth existant
 LUXURA_RENDER_API = "https://luxura-inventory-api.onrender.com"
 
-# Variable pour tracker si l'API Luxura a été pingée
-luxura_api_awake = False
-
-async def ping_luxura_api():
-    """Ping l'API Luxura sur Render pour la réveiller (free tier dort après 15min d'inactivité)"""
-    global luxura_api_awake
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"{LUXURA_API_URL}/products?limit=1")
-            if response.status_code == 200:
-                luxura_api_awake = True
-                logger.info("✅ Luxura API is awake and responding")
-                return True
-            else:
-                logger.warning(f"⚠️ Luxura API responded with status {response.status_code}")
-                return False
-    except Exception as e:
-        logger.error(f"❌ Failed to ping Luxura API: {e}")
-        return False
-
-async def keep_luxura_awake():
-    """Background task to keep Luxura API awake"""
-    while True:
-        await ping_luxura_api()
-        await asyncio.sleep(300)  # Ping every 5 minutes
+# ==================== CODE MORT SUPPRIMÉ ====================
+# ping_luxura_api() et keep_luxura_awake() ont été supprimés car ils causaient
+# des deadlocks au démarrage sur Render (le service essayait de se pinger lui-même)
 
 # Create the main app with Swagger UI
 app = FastAPI(
@@ -175,7 +158,12 @@ app = FastAPI(
     openapi_url="/api/openapi.json"
 )
 
-# ==================== ROUTES UTILITAIRES (favicon, redirects) ====================
+# ==================== ROUTES UTILITAIRES (favicon, redirects, health) ====================
+
+@app.get("/health", include_in_schema=False)
+async def health_root():
+    """Health check simple en racine"""
+    return {"ok": True}
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
@@ -451,12 +439,12 @@ async def startup_event():
     global blog_scheduler
     
     logger.info("🚀 Starting Luxura Distribution API...")
-    
-    # ⚠️ DÉSACTIVÉ: Le self-ping bloque le démarrage sur Render
-    # Le service essaie de se pinger lui-même avant d'avoir ouvert le port
-    # await ping_luxura_api()
-    # asyncio.create_task(keep_luxura_awake())
     logger.info("⏭️ Self-ping disabled (prevents Render startup deadlock)")
+    
+    # 🛡️ SCHEDULER: Contrôlé par ENABLE_SCHEDULER env var
+    if not ENABLE_SCHEDULER:
+        logger.info("⏭️ Scheduler disabled by config (ENABLE_SCHEDULER=false)")
+        return
     
     # 🛡️ CRON OPTIMISÉ FEMMES QUÉBEC: 1 article/jour aux heures de pointe
     try:
@@ -466,7 +454,6 @@ async def startup_event():
         blog_scheduler = AsyncIOScheduler(timezone="America/Montreal")
         
         # 📅 HEURES DE POINTE PAR JOUR (optimisé engagement femmes Québec)
-        # Lundi 7h, Mardi 12h, Mercredi 19h, Jeudi 7h, Vendredi 12h, Samedi 10h, Dimanche 20h
         CRON_SCHEDULE = [
             {"day": "mon", "hour": 7, "desc": "Lundi 7h - Transformation"},
             {"day": "tue", "hour": 12, "desc": "Mardi 12h - Cheveux fins"},
@@ -486,33 +473,12 @@ async def startup_event():
             )
         
         blog_scheduler.start()
-        
-        # Log du calendrier éditorial
-        try:
-            from editorial_calendar import get_current_rotation_week, get_weekly_schedule, get_week_preview
-            rotation_week = get_current_rotation_week()
-            weekly_schedule = get_weekly_schedule()
-            
-            logger.info("=" * 50)
-            logger.info("📅 CALENDRIER ÉDITORIAL - OPTIMISÉ FEMMES QUÉBEC")
-            logger.info(f"   Semaine de rotation: {rotation_week}/2")
-            logger.info("   🎯 Cible: Femmes québécoises 18-50 ans")
-            logger.info("   ⏰ Heures de pointe optimisées:")
-            for slot in weekly_schedule:
-                hour = slot.get('hour', 8)
-                target = slot.get('target', 'femmes')
-                logger.info(f"   - {slot['day'].capitalize()} {hour}h: {slot['category']} ({target})")
-            logger.info("   Publication: BROUILLON (validation humaine)")
-            logger.info("=" * 50)
-        except ImportError:
-            logger.info("=" * 50)
-            logger.info("🛡️ BLOG CRON - MODE FALLBACK")
-            logger.info("   - 7 jours/semaine aux heures de pointe")
-            logger.info("   - Catégories: rotation automatique")
-            logger.info("=" * 50)
+        logger.info("✅ Blog scheduler started")
         
     except ImportError:
         logger.warning("⚠️ APScheduler not installed - CRON disabled")
+    except Exception as e:
+        logger.error(f"❌ Failed to start blog scheduler: {e}")
     except Exception as e:
         logger.error(f"❌ Failed to start blog scheduler: {e}")
 
