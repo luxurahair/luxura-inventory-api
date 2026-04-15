@@ -39,25 +39,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ============================================
-# WIX SYNC ROUTES - LAZY IMPORT (to not block startup)
-# ============================================
-WIX_SYNC_AVAILABLE = False
-wix_sync_router = None
-
-def load_wix_sync_router():
-    """Load wix sync router lazily after startup"""
-    global WIX_SYNC_AVAILABLE, wix_sync_router
-    try:
-        from app.routes.wix import router as wix_router
-        wix_sync_router = wix_router
-        WIX_SYNC_AVAILABLE = True
-        logger.info("✅ Wix sync routes loaded from app/routes/wix.py")
-        return wix_router
-    except Exception as e:
-        logger.warning(f"⚠️ Wix sync routes not available: {e}")
-        return None
-
-# ============================================
 # DATABASE: SUPABASE (PostgreSQL)
 # ============================================
 # On utilise SQLAlchemy pour PostgreSQL au lieu de MongoDB
@@ -5361,32 +5342,33 @@ app.add_middleware(
 # Note: La fonction shutdown_db_client a été supprimée car MongoDB n'est plus utilisé.
 # Supabase/PostgreSQL utilise une pool de connexions SQLAlchemy gérée automatiquement.
 
-# ==================== WIX SYNC ROUTES (from app/routes/wix.py) ====================
-# Include the original wix sync router if available
-if WIX_SYNC_AVAILABLE and wix_sync_router:
-    app.include_router(wix_sync_router)
-    logger.info("✅ Wix sync router mounted at /wix/*")
-else:
-    # Fallback routes for compatibility
-    @app.post("/wix/sync")
-    async def wix_sync_no_prefix(
-        limit: int = 500, 
-        dry_run: bool = False,
-        background_tasks: BackgroundTasks = None
-    ):
-        """
-        Route de compatibilité pour le cron job qui appelle /wix/sync sans /api/
-        Redirige vers la vraie fonction sync_wix_inventory
-        """
-        return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
+# ==================== WIX SYNC ROUTES (FALLBACK) ====================
+# Routes pour le cron job - utilisent notre implémentation sync_wix_inventory
 
-    @app.post("/inventory/sync")
-    async def inventory_sync_no_prefix(
-        limit: int = 500, 
-        dry_run: bool = False,
-        background_tasks: BackgroundTasks = None
-    ):
-        """
-        Route de compatibilité pour le cron job qui appelle /inventory/sync sans /api/
-        """
-        return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
+@app.post("/wix/sync")
+async def wix_sync_endpoint(
+    limit: int = 500, 
+    dry_run: bool = False,
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Endpoint principal pour synchroniser l'inventaire Wix → Supabase.
+    Utilisé par le cron job luxura-inventory-sync-cron.
+    """
+    return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
+
+@app.post("/inventory/sync")
+async def inventory_sync_endpoint(
+    limit: int = 500, 
+    dry_run: bool = False,
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Alias pour /wix/sync - compatibilité avec anciennes versions.
+    """
+    return await sync_wix_inventory(limit=limit, dry_run=dry_run, background_tasks=background_tasks)
+
+@app.get("/wix/sync/last")
+async def wix_sync_last():
+    """Retourne le statut de la dernière sync (stub pour compatibilité)"""
+    return {"ok": True, "exists": False, "message": "Sync history not implemented in this version"}
