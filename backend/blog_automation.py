@@ -1411,6 +1411,11 @@ async def create_wix_draft_post(
                 draft_post["memberId"] = member_id
 
             payload = {"draftPost": draft_post}
+            
+            # Debug: Log le payload complet
+            logger.info(f"🔧 DEBUG - Payload richContent nodes count: {len(rich_content.get('nodes', []))}")
+            if rich_content.get('nodes'):
+                logger.info(f"🔧 DEBUG - First node type: {rich_content['nodes'][0].get('type')}")
 
             response = await client.post(
                 "https://www.wixapis.com/blog/v3/draft-posts",
@@ -1425,7 +1430,11 @@ async def create_wix_draft_post(
             if response.status_code in [200, 201]:
                 result = response.json()
                 draft_id = result.get("draftPost", {}).get("id")
+                # DEBUG: Log la réponse de Wix pour voir si richContent est ignoré
+                wix_rc = result.get("draftPost", {}).get("richContent", {})
+                wix_nodes = wix_rc.get("nodes", [])
                 logger.info(f"✅ Wix draft created: {draft_id}")
+                logger.info(f"🔍 Wix returned richContent nodes: {len(wix_nodes)}")
                 return result
 
             logger.error(f"Wix draft creation failed: {response.status_code} - {response.text}")
@@ -1766,7 +1775,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
                 nodes.append({
                     "type": "HEADING",
                     "headingData": {"level": 1},
-                    "nodes": [{"type": "TEXT", "textData": {"text": text}}]
+                    "nodes": [{"type": "TEXT", "textData": {"text": text, "decorations": []}}]
                 })
         
         # H2
@@ -1776,7 +1785,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
                 nodes.append({
                     "type": "HEADING",
                     "headingData": {"level": 2},
-                    "nodes": [{"type": "TEXT", "textData": {"text": text}}]
+                    "nodes": [{"type": "TEXT", "textData": {"text": text, "decorations": []}}]
                 })
         
         # H3
@@ -1786,7 +1795,7 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
                 nodes.append({
                     "type": "HEADING", 
                     "headingData": {"level": 3},
-                    "nodes": [{"type": "TEXT", "textData": {"text": text}}]
+                    "nodes": [{"type": "TEXT", "textData": {"text": text, "decorations": []}}]
                 })
         
         # BLOCKQUOTE - Pour les témoignages
@@ -1804,8 +1813,10 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
                                 "text": f"« {text} »",
                                 "decorations": [{"type": "ITALIC"}]
                             }
-                        }]
-                    }]
+                        }],
+                        "paragraphData": {}
+                    }],
+                    "blockquoteData": {"indentation": 1}
                 })
         
         # Paragraphes
@@ -1824,12 +1835,20 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
                                 "text": text,
                                 "decorations": [{"type": "BOLD"}]
                             }
-                        }]
+                        }],
+                        "paragraphData": {}
                     })
                 else:
                     nodes.append({
                         "type": "PARAGRAPH",
-                        "nodes": [{"type": "TEXT", "textData": {"text": text}}]
+                        "nodes": [{
+                            "type": "TEXT", 
+                            "textData": {
+                                "text": text,
+                                "decorations": []
+                            }
+                        }],
+                        "paragraphData": {}
                     })
         
         # Listes non-ordonnées (ul) - AVEC SUPPORT DES LIENS HYPERTEXTES
@@ -1865,7 +1884,8 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
                                         }
                                     }]
                                 }
-                            }]
+                            }],
+                            "paragraphData": {}
                         }]
                     })
                 else:
@@ -1874,7 +1894,14 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
                     if text:
                         list_items.append({
                             "type": "LIST_ITEM",
-                            "nodes": [{"type": "PARAGRAPH", "nodes": [{"type": "TEXT", "textData": {"text": text}}]}]
+                            "nodes": [{
+                                "type": "PARAGRAPH", 
+                                "nodes": [{
+                                    "type": "TEXT", 
+                                    "textData": {"text": text, "decorations": []}
+                                }],
+                                "paragraphData": {}
+                            }]
                         })
             
             if list_items:
@@ -1891,7 +1918,14 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
                 if text:
                     list_items.append({
                         "type": "LIST_ITEM",
-                        "nodes": [{"type": "PARAGRAPH", "nodes": [{"type": "TEXT", "textData": {"text": text}}]}]
+                        "nodes": [{
+                            "type": "PARAGRAPH", 
+                            "nodes": [{
+                                "type": "TEXT", 
+                                "textData": {"text": text, "decorations": []}
+                            }],
+                            "paragraphData": {}
+                        }]
                     })
             if list_items:
                 nodes.append({
@@ -1907,7 +1941,11 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
             if para.strip():
                 nodes.append({
                     "type": "PARAGRAPH",
-                    "nodes": [{"type": "TEXT", "textData": {"text": para.strip()}}]
+                    "nodes": [{
+                        "type": "TEXT", 
+                        "textData": {"text": para.strip(), "decorations": []}
+                    }],
+                    "paragraphData": {}
                 })
     
     # =====================================================
@@ -2507,7 +2545,13 @@ async def generate_daily_blogs(
     - pas de fallback image générique idiot
     - génération image pilotée par le vrai contenu
     - publication Wix plus propre
+    
+    NOTE: Le paramètre `db` est conservé pour compatibilité mais n'est plus utilisé.
+    On utilise maintenant les fonctions de database.py directement.
     """
+    # Import des fonctions de base de données
+    from database import db_get_blog_titles, db_create_blog_post, db_update_blog_post
+    
     results = []
 
     wix_member_id = None
@@ -2516,8 +2560,9 @@ async def generate_daily_blogs(
         if not wix_member_id:
             logger.warning("Could not get Wix member ID")
 
-    existing_posts = await db.blog_posts.find({}, {"title": 1}).to_list(1000)
-    existing_titles = [p.get("title", "").lower() for p in existing_posts]
+    # Utiliser la nouvelle fonction SQLAlchemy au lieu de MongoDB
+    existing_titles_list = await db_get_blog_titles()
+    existing_titles = [t.lower() for t in existing_titles_list]
 
     # Sélection des topics
     if force_topic:
@@ -2628,7 +2673,7 @@ async def generate_daily_blogs(
             "internal_links_count": len(blog_data.get("internal_links", []))
         }
 
-        await db.blog_posts.insert_one(blog_post)
+        await db_create_blog_post(blog_post)
         
         # Log de production
         if EDITORIAL_GUARD_AVAILABLE:
@@ -2761,10 +2806,7 @@ async def generate_daily_blogs(
                         "cover_patch_payload_version": "v2" if cover_attached else None
                     }
                     
-                    await db.blog_posts.update_one(
-                        {"id": post_id},
-                        {"$set": update_data}
-                    )
+                    await db_update_blog_post(post_id, update_data)
                     
                     # Toujours mettre à jour le blog_post avec les infos Wix
                     blog_post["wix_post_id"] = draft_id
@@ -2807,10 +2849,10 @@ async def generate_daily_blogs(
 
             if fb_result:
                 fb_post_id = fb_result.get("id") or fb_result.get("post_id")
-                await db.blog_posts.update_one(
-                    {"id": post_id},
-                    {"$set": {"published_to_facebook": True, "facebook_post_id": fb_post_id}}
-                )
+                await db_update_blog_post(post_id, {
+                    "published_to_facebook": True, 
+                    "facebook_post_id": fb_post_id
+                })
                 blog_post["published_to_facebook"] = True
 
         blog_post.pop("_id", None)

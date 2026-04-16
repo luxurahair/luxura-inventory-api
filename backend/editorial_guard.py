@@ -128,12 +128,11 @@ class EditorialGuard:
     
     async def load_existing_titles(self) -> List[str]:
         """Charge tous les titres existants depuis la DB."""
-        if not self.db:
-            return []
-        
+        # Import de la nouvelle fonction de base de données
         try:
-            posts = await self.db.blog_posts.find({}, {"title": 1}).to_list(1000)
-            return [p.get("title", "") for p in posts if p.get("title")]
+            from database import db_get_blog_titles
+            titles = await db_get_blog_titles()
+            return titles if titles else []
         except Exception as e:
             logger.error(f"Error loading existing titles: {e}")
             return []

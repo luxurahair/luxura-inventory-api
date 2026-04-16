@@ -9,12 +9,20 @@ import uuid
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any
+from pathlib import Path
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, Column, String, Integer, Text, Boolean, DateTime, ForeignKey, desc
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.sql import func
 
 logger = logging.getLogger(__name__)
+
+# ============================================
+# LOAD ENV VARIABLES
+# ============================================
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
 
 # ============================================
 # DATABASE CONNECTION
