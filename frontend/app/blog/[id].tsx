@@ -340,14 +340,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 12,
     zIndex: 100,
-    // @ts-ignore
-    pointerEvents: 'box-none',
   },
   logoImage: {
     width: 100,
     height: 28,
-    // @ts-ignore
-    pointerEvents: 'none',
   },
   headerButton: {
     width: 44,
@@ -358,8 +354,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     // @ts-ignore - Web only property for cursor
     cursor: 'pointer',
-    // @ts-ignore
-    pointerEvents: 'auto',
   },
   scrollView: {
     flex: 1,

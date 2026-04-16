@@ -125,16 +125,55 @@ def _resolve_product_label(blog_data: Dict[str, Any]) -> str:
 
 
 def _brand_rules() -> str:
-    return """
+    """Brand rules with VARIETY for different hair colors and styles"""
+    import random
+    
+    # Variété de couleurs de cheveux pour ne pas toujours avoir la même
+    hair_colors = [
+        "blonde with honey highlights",
+        "rich brunette with caramel balayage",
+        "warm chestnut brown with golden undertones",
+        "platinum blonde with subtle lowlights",
+        "dark brown with sun-kissed highlights",
+        "auburn red with copper tones",
+        "champagne blonde",
+        "natural black with brown undertones",
+        "golden brown ombré",
+        "strawberry blonde with rose tones",
+        "ash blonde with dimensional color",
+        "chocolate brown with caramel ribbons",
+    ]
+    
+    # Variété de styles de cheveux
+    hair_styles = [
+        "soft waves cascading down the back",
+        "sleek and ultra-shiny straight hair",
+        "elegant loose romantic curls",
+        "natural flowing movement",
+        "glamorous Hollywood-style waves",
+        "bouncy voluminous curls with body",
+        "silky smooth straight with shine",
+        "romantic beachy textured waves",
+    ]
+    
+    # Sélection aléatoire pour variété
+    chosen_color = random.choice(hair_colors)
+    chosen_style = random.choice(hair_styles)
+    
+    return f"""
 Brand context: Luxura Distribution is a premium hair extension importer and distributor in Quebec.
 Business model: direct-to-consumer e-commerce plus salon partner distribution.
 Visual identity must feel premium, elegant, commercial, salon-relevant, and realistic.
+
+MODEL VARIETY: Beautiful woman with {chosen_color} hair styled in {chosen_style}.
 
 CRITICAL HAIR RULES:
 - Hair MUST be the hero of every image
 - Hair length: mid-back to very long (below shoulders minimum, ideally to waist)
 - Hair volume: full, luxurious, healthy-looking
 - Hair texture: smooth, shiny, natural movement
+- Hair color: {chosen_color} (THIS SPECIFIC COLOR FOR THIS IMAGE)
+- Hair style: {chosen_style}
 - The image MUST demonstrate that we sell hair extensions (volume + length)
 - Show hair from angles that demonstrate length: from behind, three-quarter view, or side profile
 - Avoid front-facing shots where hair length is hidden
