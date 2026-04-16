@@ -111,15 +111,20 @@ async def generate_blog_image_with_dalle(
     add_logo: bool = True
 ) -> Optional[bytes]:
     """
-    Génère une image à partir du brief Luxura.
+    Génère une image avec DALL-E via l'API OpenAI directement (comme les crons Facebook).
+    Utilise OPENAI_API_KEY ou EMERGENT_LLM_KEY.
     """
-    if not EMERGENT_LLM_KEY:
-        logger.error("EMERGENT_LLM_KEY not configured")
+    import requests
+    import base64
+    
+    # Essayer OPENAI_API_KEY d'abord, puis EMERGENT_LLM_KEY
+    api_key = os.environ.get("OPENAI_API_KEY") or EMERGENT_LLM_KEY
+    
+    if not api_key:
+        logger.error("No API key configured (OPENAI_API_KEY or EMERGENT_LLM_KEY)")
         return None
 
     try:
-        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
-
         if blog_data is None:
             blog_data = {
                 "title": blog_title,
@@ -138,26 +143,38 @@ async def generate_blog_image_with_dalle(
             f"title={blog_title[:70]}"
         )
 
-        image_gen = OpenAIImageGeneration(api_key=EMERGENT_LLM_KEY)
-
-        images = await image_gen.generate_images(
-            prompt=prompt,
-            model="gpt-image-1",
-            number_of_images=1
+        # Appel direct à l'API OpenAI DALL-E (comme les crons Facebook)
+        response = requests.post(
+            "https://api.openai.com/v1/images/generations",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "dall-e-3",
+                "prompt": prompt,
+                "size": "1792x1024",
+                "quality": "standard",
+                "n": 1,
+                "response_format": "b64_json"  # Retourne l'image en base64
+            },
+            timeout=120
         )
 
-        if not images or len(images) == 0:
-            logger.error("No image returned from generator")
+        if response.status_code == 200:
+            data = response.json()
+            image_b64 = data["data"][0]["b64_json"]
+            image_bytes = base64.b64decode(image_b64)
+            logger.info(f"✅ [{image_type}] DALL-E image generated ({len(image_bytes)} bytes)")
+            
+            if add_logo and brief.get("logo_overlay", True):
+                logger.info("🏷️ Adding Luxura logo overlay...")
+                image_bytes = await add_logo_watermark(image_bytes)
+
+            return image_bytes
+        else:
+            logger.error(f"❌ DALL-E API error: {response.status_code} - {response.text[:200]}")
             return None
-
-        image_bytes = images[0]
-        logger.info(f"✅ [{image_type}] Raw image generated ({len(image_bytes)} bytes)")
-
-        if add_logo and brief.get("logo_overlay", True):
-            logger.info("🏷️ Adding Luxura logo overlay...")
-            image_bytes = await add_logo_watermark(image_bytes)
-
-        return image_bytes
 
     except Exception as e:
         logger.error(f"❌ Error generating image: {e}")
