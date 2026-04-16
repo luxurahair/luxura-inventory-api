@@ -71,6 +71,8 @@ const styles = StyleSheet.create({
     height: 85,
     paddingBottom: 25,
     paddingTop: 10,
+    // @ts-ignore - web only
+    cursor: 'pointer',
   },
   tabBarLabel: {
     fontSize: 11,
