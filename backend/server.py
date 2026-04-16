@@ -2344,47 +2344,47 @@ async def clear_cart(request: Request):
 
 # Blog images variées basées sur le sujet - Extensions cheveux professionnelles
 BLOG_IMAGES = {
-    # Images de salons avec coiffeuse + cliente cheveux longs soyeux
+    # TOUTES LES IMAGES = FEMMES avec cheveux longs luxueux - Extensions féminines UNIQUEMENT
     "salon": [
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",  # Salon moderne avec cliente
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80",  # Coiffeuse + cliente cheveux longs
-        "https://images.unsplash.com/photo-1595475884562-073c30d45670?w=800&q=80",  # Salon luxe
-        "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&q=80",  # Coiffeuse travaillant sur cheveux
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",  # Femme blonde cheveux longs ondulés
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",  # Femme brune cheveux longs soyeux
+        "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800&q=80",  # Femme cheveux longs luxueux
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80",  # Femme cheveux ondulés glamour
     ],
-    # Images de femmes avec cheveux longs sublimes - EXTENSIONS LOOK
+    # Femmes avec extensions cheveux longs magnifiques
     "hair": [
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",  # Femme blonde cheveux ondulés longs
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",  # Femme cheveux bruns longs sublimes
-        "https://images.unsplash.com/photo-1596704017254-9b121068fb7e?w=800&q=80",  # Femme longs cheveux bruns brillants
-        "https://images.unsplash.com/photo-1554519934-e32b1629d9ee?w=800&q=80",  # Femme cheveux noirs longs
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&q=80",  # Portrait femme longs cheveux
-        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800&q=80",  # Femme visage cheveux volumineux
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",  # Femme blonde cheveux ondulés longs sublimes
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",  # Femme brune cheveux longs brillants
+        "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800&q=80",  # Femme cheveux longs glamour
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80",  # Femme portrait cheveux volumineux
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&q=80",  # Portrait femme cheveux longs naturels
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800&q=80",  # Femme visage cheveux magnifiques
     ],
-    # Images mariage et événements
+    # Mariages - femmes cheveux longs élégants
     "wedding": [
-        "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80",  # Mariée coiffure
-        "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&q=80",  # Préparation mariée
-        "https://images.unsplash.com/photo-1595981234058-a9302fb97620?w=800&q=80",  # Coiffure élégante mariée
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",  # Femme cheveux longs pour mariage
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",  # Femme élégante cheveux longs
+        "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800&q=80",  # Femme glamour cheveux longs
     ],
-    # Images tendances - coiffeuse + cliente ou portrait cheveux longs glamour
+    # Tendances - FEMMES cheveux longs tendance
     "trends": [
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80",  # Coiffeuse + cliente glamour
-        "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?w=800&q=80",  # Femme glamour cheveux longs
-        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",  # Femme cheveux longs colorés
-        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800&q=80",  # Femme cheveux volumineux tendance
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",  # Femme blonde tendance cheveux longs
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80",  # Femme cheveux volumineux tendance
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",  # Femme brune cheveux longs stylés
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800&q=80",  # Femme portrait mode cheveux longs
     ],
-    # Images soins et entretien - coiffeuse + cliente cheveux soyeux
+    # Soins - FEMMES cheveux longs soignés
     "care": [
-        "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&q=80",  # Coiffeuse soignant cheveux longs
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80",  # Salon soins cheveux
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",  # Cliente cheveux longs au salon
-        "https://images.unsplash.com/photo-1596704017254-9b121068fb7e?w=800&q=80",  # Femme cheveux longs soignés
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",  # Femme cheveux blonds sains et longs
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",  # Femme cheveux bruns brillants longs
+        "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800&q=80",  # Femme cheveux longs soignés
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&q=80",  # Femme portrait cheveux parfaits
     ],
-    # Images B2B et professionnelles
+    # B2B - même pour B2B, images de femmes avec beaux cheveux
     "b2b": [
-        "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80",  # Business meeting
-        "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&q=80",  # Équipe pro
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",  # Salon professionnel
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",  # Femme cheveux longs professionnelle
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",  # Femme cheveux longs business
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80",  # Femme cheveux volumineux pro
     ],
 }
 
@@ -3157,14 +3157,14 @@ async def get_blog_posts_endpoint():
             await db_update_blog_post(post["id"], {"image": new_image})
     
     if not posts:
-        # Default posts with FIXED images - coiffeuse + cliente cheveux longs soyeux
+        # Default posts with FIXED images - FEMMES avec cheveux longs luxueux UNIQUEMENT
         default_posts = [
             {
                 "id": "entretien-extensions",
                 "title": "Comment entretenir vos extensions capillaires",
                 "content": "Les extensions capillaires nécessitent un entretien régulier pour maintenir leur beauté et leur durabilité.",
                 "excerpt": "Découvrez nos conseils d'experts pour maintenir vos extensions.",
-                "image": "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&q=80",  # Coiffeuse + cliente cheveux longs
+                "image": "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",  # Femme blonde cheveux longs sublimes
                 "author": "Luxura Distribution",
                 "created_at": datetime.now(timezone.utc).isoformat()
             },
@@ -3173,7 +3173,7 @@ async def get_blog_posts_endpoint():
                 "title": "Extensions Genius Weft : Guide complet pour professionnels",
                 "content": "La technique Genius Weft révolutionne l'industrie des extensions capillaires au Québec.",
                 "excerpt": "Tout savoir sur les extensions Genius Weft - la trame invisible révolutionnaire.",
-                "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80",  # Coiffeuse professionnelle + cliente
+                "image": "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",  # Femme brune cheveux longs soyeux
                 "author": "Luxura Distribution",
                 "created_at": datetime.now(timezone.utc).isoformat()
             },
@@ -3182,7 +3182,7 @@ async def get_blog_posts_endpoint():
                 "title": "Tendances coiffure 2025 : Balayage et extensions naturelles",
                 "content": "Les tendances capillaires évoluent vers plus de naturel et de sophistication.",
                 "excerpt": "Les couleurs et styles qui domineront 2025 au Québec.",
-                "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",  # Salon moderne + cliente cheveux longs
+                "image": "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80",  # Femme cheveux longs volumineux tendance
                 "author": "Luxura Distribution",
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
@@ -3224,7 +3224,7 @@ async def get_blog_post_by_id(post_id: str):
 
 <p>Avec ces conseils, vos extensions <strong>Luxura</strong> conserveront leur éclat pendant 12 à 18 mois. Pour plus de conseils personnalisés, contactez nos experts.</p>""",
             "excerpt": "Découvrez nos conseils d'experts pour maintenir vos extensions et prolonger leur durée de vie.",
-            "image": "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&q=80",
+            "image": "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc).isoformat()
         },
@@ -3253,7 +3253,7 @@ async def get_blog_post_by_id(post_id: str):
 
 <p><strong>Luxura Distribution</strong> forme gratuitement les salons partenaires à cette technique. Contactez-nous pour devenir salon affilié.</p>""",
             "excerpt": "Tout savoir sur les extensions Genius Weft - la trame invisible révolutionnaire pour professionnels.",
-            "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80",
+            "image": "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc).isoformat()
         },
@@ -3280,7 +3280,7 @@ async def get_blog_post_by_id(post_id: str):
 
 <p>Restez à la pointe des tendances avec <strong>Luxura Distribution</strong> - votre partenaire beauté au Québec.</p>""",
             "excerpt": "Les couleurs et styles qui domineront 2025 au Québec - du balayage champagne au glass hair.",
-            "image": "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=800&q=80",
+            "image": "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80",
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc).isoformat()
         }

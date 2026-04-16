@@ -31,9 +31,21 @@ if DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     
     try:
-        engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
+        # Configuration améliorée pour éviter les timeouts Supabase
+        engine = create_engine(
+            DATABASE_URL, 
+            pool_pre_ping=True,      # Vérifie la connexion avant utilisation
+            pool_recycle=300,        # Recycle les connexions après 5 min
+            pool_size=5,             # Nombre de connexions dans le pool
+            max_overflow=10,         # Connexions supplémentaires si besoin
+            pool_timeout=30,         # Timeout pour obtenir une connexion du pool
+            connect_args={
+                "connect_timeout": 10,    # Timeout connexion initiale (10s)
+                "options": "-c statement_timeout=30000"  # Timeout requête (30s)
+            }
+        )
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        logger.info("✅ Database engine created")
+        logger.info("✅ Database engine created with improved timeout settings")
     except Exception as e:
         logger.error(f"❌ Database connection error: {e}")
         engine = None
@@ -431,9 +443,10 @@ async def db_clear_cart(user_id: str) -> bool:
 # ============================================
 
 async def db_get_blog_posts(limit: int = 100) -> List[Dict]:
-    """Obtenir tous les articles de blog"""
+    """Obtenir tous les articles de blog avec timeout protection"""
     session = get_db_session()
     if not session:
+        logger.warning("⚠️ db_get_blog_posts: No database session available")
         return []
     try:
         posts = session.query(BlogPostDB).order_by(desc(BlogPostDB.created_at)).limit(limit).all()
@@ -455,13 +468,17 @@ async def db_get_blog_posts(limit: int = 100) -> List[Dict]:
             }
             for post in posts
         ]
+    except Exception as e:
+        logger.error(f"❌ db_get_blog_posts error (returning empty): {e}")
+        return []  # Retourne liste vide pour permettre fallback
     finally:
         session.close()
 
 async def db_get_blog_post(post_id: str) -> Optional[Dict]:
-    """Obtenir un article de blog par ID"""
+    """Obtenir un article de blog par ID avec timeout protection"""
     session = get_db_session()
     if not session:
+        logger.warning("⚠️ db_get_blog_post: No database session available")
         return None
     try:
         post = session.query(BlogPostDB).filter(BlogPostDB.id == post_id).first()
@@ -482,6 +499,9 @@ async def db_get_blog_post(post_id: str) -> Optional[Dict]:
                 "created_at": post.created_at
             }
         return None
+    except Exception as e:
+        logger.error(f"❌ db_get_blog_post error (returning None): {e}")
+        return None  # Retourne None pour permettre fallback vers articles par défaut
     finally:
         session.close()
 
