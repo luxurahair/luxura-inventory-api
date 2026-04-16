@@ -125,62 +125,84 @@ def _resolve_product_label(blog_data: Dict[str, Any]) -> str:
 
 
 def _brand_rules() -> str:
-    """Brand rules with VARIETY for different hair colors and styles"""
+    """Brand rules with ARTISTIC STYLE like Luxura Facebook posts"""
     import random
     
-    # Variété de couleurs de cheveux pour ne pas toujours avoir la même
+    # Variété de couleurs de cheveux
     hair_colors = [
-        "blonde with honey highlights",
-        "rich brunette with caramel balayage",
-        "warm chestnut brown with golden undertones",
-        "platinum blonde with subtle lowlights",
-        "dark brown with sun-kissed highlights",
-        "auburn red with copper tones",
+        "rich dark brown with subtle highlights",
+        "warm caramel brown with golden undertones", 
+        "deep chocolate brown",
+        "honey blonde with natural dimension",
+        "auburn with copper reflections",
+        "natural black with shine",
         "champagne blonde",
-        "natural black with brown undertones",
-        "golden brown ombré",
-        "strawberry blonde with rose tones",
-        "ash blonde with dimensional color",
-        "chocolate brown with caramel ribbons",
+        "chestnut brown with warm tones",
+        "platinum blonde with soft roots",
+        "golden brown balayage",
     ]
     
-    # Variété de styles de cheveux
-    hair_styles = [
-        "soft waves cascading down the back",
-        "sleek and ultra-shiny straight hair",
-        "elegant loose romantic curls",
-        "natural flowing movement",
-        "glamorous Hollywood-style waves",
-        "bouncy voluminous curls with body",
-        "silky smooth straight with shine",
-        "romantic beachy textured waves",
+    # Styles ARTISTIQUES comme les pubs FB
+    artistic_styles = [
+        "hair dramatically flowing in the wind, movement captured",
+        "close-up profile shot focusing on hair texture and length",
+        "hair cascading over shoulders, natural movement",
+        "wind-blown hair creating dynamic motion",
+        "hair falling naturally with soft movement",
+        "artistic side profile showcasing hair length",
+        "hair in motion against dark background",
+        "soft natural hair movement, editorial style",
     ]
     
-    # Sélection aléatoire pour variété
+    # Ambiances/Lighting comme FB
+    moods = [
+        "dramatic black and white photography, high contrast",
+        "warm golden hour lighting, natural tones",
+        "soft moody lighting with shadows",
+        "dramatic studio lighting, dark background",
+        "natural soft light, warm brown tones",
+        "editorial fashion photography style",
+        "cinematic lighting with depth",
+        "intimate portrait lighting",
+    ]
+    
     chosen_color = random.choice(hair_colors)
-    chosen_style = random.choice(hair_styles)
+    chosen_style = random.choice(artistic_styles)
+    chosen_mood = random.choice(moods)
     
     return f"""
 Brand context: Luxura Distribution is a premium hair extension importer and distributor in Quebec.
 Business model: direct-to-consumer e-commerce plus salon partner distribution.
-Visual identity must feel premium, elegant, commercial, salon-relevant, and realistic.
 
-MODEL VARIETY: Beautiful woman with {chosen_color} hair styled in {chosen_style}.
+ARTISTIC STYLE (CRITICAL - match Luxura Facebook aesthetic):
+- Photography style: {chosen_mood}
+- Hair presentation: {chosen_style}
+- Hair color: {chosen_color}
+
+THE IMAGE MUST LOOK LIKE A LUXURA FACEBOOK AD:
+- Dramatic, artistic, editorial quality
+- Hair is the HERO - focus on texture, length, movement
+- Natural authentic beauty, not overly posed
+- Magazine-quality, high-end commercial photography
+- Close-ups or profile shots that showcase the hair
+- Motion and flow in the hair when possible
 
 CRITICAL HAIR RULES:
 - Hair MUST be the hero of every image
 - Hair length: mid-back to very long (below shoulders minimum, ideally to waist)
 - Hair volume: full, luxurious, healthy-looking
 - Hair texture: smooth, shiny, natural movement
-- Hair color: {chosen_color} (THIS SPECIFIC COLOR FOR THIS IMAGE)
-- Hair style: {chosen_style}
-- The image MUST demonstrate that we sell hair extensions (volume + length)
-- Show hair from angles that demonstrate length: from behind, three-quarter view, or side profile
-- Avoid front-facing shots where hair length is hidden
+- Hair color: {chosen_color}
+- Show hair from angles that demonstrate length: from behind, three-quarter view, side profile, or close-up
+- Capture movement, flow, and texture
 
-No training classroom, no certification scene, no teacher/student workshop unless explicitly required by the article.
-No men, no short hair, no pixie cut, no bob haircut, no shoulder-length hero shot.
-No cartoon, no text, no watermark, no low-quality collage.
+AVOID ABSOLUTELY:
+- Generic stock photo look
+- Stiff posed photos
+- Men, short hair, pixie cuts, bob haircuts
+- Cartoons, text overlays, watermarks
+- Training/classroom scenes
+- Low quality or amateur look
 """.strip()
 
 
