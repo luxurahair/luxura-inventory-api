@@ -148,14 +148,255 @@ LUXURA_RENDER_API = "https://luxura-inventory-api.onrender.com"
 # ping_luxura_api() et keep_luxura_awake() ont été supprimés car ils causaient
 # des deadlocks au démarrage sur Render (le service essayait de se pinger lui-même)
 
+# ==================== SWAGGER TAGS CONFIGURATION ====================
+# Documentation organisée par modules avec descriptions détaillées
+
+SWAGGER_TAGS = [
+    {
+        "name": "🏥 Health & Status",
+        "description": """
+**Endpoints de surveillance et diagnostic**
+
+Ces endpoints permettent de vérifier la santé de l'API et des services connectés:
+- Health check principal
+- Status des cron jobs
+- Ping des services externes
+"""
+    },
+    {
+        "name": "📦 Products",
+        "description": """
+**Catalogue de produits Luxura**
+
+Gestion du catalogue d'extensions capillaires:
+- Liste complète des produits avec filtres
+- Détails par handle de produit
+- Catégories disponibles
+- Images produits
+
+**Source des données:** Synchronisé depuis Wix Catalog → Supabase
+"""
+    },
+    {
+        "name": "🎨 Colors",
+        "description": """
+**Système de couleurs Luxura**
+
+Gestion des 45+ couleurs d'extensions disponibles:
+- Nuancier complet avec codes
+- Regroupement par catégorie (Naturels, Blonds, Spéciaux, etc.)
+- Descriptions SEO pour chaque couleur
+- Images de référence
+
+**Catégories:** Naturels, Blonds Froids, Blonds Chauds, Châtains, Spéciaux
+"""
+    },
+    {
+        "name": "🖌️ Color Engine",
+        "description": """
+**Moteur de recolorisation d'images**
+
+Outil professionnel pour visualiser les extensions dans différentes couleurs:
+- Recolorisation haute qualité (préserve les détails)
+- Génération automatique avec watermark Luxura
+- Support des 45 couleurs du catalogue
+- Export PNG/JPEG
+
+**Utilisation:** Upload d'image → Sélection couleur → Résultat recolorisé
+"""
+    },
+    {
+        "name": "📝 Blog",
+        "description": """
+**Système de blog automatisé avec IA**
+
+Génération et gestion des articles de blog:
+- Génération automatique avec GPT-4o
+- Images DALL-E 3 artistiques
+- Publication vers Wix Blog (brouillons)
+- Workflow d'approbation par email
+- Mots-clés SEO optimisés
+
+**Flux:** Génération IA → Brouillon Wix → Email approbation → Publication manuelle
+"""
+    },
+    {
+        "name": "🔄 Wix Integration",
+        "description": """
+**Intégration avec Wix (E-commerce)**
+
+Synchronisation bidirectionnelle avec le site Wix:
+- Sync catalogue produits
+- Push articles de blog
+- Gestion des tokens OAuth
+- Patch des SKUs variants
+
+**APIs utilisées:** Wix Stores, Wix Blog, Wix Media
+"""
+    },
+    {
+        "name": "📱 Facebook",
+        "description": """
+**Publication automatique sur Facebook**
+
+Automatisation du marketing sur Facebook:
+- Posts éducatifs (Mardi/Mercredi)
+- Posts produits (Lundi/Jeudi)
+- Posts weekend (Vendredi/Samedi)
+- Partage automatique des blogs
+
+**API:** Facebook Graph API v18.0
+"""
+    },
+    {
+        "name": "🔗 Backlinks & SEO",
+        "description": """
+**Automatisation SEO et backlinks**
+
+Stratégie de domination SEO pour le Québec:
+- Soumission automatique aux annuaires
+- Génération de citations locales
+- Tracking des backlinks
+- Optimisation on-page
+
+**Cible:** Salons de coiffure et beauté au Québec
+"""
+    },
+    {
+        "name": "🛒 Cart",
+        "description": """
+**Gestion du panier d'achat**
+
+Fonctionnalités e-commerce:
+- Ajouter/modifier/supprimer des items
+- Calcul automatique des totaux
+- Persistance par utilisateur
+"""
+    },
+    {
+        "name": "🔐 Auth",
+        "description": """
+**Authentification utilisateurs**
+
+Gestion des sessions et utilisateurs:
+- Échange de tokens Supabase
+- Gestion des sessions
+- Logout sécurisé
+"""
+    },
+    {
+        "name": "💼 Salons",
+        "description": """
+**Réseau de salons partenaires**
+
+Gestion des salons affiliés Luxura:
+- Liste des salons actifs
+- Informations de contact
+- Codes salons pour commandes
+"""
+    },
+    {
+        "name": "📊 Marketing",
+        "description": """
+**Outils marketing et campagnes**
+
+Génération de contenu marketing:
+- Templates de campagnes
+- Intégration Google Drive
+- Plans de contenu hebdomadaires
+- Captions prêts à l'emploi
+"""
+    },
+    {
+        "name": "📁 Files & Downloads",
+        "description": """
+**Gestion des fichiers**
+
+Téléchargement et accès aux ressources:
+- Images générées
+- Exports de données
+- Fichiers statiques
+"""
+    },
+    {
+        "name": "⏰ Cron & Monitoring",
+        "description": """
+**Surveillance et tâches planifiées**
+
+Monitoring des services et crons:
+- Status de tous les services Render
+- Derniers runs des crons
+- Déclenchement manuel des tâches
+- Auto-repair system
+"""
+    },
+]
+
 # Create the main app with Swagger UI
 app = FastAPI(
     title="Luxura Distribution API",
-    description="API pour l'application mobile Luxura - Extensions de cheveux professionnels",
-    version="1.0.0",
+    description="""
+# 🌟 API Luxura Distribution
+
+**Plateforme complète pour la gestion des extensions capillaires premium au Québec**
+
+---
+
+## 📋 Modules Principaux
+
+| Module | Description |
+|--------|-------------|
+| **Products** | Catalogue de 187+ produits synchronisé avec Wix |
+| **Colors** | Système de 45+ couleurs avec nuancier |
+| **Color Engine** | Recolorisation d'images en temps réel |
+| **Blog** | Génération automatique d'articles avec IA |
+| **Facebook** | Publication automatisée sur les réseaux |
+| **SEO/Backlinks** | Stratégie de domination locale |
+
+---
+
+## 🔑 Authentification
+
+La plupart des endpoints publics ne nécessitent pas d'authentification.
+Pour les endpoints protégés, utilisez le header:
+```
+x-seo-secret: votre_secret
+```
+
+---
+
+## 🌐 Services Connectés
+
+- **Wix** - E-commerce et Blog
+- **Supabase** - Base de données PostgreSQL
+- **OpenAI** - GPT-4o et DALL-E 3
+- **Facebook** - Graph API
+
+---
+
+## 📞 Support
+
+- **Email:** info@luxuradistribution.com
+- **Site:** [luxuradistribution.com](https://luxuradistribution.com)
+
+---
+
+*Luxura Distribution © 2026 - Extensions capillaires premium au Québec*
+    """,
+    version="2.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
+    openapi_url="/api/openapi.json",
+    openapi_tags=SWAGGER_TAGS,
+    contact={
+        "name": "Luxura Distribution",
+        "url": "https://luxuradistribution.com",
+        "email": "info@luxuradistribution.com",
+    },
+    license_info={
+        "name": "Proprietary",
+        "url": "https://luxuradistribution.com/terms",
+    },
 )
 
 # ==================== ROUTES UTILITAIRES (favicon, redirects, health) ====================
