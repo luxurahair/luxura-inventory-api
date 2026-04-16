@@ -22,6 +22,17 @@ import RenderHtml from 'react-native-render-html';
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const LUXURA_LOGO = 'https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/i7uo40l8_Luxura%20Distribution%20-%20OR%20-%20PNG.png';
 
+// Helper pour obtenir l'URL complète de l'image
+const getImageUrl = (imageUrl: string | undefined): string | undefined => {
+  if (!imageUrl) return undefined;
+  // Si l'URL commence par /api/, c'est une URL relative - ajouter le backend URL
+  if (imageUrl.startsWith('/api/')) {
+    return `${API_URL}${imageUrl}`;
+  }
+  // Sinon retourner l'URL telle quelle (Unsplash, etc.)
+  return imageUrl;
+};
+
 interface BlogPost {
   id: string;
   title: string;
@@ -248,7 +259,7 @@ export default function BlogPostScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Hero Image */}
         {post.image && (
-          <Image source={{ uri: post.image }} style={styles.heroImage} resizeMode="cover" />
+          <Image source={{ uri: getImageUrl(post.image) }} style={styles.heroImage} resizeMode="cover" />
         )}
 
         {/* Content */}

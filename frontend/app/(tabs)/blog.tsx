@@ -64,6 +64,17 @@ export default function BlogScreen() {
     });
   };
 
+  // Helper pour obtenir l'URL complète de l'image
+  const getImageUrl = (imageUrl: string | undefined): string | undefined => {
+    if (!imageUrl) return undefined;
+    // Si l'URL commence par /api/, c'est une URL relative - ajouter le backend URL
+    if (imageUrl.startsWith('/api/')) {
+      return `${API_URL}${imageUrl}`;
+    }
+    // Sinon retourner l'URL telle quelle (Unsplash, etc.)
+    return imageUrl;
+  };
+
   const renderPost = ({ item }: { item: BlogPost }) => (
     <TouchableOpacity
       style={styles.postCard}
@@ -71,7 +82,7 @@ export default function BlogScreen() {
       activeOpacity={0.8}
     >
       {item.image && (
-        <Image source={{ uri: item.image }} style={styles.postImage} resizeMode="cover" />
+        <Image source={{ uri: getImageUrl(item.image) }} style={styles.postImage} resizeMode="cover" />
       )}
       <View style={styles.postContent}>
         <Text style={styles.postTitle}>{item.title}</Text>

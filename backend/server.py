@@ -204,6 +204,10 @@ async def cors_ping():
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 
+# Dossier pour les images de blog générées par DALL-E
+BLOG_IMAGES_DIR = STATIC_DIR / "blog_images"
+BLOG_IMAGES_DIR.mkdir(exist_ok=True)
+
 # Dossier pour les images de produits watermarkées
 PRODUCTS_IMG_DIR = STATIC_DIR / "products"
 PRODUCTS_IMG_DIR.mkdir(exist_ok=True)
@@ -219,6 +223,14 @@ async def serve_static_file(filename: str):
     if file_path.exists():
         return FileResponse(file_path)
     raise HTTPException(status_code=404, detail="File not found")
+
+@app.get("/api/blog-images/{filename}")
+async def serve_blog_image(filename: str):
+    """Sert les images de blog générées par DALL-E"""
+    file_path = BLOG_IMAGES_DIR / filename
+    if file_path.exists():
+        return FileResponse(file_path, media_type="image/png")
+    raise HTTPException(status_code=404, detail="Blog image not found")
 
 @app.get("/api/downloads/{filename}")
 async def download_file(filename: str):
@@ -3157,14 +3169,15 @@ async def get_blog_posts_endpoint():
             await db_update_blog_post(post["id"], {"image": new_image})
     
     if not posts:
-        # Default posts with FIXED images - FEMMES avec cheveux longs luxueux UNIQUEMENT
+        # Default posts with DALL-E generated images - FEMMES avec cheveux longs luxueux
+        # Images générées spécifiquement pour chaque article
         default_posts = [
             {
                 "id": "entretien-extensions",
                 "title": "Comment entretenir vos extensions capillaires",
                 "content": "Les extensions capillaires nécessitent un entretien régulier pour maintenir leur beauté et leur durabilité.",
                 "excerpt": "Découvrez nos conseils d'experts pour maintenir vos extensions.",
-                "image": "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",  # Femme blonde cheveux longs sublimes
+                "image": "/api/blog-images/blog_image_entretien_extensions.png",
                 "author": "Luxura Distribution",
                 "created_at": datetime.now(timezone.utc).isoformat()
             },
@@ -3173,7 +3186,7 @@ async def get_blog_posts_endpoint():
                 "title": "Extensions Genius Weft : Guide complet pour professionnels",
                 "content": "La technique Genius Weft révolutionne l'industrie des extensions capillaires au Québec.",
                 "excerpt": "Tout savoir sur les extensions Genius Weft - la trame invisible révolutionnaire.",
-                "image": "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",  # Femme brune cheveux longs soyeux
+                "image": "/api/blog-images/blog_image_guide_genius_weft.png",
                 "author": "Luxura Distribution",
                 "created_at": datetime.now(timezone.utc).isoformat()
             },
@@ -3182,7 +3195,7 @@ async def get_blog_posts_endpoint():
                 "title": "Tendances coiffure 2025 : Balayage et extensions naturelles",
                 "content": "Les tendances capillaires évoluent vers plus de naturel et de sophistication.",
                 "excerpt": "Les couleurs et styles qui domineront 2025 au Québec.",
-                "image": "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80",  # Femme cheveux longs volumineux tendance
+                "image": "/api/blog-images/blog_image_tendances_2025.png",
                 "author": "Luxura Distribution",
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
@@ -3199,7 +3212,7 @@ async def get_blog_post_by_id(post_id: str):
     if post:
         return post
     
-    # Si pas trouvé en BD, vérifier les articles par défaut
+    # Si pas trouvé en BD, vérifier les articles par défaut avec images DALL-E
     default_posts = {
         "entretien-extensions": {
             "id": "entretien-extensions",
@@ -3224,7 +3237,7 @@ async def get_blog_post_by_id(post_id: str):
 
 <p>Avec ces conseils, vos extensions <strong>Luxura</strong> conserveront leur éclat pendant 12 à 18 mois. Pour plus de conseils personnalisés, contactez nos experts.</p>""",
             "excerpt": "Découvrez nos conseils d'experts pour maintenir vos extensions et prolonger leur durée de vie.",
-            "image": "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=800&q=80",
+            "image": "/api/blog-images/blog_image_entretien_extensions.png",
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc).isoformat()
         },
@@ -3253,7 +3266,7 @@ async def get_blog_post_by_id(post_id: str):
 
 <p><strong>Luxura Distribution</strong> forme gratuitement les salons partenaires à cette technique. Contactez-nous pour devenir salon affilié.</p>""",
             "excerpt": "Tout savoir sur les extensions Genius Weft - la trame invisible révolutionnaire pour professionnels.",
-            "image": "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=800&q=80",
+            "image": "/api/blog-images/blog_image_guide_genius_weft.png",
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc).isoformat()
         },
@@ -3280,7 +3293,7 @@ async def get_blog_post_by_id(post_id: str):
 
 <p>Restez à la pointe des tendances avec <strong>Luxura Distribution</strong> - votre partenaire beauté au Québec.</p>""",
             "excerpt": "Les couleurs et styles qui domineront 2025 au Québec - du balayage champagne au glass hair.",
-            "image": "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80",
+            "image": "/api/blog-images/blog_image_tendances_2025.png",
             "author": "Luxura Distribution",
             "created_at": datetime.now(timezone.utc).isoformat()
         }
