@@ -414,25 +414,27 @@ Le post doit:
     
     async def _generate_image_prompt(self, item: Dict) -> str:
         """
-        Génère un prompt DALL-E pour l'image du post
+        Génère un prompt DALL-E PHOTORÉALISTE pour l'image du post
+        IMPORTANT: Éviter les rendus CGI/3D - viser le style photographie réelle
         """
         title = item.get("title_fr") or item["title"]
         
         if not self.openai_key:
-            return f"Professional hair salon, woman with beautiful long hair extensions, elegant, high quality photography"
+            return "Photograph of hair extensions on mannequin head, professional salon lighting, DSLR camera style, realistic hair texture, clean white background"
         
-        prompt = f"""Basé sur ce sujet d'actualité sur les extensions capillaires:
+        prompt = f"""Tu dois créer un prompt DALL-E pour illustrer cet article sur les extensions capillaires:
 "{title}"
 
-Génère un prompt DALL-E en anglais pour créer une image professionnelle et élégante.
+RÈGLES STRICTES pour un résultat PHOTORÉALISTE:
+1. Utilise des termes de PHOTOGRAPHIE: "photograph", "DSLR", "natural lighting", "candid"
+2. ÉVITE: "elegant", "luxurious", "sophisticated", "stunning" (ces mots créent du CGI)
+3. Montre les extensions sur mannequin OU vue de dos d'une femme (évite les visages)
+4. Style: photographie produit professionnelle ou photo de salon de coiffure
+5. Éclairage naturel, fond neutre ou salon réel
 
-L'image doit:
-- Montrer une femme avec de beaux cheveux longs (extensions)
-- Avoir un style haut de gamme, luxueux
-- Être réaliste et professionnelle (style photographie de mode)
-- Évoquer la beauté, la confiance, la féminité
-
-Réponds UNIQUEMENT avec le prompt DALL-E (max 200 caractères)."""
+Réponds UNIQUEMENT avec le prompt en anglais (max 150 caractères).
+Exemple bon: "Photograph of long brown hair extensions on mannequin, salon window light, realistic texture"
+Exemple mauvais: "Elegant woman with stunning luxurious hair" (trop CGI)"""
         
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -446,18 +448,23 @@ Réponds UNIQUEMENT avec le prompt DALL-E (max 200 caractères)."""
                         "model": "gpt-4o",
                         "messages": [{"role": "user", "content": prompt}],
                         "max_tokens": 100,
-                        "temperature": 0.7
+                        "temperature": 0.5
                     }
                 )
                 
                 if response.status_code == 200:
                     result = response.json()
-                    return result["choices"][0]["message"]["content"].strip()
+                    generated_prompt = result["choices"][0]["message"]["content"].strip()
+                    # Ajouter des termes photoréalistes si manquants
+                    if "photograph" not in generated_prompt.lower() and "photo" not in generated_prompt.lower():
+                        generated_prompt = "Photograph, " + generated_prompt
+                    return generated_prompt
                     
         except Exception as e:
             logger.error(f"Erreur prompt image: {e}")
         
-        return "Professional hair salon, beautiful woman with long flowing hair extensions, luxury beauty photography, soft lighting, elegant"
+        # Fallback photoréaliste
+        return "Photograph of long hair extensions displayed in professional salon, natural window lighting, realistic texture, clean background"
     
     def _select_hashtags(self, item: Dict) -> List[str]:
         """
