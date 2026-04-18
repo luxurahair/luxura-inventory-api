@@ -417,10 +417,10 @@ Le post doit:
         
         return min(score, 1.0)
     
-    async def _generate_image_prompt(self, item: Dict) -> str:
+    async def _generate_image_prompt(self, item: Dict, post_text: str = "") -> str:
         """
-        Génère un prompt pour l'image du post
-        Utilise le style Luxura + contexte saisonnier automatique
+        Génère un prompt pour l'image APRÈS avoir créé le texte du post
+        L'image doit correspondre au contexte et au contenu du post
         """
         title = item.get("title_fr") or item["title"]
         
@@ -431,7 +431,7 @@ Le post doit:
         
         if not self.openai_key:
             # Fallback avec le style Luxura + saison
-            return f"Beautiful woman from behind with mid-back length hair extensions, {image_context}, lifestyle beauty photography, elegant and aspirational, no face visible"
+            return f"Beautiful woman with mid-back length hair extensions, {image_context}, lifestyle beauty photography, elegant and aspirational"
         
         system_prompt = f"""Tu es un expert en création de prompts pour Grok et DALL-E 3.
 Tu crées des images pour Luxura Distribution (extensions capillaires premium au Québec).
@@ -442,39 +442,50 @@ CONTEXTE ACTUEL:
 - Atmosphère: {season['atmosphere']}
 - Éléments visuels: {image_context}
 
-STYLE LUXURA (OBLIGATOIRE):
-1. Femme vue de DOS ou de profil (jamais de face)
-2. Cheveux jusqu'au MILIEU du dos MAXIMUM (trois-quarts du dos, PAS plus long)
-3. Lumière naturelle adaptée à la saison
-4. Style: lifestyle/beauté, pas commercial
+STYLE LUXURA:
+1. Femmes élégantes avec extensions capillaires visibles
+2. PEUT montrer: visage, profil, dos, groupe de femmes, événement
+3. Cheveux jusqu'au MILIEU du dos MAXIMUM (trois-quarts du dos, PAS plus long)
+4. Style: lifestyle/beauté adapté au contexte du post
 5. Ambiance: {season['atmosphere']}
 6. Couleurs: {', '.join(season['colors'])}
 
 RÈGLE LONGUEUR CHEVEUX (TRÈS IMPORTANT):
 - Cheveux s'arrêtent au MILIEU du dos ou aux omoplates
 - JAMAIS de cheveux dépassant les trois-quarts du dos
-- Termes: "mid-back length" ou "shoulder blade length"
+- Termes à utiliser: "mid-back length hair" ou "shoulder blade length hair"
+
+CE QUI EST PERMIS:
+- Visage visible, sourire, regard
+- Une femme ou plusieurs femmes ensemble
+- Contexte événementiel (fête, mariage, graduation, brunch, etc.)
+- Poses variées (debout, assise, marchant, etc.)
+- Interaction avec d'autres personnes
 
 ÉLÉMENTS SAISONNIERS À INCLURE:
 {image_context}
 
 INTERDITS:
-- Visage de face
-- Cheveux trop longs
-- Mannequin, équipement studio
-- Texte, logo
-- CGI ou rendu 3D
-- Éléments de MAUVAISE saison (pas d'automne si printemps, etc.)
+- Cheveux trop longs (dépassant les trois-quarts du dos)
+- Mannequin en plastique
+- Texte, logo, watermark
+- CGI ou rendu 3D artificiel
+- Éléments de MAUVAISE saison
 
-Retourne UNIQUEMENT le prompt en anglais (max 200 caractères)."""
+L'image DOIT correspondre au contenu du post Facebook ci-dessous.
 
-        user_prompt = f"""Crée un prompt image pour illustrer cet article sur les extensions capillaires:
-"{title}"
+Retourne UNIQUEMENT le prompt en anglais (max 250 caractères)."""
 
-Saison actuelle: {season['name_fr']}
-Occasion: {seasonal_ctx['occasion']}
+        user_prompt = f"""Crée un prompt image pour ce post Facebook sur les extensions capillaires:
 
-Le prompt doit refléter la saison actuelle et le style Luxura."""
+TITRE DE L'ARTICLE SOURCE: "{title}"
+
+TEXTE DU POST FACEBOOK:
+{post_text[:500] if post_text else "Post sur les extensions capillaires"}
+
+Saison: {season['name_fr']} | Occasion: {seasonal_ctx['occasion']}
+
+Le prompt doit illustrer EXACTEMENT le contexte et le thème du post."""
         
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
