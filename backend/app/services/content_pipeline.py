@@ -1,6 +1,7 @@
 """
 Pipeline de contenu automatisé
 Orchestre la collecte, le filtrage et la génération de posts
+Inclut la génération d'images DALL-E 3 et la publication Facebook
 """
 
 import os
@@ -12,6 +13,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from .content_discovery import ContentDiscoveryService
+from .facebook_publisher import FacebookPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,7 @@ class ContentPipeline:
     
     def __init__(self, db_session=None):
         self.discovery_service = ContentDiscoveryService()
+        self.facebook_publisher = FacebookPublisher()
         self.db_session = db_session
         self.history_file = Path("/tmp/luxura_content_history.json")
         self.history = self._load_history()
@@ -55,15 +58,21 @@ class ContentPipeline:
         except Exception as e:
             logger.error(f"Erreur sauvegarde historique: {e}")
     
-    async def run_daily_scan(self, max_posts: int = 3) -> Dict:
+    async def run_daily_scan(self, max_posts: int = 3, generate_images: bool = True) -> Dict:
         """
         Exécute le scan quotidien complet
+        
+        Args:
+            max_posts: Nombre max de posts à générer
+            generate_images: Si True, génère les images DALL-E 3
         
         Returns:
             Dict avec les résultats du scan
         """
         logger.info("=" * 60)
         logger.info("🚀 DÉMARRAGE DU SCAN QUOTIDIEN LUXURA")
+        if generate_images:
+            logger.info("🎨 Mode: AVEC génération d'images DALL-E 3")
         logger.info("=" * 60)
         
         results = {
@@ -73,6 +82,7 @@ class ContentPipeline:
             "articles_new": 0,
             "posts_generated": 0,
             "posts_approved": 0,
+            "images_generated": 0,
             "posts": [],
             "errors": []
         }
@@ -115,6 +125,21 @@ class ContentPipeline:
                 try:
                     post = await self.discovery_service.generate_facebook_post(item)
                     
+                    # Étape 5: Génération d'image DALL-E 3
+                    if generate_images and post.get("image_prompt"):
+                        logger.info(f"🎨 Étape 5: Génération image DALL-E 3...")
+                        image_url = await self.facebook_publisher.generate_image(
+                            post["image_prompt"]
+                        )
+                        if image_url:
+                            post["image_url"] = image_url
+                            post["has_image"] = True
+                            results["images_generated"] += 1
+                            logger.info(f"   ✅ Image générée!")
+                        else:
+                            post["has_image"] = False
+                            logger.warning(f"   ⚠️ Image non générée")
+                    
                     # Ajouter l'URL à l'historique
                     self.history["processed_urls"].append(item["source_url"])
                     
@@ -125,7 +150,7 @@ class ContentPipeline:
                         results["posts_approved"] += 1
                     
                     logger.info(f"   ✅ Post généré: {post.get('post_title', '')[:50]}...")
-                    logger.info(f"      Score: {post.get('confidence_score', 0):.2f} | Status: {post.get('status')}")
+                    logger.info(f"      Score: {post.get('confidence_score', 0):.2f} | Status: {post.get('status')} | Image: {'✅' if post.get('has_image') else '❌'}")
                     
                 except Exception as e:
                     logger.error(f"Erreur génération post: {e}")
@@ -135,7 +160,7 @@ class ContentPipeline:
             self._save_history()
             
             logger.info("=" * 60)
-            logger.info(f"✅ SCAN TERMINÉ: {results['posts_generated']} posts générés")
+            logger.info(f"✅ SCAN TERMINÉ: {results['posts_generated']} posts générés, {results['images_generated']} images")
             logger.info("=" * 60)
             
         except Exception as e:
@@ -165,12 +190,36 @@ class ContentPipeline:
         
         return new_items
     
-    async def generate_and_publish_post(self, item: Dict, publish: bool = False) -> Dict:
+    async def generate_and_publish_post(
+        self, 
+        item: Dict, 
+        generate_image: bool = True,
+        publish: bool = False
+    ) -> Dict:
         """
-        Génère un post et optionnellement le publie
+        Génère un post avec image et optionnellement le publie sur Facebook
+        
+        Args:
+            item: Article source
+            generate_image: Si True, génère une image DALL-E 3
+            publish: Si True, publie directement sur Facebook
+            
+        Returns:
+            Dict avec le post et les infos de publication
         """
-        # Générer le post
+        # Générer le post texte
         post = await self.discovery_service.generate_facebook_post(item)
+        
+        # Générer l'image DALL-E 3
+        if generate_image and post.get("image_prompt"):
+            logger.info(f"🎨 Génération image DALL-E 3...")
+            image_url = await self.facebook_publisher.generate_image(post["image_prompt"])
+            if image_url:
+                post["image_url"] = image_url
+                post["has_image"] = True
+                logger.info(f"   ✅ Image générée!")
+            else:
+                post["has_image"] = False
         
         # Sauvegarder en base si disponible
         if self.db_session:
@@ -178,8 +227,26 @@ class ContentPipeline:
         
         # Publier si demandé et score suffisant
         if publish and post.get("confidence_score", 0) >= 0.85:
-            # TODO: Intégrer facebook_publisher.py
-            pass
+            logger.info(f"📘 Publication Facebook...")
+            
+            # Construire le texte complet avec hashtags
+            full_text = post.get("post_text", "")
+            if post.get("hashtags"):
+                full_text += "\n\n" + " ".join(post["hashtags"])
+            
+            success, post_id, error = await self.facebook_publisher.publish_post(
+                full_text, 
+                post.get("image_url")
+            )
+            
+            post["published"] = success
+            post["published_post_id"] = post_id
+            if error:
+                post["publish_error"] = error
+            
+            if success:
+                post["status"] = "published"
+                logger.info(f"   ✅ Publié! Post ID: {post_id}")
         
         return post
     

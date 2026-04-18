@@ -26,6 +26,7 @@ class ScanResponse(BaseModel):
     articles_found: int
     articles_relevant: int
     posts_generated: int
+    images_generated: int = 0
     posts: List[dict]
     errors: List[str] = []
 
@@ -41,6 +42,7 @@ class PostStatusUpdate(BaseModel):
 @router.post("/ingest/hair-canada", response_model=ScanResponse)
 async def ingest_hair_canada_news(
     max_posts: int = Query(default=3, le=10, description="Nombre max de posts à générer"),
+    generate_images: bool = Query(default=True, description="Générer les images DALL-E 3"),
     background_tasks: BackgroundTasks = None
 ):
     """
@@ -52,16 +54,24 @@ async def ingest_hair_canada_news(
     3. Dédoublonnage
     4. Traduction FR
     5. Génération posts Facebook avec GPT-4o
-    6. Sauvegarde en brouillon
+    6. 🎨 Génération images DALL-E 3 (optionnel)
+    7. Sauvegarde en brouillon
+    
+    Args:
+        max_posts: Nombre max de posts (1-10)
+        generate_images: Si True, génère des images DALL-E 3 pour chaque post
     
     Returns:
-        Posts générés en brouillon
+        Posts générés avec images
     """
-    logger.info(f"🚀 Lancement scan contenu (max_posts={max_posts})")
+    logger.info(f"🚀 Lancement scan contenu (max_posts={max_posts}, images={generate_images})")
     
     try:
         pipeline = ContentPipeline()
-        results = await pipeline.run_daily_scan(max_posts=max_posts)
+        results = await pipeline.run_daily_scan(
+            max_posts=max_posts,
+            generate_images=generate_images
+        )
         
         return ScanResponse(
             success=True,
@@ -69,6 +79,7 @@ async def ingest_hair_canada_news(
             articles_found=results["articles_found"],
             articles_relevant=results["articles_relevant"],
             posts_generated=results["posts_generated"],
+            images_generated=results.get("images_generated", 0),
             posts=results["posts"],
             errors=results["errors"]
         )
