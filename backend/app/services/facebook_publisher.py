@@ -1,6 +1,6 @@
 """
-Service de publication Facebook avec génération d'images DALL-E
-Réutilise la logique existante de facebook_cron.py
+Service de publication Facebook avec génération d'images
+Supporte: Grok (xAI) et DALL-E 3 (OpenAI)
 """
 
 import os
@@ -14,35 +14,98 @@ logger = logging.getLogger(__name__)
 
 class FacebookPublisher:
     """
-    Publie des posts Facebook avec images générées par DALL-E 3
+    Publie des posts Facebook avec images générées par Grok ou DALL-E 3
+    Priorité: Grok > DALL-E
     """
     
     def __init__(self):
+        # Clés API
+        self.grok_key = os.getenv("XAI_API_KEY") or os.getenv("GROK_API_KEY")
         self.openai_key = os.getenv("OPENAI_API_KEY")
+        
+        # Facebook
         self.fb_token = os.getenv("FB_PAGE_ACCESS_TOKEN")
         self.fb_page_id = os.getenv("FB_PAGE_ID", "1838415193042352")
         self.fb_api_version = "v25.0"
+        
+        # Détecter le provider d'images
+        if self.grok_key:
+            self.image_provider = "grok"
+            logger.info("🎨 Image provider: Grok (xAI)")
+        elif self.openai_key:
+            self.image_provider = "dalle"
+            logger.info("🎨 Image provider: DALL-E 3 (OpenAI)")
+        else:
+            self.image_provider = None
+            logger.warning("⚠️ Aucune clé API pour génération d'images")
     
     # ============================================
-    # GÉNÉRATION D'IMAGE DALL-E 3
+    # GÉNÉRATION D'IMAGE - GROK (xAI)
     # ============================================
     
-    async def generate_image(self, prompt: str) -> Optional[str]:
+    async def generate_image_grok(self, prompt: str) -> Optional[str]:
         """
-        Génère une image avec DALL-E 3 et retourne l'URL temporaire.
+        Génère une image avec Grok (xAI) et retourne l'URL.
         
         Args:
-            prompt: Le prompt DALL-E pour l'image
+            prompt: Le prompt pour l'image
             
         Returns:
             URL de l'image ou None si erreur
         """
+        if not self.grok_key:
+            return None
+        
+        logger.info(f"🎨 Génération image Grok (xAI)...")
+        logger.info(f"   Prompt: {prompt[:80]}...")
+        
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    "https://api.x.ai/v1/images/generations",
+                    headers={
+                        "Authorization": f"Bearer {self.grok_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "grok-2-image",
+                        "prompt": prompt,
+                        "n": 1
+                    }
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    # Grok retourne les images dans data[].url
+                    if data.get("data") and len(data["data"]) > 0:
+                        image_url = data["data"][0].get("url")
+                        if image_url:
+                            logger.info(f"✅ Image Grok générée!")
+                            return image_url
+                    
+                    logger.error(f"❌ Réponse Grok inattendue: {data}")
+                    return None
+                else:
+                    logger.error(f"❌ Erreur Grok: {response.status_code}")
+                    logger.error(response.text[:500])
+                    return None
+                    
+        except Exception as e:
+            logger.error(f"❌ Erreur Grok: {e}")
+            return None
+    
+    # ============================================
+    # GÉNÉRATION D'IMAGE - DALL-E 3 (Fallback)
+    # ============================================
+    
+    async def generate_image_dalle(self, prompt: str) -> Optional[str]:
+        """
+        Génère une image avec DALL-E 3 et retourne l'URL temporaire.
+        """
         if not self.openai_key:
-            logger.warning("OPENAI_API_KEY non configuré - pas d'image générée")
             return None
         
         logger.info(f"🎨 Génération image DALL-E 3...")
-        logger.debug(f"   Prompt: {prompt[:100]}...")
         
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
@@ -56,7 +119,7 @@ class FacebookPublisher:
                         "model": "dall-e-3",
                         "prompt": prompt,
                         "n": 1,
-                        "size": "1792x1024",  # Format paysage pour Facebook
+                        "size": "1792x1024",
                         "quality": "standard"
                     }
                 )
@@ -64,7 +127,7 @@ class FacebookPublisher:
                 if response.status_code == 200:
                     data = response.json()
                     image_url = data["data"][0]["url"]
-                    logger.info(f"✅ Image générée avec succès!")
+                    logger.info(f"✅ Image DALL-E générée!")
                     return image_url
                 else:
                     logger.error(f"❌ Erreur DALL-E: {response.status_code}")
@@ -72,8 +135,31 @@ class FacebookPublisher:
                     return None
                     
         except Exception as e:
-            logger.error(f"❌ Erreur génération image: {e}")
+            logger.error(f"❌ Erreur DALL-E: {e}")
             return None
+    
+    # ============================================
+    # GÉNÉRATION D'IMAGE - AUTO (Grok > DALL-E)
+    # ============================================
+    
+    async def generate_image(self, prompt: str) -> Optional[str]:
+        """
+        Génère une image avec le meilleur provider disponible.
+        Priorité: Grok > DALL-E
+        """
+        # Essayer Grok d'abord
+        if self.grok_key:
+            image_url = await self.generate_image_grok(prompt)
+            if image_url:
+                return image_url
+            logger.warning("⚠️ Grok a échoué, fallback vers DALL-E...")
+        
+        # Fallback vers DALL-E
+        if self.openai_key:
+            return await self.generate_image_dalle(prompt)
+        
+        logger.error("❌ Aucun provider d'images disponible")
+        return None
     
     # ============================================
     # PUBLICATION FACEBOOK
