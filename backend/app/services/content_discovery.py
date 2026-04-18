@@ -2,6 +2,7 @@
 Service de découverte de contenu
 Scrape, filtre, traduit et génère les posts
 UNIQUEMENT sur les extensions capillaires
+Adapte automatiquement le contenu selon la saison et les événements
 """
 
 import os
@@ -18,6 +19,10 @@ from .content_sources import (
     REQUIRED_EXTENSION_KEYWORDS, INCLUDE_KEYWORDS, 
     EXCLUDE_KEYWORDS, CANADA_KEYWORDS,
     LUXURA_TONE, POST_TEMPLATES
+)
+from .seasonal_context import (
+    get_seasonal_context, get_image_prompt_context, 
+    get_post_intro, get_current_season
 )
 
 logger = logging.getLogger(__name__)
@@ -414,52 +419,62 @@ Le post doit:
     
     async def _generate_image_prompt(self, item: Dict) -> str:
         """
-        Génère un prompt DALL-E pour l'image du post
-        Utilise le style Luxura: lifestyle, femme de dos, cheveux fluides, lumière naturelle
+        Génère un prompt pour l'image du post
+        Utilise le style Luxura + contexte saisonnier automatique
         """
         title = item.get("title_fr") or item["title"]
         
-        if not self.openai_key:
-            # Fallback avec le style Luxura - cheveux mi-dos maximum
-            return "Beautiful woman from behind with mid-back length hair extensions, natural wavy hair reaching shoulder blades, golden hour lighting, lifestyle beauty photography, soft focus background, elegant and aspirational, no face visible"
+        # Obtenir le contexte saisonnier
+        seasonal_ctx = get_seasonal_context()
+        season = seasonal_ctx["season"]
+        image_context = get_image_prompt_context()
         
-        system_prompt = """Tu es un expert en création de prompts pour DALL-E 3 et Grok.
+        if not self.openai_key:
+            # Fallback avec le style Luxura + saison
+            return f"Beautiful woman from behind with mid-back length hair extensions, {image_context}, lifestyle beauty photography, elegant and aspirational, no face visible"
+        
+        system_prompt = f"""Tu es un expert en création de prompts pour Grok et DALL-E 3.
 Tu crées des images pour Luxura Distribution (extensions capillaires premium au Québec).
+
+CONTEXTE ACTUEL:
+- Saison: {season['name_fr']}
+- Occasion: {seasonal_ctx['occasion']}
+- Atmosphère: {season['atmosphere']}
+- Éléments visuels: {image_context}
 
 STYLE LUXURA (OBLIGATOIRE):
 1. Femme vue de DOS ou de profil (jamais de face)
-2. Cheveux longs jusqu'au milieu du dos MAXIMUM (trois-quarts du dos, PAS plus long)
-3. Lumière: golden hour, naturelle, douce
+2. Cheveux jusqu'au MILIEU du dos MAXIMUM (trois-quarts du dos, PAS plus long)
+3. Lumière naturelle adaptée à la saison
 4. Style: lifestyle/beauté, pas commercial
-5. Ambiance: aspirationnelle, élégante, féminine
-6. Décor: extérieur nature, salon lumineux, ou près d'une fenêtre
-7. Couleurs: tons chauds, dorés, naturels
+5. Ambiance: {season['atmosphere']}
+6. Couleurs: {', '.join(season['colors'])}
 
 RÈGLE LONGUEUR CHEVEUX (TRÈS IMPORTANT):
-- Les cheveux doivent s'arrêter au MILIEU du dos ou aux omoplates
-- JAMAIS de cheveux qui descendent jusqu'aux fesses ou plus bas
-- Longueur réaliste et élégante: "mid-back length" ou "shoulder blade length"
+- Cheveux s'arrêtent au MILIEU du dos ou aux omoplates
+- JAMAIS de cheveux dépassant les trois-quarts du dos
+- Termes: "mid-back length" ou "shoulder blade length"
+
+ÉLÉMENTS SAISONNIERS À INCLURE:
+{image_context}
 
 INTERDITS:
-- Visage visible de face
-- Cheveux trop longs (dépassant les trois-quarts du dos)
-- Mannequin ou tête en plastique
-- Appareil photo ou équipement studio
-- Texte, logo, graphisme
-- Style commercial ou catalogue
+- Visage de face
+- Cheveux trop longs
+- Mannequin, équipement studio
+- Texte, logo
 - CGI ou rendu 3D
-
-EXEMPLES DE BONS PROMPTS:
-- "Beautiful woman from behind with mid-back length flowing hair extensions, natural wavy hair, golden hour lighting, lifestyle beauty photography"
-- "Woman with shoulder blade length hair extensions near window, soft natural morning light, cozy aesthetic"
-- "Elegant mid-length hair extensions flowing in wind, outdoor nature setting, sunset golden light"
+- Éléments de MAUVAISE saison (pas d'automne si printemps, etc.)
 
 Retourne UNIQUEMENT le prompt en anglais (max 200 caractères)."""
 
-        user_prompt = f"""Crée un prompt DALL-E pour illustrer cet article sur les extensions capillaires:
+        user_prompt = f"""Crée un prompt image pour illustrer cet article sur les extensions capillaires:
 "{title}"
 
-Le prompt doit capturer l'essence de ce sujet tout en respectant le style Luxura."""
+Saison actuelle: {season['name_fr']}
+Occasion: {seasonal_ctx['occasion']}
+
+Le prompt doit refléter la saison actuelle et le style Luxura."""
         
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
