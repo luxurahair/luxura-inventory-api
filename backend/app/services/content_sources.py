@@ -107,6 +107,17 @@ INCLUDE_KEYWORDS = [
     # Salon/Pro
     "salon", "coiffeur", "coiffeuse", "styliste", "stylist",
     "hair professional", "professionnel cheveux",
+    
+    # =============================================
+    # FÉMININ - BONUS (cibler les femmes)
+    # =============================================
+    "women", "woman", "femme", "femmes", "féminin", "feminine",
+    "bride", "bridal", "mariée", "mariage",
+    "celebrity hair", "cheveux célébrité",
+    "red carpet", "tapis rouge",
+    "beauty", "beauté", "glamour", "glamorous",
+    "her hair", "ses cheveux",
+    "she", "elle",
 ]
 
 # Mots-clés d'exclusion
@@ -120,8 +131,19 @@ EXCLUDE_KEYWORDS = [
     "medical", "médical", "cancer", "chimio", "chemo",
     "alopecia", "alopécie",
     
-    # Homme
+    # =============================================
+    # MASCULIN / HOMMES - BLOQUER COMPLÈTEMENT
+    # =============================================
     "men's hair", "beard", "barbe", "male pattern",
+    "masculine", "masculin", "masculinity", "masculinité",
+    "men's fashion", "mode masculine", "menswear", "mode homme",
+    "men's style", "style homme", "for men", "pour homme",
+    "homme", "hommes", "man", "men",
+    "gentleman", "gentlemen",
+    "barbershop", "barbier", "barber",
+    "male grooming", "soins homme",
+    "men's week", "semaine homme",
+    "guy", "guys", "gars",
     
     # Spam/Pub
     "buy now", "discount code", "promo code", "coupon",
