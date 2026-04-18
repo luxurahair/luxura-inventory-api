@@ -78,46 +78,50 @@ TRUSTED_SOURCES = [
 # MOTS-CLÉS DE PERTINENCE
 # ============================================
 
-# Mots-clés obligatoires (au moins un)
-INCLUDE_KEYWORDS = [
-    # Types d'extensions
+# =============================================
+# MOTS-CLÉS OBLIGATOIRES - EXTENSIONS CAPILLAIRES SEULEMENT
+# Un article DOIT contenir au moins UN de ces mots pour être accepté
+# =============================================
+REQUIRED_EXTENSION_KEYWORDS = [
+    # Extensions - OBLIGATOIRE
     "extension", "extensions", "hair extension", "hair extensions",
     "rallonge", "rallonges", "rajout", "rajouts",
-    "tape-in", "tape in", "tapein",
-    "clip-in", "clip in", "clipin",
+    "tape-in", "tape in", "tapein", "tape extension",
+    "clip-in", "clip in", "clipin", "clip extension",
     "weft", "genius weft", "hand-tied", "hand tied", "handtied",
-    "keratin", "kératine", "fusion", "k-tip", "i-tip", "u-tip",
-    "micro-link", "microlink", "micro ring",
-    "ponytail extension", "queue de cheval",
-    "halo extension", "wire extension",
-    "topper", "toppers", "hair topper",
-    
-    # Cheveux
-    "long hair", "cheveux longs",
-    "hair volume", "volume cheveux",
-    "thick hair", "cheveux épais",
-    "hair length", "longueur cheveux",
-    "hair transformation", "transformation cheveux",
-    
-    # Qualité
+    "keratin extension", "kératine extension", "fusion extension",
+    "k-tip", "i-tip", "u-tip", "flat tip",
+    "micro-link", "microlink", "micro ring", "micro bead",
+    "ponytail extension", "queue de cheval extension",
+    "halo extension", "wire extension", "invisible wire",
+    "topper", "toppers", "hair topper", "wiglet",
+    "weave", "sew-in", "sew in",
+    "hair piece", "hairpiece", "postiche",
+]
+
+# Mots-clés bonus (augmentent le score mais pas obligatoires)
+INCLUDE_KEYWORDS = [
+    # Qualité extensions
     "remy", "remy hair", "human hair", "cheveux naturels",
     "virgin hair", "premium hair", "luxury hair",
-    "100% human", "100% naturel",
+    "100% human", "100% naturel", "real hair",
     
-    # Salon/Pro
-    "salon", "coiffeur", "coiffeuse", "styliste", "stylist",
-    "hair professional", "professionnel cheveux",
+    # Installation/Entretien extensions
+    "extension installation", "pose extension", "application",
+    "extension removal", "retrait extension",
+    "extension maintenance", "entretien extension",
+    "extension care", "soin extension",
     
-    # =============================================
-    # FÉMININ - BONUS (cibler les femmes)
-    # =============================================
-    "women", "woman", "femme", "femmes", "féminin", "feminine",
+    # Transformation avec extensions
+    "hair transformation", "transformation cheveux",
+    "before and after", "avant après",
+    "length", "longueur", "volume",
+    
+    # Féminin
+    "women", "woman", "femme", "femmes",
     "bride", "bridal", "mariée", "mariage",
-    "celebrity hair", "cheveux célébrité",
-    "red carpet", "tapis rouge",
-    "beauty", "beauté", "glamour", "glamorous",
-    "her hair", "ses cheveux",
-    "she", "elle",
+    "celebrity", "célébrité", "star",
+    "beauty", "beauté", "glamour",
 ]
 
 # Mots-clés d'exclusion

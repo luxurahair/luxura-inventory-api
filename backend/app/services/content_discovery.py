@@ -1,6 +1,7 @@
 """
 Service de découverte de contenu
 Scrape, filtre, traduit et génère les posts
+UNIQUEMENT sur les extensions capillaires
 """
 
 import os
@@ -14,7 +15,8 @@ from bs4 import BeautifulSoup
 
 from .content_sources import (
     SEARCH_QUERIES, TRUSTED_SOURCES,
-    INCLUDE_KEYWORDS, EXCLUDE_KEYWORDS, CANADA_KEYWORDS,
+    REQUIRED_EXTENSION_KEYWORDS, INCLUDE_KEYWORDS, 
+    EXCLUDE_KEYWORDS, CANADA_KEYWORDS,
     LUXURA_TONE, POST_TEMPLATES
 )
 
@@ -178,22 +180,48 @@ class ContentDiscoveryService:
     def _calculate_relevance(self, item: Dict) -> Tuple[float, List[str]]:
         """
         Calcule le score de pertinence
+        OBLIGATOIRE: L'article DOIT parler d'extensions capillaires
         """
         text = f"{item.get('title', '')} {item.get('summary', '')}".lower()
         
-        # Exclusions
+        # =============================================
+        # ÉTAPE 1: Exclusions (rejette immédiatement)
+        # =============================================
         for keyword in EXCLUDE_KEYWORDS:
             if keyword in text:
+                logger.debug(f"❌ Exclu (mot interdit '{keyword}'): {item.get('title', '')[:40]}")
                 return 0.0, []
         
-        # Score positif
-        matched_keywords = []
-        score = 0.0
+        # =============================================
+        # ÉTAPE 2: OBLIGATOIRE - Doit contenir un mot d'extension
+        # =============================================
+        has_extension_keyword = False
+        extension_matched = []
         
+        for keyword in REQUIRED_EXTENSION_KEYWORDS:
+            if keyword in text:
+                has_extension_keyword = True
+                extension_matched.append(keyword)
+        
+        # Si aucun mot d'extension trouvé, rejeter l'article
+        if not has_extension_keyword:
+            logger.debug(f"❌ Rejeté (pas d'extension): {item.get('title', '')[:40]}")
+            return 0.0, []
+        
+        # =============================================
+        # ÉTAPE 3: Score de base + bonus
+        # =============================================
+        matched_keywords = extension_matched.copy()
+        score = 0.5  # Score de base car contient un mot d'extension
+        
+        # Bonus pour chaque mot d'extension supplémentaire
+        score += len(extension_matched) * 0.1
+        
+        # Bonus pour mots-clés secondaires
         for keyword in INCLUDE_KEYWORDS:
             if keyword in text:
                 matched_keywords.append(keyword)
-                score += 0.15
+                score += 0.05
         
         # Bonus Canada
         for keyword in CANADA_KEYWORDS:
@@ -203,8 +231,9 @@ class ContentDiscoveryService:
         
         # Bonus source fiable
         if item.get("is_trusted"):
-            score += 0.2
+            score += 0.15
         
+        logger.debug(f"✅ Pertinent ({score:.2f}): {item.get('title', '')[:40]}")
         return min(score, 1.0), matched_keywords
     
     # ============================================
