@@ -439,40 +439,35 @@ Tu crées des images pour Luxura Distribution (extensions capillaires premium au
 CONTEXTE ACTUEL:
 - Saison: {season['name_fr']}
 - Occasion: {seasonal_ctx['occasion']}
-- Atmosphère: {season['atmosphere']}
-- Éléments visuels: {image_context}
 
-STYLE LUXURA:
-1. Femmes élégantes avec extensions capillaires visibles
-2. PEUT montrer: visage, profil, dos, groupe de femmes, événement
-3. Cheveux jusqu'au MILIEU du dos MAXIMUM (trois-quarts du dos, PAS plus long)
-4. Style: lifestyle/beauté adapté au contexte du post
-5. Ambiance: {season['atmosphere']}
-6. Couleurs: {', '.join(season['colors'])}
+STYLE NATUREL ET AUTHENTIQUE (TRÈS IMPORTANT):
+1. Photos CANDIDES, moments naturels, pas posées
+2. Maximum 1 à 2 personnes (JAMAIS de groupe de 5+)
+3. Cheveux jusqu'au MILIEU du dos MAXIMUM (trois-quarts du dos)
+4. Lumière naturelle réaliste (pas de studio parfait)
+5. Vêtements normaux du quotidien (pas de coordination de couleurs parfaite)
+6. Expression naturelle, pas de sourire forcé "stock photo"
 
-RÈGLE LONGUEUR CHEVEUX (TRÈS IMPORTANT):
-- Cheveux s'arrêtent au MILIEU du dos ou aux omoplates
-- JAMAIS de cheveux dépassant les trois-quarts du dos
-- Termes à utiliser: "mid-back length hair" ou "shoulder blade length hair"
+CE QU'ON VEUT:
+- Style photojournalisme ou photo candide
+- Moment authentique capturé sur le vif
+- Une femme seule ou deux amies/mère-fille max
+- Ambiance réelle, pas publicitaire
+- Termes: "candid moment", "natural lighting", "authentic", "documentary style"
 
-CE QUI EST PERMIS:
-- Visage visible, sourire, regard
-- Une femme ou plusieurs femmes ensemble
-- Contexte événementiel (fête, mariage, graduation, brunch, etc.)
-- Poses variées (debout, assise, marchant, etc.)
-- Interaction avec d'autres personnes
+CE QU'ON NE VEUT PAS:
+- Groupes de 5+ personnes
+- Poses parfaites synchronisées
+- Tout le monde en couleurs assorties
+- Style "stock photo" commercial
+- Éclairage de studio parfait
+- CGI ou rendu trop lisse
 
-ÉLÉMENTS SAISONNIERS À INCLURE:
-{image_context}
+RÈGLE CHEVEUX:
+- "mid-back length hair" ou "shoulder blade length hair"
+- JAMAIS plus long que trois-quarts du dos
 
-INTERDITS:
-- Cheveux trop longs (dépassant les trois-quarts du dos)
-- Mannequin en plastique
-- Texte, logo, watermark
-- CGI ou rendu 3D artificiel
-- Éléments de MAUVAISE saison
-
-L'image DOIT correspondre au contenu du post Facebook ci-dessous.
+L'image DOIT avoir l'air d'une VRAIE photo prise par un ami, pas une pub.
 
 Retourne UNIQUEMENT le prompt en anglais (max 250 caractères)."""
 
