@@ -3063,6 +3063,268 @@ async def trigger_blog_generation_now():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== CRON FACEBOOK AUTO-POST ====================
+# Endpoint appelé par les Cron Jobs Render pour poster automatiquement sur Facebook
+
+FACEBOOK_POST_TEMPLATES = {
+    "educational": {
+        "topics": [
+            "Comment choisir la bonne longueur d'extensions pour votre visage",
+            "Les 5 erreurs à éviter lors de la pose d'extensions",
+            "Guide complet: Entretien de vos extensions capillaires",
+            "Pourquoi les extensions Remy sont supérieures aux synthétiques",
+            "Comment dormir avec des extensions sans les abîmer"
+        ],
+        "hashtags": "#ExtensionsCapillaires #ConseilsBeauté #Coiffure #Luxura #Québec"
+    },
+    "product": {
+        "topics": [
+            "Découvrez nos extensions Tape-In premium - qualité Remy",
+            "Nouveau: Extensions Kératine disponibles en 45 couleurs",
+            "Extensions Clip-In: Transformation instantanée!",
+            "Extensions Ponytail: Élégance en 2 minutes",
+            "Qualité professionnelle, prix accessible - Extensions Luxura"
+        ],
+        "hashtags": "#Extensions #Cheveux #Beauté #Luxura #Montréal #SalonCoiffure"
+    },
+    "weekend": {
+        "topics": [
+            "Prête pour le weekend? Nos extensions vous donnent ce look!",
+            "Inspiration coiffure du weekend avec Luxura",
+            "Weekend = temps de prendre soin de vos extensions!",
+            "Sortie ce soir? Extensions Luxura pour un look parfait",
+            "Détente du weekend: Masque hydratant pour vos extensions"
+        ],
+        "hashtags": "#Weekend #BeautéQuébec #Extensions #Luxura #LookDuJour"
+    }
+}
+
+@api_router.post("/cron/facebook/auto-post")
+async def cron_facebook_auto_post(category: str = "educational"):
+    """
+    📱 Endpoint pour les Cron Jobs Render - Publication automatique Facebook
+    
+    AVEC génération IA:
+    - Texte généré par GPT-4o
+    - Image générée par DALL-E 3
+    - Publication avec photo sur Facebook
+    
+    Catégories:
+    - educational: Mardi/Jeudi - Conseils et tutoriels
+    - product: Lundi/Mercredi/Vendredi - Mise en avant produits
+    - weekend: Samedi - Posts lifestyle/inspiration
+    """
+    import random
+    from datetime import datetime
+    
+    logger.info(f"🔔 CRON Facebook Auto-Post déclenché - Catégorie: {category}")
+    
+    openai_key = os.getenv("OPENAI_API_KEY")
+    fb_token = os.getenv("FB_PAGE_ACCESS_TOKEN")
+    fb_page_id = os.getenv("FB_PAGE_ID", "1838415193042352")
+    
+    if not fb_token:
+        logger.error("❌ FB_PAGE_ACCESS_TOKEN non configuré")
+        return {"success": False, "error": "FB_PAGE_ACCESS_TOKEN non configuré", "category": category}
+    
+    template = FACEBOOK_POST_TEMPLATES.get(category, FACEBOOK_POST_TEMPLATES["educational"])
+    topic = random.choice(template["topics"])
+    hashtags = template["hashtags"]
+    current_date = datetime.now().strftime("%d/%m/%Y")
+    
+    generated_text = None
+    generated_image_url = None
+    
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        
+        # ==================== 1. GÉNÉRATION TEXTE GPT-4o ====================
+        if openai_key:
+            try:
+                logger.info("🤖 Génération du texte avec GPT-4o...")
+                
+                if category == "educational":
+                    gpt_prompt = f"""Tu es le community manager de Luxura Distribution, spécialiste des extensions capillaires premium au Québec.
+                    
+Écris un post Facebook ÉDUCATIF sur ce sujet: "{topic}"
+
+Le post doit:
+- Être informatif et utile pour les femmes québécoises
+- Avoir un ton professionnel mais chaleureux
+- Faire 150-200 mots maximum
+- Inclure des emojis pertinents
+- Terminer par un appel à l'action vers luxuradistribution.com
+- NE PAS inclure de hashtags (je les ajouterai après)
+
+Écris UNIQUEMENT le texte du post, rien d'autre."""
+
+                elif category == "product":
+                    gpt_prompt = f"""Tu es le community manager de Luxura Distribution, spécialiste des extensions capillaires premium au Québec.
+                    
+Écris un post Facebook PROMOTIONNEL sur: "{topic}"
+
+Le post doit:
+- Mettre en valeur la qualité premium des extensions Luxura
+- Mentionner les avantages (cheveux Remy 100%, 45 couleurs, qualité salon)
+- Être persuasif mais authentique
+- Faire 100-150 mots maximum
+- Inclure des emojis pertinents
+- Appel à l'action: commander sur luxuradistribution.com
+- NE PAS inclure de hashtags
+
+Écris UNIQUEMENT le texte du post."""
+
+                else:  # weekend
+                    gpt_prompt = f"""Tu es le community manager de Luxura Distribution, spécialiste des extensions capillaires premium au Québec.
+                    
+Écris un post Facebook LIFESTYLE/WEEKEND sur: "{topic}"
+
+Le post doit:
+- Être inspirant et positif
+- Parler de beauté, confiance en soi, weekend
+- Ton décontracté et amical
+- Faire 100-150 mots maximum
+- Inclure des emojis festifs
+- Souhaiter un bon weekend
+- NE PAS inclure de hashtags
+
+Écris UNIQUEMENT le texte du post."""
+
+                gpt_response = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {openai_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "gpt-4o",
+                        "messages": [{"role": "user", "content": gpt_prompt}],
+                        "max_tokens": 500,
+                        "temperature": 0.8
+                    }
+                )
+                
+                if gpt_response.status_code == 200:
+                    gpt_result = gpt_response.json()
+                    generated_text = gpt_result["choices"][0]["message"]["content"].strip()
+                    logger.info(f"✅ Texte GPT-4o généré ({len(generated_text)} chars)")
+                else:
+                    logger.warning(f"⚠️ GPT-4o erreur: {gpt_response.status_code}")
+                    
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur GPT-4o: {e}")
+        
+        # ==================== 2. GÉNÉRATION IMAGE DALL-E 3 ====================
+        if openai_key:
+            try:
+                logger.info("🎨 Génération de l'image avec DALL-E 3...")
+                
+                if category == "educational":
+                    dalle_prompt = "Professional hair salon setting, beautiful woman with long flowing hair extensions, natural lighting, elegant and educational mood, high-end beauty photography, soft colors, Quebec Canadian style"
+                elif category == "product":
+                    dalle_prompt = "Luxurious hair extensions display, premium Remy human hair, multiple colors arranged beautifully, professional product photography, elegant gold and cream tones, high-end beauty brand aesthetic"
+                else:  # weekend
+                    dalle_prompt = "Happy confident woman with beautiful long hair extensions enjoying weekend, lifestyle photography, natural outdoor setting, warm golden hour lighting, joyful and relaxed mood, Quebec Canadian beauty"
+                
+                dalle_response = await client.post(
+                    "https://api.openai.com/v1/images/generations",
+                    headers={
+                        "Authorization": f"Bearer {openai_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "dall-e-3",
+                        "prompt": dalle_prompt,
+                        "n": 1,
+                        "size": "1024x1024",
+                        "quality": "standard"
+                    }
+                )
+                
+                if dalle_response.status_code == 200:
+                    dalle_result = dalle_response.json()
+                    generated_image_url = dalle_result["data"][0]["url"]
+                    logger.info(f"✅ Image DALL-E générée: {generated_image_url[:50]}...")
+                else:
+                    error_detail = dalle_response.text[:200]
+                    logger.warning(f"⚠️ DALL-E erreur {dalle_response.status_code}: {error_detail}")
+                    
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur DALL-E: {e}")
+        
+        # ==================== 3. CONSTRUIRE LE MESSAGE FINAL ====================
+        if generated_text:
+            message = f"{generated_text}\n\n{hashtags}"
+        else:
+            # Fallback si GPT échoue
+            if category == "educational":
+                message = f"📚 Conseil du jour - {current_date}\n\n{topic}\n\nPour plus d'informations, visitez notre site!\n\n🌐 luxuradistribution.com\n📧 info@luxuradistribution.com\n\n{hashtags}"
+            elif category == "product":
+                message = f"✨ Produit vedette - {current_date}\n\n{topic}\n\n👉 Commandez maintenant sur luxuradistribution.com\n💰 Prix professionnels disponibles pour les salons\n\n{hashtags}"
+            else:
+                message = f"🌟 Inspiration Weekend - {current_date}\n\n{topic}\n\nPassez un excellent weekend! 💕\n\n🌐 luxuradistribution.com\n\n{hashtags}"
+        
+        # ==================== 4. PUBLIER SUR FACEBOOK ====================
+        try:
+            if generated_image_url:
+                # Publication avec photo
+                logger.info("📸 Publication Facebook avec photo...")
+                fb_response = await client.post(
+                    f"https://graph.facebook.com/v25.0/{fb_page_id}/photos",
+                    data={
+                        "url": generated_image_url,
+                        "caption": message,
+                        "access_token": fb_token
+                    }
+                )
+            else:
+                # Publication texte seul (fallback)
+                logger.info("📝 Publication Facebook texte seul...")
+                fb_response = await client.post(
+                    f"https://graph.facebook.com/v25.0/{fb_page_id}/feed",
+                    data={
+                        "message": message,
+                        "access_token": fb_token
+                    }
+                )
+            
+            result = fb_response.json()
+            
+            if "error" in result:
+                error = result["error"]
+                logger.error(f"❌ Erreur Facebook: {error}")
+                return {
+                    "success": False, 
+                    "error": error.get("message"), 
+                    "category": category,
+                    "ai_text_generated": generated_text is not None,
+                    "ai_image_generated": generated_image_url is not None
+                }
+            
+            post_id = result.get("id") or result.get("post_id")
+            logger.info(f"✅ Post Facebook publié: {post_id}")
+            
+            return {
+                "success": True,
+                "post_id": post_id,
+                "category": category,
+                "message": message,
+                "ai_text_generated": generated_text is not None,
+                "ai_image_generated": generated_image_url is not None,
+                "image_url": generated_image_url,
+                "page_url": f"https://www.facebook.com/{fb_page_id}",
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur publication Facebook: {e}")
+            return {
+                "success": False, 
+                "error": str(e), 
+                "category": category,
+                "ai_text_generated": generated_text is not None,
+                "ai_image_generated": generated_image_url is not None
+            }
+
 
 @api_router.get("/blog/wix-posts")
 async def list_wix_blog_posts(limit: int = 50):
@@ -5648,6 +5910,15 @@ try:
     logger.info("✅ Mounted app/routes/content.py router (/api/content)")
 except Exception:
     logger.exception("❌ Failed to mount content router")
+
+# ==================== GROK / xAI ROUTES ====================
+try:
+    from app.routes.grok import router as grok_router
+    app.include_router(grok_router, prefix="/api")
+    logger.info("✅ Mounted app/routes/grok.py router (/api/grok)")
+except Exception:
+    logger.exception("❌ Failed to mount grok router")
+
 
 
 # ==================== WIX TOKEN ROUTES (compatibilité avec anciennes versions) ====================
