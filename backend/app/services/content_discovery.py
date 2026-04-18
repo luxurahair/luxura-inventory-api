@@ -441,36 +441,35 @@ CONTEXTE ACTUEL:
 - Occasion: {seasonal_ctx['occasion']}
 
 CHEVEUX - RÈGLES ESSENTIELLES (COMPAGNIE D'EXTENSIONS):
-1. Cheveux TRÈS VOLUMINEUX - plus que naturel, effet "wow"
-2. Texture SOYEUSE, brillante, luxueuse
+1. Cheveux avec un BEAU VOLUME NATUREL - pas exagéré, pas artificiel
+2. Texture SOYEUSE, brillante mais naturelle
 3. LONGUEUR MINIMUM: mi-dos, tombant vers l'avant sur la poitrine
 4. LONGUEUR MAXIMUM: trois-quarts du dos
 5. Les cheveux peuvent tomber vers l'avant, encadrer le visage
-6. Volume impressionnant visible - c'est une pub pour extensions!
-7. Termes: "voluminous thick hair", "silky luxurious hair", "hair falling forward over shoulders"
+6. Volume élégant et naturel - pas "perruque" ou "trop parfait"
+7. Termes: "naturally full hair", "silky healthy hair", "hair falling over shoulders"
 
 STYLE NATUREL ET AUTHENTIQUE:
-1. Photos CANDIDES, moments naturels, pas trop posées
+1. Photos CANDIDES, moments naturels
 2. Maximum 1 à 2 personnes
 3. Lumière naturelle réaliste
-4. Expression naturelle, pas de sourire forcé "stock photo"
-5. Style photojournalisme ou lifestyle authentique
+4. Expression naturelle
+5. Style lifestyle authentique
 
 CE QU'ON VEUT:
-- Cheveux VOLUMINEUX et SOYEUX (effet extensions visible)
+- Cheveux BEAUX et SOYEUX avec volume naturel
 - Longueur mi-dos à 3/4 dos, peut tomber sur la poitrine
-- Moment authentique mais cheveux spectaculaires
-- Une femme ou deux max
-- Termes: "thick voluminous silky hair", "hair cascading over shoulders", "luxurious hair volume"
+- Aspect santé, brillance naturelle
+- Termes: "healthy shiny hair", "naturally full", "soft silky texture"
 
 CE QU'ON NE VEUT PAS:
-- Cheveux fins ou naturels sans volume
-- Cheveux trop courts (doivent être au moins mi-dos)
-- Cheveux trop longs (pas plus que 3/4 du dos)
+- Volume exagéré type publicité L'Oréal
+- Cheveux fins sans volume
+- Cheveux trop courts ou trop longs
+- Style "stock photo" artificiel
 - Groupes de 5+ personnes
-- Style "stock photo" commercial parfait
 
-L'image doit montrer des CHEVEUX SPECTACULAIRES qui donnent envie d'acheter des extensions!
+L'image doit montrer de BEAUX CHEVEUX naturels qui inspirent confiance.
 
 Retourne UNIQUEMENT le prompt en anglais (max 250 caractères)."""
 
