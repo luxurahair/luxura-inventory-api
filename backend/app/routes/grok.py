@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 class ImageRequest(BaseModel):
     prompt: str
     n: Optional[int] = 1
-    model: Optional[str] = "grok-2-image"
+    model: Optional[str] = "grok-imagine-image"
 
 
 class VideoRequest(BaseModel):
@@ -284,7 +284,7 @@ def generate_luxura_image(request: LuxuraProductRequest):
             f"{XAI_BASE_URL}/images/generations",
             headers=get_headers(),
             json={
-                "model": "grok-2-image",
+                "model": "grok-imagine-image",
                 "prompt": prompt,
                 "n": 1
             },

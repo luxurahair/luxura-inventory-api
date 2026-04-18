@@ -68,7 +68,7 @@ class FacebookPublisher:
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": "grok-2-image",
+                        "model": "grok-imagine-image",
                         "prompt": prompt,
                         "n": 1
                     }
