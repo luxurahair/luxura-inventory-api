@@ -472,6 +472,123 @@ class LuxuraAPITester:
         except Exception as e:
             self.log_result("SEO Stats API", False, f"Error: {str(e)}")
 
+    def test_content_pipeline_endpoints(self):
+        """Test Daily Content Pipeline API endpoints"""
+        print("\n📰 TESTING CONTENT PIPELINE ENDPOINTS")
+        print("-" * 40)
+        
+        # Test 1: GET /api/content/sources - Should return search queries and trusted sources
+        try:
+            response = self.session.get(f"{BASE_URL}/content/sources")
+            if response.status_code == 200:
+                data = response.json()
+                required_fields = ["search_queries", "trusted_sources", "include_keywords_count"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    self.log_result("Content Sources API", True, 
+                        f"Returns content sources config: {len(data.get('search_queries', []))} queries, "
+                        f"{len(data.get('trusted_sources', []))} sources", data)
+                else:
+                    self.log_result("Content Sources API", False, f"Missing fields: {missing_fields}", data)
+            else:
+                self.log_result("Content Sources API", False, f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_result("Content Sources API", False, f"Error: {str(e)}")
+        
+        # Test 2: GET /api/content/posts/facebook - Should list generated posts (may be empty initially)
+        try:
+            response = self.session.get(f"{BASE_URL}/content/posts/facebook")
+            if response.status_code == 200:
+                data = response.json()
+                if "posts" in data and "total" in data:
+                    self.log_result("Facebook Posts List API", True, 
+                        f"Returns posts list: {data.get('total', 0)} posts", data)
+                else:
+                    self.log_result("Facebook Posts List API", False, "Missing expected fields", data)
+            else:
+                self.log_result("Facebook Posts List API", False, f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_result("Facebook Posts List API", False, f"Error: {str(e)}")
+        
+        # Test 3: POST /api/content/jobs/daily-run - Should trigger background job
+        try:
+            response = self.session.post(f"{BASE_URL}/content/jobs/daily-run")
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status") == "started":
+                    self.log_result("Daily Job Trigger API", True, "Successfully triggered daily content job", data)
+                else:
+                    self.log_result("Daily Job Trigger API", False, f"Unexpected response: {data}")
+            else:
+                self.log_result("Daily Job Trigger API", False, f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_result("Daily Job Trigger API", False, f"Error: {str(e)}")
+        
+        # Test 4: POST /api/content/ingest/hair-canada?max_posts=1 - Full pipeline test
+        print("   🚀 Testing full content pipeline (this may take 30-60 seconds)...")
+        try:
+            # Use longer timeout for this endpoint as it makes real HTTP calls
+            response = self.session.post(f"{BASE_URL}/content/ingest/hair-canada?max_posts=1", timeout=90)
+            if response.status_code == 200:
+                data = response.json()
+                required_fields = ["success", "articles_found", "posts_generated", "posts"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields and data.get("success"):
+                    posts = data.get("posts", [])
+                    if posts:
+                        # Check first post structure
+                        first_post = posts[0]
+                        post_fields = ["post_text", "hashtags", "confidence_score", "status"]
+                        missing_post_fields = [field for field in post_fields if field not in first_post]
+                        
+                        if not missing_post_fields:
+                            # Check for French text and hashtags
+                            post_text = first_post.get("post_text", "")
+                            hashtags = first_post.get("hashtags", [])
+                            has_french = any(word in post_text.lower() for word in ["luxura", "extensions", "cheveux", "beauté"])
+                            has_hashtags = len(hashtags) > 0
+                            
+                            if has_french and has_hashtags:
+                                self.log_result("Content Ingest Pipeline", True, 
+                                    f"Full pipeline working: {data.get('articles_found', 0)} articles found, "
+                                    f"{data.get('posts_generated', 0)} posts generated with French text and hashtags", 
+                                    {
+                                        "articles_found": data.get("articles_found"),
+                                        "posts_generated": data.get("posts_generated"),
+                                        "sample_post": {
+                                            "text_preview": post_text[:100] + "...",
+                                            "hashtags_count": len(hashtags),
+                                            "confidence_score": first_post.get("confidence_score"),
+                                            "status": first_post.get("status")
+                                        }
+                                    })
+                            else:
+                                issues = []
+                                if not has_french:
+                                    issues.append("No French content detected")
+                                if not has_hashtags:
+                                    issues.append("No hashtags generated")
+                                self.log_result("Content Ingest Pipeline", False, f"Content quality issues: {', '.join(issues)}", first_post)
+                        else:
+                            self.log_result("Content Ingest Pipeline", False, f"Generated post missing fields: {missing_post_fields}", first_post)
+                    else:
+                        self.log_result("Content Ingest Pipeline", False, "No posts generated despite success=true", data)
+                else:
+                    issues = []
+                    if missing_fields:
+                        issues.append(f"Missing fields: {missing_fields}")
+                    if not data.get("success"):
+                        issues.append("Pipeline reported failure")
+                    self.log_result("Content Ingest Pipeline", False, "; ".join(issues), data)
+            else:
+                self.log_result("Content Ingest Pipeline", False, f"HTTP {response.status_code}: {response.text}")
+        except requests.exceptions.Timeout:
+            self.log_result("Content Ingest Pipeline", False, "Request timed out after 90 seconds - pipeline may be working but slow")
+        except Exception as e:
+            self.log_result("Content Ingest Pipeline", False, f"Error: {str(e)}")
+
     def run_all_tests(self):
         """Run all tests including backlink automation"""
         print("🚀 Starting Luxura Distribution Complete Testing Suite")
@@ -483,20 +600,23 @@ class LuxuraAPITester:
         self.test_health_check()
         self.test_products_list()
         self.test_single_product()
-        self.test_product_category_filter()
-        self.test_categories_list()
+        self.test_products_filter()
+        self.test_categories()
         self.test_blog_list()
         self.test_single_blog_post()
-        self.test_salons_list()
+        self.test_salons()
         
         # Auth Tests (expect 401 for protected endpoints)
         print("\n🔐 TESTING AUTH PROTECTION")
         print("-" * 30)
         self.test_auth_endpoints()
-        self.test_cart_api_protection()
+        self.test_cart_unauthorized()
         
         # SEO & Backlink Tests
         self.test_seo_backlink_endpoints()
+        
+        # Content Pipeline Tests
+        self.test_content_pipeline_endpoints()
         
         # Backlink Automation Tests
         self.test_backlink_automation_system()

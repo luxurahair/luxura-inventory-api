@@ -5641,6 +5641,15 @@ try:
 except Exception:
     logger.exception("❌ Failed to mount movement router")
 
+# ==================== CONTENT AUTOMATION ROUTES ====================
+try:
+    from app.routes.content import router as content_router
+    app.include_router(content_router, prefix="/api")
+    logger.info("✅ Mounted app/routes/content.py router (/api/content)")
+except Exception:
+    logger.exception("❌ Failed to mount content router")
+
+
 # ==================== WIX TOKEN ROUTES (compatibilité avec anciennes versions) ====================
 
 @app.post("/wix/token")

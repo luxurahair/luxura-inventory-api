@@ -307,6 +307,18 @@ test_plan:
         agent: "main"
         comment: "✅ FIXED - Completely rewrote Color Engine to V8 with frequency decomposition. Now uses high-frequency extraction to preserve texture/details while transferring color via HSV. Tests pass with 9/10 quality rating. High resolution 1200x1200 preserved. Both dark colors (#1A) and blonde colors (#24) work correctly."
 
+  - task: "Daily Content Pipeline API"
+    implemented: true
+    working: true
+    file: "/app/backend/app/routes/content.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED - Daily Content Pipeline fully operational: GET /api/content/sources returns 16 search queries and 16 trusted sources ✅, GET /api/content/posts/facebook returns posts list ✅, POST /api/content/jobs/daily-run triggers background job ✅, POST /api/content/ingest/hair-canada full pipeline working with Google News scraping, relevance filtering, French translation, and Facebook post generation with GPT-4o. Generated post contains French text, hashtags, confidence score 0.85, and approved status. Real HTTP calls to Google News and OpenAI working correctly."
+
 agent_communication:
   - agent: "main"
     message: "MVP implementation complete. Please test all backend APIs especially products, cart with auth, and verify data seeding works correctly."
@@ -316,3 +328,5 @@ agent_communication:
     message: "🔗 BACKLINK AUTOMATION SYSTEM TESTED - ALL COMPONENTS OPERATIONAL (8/8): Playwright automation system fully functional with business info for Luxura Distribution, 8 target directories configured (Hotfrog Canada, Cylex Canada, iGlobal, Canpages, Yelp Canada, etc.), Playwright installed and ready, screenshot directory prepared, all automation functions working. SEO endpoints operational. System ready for directory submissions to create backlinks. Recommend adding API endpoints for integration."
   - agent: "main"
     message: "🎨 COLOR ENGINE V8 FIX COMPLETE - User reported gray/blurry images with #1A color. Root cause: Previous HSV method was losing high-frequency details (texture). Solution: Rewrote to V8 using frequency decomposition - extracts high-freq details BEFORE color transfer, applies HSV color shift, then RE-INJECTS the original details. Result: 9/10 quality rating from AI analysis, full 1200x1200 resolution preserved, sharp images with accurate color transfer. Both dark (#1A) and light (#24) colors tested successfully."
+  - agent: "testing"
+    message: "📰 DAILY CONTENT PIPELINE TESTING COMPLETE - ALL ENDPOINTS OPERATIONAL (4/4): GET /api/content/sources ✅ (returns 16 search queries, 16 trusted sources), GET /api/content/posts/facebook ✅ (returns posts list), POST /api/content/jobs/daily-run ✅ (triggers background job), POST /api/content/ingest/hair-canada ✅ (full pipeline working). Complete workflow tested: Google News scraping → relevance filtering → French translation → GPT-4o Facebook post generation. Generated post contains proper French text, hashtags, confidence score 0.85, approved status. Real HTTP calls to Google News and OpenAI APIs working correctly with 30-60 second timeout."
