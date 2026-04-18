@@ -414,27 +414,46 @@ Le post doit:
     
     async def _generate_image_prompt(self, item: Dict) -> str:
         """
-        Génère un prompt DALL-E PHOTORÉALISTE pour l'image du post
-        IMPORTANT: Éviter les rendus CGI/3D - viser le style photographie réelle
+        Génère un prompt DALL-E pour l'image du post
+        Utilise le style Luxura: lifestyle, femme de dos, cheveux fluides, lumière naturelle
         """
         title = item.get("title_fr") or item["title"]
         
         if not self.openai_key:
-            return "Photograph of hair extensions on mannequin head, professional salon lighting, DSLR camera style, realistic hair texture, clean white background"
+            # Fallback avec le style Luxura
+            return "Beautiful woman from behind showing long flowing hair extensions, natural wavy hair, golden hour lighting, lifestyle beauty photography, soft focus background, elegant and aspirational, no face visible, no text"
         
-        prompt = f"""Tu dois créer un prompt DALL-E pour illustrer cet article sur les extensions capillaires:
+        system_prompt = """Tu es un expert en création de prompts pour DALL-E 3.
+Tu crées des images pour Luxura Distribution (extensions capillaires premium au Québec).
+
+STYLE LUXURA (OBLIGATOIRE):
+1. Femme vue de DOS ou de profil (jamais de face)
+2. Cheveux longs, fluides, naturels (extensions visibles)
+3. Lumière: golden hour, naturelle, douce
+4. Style: lifestyle/beauté, pas commercial
+5. Ambiance: aspirationnelle, élégante, féminine
+6. Décor: extérieur nature, salon lumineux, ou près d'une fenêtre
+7. Couleurs: tons chauds, dorés, naturels
+
+INTERDITS:
+- Visage visible de face
+- Mannequin ou tête en plastique
+- Appareil photo ou équipement studio
+- Texte, logo, graphisme
+- Style commercial ou catalogue
+- CGI ou rendu 3D
+
+EXEMPLES DE BONS PROMPTS:
+- "Beautiful woman from behind showing long flowing hair extensions, natural wavy hair, golden hour lighting, lifestyle beauty photography"
+- "Woman brushing beautiful long hair near window, soft natural morning light, cozy aesthetic, peaceful feminine atmosphere"
+- "Long flowing hair extensions in wind, outdoor nature setting, sunset golden light, aspirational beauty moment"
+
+Retourne UNIQUEMENT le prompt en anglais (max 200 caractères)."""
+
+        user_prompt = f"""Crée un prompt DALL-E pour illustrer cet article sur les extensions capillaires:
 "{title}"
 
-RÈGLES STRICTES pour un résultat PHOTORÉALISTE:
-1. Utilise des termes de PHOTOGRAPHIE: "photograph", "DSLR", "natural lighting", "candid"
-2. ÉVITE: "elegant", "luxurious", "sophisticated", "stunning" (ces mots créent du CGI)
-3. Montre les extensions sur mannequin OU vue de dos d'une femme (évite les visages)
-4. Style: photographie produit professionnelle ou photo de salon de coiffure
-5. Éclairage naturel, fond neutre ou salon réel
-
-Réponds UNIQUEMENT avec le prompt en anglais (max 150 caractères).
-Exemple bon: "Photograph of long brown hair extensions on mannequin, salon window light, realistic texture"
-Exemple mauvais: "Elegant woman with stunning luxurious hair" (trop CGI)"""
+Le prompt doit capturer l'essence de ce sujet tout en respectant le style Luxura."""
         
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -446,25 +465,24 @@ Exemple mauvais: "Elegant woman with stunning luxurious hair" (trop CGI)"""
                     },
                     json={
                         "model": "gpt-4o",
-                        "messages": [{"role": "user", "content": prompt}],
-                        "max_tokens": 100,
-                        "temperature": 0.5
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        "max_tokens": 150,
+                        "temperature": 0.6
                     }
                 )
                 
                 if response.status_code == 200:
                     result = response.json()
-                    generated_prompt = result["choices"][0]["message"]["content"].strip()
-                    # Ajouter des termes photoréalistes si manquants
-                    if "photograph" not in generated_prompt.lower() and "photo" not in generated_prompt.lower():
-                        generated_prompt = "Photograph, " + generated_prompt
-                    return generated_prompt
+                    return result["choices"][0]["message"]["content"].strip()
                     
         except Exception as e:
             logger.error(f"Erreur prompt image: {e}")
         
-        # Fallback photoréaliste
-        return "Photograph of long hair extensions displayed in professional salon, natural window lighting, realistic texture, clean background"
+        # Fallback Luxura style
+        return "Beautiful woman from behind showing long flowing hair extensions, golden hour natural lighting, lifestyle beauty photography, elegant aspirational mood, no face visible"
     
     def _select_hashtags(self, item: Dict) -> List[str]:
         """
