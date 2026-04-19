@@ -1,0 +1,161 @@
+name: "🔧 Luxura Auto-Repair System"
+
+on:
+  schedule:
+    # Toutes les 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action à exécuter'
+        required: true
+        default: 'check'
+        type: choice
+        options:
+          - check
+          - repair
+          - backup
+          - deploy
+          - deploy-clear-cache
+
+env:
+  RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+  RENDER_SERVICE_ID: srv-d46bkg2li9vc73dean4g
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+  EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+  NOTIFY_EMAIL: info@luxuradistribution.com
+  RENDER_SERVICE_URL: https://luxura-inventory-api.onrender.com
+
+jobs:
+  health-check:
+    name: "🏥 Health Check"
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.check.outputs.status }}
+      health_score: ${{ steps.check.outputs.health_score }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install httpx python-dotenv
+      
+      - name: Run Health Check
+        id: check
+        run: |
+          python scripts/auto_repair_system.py --check > health_report.json 2>&1 || true
+          
+          # Extraire les résultats
+          STATUS=$(python -c "import json; data=json.load(open('health_report.json')); print(data.get('status', 'unknown'))" 2>/dev/null || echo "critical")
+          SCORE=$(python -c "import json; data=json.load(open('health_report.json')); print(data.get('health_score', 0))" 2>/dev/null || echo "0")
+          
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "health_score=$SCORE" >> $GITHUB_OUTPUT
+          
+          echo "### 🏥 Health Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: $STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health Score**: $SCORE%" >> $GITHUB_STEP_SUMMARY
+          
+          cat health_report.json >> $GITHUB_STEP_SUMMARY || true
+
+  auto-repair:
+    name: "🔧 Auto Repair"
+    needs: health-check
+    if: needs.health-check.outputs.status == 'critical'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install httpx python-dotenv
+      
+      - name: Trigger Repair
+        run: |
+          echo "### 🔧 Auto-Repair Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "L'API est en état critique. Déclenchement de la réparation..." >> $GITHUB_STEP_SUMMARY
+          
+          python scripts/auto_repair_system.py --repair
+
+  create-backup:
+    name: "💾 Create Backup"
+    needs: health-check
+    if: needs.health-check.outputs.status == 'healthy' && needs.health-check.outputs.health_score == '100'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install httpx python-dotenv
+      
+      - name: Create Backup Tag
+        run: |
+          echo "### 💾 Creating Backup" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "L'API est 100% healthy. Création d'un backup..." >> $GITHUB_STEP_SUMMARY
+          
+          python scripts/auto_repair_system.py --backup
+
+  manual-action:
+    name: "⚙️ Manual Action"
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install httpx python-dotenv
+      
+      - name: Execute Action
+        run: |
+          ACTION="${{ github.event.inputs.action }}"
+          
+          echo "### ⚙️ Manual Action: $ACTION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          case $ACTION in
+            check)
+              python scripts/auto_repair_system.py --check
+              ;;
+            repair)
+              python scripts/auto_repair_system.py --repair
+              ;;
+            backup)
+              python scripts/auto_repair_system.py --backup
+              ;;
+            deploy)
+              python scripts/auto_repair_system.py --deploy
+              ;;
+            deploy-clear-cache)
+              python scripts/auto_repair_system.py --deploy --clear-cache
+              ;;
+          esac
