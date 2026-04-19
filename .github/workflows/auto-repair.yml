@@ -20,11 +20,11 @@ on:
 
 env:
   RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-  RENDER_SERVICE_ID: srv-d46bkg2li9vc73dean4g
+  RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
-  EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-  NOTIFY_EMAIL: info@luxuradistribution.com
+  EMAIL_USERNAME: ${{ secrets.LUXURA_EMAIL }}
+  EMAIL_PASSWORD: ${{ secrets.LUXURA_APP_PASSWORD }}
+  NOTIFY_EMAIL: ${{ secrets.ADMIN_EMAIL }}
   RENDER_SERVICE_URL: https://luxura-inventory-api.onrender.com
 
 jobs:
