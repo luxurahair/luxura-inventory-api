@@ -134,3 +134,5 @@ asyncpg==0.31.0
 
 # Color Engine dependencies
 opencv-python-headless==4.10.0.84
+beautifulsoup4==4.12.3
+emergentintegrations==0.1.0
