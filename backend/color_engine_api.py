@@ -9,7 +9,6 @@ Module de recolorisation haute qualité professionnelle.
 """
 
 import numpy as np
-import cv2
 from PIL import Image, ImageFilter, ImageEnhance
 import io
 import base64
@@ -17,6 +16,15 @@ from typing import Tuple, Optional
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Import optionnel de cv2 - le serveur démarre même sans
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
+    cv2 = None
+    logger.warning("⚠️ OpenCV (cv2) non disponible - Color Engine désactivé")
 
 
 def create_hair_mask(image: np.ndarray) -> np.ndarray:

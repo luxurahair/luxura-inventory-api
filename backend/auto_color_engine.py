@@ -7,12 +7,31 @@ reçois l'image recolorisée avec le gabarit + watermark.
 
 import os
 import numpy as np
-import cv2
 from PIL import Image
-from rembg import remove
 import io
 import base64
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Import optionnel de cv2 et rembg
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
+    cv2 = None
+    logger.warning("⚠️ OpenCV (cv2) non disponible - Auto Color Engine désactivé")
+
+try:
+    from rembg import remove
+    REMBG_AVAILABLE = True
+except ImportError:
+    REMBG_AVAILABLE = False
+    def remove(img, **kwargs):
+        return img  # No-op fallback
+    logger.warning("⚠️ rembg non disponible - Background removal désactivé")
 
 # Chemin du gabarit sauvegardé
 TEMPLATE_PATH = Path(__file__).parent / "templates" / "gabarit_genius.jpg"
