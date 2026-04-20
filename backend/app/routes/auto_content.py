@@ -185,47 +185,183 @@ Retourne UNIQUEMENT le post prêt à publier (80-120 mots max).""",
 
 # ==================== IMAGES - VRAIES PHOTOS STOCK HAUTE QUALITÉ ====================
 # Photos réelles de femmes avec beaux cheveux (Unsplash/Pexels)
-# Plus naturelles que les images générées par AI
+# Organisées par THÈME SPÉCIFIQUE pour correspondre au contenu
 
-REAL_PHOTO_URLS = {
-    "product": [
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=1200&fit=crop",  # Femme cheveux longs naturels
+THEMED_PHOTOS = {
+    # ==== PRODUITS PAR TYPE ====
+    "genius": [
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=1200&fit=crop",  # Cheveux longs lisses
         "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=1200&fit=crop",  # Cheveux brillants
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&h=1200&fit=crop",  # Portrait beauté
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=1200&fit=crop",  # Femme souriante cheveux
-        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=1200&fit=crop",  # Beauté naturelle
     ],
-    "educational": [
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",  # Salon coiffure
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=1200&fit=crop",  # Styling cheveux
-        "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=1200&h=1200&fit=crop",  # Coiffeuse au travail
-        "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=1200&h=1200&fit=crop",  # Salon pro
+    "tape": [
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=1200&fit=crop",  # Styling salon
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",  # Application salon
     ],
-    "testimonial": [
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=1200&fit=crop",  # Portrait femme heureuse
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=1200&fit=crop",  # Femme naturelle
-        "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?w=1200&h=1200&fit=crop",  # Beauté authentique
+    "halo": [
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=1200&fit=crop",  # Look naturel
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=1200&fit=crop",  # Volume naturel
     ],
-    "b2b": [
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",  # Salon moderne
-        "https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?w=1200&h=1200&fit=crop",  # Équipement pro
-        "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=1200&h=1200&fit=crop",  # Coiffeuse pro
+    "i-tip": [
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&h=1200&fit=crop",  # Cheveux fins
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=1200&fit=crop",  # Discret élégant
     ],
-    "weekend": [
+    "ponytail": [
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=1200&fit=crop",  # Queue de cheval glam
+        "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?w=1200&h=1200&fit=crop",  # Ponytail élégant
+    ],
+    "clip-in": [
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=1200&fit=crop",  # Volume ajouté
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=1200&fit=crop",  # Transformation rapide
+    ],
+    
+    # ==== ÉDUCATIF PAR THÈME ====
+    "entretien": [
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=1200&fit=crop",  # Brossage cheveux
+        "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=1200&h=1200&fit=crop",  # Soins cheveux
+    ],
+    "pose": [
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",  # Salon pose
+        "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=1200&h=1200&fit=crop",  # Coiffeuse travail
+    ],
+    "erreurs": [
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=1200&fit=crop",  # Styling
+        "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=1200&h=1200&fit=crop",  # Conseils pro
+    ],
+    "comparatif": [
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=1200&fit=crop",  # Avant/après
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=1200&fit=crop",  # Comparaison
+    ],
+    "choix_couleur": [
+        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=1200&h=1200&fit=crop",  # Palette couleurs
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=1200&fit=crop",  # Teinte naturelle
+    ],
+    "duree_vie": [
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=1200&fit=crop",  # Cheveux sains
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=1200&fit=crop",  # Longévité
+    ],
+    
+    # ==== WEEKEND/LIFESTYLE ====
+    "mariage": [
+        "https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&h=1200&fit=crop",  # Mariée cheveux
+        "https://images.unsplash.com/photo-1513379733131-47fc74b45fc7?w=1200&h=1200&fit=crop",  # Coiffure mariage
+        "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=1200&h=1200&fit=crop",  # Préparation mariée
+    ],
+    "event": [
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=1200&fit=crop",  # Soirée glamour
+        "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?w=1200&h=1200&fit=crop",  # Événement chic
+    ],
+    "lifestyle": [
         "https://images.unsplash.com/photo-1496440737103-cd596325d314?w=1200&h=1200&fit=crop",  # Cheveux au vent
-        "https://images.unsplash.com/photo-1503830232159-4b417691001e?w=1200&h=1200&fit=crop",  # Lifestyle
-        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=1200&fit=crop",  # Femme glamour
-        "https://images.unsplash.com/photo-1513379733131-47fc74b45fc7?w=1200&h=1200&fit=crop",  # Mariée
+        "https://images.unsplash.com/photo-1503830232159-4b417691001e?w=1200&h=1200&fit=crop",  # Liberté
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=1200&fit=crop",  # Naturel
     ],
-    "magazine": [
+    "avant_apres": [
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=1200&fit=crop",  # Transformation
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=1200&fit=crop",  # Résultat wow
+    ],
+    "motivation": [
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=1200&fit=crop",  # Confiance
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=1200&fit=crop",  # Empowerment
+    ],
+    
+    # ==== B2B ====
+    "offre_salon": [
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",  # Salon moderne
+        "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=1200&h=1200&fit=crop",  # Équipe salon
+    ],
+    "formation": [
+        "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=1200&h=1200&fit=crop",  # Formation coiffure
+        "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=1200&h=1200&fit=crop",  # Apprentissage
+    ],
+    "partenariat": [
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",  # Salon partenaire
+        "https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?w=1200&h=1200&fit=crop",  # Pro équipement
+    ],
+    "marge": [
+        "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=1200&h=1200&fit=crop",  # Business salon
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",  # Succès
+    ],
+    
+    # ==== TÉMOIGNAGES ====
+    "satisfaction": [
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=1200&fit=crop",  # Cliente heureuse
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=1200&fit=crop",  # Sourire satisfaction
+    ],
+    "transformation": [
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=1200&fit=crop",  # Avant/après
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=1200&fit=crop",  # Wow effect
+    ],
+    "resultats": [
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=1200&fit=crop",  # Résultat brillant
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=1200&fit=crop",  # Naturel parfait
+    ],
+    
+    # ==== MAGAZINE/TENDANCES ====
+    "tendance_coupe": [
         "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=1200&h=1200&fit=crop",  # Editorial
         "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1200&h=1200&fit=crop",  # Fashion
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=1200&fit=crop",  # Model beauté
+    ],
+    "quiet_luxury": [
+        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=1200&fit=crop",  # Luxe discret
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=1200&fit=crop",  # Élégance
+    ],
+    "inspiration_internationale": [
+        "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1200&h=1200&fit=crop",  # Fashion week
+        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=1200&h=1200&fit=crop",  # International
     ],
 }
 
-# Garder les anciennes pour fallback
-STOCK_IMAGES = REAL_PHOTO_URLS
+# Fallback par type de contenu si le thème n'a pas de photos spécifiques
+FALLBACK_PHOTOS = {
+    "product": [
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=1200&fit=crop",
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=1200&fit=crop",
+    ],
+    "educational": [
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=1200&fit=crop",
+    ],
+    "testimonial": [
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=1200&fit=crop",
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=1200&fit=crop",
+    ],
+    "b2b": [
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",
+        "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=1200&h=1200&fit=crop",
+    ],
+    "weekend": [
+        "https://images.unsplash.com/photo-1496440737103-cd596325d314?w=1200&h=1200&fit=crop",
+        "https://images.unsplash.com/photo-1503830232159-4b417691001e?w=1200&h=1200&fit=crop",
+    ],
+    "magazine": [
+        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=1200&h=1200&fit=crop",
+        "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1200&h=1200&fit=crop",
+    ],
+}
+
+# Garder pour compatibilité
+STOCK_IMAGES = FALLBACK_PHOTOS
+REAL_PHOTO_URLS = FALLBACK_PHOTOS
+
+
+def select_photo_for_content(content_type: str, theme: str) -> str:
+    """
+    Sélectionne intelligemment une photo basée sur le thème ET le type de contenu
+    """
+    # D'abord essayer de trouver une photo spécifique au thème
+    if theme and theme in THEMED_PHOTOS:
+        photos = THEMED_PHOTOS[theme]
+        logger.info(f"📷 Photo sélectionnée par thème: {theme}")
+        return random.choice(photos)
+    
+    # Sinon utiliser le fallback par type de contenu
+    if content_type in FALLBACK_PHOTOS:
+        photos = FALLBACK_PHOTOS[content_type]
+        logger.info(f"📷 Photo sélectionnée par type: {content_type}")
+        return random.choice(photos)
+    
+    # Dernier recours
+    return "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=1200&fit=crop"
 
 # Prompts d'image par type de contenu
 IMAGE_PROMPTS = {
@@ -428,14 +564,14 @@ NO text, NO watermarks, NO logos, photorealistic, 8K quality render."""
 
 # ==================== GÉNÉRATION DE CONTENU ====================
 
-async def generate_content(content_type: str, theme: str = None, generate_ai_images: bool = True) -> Dict:
+async def generate_content(content_type: str, theme: str = None, generate_ai_images: bool = False) -> Dict:
     """
     Génère du contenu avec GPT-4o
     
     Args:
         content_type: Type de contenu
         theme: Thème spécifique (optionnel)
-        generate_ai_images: Si True, essaie de générer des images avec DALL-E/Grok
+        generate_ai_images: Si True, essaie de générer des images avec Grok (défaut: False = vraies photos)
     """
     if content_type not in CONTENT_TYPES:
         raise ValueError(f"Type de contenu invalide: {content_type}")
@@ -452,20 +588,22 @@ async def generate_content(content_type: str, theme: str = None, generate_ai_ima
         generator = MagazineContentGenerator()
         result = await generator.generate_magazine_post(theme=theme, country_inspiration="auto")
         
-        # Générer image AI si demandé
+        # Sélectionner photo selon le thème
         if generate_ai_images:
             image_result = await generate_ai_image(content_type, result["full_text"])
+            image_url = image_result["url"]
+            image_source = image_result["source"]
         else:
-            images = STOCK_IMAGES.get(content_type, STOCK_IMAGES["product"])
-            image_result = {"url": random.choice(images), "source": "stock"}
+            image_url = select_photo_for_content(content_type, theme)
+            image_source = "stock"
         
         return {
             "content_type": "magazine",
             "theme": theme,
             "text": result["full_text"],
             "hashtags": result["hashtags"],
-            "image_url": image_result["url"],
-            "image_source": image_result["source"],
+            "image_url": image_url,
+            "image_source": image_source,
             "image_prompt": result.get("image_prompt", ""),
         }
     
@@ -488,11 +626,11 @@ async def generate_content(content_type: str, theme: str = None, generate_ai_ima
                 json={
                     "model": "gpt-4o",
                     "messages": [
-                        {"role": "system", "content": "Tu es une experte en marketing beauté pour Luxura Distribution au Québec. Tu écris en français québécois naturel."},
+                        {"role": "system", "content": "Tu es une experte en marketing beauté pour Luxura Distribution au Québec. Tu écris en français québécois naturel, comme une amie, PAS comme une pub."},
                         {"role": "user", "content": prompt}
                     ],
                     "max_tokens": 500,
-                    "temperature": 0.8
+                    "temperature": 0.85
                 }
             )
             
@@ -500,12 +638,15 @@ async def generate_content(content_type: str, theme: str = None, generate_ai_ima
                 result = response.json()
                 text = result["choices"][0]["message"]["content"].strip()
                 
-                # Générer image AI si demandé
+                # Sélectionner photo SELON LE THÈME
                 if generate_ai_images:
                     image_result = await generate_ai_image(content_type, text)
+                    image_url = image_result["url"]
+                    image_source = image_result["source"]
                 else:
-                    images = STOCK_IMAGES.get(content_type, STOCK_IMAGES["product"])
-                    image_result = {"url": random.choice(images), "source": "stock"}
+                    image_url = select_photo_for_content(content_type, theme)
+                    image_source = "stock"
+                    logger.info(f"📷 Photo sélectionnée pour thème '{theme}': {image_url[:50]}...")
                 
                 # Extraire ou générer des hashtags
                 hashtags = _extract_hashtags(text, content_type)
@@ -515,8 +656,8 @@ async def generate_content(content_type: str, theme: str = None, generate_ai_ima
                     "theme": theme,
                     "text": text,
                     "hashtags": hashtags,
-                    "image_url": image_result["url"],
-                    "image_source": image_result["source"],
+                    "image_url": image_url,
+                    "image_source": image_source,
                 }
             else:
                 logger.error(f"Erreur OpenAI: {response.status_code}")
