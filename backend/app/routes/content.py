@@ -353,6 +353,185 @@ async def ingest_hair_canada_news(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============================================
+# 🌍 SCAN INTERNATIONAL - MODE FÉMININE
+# ============================================
+
+@router.post("/scan-international")
+async def scan_international_content(
+    max_posts: int = Query(default=3, le=5, description="Nombre max de posts à générer"),
+    send_email: bool = Query(default=True, description="Envoyer email d'approbation"),
+    background_tasks: BackgroundTasks = None
+):
+    """
+    🌍 SCAN INTERNATIONAL - Tendances Mode Féminine
+    
+    Scrute les actualités mode féminine de:
+    - 🇫🇷 France (Paris, Elle, Vogue)
+    - 🇮🇹 Italie (Milan, Grazia)
+    - 🇺🇸 USA (New York, Allure, Glamour)
+    - 🇬🇧 UK (Londres, Harper's Bazaar)
+    - 🇨🇦 Canada (Montréal, Fashion Magazine)
+    
+    Rotation automatique des pays par jour de la semaine.
+    
+    Processus:
+    1. Scrutation Google News par pays
+    2. Filtrage articles mode féminine/coiffure
+    3. Traduction française (GPT-4o)
+    4. Génération image contextuelle (Grok)
+    5. Ajout watermark LUXURA doré
+    6. Email approbation → Publication Facebook
+    """
+    logger.info(f"🌍 Lancement scan international (max_posts={max_posts})")
+    
+    try:
+        from app.services.international_content_scanner import InternationalContentScanner, COUNTRY_CONFIG
+        from app.services.watermark import process_image_with_watermark
+        from app.services.email_approval import send_approval_email
+        
+        scanner = InternationalContentScanner()
+        countries = scanner.get_todays_countries()
+        
+        results = {
+            "timestamp": datetime.now().isoformat(),
+            "countries_scanned": [COUNTRY_CONFIG[c]["name"] for c in countries],
+            "countries_flags": [COUNTRY_CONFIG[c]["flag"] for c in countries],
+            "articles_found": 0,
+            "posts_generated": 0,
+            "posts": [],
+            "errors": []
+        }
+        
+        logger.info(f"🌍 Pays du jour: {', '.join([COUNTRY_CONFIG[c]['flag'] + ' ' + COUNTRY_CONFIG[c]['name'] for c in countries])}")
+        
+        # 1. Scanner les actualités
+        articles = await scanner.scan_international_news(max_per_country=5)
+        results["articles_found"] = len(articles)
+        
+        if not articles:
+            logger.warning("Aucun article trouvé")
+            return results
+        
+        # 2. Générer les posts
+        for article in articles[:max_posts]:
+            try:
+                logger.info(f"📝 Génération: {article['country_flag']} {article['title'][:50]}...")
+                
+                # Générer le post complet (traduit + image Grok)
+                post = await scanner.generate_luxura_post(article)
+                
+                # 3. Ajouter watermark LUXURA
+                if post.get("image_url"):
+                    logger.info(f"🏷️ Ajout watermark LUXURA...")
+                    try:
+                        watermarked_bytes = await process_image_with_watermark(post["image_url"])
+                        if watermarked_bytes:
+                            post["watermarked_image_bytes"] = watermarked_bytes
+                            post["has_watermark"] = True
+                            logger.info(f"   ✅ Watermark ajouté ({len(watermarked_bytes)} bytes)")
+                    except Exception as wm_err:
+                        logger.warning(f"   ⚠️ Watermark erreur: {wm_err}")
+                        post["has_watermark"] = False
+                
+                results["posts"].append(post)
+                results["posts_generated"] += 1
+                
+                # 4. Envoyer email d'approbation
+                if send_email:
+                    full_text = post["post_text"]
+                    if post.get("hashtags"):
+                        full_text += "\n\n" + " ".join(post["hashtags"])
+                    
+                    post_data = {
+                        "text": post["post_text"],
+                        "full_text": full_text,
+                        "hashtags": post.get("hashtags", []),
+                        "image_url": post.get("image_url"),
+                        "source_title": f"{post['country_flag']} {post['title_fr'][:50]}",
+                        "source_url": post["source_url"],
+                        "country": post["country"],
+                    }
+                    
+                    try:
+                        email_result = await send_approval_email(post_data)
+                        
+                        if email_result.get("success"):
+                            post_id = email_result.get("post_id")
+                            # Sauvegarder le post avec watermark pour l'approbation
+                            add_pending_post(post_id, {
+                                **post_data,
+                                "watermarked_image_bytes": post.get("watermarked_image_bytes"),
+                                "has_watermark": post.get("has_watermark", False),
+                            })
+                            post["post_id"] = post_id
+                            post["email_sent"] = True
+                            logger.info(f"   📧 Email envoyé! ID: {post_id}")
+                        else:
+                            post["email_sent"] = False
+                            logger.warning(f"   ⚠️ Email non envoyé")
+                    except Exception as email_err:
+                        post["email_sent"] = False
+                        logger.warning(f"   ⚠️ Erreur email: {email_err}")
+                
+                # Nettoyer les bytes avant de retourner (trop gros pour JSON)
+                if "watermarked_image_bytes" in post:
+                    del post["watermarked_image_bytes"]
+                
+                logger.info(f"   ✅ Post généré: {post['country_flag']} {post['title_fr'][:40]}...")
+                
+            except Exception as e:
+                logger.error(f"   ❌ Erreur: {e}")
+                results["errors"].append(str(e))
+        
+        logger.info(f"🌍 Scan terminé: {results['posts_generated']} posts générés")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Erreur scan international: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/international/countries")
+async def list_international_countries():
+    """
+    🌍 Liste les pays configurés pour le scan international
+    """
+    from app.services.international_content_scanner import COUNTRY_CONFIG, DAILY_COUNTRY_ROTATION
+    
+    countries = []
+    for code, config in COUNTRY_CONFIG.items():
+        countries.append({
+            "code": code,
+            "name": config["name"],
+            "flag": config["flag"],
+            "city": config["city"],
+            "language": config["language"],
+            "queries_count": len(config["queries"]),
+            "sources_count": len(config["sources"]),
+        })
+    
+    # Pays du jour
+    from datetime import datetime
+    day = datetime.now().weekday()
+    today_countries = DAILY_COUNTRY_ROTATION.get(day, ["france", "usa"])
+    
+    return {
+        "countries": countries,
+        "today_countries": today_countries,
+        "today_countries_names": [COUNTRY_CONFIG[c]["flag"] + " " + COUNTRY_CONFIG[c]["name"] for c in today_countries],
+        "rotation": {
+            "lundi": ["france", "italy"],
+            "mardi": ["usa", "uk"],
+            "mercredi": ["france", "canada"],
+            "jeudi": ["italy", "usa"],
+            "vendredi": ["uk", "france"],
+            "samedi": ["usa", "italy"],
+            "dimanche": ["france", "uk"],
+        }
+    }
+
+
 @router.get("/sources")
 async def list_content_sources():
     """

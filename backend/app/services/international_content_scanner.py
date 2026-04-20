@@ -1,0 +1,716 @@
+"""
+🌍 LUXURA INTERNATIONAL CONTENT SCANNER v2
+==========================================
+Scrute les tendances mode féminine internationales:
+- 🇫🇷 France (Paris, Elle, Vogue)
+- 🇮🇹 Italie (Milan, Grazia)
+- 🇺🇸 USA (New York, Allure, Glamour)
+- 🇬🇧 UK (Londres, Harper's Bazaar)
+- 🇨🇦 Canada (Montréal, Fashion Magazine)
+
+Flux:
+1. Scrutation Google News par pays (rotation quotidienne)
+2. Filtrage articles mode féminine/coiffure
+3. Traduction française (GPT-4o)
+4. Génération image contextuelle (Grok)
+5. Ajout watermark LUXURA doré
+6. Email approbation → Publication Facebook
+"""
+
+import os
+import logging
+import httpx
+import hashlib
+import random
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional, Tuple
+from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================
+# CONFIGURATION PAR PAYS
+# ============================================
+
+COUNTRY_CONFIG = {
+    "france": {
+        "name": "France",
+        "flag": "🇫🇷",
+        "city": "Paris",
+        "language": "fr",
+        "google_params": {"hl": "fr", "gl": "FR", "ceid": "FR:fr"},
+        "queries": [
+            "tendances coiffure femme 2026",
+            "coupe bob carré tendance",
+            "extensions cheveux naturels",
+            "cheveux brillants glossy",
+            "frange rideau tendance",
+            "coiffure mariage 2026",
+            "soins cheveux luxe",
+        ],
+        "sources": ["elle.fr", "vogue.fr", "marieclaire.fr", "grazia.fr", "glamourparis.com"],
+    },
+    "italy": {
+        "name": "Italie",
+        "flag": "🇮🇹",
+        "city": "Milan",
+        "language": "it",
+        "google_params": {"hl": "it", "gl": "IT", "ceid": "IT:it"},
+        "queries": [
+            "tendenze capelli 2026",
+            "extension capelli naturali",
+            "milan fashion week hair",
+            "capelli lucidi glossy",
+            "acconciature eleganti",
+            "taglio bob italiano",
+        ],
+        "sources": ["vogue.it", "elle.it", "grazia.it", "vanityfair.it", "marieclaire.it"],
+    },
+    "usa": {
+        "name": "États-Unis",
+        "flag": "🇺🇸",
+        "city": "New York",
+        "language": "en",
+        "google_params": {"hl": "en-US", "gl": "US", "ceid": "US:en"},
+        "queries": [
+            "hair trends 2026 women",
+            "hair extensions celebrity",
+            "bob haircut trends",
+            "glossy hair trend",
+            "new york fashion week hair",
+            "bridal hairstyles 2026",
+            "volume hair tips",
+        ],
+        "sources": ["allure.com", "elle.com", "glamour.com", "byrdie.com", "refinery29.com", "instyle.com"],
+    },
+    "uk": {
+        "name": "Royaume-Uni",
+        "flag": "🇬🇧",
+        "city": "Londres",
+        "language": "en",
+        "google_params": {"hl": "en-GB", "gl": "GB", "ceid": "GB:en"},
+        "queries": [
+            "hair trends london 2026",
+            "british women hairstyles",
+            "hair extensions uk",
+            "glossy hair tips",
+            "wedding hair 2026",
+        ],
+        "sources": ["glamourmagazine.co.uk", "harpersbazaar.com/uk", "marieclaire.co.uk"],
+    },
+    "canada": {
+        "name": "Canada",
+        "flag": "🇨🇦",
+        "city": "Montréal",
+        "language": "en",
+        "google_params": {"hl": "en-CA", "gl": "CA", "ceid": "CA:en"},
+        "queries": [
+            "hair extensions Canada",
+            "coiffure tendance Montréal",
+            "extensions cheveux Québec",
+            "salon coiffure premium",
+        ],
+        "sources": ["fashionmagazine.com", "thekit.ca", "salonmagazine.ca"],
+    },
+}
+
+# Rotation des pays par jour de la semaine
+DAILY_COUNTRY_ROTATION = {
+    0: ["france", "italy"],      # Lundi: Europe
+    1: ["usa", "uk"],            # Mardi: Anglophone
+    2: ["france", "canada"],     # Mercredi: Francophone
+    3: ["italy", "usa"],         # Jeudi: Mode
+    4: ["uk", "france"],         # Vendredi: Élégance
+    5: ["usa", "italy"],         # Samedi: Lifestyle
+    6: ["france", "uk"],         # Dimanche: Classique
+}
+
+
+# ============================================
+# MOTS-CLÉS FÉMININS MODE/COIFFURE
+# ============================================
+
+FEMININE_KEYWORDS = [
+    # Coiffure
+    "hair", "cheveux", "capelli", "coiffure", "hairstyle", "acconciatura",
+    "bob", "lob", "fringe", "frange", "bangs", "frangia",
+    "extensions", "rallonges", "extension",
+    "glossy", "brillant", "lucido", "shiny",
+    "volume", "volumineux",
+    "long hair", "cheveux longs", "capelli lunghi",
+    
+    # Mode féminine
+    "women", "femme", "donna", "feminine", "féminin", "femminile",
+    "beauty", "beauté", "bellezza",
+    "style", "tendance", "trend", "tendenza",
+    "fashion", "mode", "moda",
+    "elegant", "élégant", "elegante",
+    "chic", "glamour", "luxe", "luxury",
+    
+    # Occasions
+    "wedding", "mariage", "matrimonio", "bridal",
+    "celebrity", "célébrité",
+    "red carpet", "tapis rouge",
+]
+
+EXCLUDE_KEYWORDS = [
+    "men", "homme", "uomo", "masculine", "masculin",
+    "beard", "barbe", "barba",
+    "bald", "chauve", "calvo",
+    "hair loss", "perte cheveux", "perdita capelli",
+    "wig", "perruque", "parrucca",
+    "casino", "crypto", "bitcoin", "forex",
+]
+
+
+class InternationalContentScanner:
+    """
+    Scanner de contenu international pour Luxura
+    """
+    
+    def __init__(self):
+        self.google_news_url = "https://news.google.com/rss/search"
+        self.openai_key = os.getenv("OPENAI_API_KEY")
+        self.grok_key = os.getenv("XAI_API_KEY") or os.getenv("GROK_API_KEY")
+    
+    def get_todays_countries(self) -> List[str]:
+        """Retourne les pays à scanner aujourd'hui (rotation)"""
+        day_of_week = datetime.now().weekday()
+        return DAILY_COUNTRY_ROTATION.get(day_of_week, ["france", "usa"])
+    
+    async def scan_international_news(self, max_per_country: int = 5) -> List[Dict]:
+        """
+        Scrute les actualités mode féminine de tous les pays du jour
+        """
+        countries = self.get_todays_countries()
+        all_articles = []
+        
+        logger.info(f"🌍 Scrutation internationale: {', '.join([COUNTRY_CONFIG[c]['flag'] + ' ' + COUNTRY_CONFIG[c]['name'] for c in countries])}")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for country_code in countries:
+                config = COUNTRY_CONFIG.get(country_code)
+                if not config:
+                    continue
+                
+                logger.info(f"\n{config['flag']} Scrutation {config['name']} ({config['city']})...")
+                
+                # Sélectionner 3 requêtes aléatoires pour ce pays
+                queries = random.sample(config["queries"], min(3, len(config["queries"])))
+                
+                for query in queries:
+                    try:
+                        articles = await self._fetch_google_news(
+                            client, 
+                            query, 
+                            config["google_params"],
+                            country_code,
+                            config["language"]
+                        )
+                        
+                        # Filtrer les articles pertinents
+                        filtered = self._filter_feminine_articles(articles)
+                        all_articles.extend(filtered[:max_per_country])
+                        
+                        logger.info(f"   ✅ '{query}': {len(filtered)} articles féminins trouvés")
+                        
+                    except Exception as e:
+                        logger.error(f"   ❌ Erreur '{query}': {e}")
+                        continue
+        
+        # Dédupliquer par titre
+        unique_articles = self._deduplicate_articles(all_articles)
+        
+        logger.info(f"\n📊 Total: {len(unique_articles)} articles uniques collectés")
+        return unique_articles
+    
+    async def _fetch_google_news(
+        self, 
+        client: httpx.AsyncClient, 
+        query: str,
+        google_params: Dict,
+        country: str,
+        language: str
+    ) -> List[Dict]:
+        """Récupère les articles Google News pour une requête"""
+        
+        params = {
+            "q": query,
+            **google_params
+        }
+        
+        response = await client.get(self.google_news_url, params=params)
+        
+        if response.status_code != 200:
+            return []
+        
+        return self._parse_rss(response.text, country, language)
+    
+    def _parse_rss(self, xml_content: str, country: str, language: str) -> List[Dict]:
+        """Parse le flux RSS Google News"""
+        articles = []
+        
+        try:
+            soup = BeautifulSoup(xml_content, 'html.parser')
+            
+            for item in soup.find_all('item')[:10]:  # Max 10 par requête
+                title_tag = item.find('title')
+                link_tag = item.find('link')
+                pub_date_tag = item.find('pubdate')
+                source_tag = item.find('source')
+                desc_tag = item.find('description')
+                
+                if not title_tag or not link_tag:
+                    continue
+                
+                title = title_tag.text.strip()
+                url = link_tag.text.strip()
+                source = source_tag.text if source_tag else "Unknown"
+                
+                # Vérifier si source fiable
+                config = COUNTRY_CONFIG.get(country, {})
+                trusted_sources = config.get("sources", [])
+                is_trusted = any(ts in url.lower() for ts in trusted_sources)
+                
+                articles.append({
+                    "title": title,
+                    "url": url,
+                    "source": source,
+                    "summary": desc_tag.text if desc_tag else "",
+                    "country": country,
+                    "country_name": config.get("name", country),
+                    "country_flag": config.get("flag", "🌍"),
+                    "city": config.get("city", ""),
+                    "language": language,
+                    "is_trusted": is_trusted,
+                    "collected_at": datetime.now().isoformat(),
+                })
+                
+        except Exception as e:
+            logger.error(f"Erreur parsing RSS: {e}")
+        
+        return articles
+    
+    def _filter_feminine_articles(self, articles: List[Dict]) -> List[Dict]:
+        """Filtre les articles pour ne garder que le contenu féminin mode/coiffure"""
+        filtered = []
+        
+        for article in articles:
+            text = f"{article['title']} {article.get('summary', '')}".lower()
+            
+            # Vérifier exclusions
+            if any(kw in text for kw in EXCLUDE_KEYWORDS):
+                continue
+            
+            # Doit contenir au moins un mot-clé féminin
+            if any(kw in text for kw in FEMININE_KEYWORDS):
+                # Calculer score de pertinence
+                score = sum(1 for kw in FEMININE_KEYWORDS if kw in text)
+                article["relevance_score"] = min(score / 5, 1.0)
+                filtered.append(article)
+        
+        # Trier par pertinence
+        filtered.sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
+        return filtered
+    
+    def _deduplicate_articles(self, articles: List[Dict]) -> List[Dict]:
+        """Dédoublonne par titre similaire"""
+        seen_titles = set()
+        unique = []
+        
+        for article in articles:
+            title_normalized = article["title"].lower()[:50]
+            title_hash = hashlib.md5(title_normalized.encode()).hexdigest()
+            
+            if title_hash not in seen_titles:
+                seen_titles.add(title_hash)
+                unique.append(article)
+        
+        return unique
+    
+    # ============================================
+    # TRADUCTION EN FRANÇAIS
+    # ============================================
+    
+    async def translate_to_french(self, text: str, source_language: str) -> str:
+        """Traduit un texte en français québécois"""
+        
+        if source_language == "fr":
+            return text  # Déjà en français
+        
+        if not self.openai_key:
+            logger.warning("OPENAI_API_KEY non configurée - pas de traduction")
+            return text
+        
+        language_names = {
+            "en": "anglais",
+            "it": "italien",
+            "es": "espagnol",
+            "de": "allemand",
+        }
+        
+        source_lang_name = language_names.get(source_language, source_language)
+        
+        prompt = f"""Traduis ce texte de {source_lang_name} vers le français québécois.
+Garde un ton naturel, féminin et élégant. Ne traduis pas les noms propres ou marques.
+
+Texte à traduire:
+{text}
+
+Retourne UNIQUEMENT la traduction, sans explication."""
+        
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.openai_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "gpt-4o",
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": 500,
+                        "temperature": 0.3
+                    }
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    return result["choices"][0]["message"]["content"].strip()
+                    
+        except Exception as e:
+            logger.error(f"Erreur traduction: {e}")
+        
+        return text
+    
+    # ============================================
+    # GÉNÉRATION POST FACEBOOK
+    # ============================================
+    
+    async def generate_luxura_post(self, article: Dict) -> Dict:
+        """
+        Génère un post Facebook complet à partir d'un article international
+        """
+        # 1. Traduire le titre et résumé en français
+        title_fr = await self.translate_to_french(article["title"], article["language"])
+        summary_fr = await self.translate_to_french(article.get("summary", ""), article["language"])
+        
+        # 2. Générer le texte du post avec GPT-4o
+        post_text = await self._generate_post_text(article, title_fr, summary_fr)
+        
+        # 3. Générer le prompt image contextuel
+        image_prompt = await self._generate_image_prompt(article, title_fr, post_text)
+        
+        # 4. Générer l'image avec Grok
+        image_url = await self._generate_grok_image(image_prompt)
+        
+        return {
+            "title_original": article["title"],
+            "title_fr": title_fr,
+            "summary_fr": summary_fr,
+            "post_text": post_text,
+            "image_prompt": image_prompt,
+            "image_url": image_url,
+            "source_url": article["url"],
+            "source_name": article["source"],
+            "country": article["country"],
+            "country_flag": article["country_flag"],
+            "city": article["city"],
+            "hashtags": self._generate_hashtags(article),
+            "generated_at": datetime.now().isoformat(),
+        }
+    
+    async def _generate_post_text(self, article: Dict, title_fr: str, summary_fr: str) -> str:
+        """Génère le texte du post Facebook style Luxura"""
+        
+        if not self.openai_key:
+            return f"✨ {title_fr}\n\nDécouvrez cette tendance sur luxuradistribution.com"
+        
+        prompt = f"""Tu es la community manager de Luxura Distribution, importateur d'extensions capillaires premium au Québec.
+Tu as un ton SENSUEL, FÉMININ et CHALEUREUX, comme une amie passionnée de beauté.
+
+Voici un article de mode/coiffure venant de {article['country_flag']} {article['city']}:
+Titre: {title_fr}
+Résumé: {summary_fr[:300]}
+
+Écris un post Facebook ENGAGEANT en français québécois.
+
+STYLE LUXURA:
+- Commence par un emoji accrocheur
+- Ton sensuel et féminin, pas corporate
+- Parle de la séduction, de la confiance, du pouvoir de beaux cheveux
+- Mentionne l'inspiration de {article['city']} si pertinent
+- 100-150 mots maximum
+- Termine par luxuradistribution.com
+- PAS de hashtags (je les ajoute après)
+
+Exemples de ton:
+- "Des cheveux qui font tourner les têtes..."
+- "Se sentir irrésistible et confiante..."
+- "Le secret des {article['city'].lower()}es pour des cheveux de rêve..."
+
+Écris UNIQUEMENT le post."""
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.openai_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "gpt-4o",
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": 400,
+                        "temperature": 0.8
+                    }
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    return result["choices"][0]["message"]["content"].strip()
+                    
+        except Exception as e:
+            logger.error(f"Erreur génération post: {e}")
+        
+        return f"✨ {title_fr}\n\nDécouvrez cette tendance venue de {article['city']} sur luxuradistribution.com"
+    
+    async def _generate_image_prompt(self, article: Dict, title_fr: str, post_text: str) -> str:
+        """Génère un prompt image contextuel basé sur l'article"""
+        
+        if not self.openai_key:
+            return f"Beautiful woman with flowing hair extensions, {article['city']} style, elegant feminine aesthetic, natural lighting, no text"
+        
+        prompt = f"""Tu es expert en création de prompts pour Grok Imagine (génération d'images IA).
+
+ARTICLE SOURCE:
+- Titre: {title_fr}
+- Ville: {article['city']}
+- Pays: {article['country_flag']} {article['country_name']}
+
+POST FACEBOOK:
+{post_text[:400]}
+
+Crée un prompt image EN ANGLAIS qui illustre PARFAITEMENT cet article.
+
+RÈGLES OBLIGATOIRES:
+1. Femme élégante avec beaux cheveux (mi-longs à longs)
+2. Style {article['city']} authentique
+3. Cheveux soyeux, brillants, avec volume naturel
+4. Lumière naturelle, ambiance lifestyle
+5. Pas de texte, pas de logo, pas de watermark
+6. Photo candide, pas "stock photo"
+7. Maximum 200 caractères
+
+STYLE PAR VILLE:
+- Paris: élégance discrète, café parisien, Haussmann
+- Milan: sophistication, mode italienne, luxe
+- New York: dynamique, urbain chic, rooftop
+- Londres: classique, raffiné, jardin anglais
+
+Retourne UNIQUEMENT le prompt en anglais."""
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.openai_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "gpt-4o",
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": 150,
+                        "temperature": 0.7
+                    }
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    return result["choices"][0]["message"]["content"].strip()
+                    
+        except Exception as e:
+            logger.error(f"Erreur prompt image: {e}")
+        
+        # Fallback
+        city_styles = {
+            "Paris": "Parisian cafe terrace, Haussmann building",
+            "Milan": "elegant Italian piazza, luxury fashion",
+            "New York": "Manhattan rooftop, urban chic",
+            "Londres": "English garden, classic elegance",
+            "Montréal": "Old Montreal cobblestone, European charm",
+        }
+        style = city_styles.get(article['city'], "elegant urban setting")
+        
+        return f"Beautiful woman with long flowing silky hair, {style}, natural golden hour lighting, lifestyle photography, feminine elegant aesthetic, no text"
+    
+    async def _generate_grok_image(self, prompt: str) -> Optional[str]:
+        """Génère une image avec Grok (xAI)"""
+        
+        if not self.grok_key:
+            logger.warning("XAI_API_KEY non configurée - pas d'image Grok")
+            return None
+        
+        logger.info(f"🎨 Génération image Grok...")
+        logger.info(f"   Prompt: {prompt[:80]}...")
+        
+        # Améliorer le prompt pour qualité premium
+        enhanced_prompt = f"""{prompt}
+
+STYLE: Ultra high quality professional beauty photography, magazine editorial quality,
+sharp focus, natural soft lighting, warm color tones, elegant and aspirational mood,
+shot with professional camera, shallow depth of field, bokeh background,
+skin texture visible but flattering, hair looks silky and healthy with natural shine,
+photorealistic, 8K quality render, NO text, NO watermarks, NO logos."""
+
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    "https://api.x.ai/v1/images/generations",
+                    headers={
+                        "Authorization": f"Bearer {self.grok_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "grok-imagine-image",
+                        "prompt": enhanced_prompt,
+                        "n": 1,
+                    }
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get("data") and len(result["data"]) > 0:
+                        image_url = result["data"][0].get("url")
+                        if image_url:
+                            logger.info(f"   ✅ Image Grok générée!")
+                            return image_url
+                
+                logger.warning(f"   ⚠️ Grok: {response.status_code} - {response.text[:100]}")
+                
+        except Exception as e:
+            logger.error(f"   ❌ Erreur Grok: {e}")
+        
+        return None
+    
+    def _generate_hashtags(self, article: Dict) -> List[str]:
+        """Génère les hashtags basés sur le pays et le contenu"""
+        
+        base_hashtags = ["#LuxuraDistribution", "#ExtensionsCheveux", "#Québec"]
+        
+        country_hashtags = {
+            "france": ["#TendancesParis", "#StyleFrançais", "#ModeFéminine"],
+            "italy": ["#StyleMilan", "#ModeItalienne", "#Eleganza"],
+            "usa": ["#TrendingNYC", "#AmericanStyle", "#GlamourUSA"],
+            "uk": ["#LondonStyle", "#BritishElegance", "#UKBeauty"],
+            "canada": ["#BeautéQuébec", "#MontréalStyle", "#CanadianBeauty"],
+        }
+        
+        country_tags = country_hashtags.get(article["country"], [])
+        
+        return (base_hashtags + country_tags)[:7]
+
+
+# ============================================
+# FONCTION PRINCIPALE POUR LE CRON
+# ============================================
+
+async def run_international_content_scan(max_posts: int = 3, send_email: bool = True) -> Dict:
+    """
+    Exécute le scan international complet
+    
+    Returns:
+        Dict avec les résultats du scan
+    """
+    from app.services.email_approval import send_approval_email
+    from app.services.watermark import process_image_with_watermark
+    from app.routes.content import add_pending_post
+    
+    scanner = InternationalContentScanner()
+    
+    results = {
+        "timestamp": datetime.now().isoformat(),
+        "countries_scanned": scanner.get_todays_countries(),
+        "articles_found": 0,
+        "posts_generated": 0,
+        "posts": [],
+        "errors": []
+    }
+    
+    logger.info("=" * 60)
+    logger.info("🌍 LUXURA INTERNATIONAL CONTENT SCAN")
+    logger.info(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    logger.info("=" * 60)
+    
+    try:
+        # 1. Scanner les actualités internationales
+        articles = await scanner.scan_international_news(max_per_country=5)
+        results["articles_found"] = len(articles)
+        
+        if not articles:
+            logger.warning("Aucun article trouvé")
+            return results
+        
+        # 2. Générer les posts (max 3)
+        for article in articles[:max_posts]:
+            try:
+                logger.info(f"\n📝 Génération post: {article['title'][:50]}...")
+                
+                # Générer le post complet
+                post = await scanner.generate_luxura_post(article)
+                
+                # 3. Ajouter watermark si image générée
+                if post.get("image_url"):
+                    logger.info(f"🏷️ Ajout watermark LUXURA...")
+                    watermarked_bytes = await process_image_with_watermark(post["image_url"])
+                    if watermarked_bytes:
+                        post["watermarked_image_bytes"] = watermarked_bytes
+                        post["has_watermark"] = True
+                        logger.info(f"   ✅ Watermark ajouté! ({len(watermarked_bytes)} bytes)")
+                
+                results["posts"].append(post)
+                results["posts_generated"] += 1
+                
+                # 4. Envoyer email d'approbation
+                if send_email:
+                    post_data = {
+                        "text": post["post_text"],
+                        "full_text": post["post_text"],
+                        "hashtags": post["hashtags"],
+                        "image_url": post.get("image_url"),
+                        "source_title": f"{post['country_flag']} {post['title_fr'][:50]}",
+                        "source_url": post["source_url"],
+                        "country": post["country"],
+                    }
+                    
+                    email_result = await send_approval_email(post_data)
+                    
+                    if email_result.get("success"):
+                        post_id = email_result.get("post_id")
+                        add_pending_post(post_id, {
+                            **post_data,
+                            "watermarked_image_bytes": post.get("watermarked_image_bytes"),
+                        })
+                        post["post_id"] = post_id
+                        post["email_sent"] = True
+                        logger.info(f"   📧 Email envoyé! ID: {post_id}")
+                
+                logger.info(f"   ✅ Post généré: {post['country_flag']} {post['title_fr'][:40]}...")
+                
+            except Exception as e:
+                logger.error(f"   ❌ Erreur: {e}")
+                results["errors"].append(str(e))
+    
+    except Exception as e:
+        logger.error(f"Erreur scan: {e}")
+        results["errors"].append(str(e))
+    
+    logger.info("\n" + "=" * 60)
+    logger.info(f"✅ SCAN TERMINÉ: {results['posts_generated']} posts générés")
+    logger.info("=" * 60)
+    
+    return results
