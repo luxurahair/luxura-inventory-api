@@ -5911,6 +5911,14 @@ try:
 except Exception:
     logger.exception("❌ Failed to mount content router")
 
+# ==================== AUTO CONTENT WITH APPROVAL ROUTES ====================
+try:
+    from app.routes.auto_content import router as auto_content_router
+    app.include_router(auto_content_router, prefix="/api")
+    logger.info("✅ Mounted app/routes/auto_content.py router (/api/auto-content)")
+except Exception:
+    logger.exception("❌ Failed to mount auto-content router")
+
 # ==================== GROK / xAI ROUTES ====================
 try:
     from app.routes.grok import router as grok_router
