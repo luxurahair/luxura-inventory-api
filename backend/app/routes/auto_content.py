@@ -218,12 +218,98 @@ STOCK_IMAGES = {
     ],
 }
 
+# Prompts d'image par type de contenu
+IMAGE_PROMPTS = {
+    "product": "Professional product photography of premium hair extensions, elegant display, soft lighting, luxury beauty product, white background, high-end cosmetics style",
+    "educational": "Woman with beautiful healthy hair in a salon setting, professional lighting, educational beauty content style, clean aesthetic",
+    "testimonial": "Happy woman in a professional hair salon, natural smile, beautiful hair transformation, authentic moment",
+    "b2b": "Professional hair salon interior, modern equipment, elegant atmosphere, business professional setting",
+    "weekend": "Elegant woman with gorgeous flowing hair, lifestyle photography, golden hour lighting, aspirational beauty, natural movement",
+    "magazine": "Fashion editorial style, woman with trendy hairstyle, magazine cover quality, high fashion beauty photography",
+}
+
+
+async def generate_ai_image(content_type: str, text: str = "") -> Dict:
+    """
+    Génère une image avec DALL-E 3 ou Grok
+    
+    Returns:
+        Dict avec url et source (dalle/grok/stock)
+    """
+    # Vérifier les clés API disponibles
+    dalle_key = os.getenv("OPENAI_API_KEY")
+    grok_key = os.getenv("XAI_API_KEY") or os.getenv("GROK_API_KEY")
+    
+    base_prompt = IMAGE_PROMPTS.get(content_type, IMAGE_PROMPTS["product"])
+    
+    # Essayer DALL-E 3 d'abord
+    if dalle_key:
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    "https://api.openai.com/v1/images/generations",
+                    headers={
+                        "Authorization": f"Bearer {dalle_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "dall-e-3",
+                        "prompt": f"{base_prompt}. Style: premium beauty brand, no text in image.",
+                        "n": 1,
+                        "size": "1024x1024",
+                        "quality": "standard"
+                    }
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    image_url = result["data"][0]["url"]
+                    logger.info(f"🎨 Image DALL-E 3 générée pour {content_type}")
+                    return {"url": image_url, "source": "dalle"}
+        except Exception as e:
+            logger.warning(f"DALL-E failed: {e}")
+    
+    # Essayer Grok/xAI
+    if grok_key:
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    "https://api.x.ai/v1/images/generations",
+                    headers={
+                        "Authorization": f"Bearer {grok_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "grok-2-image",
+                        "prompt": f"{base_prompt}. Premium beauty photography.",
+                        "n": 1
+                    }
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    image_url = result.get("data", [{}])[0].get("url")
+                    if image_url:
+                        logger.info(f"🤖 Image Grok générée pour {content_type}")
+                        return {"url": image_url, "source": "grok"}
+        except Exception as e:
+            logger.warning(f"Grok failed: {e}")
+    
+    # Fallback vers images stock
+    images = STOCK_IMAGES.get(content_type, STOCK_IMAGES["product"])
+    return {"url": random.choice(images), "source": "stock"}
+
 
 # ==================== GÉNÉRATION DE CONTENU ====================
 
-async def generate_content(content_type: str, theme: str = None) -> Dict:
+async def generate_content(content_type: str, theme: str = None, generate_ai_images: bool = True) -> Dict:
     """
     Génère du contenu avec GPT-4o
+    
+    Args:
+        content_type: Type de contenu
+        theme: Thème spécifique (optionnel)
+        generate_ai_images: Si True, essaie de générer des images avec DALL-E/Grok
     """
     if content_type not in CONTENT_TYPES:
         raise ValueError(f"Type de contenu invalide: {content_type}")
@@ -239,13 +325,22 @@ async def generate_content(content_type: str, theme: str = None) -> Dict:
         from app.services.magazine_content_generator import MagazineContentGenerator
         generator = MagazineContentGenerator()
         result = await generator.generate_magazine_post(theme=theme, country_inspiration="auto")
+        
+        # Générer image AI si demandé
+        if generate_ai_images:
+            image_result = await generate_ai_image(content_type, result["full_text"])
+        else:
+            images = STOCK_IMAGES.get(content_type, STOCK_IMAGES["product"])
+            image_result = {"url": random.choice(images), "source": "stock"}
+        
         return {
             "content_type": "magazine",
             "theme": theme,
             "text": result["full_text"],
             "hashtags": result["hashtags"],
-            "image_url": result["fallback_image_url"],
-            "image_prompt": result["image_prompt"],
+            "image_url": image_result["url"],
+            "image_source": image_result["source"],
+            "image_prompt": result.get("image_prompt", ""),
         }
     
     # Génération standard avec GPT-4o
@@ -279,9 +374,12 @@ async def generate_content(content_type: str, theme: str = None) -> Dict:
                 result = response.json()
                 text = result["choices"][0]["message"]["content"].strip()
                 
-                # Sélectionner une image
-                images = STOCK_IMAGES.get(content_type, STOCK_IMAGES["product"])
-                image_url = random.choice(images)
+                # Générer image AI si demandé
+                if generate_ai_images:
+                    image_result = await generate_ai_image(content_type, text)
+                else:
+                    images = STOCK_IMAGES.get(content_type, STOCK_IMAGES["product"])
+                    image_result = {"url": random.choice(images), "source": "stock"}
                 
                 # Extraire ou générer des hashtags
                 hashtags = _extract_hashtags(text, content_type)
@@ -291,7 +389,8 @@ async def generate_content(content_type: str, theme: str = None) -> Dict:
                     "theme": theme,
                     "text": text,
                     "hashtags": hashtags,
-                    "image_url": image_url,
+                    "image_url": image_result["url"],
+                    "image_source": image_result["source"],
                 }
             else:
                 logger.error(f"Erreur OpenAI: {response.status_code}")
@@ -388,7 +487,8 @@ def _extract_hashtags(text: str, content_type: str) -> List[str]:
 async def generate_and_send_for_approval(
     content_type: str,
     theme: str = Query(default=None, description="Thème spécifique (optionnel)"),
-    send_email: bool = Query(default=True, description="Envoyer l'email d'approbation")
+    send_email: bool = Query(default=True, description="Envoyer l'email d'approbation"),
+    ai_images: bool = Query(default=True, description="Générer images avec DALL-E/Grok (sinon stock photos)")
 ):
     """
     🎨 Génère du contenu et l'envoie pour approbation par email
@@ -400,6 +500,10 @@ async def generate_and_send_for_approval(
     - b2b: Contenu professionnel
     - weekend: Inspiration weekend
     - magazine: Articles tendances
+    
+    Images:
+    - ai_images=true: Génère avec DALL-E 3 ou Grok
+    - ai_images=false: Utilise photos stock (Unsplash/Pexels)
     """
     if content_type not in CONTENT_TYPES:
         raise HTTPException(
@@ -407,10 +511,10 @@ async def generate_and_send_for_approval(
             detail=f"Type invalide. Valides: {list(CONTENT_TYPES.keys())}"
         )
     
-    logger.info(f"🎨 Génération contenu: {content_type} | theme={theme}")
+    logger.info(f"🎨 Génération contenu: {content_type} | theme={theme} | ai_images={ai_images}")
     
     # Générer le contenu
-    content = await generate_content(content_type, theme)
+    content = await generate_content(content_type, theme, generate_ai_images=ai_images)
     
     if send_email:
         # Envoyer pour approbation
@@ -422,6 +526,7 @@ async def generate_and_send_for_approval(
             "full_text": content["text"],
             "hashtags": content["hashtags"],
             "image_url": content["image_url"],
+            "image_source": content.get("image_source", "stock"),
             "fallback_image_url": content["image_url"],
             "content_type": content_type,
             "theme": content.get("theme"),
@@ -440,6 +545,7 @@ async def generate_and_send_for_approval(
                 "content_type": content_type,
                 "theme": content.get("theme"),
                 "post_id": post_id,
+                "image_source": content.get("image_source", "stock"),
                 "message": "📧 Email d'approbation envoyé!",
                 "approve_url": f"{API_URL}/api/content/approve/{post_id}",
                 "reject_url": f"{API_URL}/api/content/reject/{post_id}",
@@ -453,6 +559,7 @@ async def generate_and_send_for_approval(
         "success": True,
         "content_type": content_type,
         "theme": content.get("theme"),
+        "image_source": content.get("image_source", "stock"),
         "content": content,
         "message": "Contenu généré (email non envoyé)"
     }

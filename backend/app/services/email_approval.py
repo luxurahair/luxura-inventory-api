@@ -94,6 +94,32 @@ def create_approval_email_html(post: Dict, post_id: str) -> str:
     source_title = post.get("source_title", "Actualité extensions capillaires")
     source_url = post.get("source_url", "")
     
+    # Type de contenu
+    content_type = post.get("content_type", "magazine")
+    theme = post.get("theme", "")
+    
+    # Labels pour les types de contenu
+    CONTENT_TYPE_LABELS = {
+        "product": {"label": "✨ PRODUIT", "color": "#9b59b6", "icon": "✨"},
+        "educational": {"label": "📚 ÉDUCATIF", "color": "#3498db", "icon": "📚"},
+        "testimonial": {"label": "💬 TÉMOIGNAGE", "color": "#e67e22", "icon": "💬"},
+        "b2b": {"label": "💼 B2B PRO", "color": "#2c3e50", "icon": "💼"},
+        "weekend": {"label": "🌟 WEEKEND", "color": "#e74c3c", "icon": "🌟"},
+        "magazine": {"label": "📰 MAGAZINE", "color": "#1abc9c", "icon": "📰"},
+    }
+    
+    type_info = CONTENT_TYPE_LABELS.get(content_type, {"label": "📱 POST", "color": "#667eea", "icon": "📱"})
+    
+    # Source de l'image
+    image_source = post.get("image_source", "stock")
+    IMAGE_SOURCE_LABELS = {
+        "stock": "📷 Photo Stock (Unsplash/Pexels)",
+        "dalle": "🎨 Image générée par DALL-E 3",
+        "grok": "🤖 Image générée par Grok/xAI",
+        "custom": "📸 Image personnalisée",
+    }
+    image_source_label = IMAGE_SOURCE_LABELS.get(image_source, "📷 Photo Stock")
+    
     # URLs d'action
     approve_url = f"{API_URL}/api/content/approve/{post_id}"
     reject_url = f"{API_URL}/api/content/reject/{post_id}"
@@ -104,11 +130,17 @@ def create_approval_email_html(post: Dict, post_id: str) -> str:
         image_html = f'''
         <div style="margin: 20px 0; text-align: center;">
             <img src="{image_url}" alt="Image du post" style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <p style="font-size: 11px; color: #888; margin-top: 8px;">{image_source_label}</p>
         </div>
         '''
     
     # Formater le texte pour l'affichage HTML
     text_html = text.replace("\n", "<br>")
+    
+    # Badge du thème
+    theme_badge = ""
+    if theme:
+        theme_badge = f'<span style="background: #eee; padding: 4px 10px; border-radius: 12px; font-size: 12px; margin-left: 10px;">{theme}</span>'
     
     html = f'''
 <!DOCTYPE html>
@@ -119,8 +151,9 @@ def create_approval_email_html(post: Dict, post_id: str) -> str:
     <style>
         body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
         .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+        .header {{ background: linear-gradient(135deg, {type_info["color"]} 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
         .header h1 {{ margin: 0; font-size: 24px; }}
+        .type-badge {{ display: inline-block; background: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; margin-top: 15px; }}
         .content {{ background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }}
         .post-preview {{ background: white; border-radius: 10px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
         .post-text {{ font-size: 15px; white-space: pre-wrap; }}
@@ -130,17 +163,37 @@ def create_approval_email_html(post: Dict, post_id: str) -> str:
         .btn-approve {{ background: #28a745; color: white; }}
         .btn-reject {{ background: #dc3545; color: white; }}
         .footer {{ text-align: center; margin-top: 30px; font-size: 12px; color: #666; }}
-        .date {{ font-size: 14px; color: #666; margin-top: 10px; }}
+        .date {{ font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 10px; }}
+        .meta-info {{ background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 20px; }}
+        .meta-row {{ display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px; }}
+        .meta-label {{ color: #666; }}
+        .meta-value {{ font-weight: bold; color: #333; }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📱 Nouveau Post Facebook</h1>
+            <h1>{type_info["icon"]} Nouveau Post Facebook</h1>
+            <div class="type-badge">{type_info["label"]}{theme_badge}</div>
             <p class="date">À publier le {get_date_fr()}</p>
         </div>
         
         <div class="content">
+            <div class="meta-info">
+                <div class="meta-row">
+                    <span class="meta-label">Type de contenu:</span>
+                    <span class="meta-value">{type_info["label"]}</span>
+                </div>
+                <div class="meta-row">
+                    <span class="meta-label">Thème:</span>
+                    <span class="meta-value">{theme or "Auto"}</span>
+                </div>
+                <div class="meta-row">
+                    <span class="meta-label">Source image:</span>
+                    <span class="meta-value">{image_source_label}</span>
+                </div>
+            </div>
+            
             <h2>📝 Preview du post:</h2>
             
             <div class="post-preview">
@@ -153,7 +206,7 @@ def create_approval_email_html(post: Dict, post_id: str) -> str:
             </div>
             
             <div class="buttons">
-                <a href="{approve_url}" class="btn btn-approve">✅ Approuver</a>
+                <a href="{approve_url}" class="btn btn-approve">✅ Approuver et Publier</a>
                 <a href="{reject_url}" class="btn btn-reject">❌ Rejeter</a>
             </div>
             
@@ -164,7 +217,7 @@ def create_approval_email_html(post: Dict, post_id: str) -> str:
         
         <div class="footer">
             <p>💜 Luxura Distribution - Système de contenu automatisé</p>
-            <p>Ce post a été généré automatiquement à partir d'actualités du secteur.</p>
+            <p>Ce post a été généré automatiquement. Cliquez Approuver pour publier sur Facebook.</p>
         </div>
     </div>
 </body>
