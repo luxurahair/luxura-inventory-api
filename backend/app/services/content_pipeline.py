@@ -14,6 +14,7 @@ from pathlib import Path
 
 from .content_discovery import ContentDiscoveryService
 from .facebook_publisher import FacebookPublisher
+from .email_approval import send_approval_email, traduire_date_fr
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +149,21 @@ class ContentPipeline:
                     
                     if post.get("status") == "approved":
                         results["posts_approved"] += 1
+                    
+                    # Étape 6: Envoi email d'approbation
+                    logger.info(f"📧 Étape 6: Envoi email d'approbation...")
+                    try:
+                        email_result = await send_approval_email(post)
+                        if email_result.get("success"):
+                            logger.info(f"   ✅ Email envoyé! ID: {email_result.get('post_id')}")
+                            post["approval_email_sent"] = True
+                            post["approval_post_id"] = email_result.get("post_id")
+                        else:
+                            logger.warning(f"   ⚠️ Email non envoyé: {email_result.get('message')}")
+                            post["approval_email_sent"] = False
+                    except Exception as email_error:
+                        logger.warning(f"   ⚠️ Erreur email: {email_error}")
+                        post["approval_email_sent"] = False
                     
                     logger.info(f"   ✅ Post généré: {post.get('post_title', '')[:50]}...")
                     logger.info(f"      Score: {post.get('confidence_score', 0):.2f} | Status: {post.get('status')} | Image: {'✅' if post.get('has_image') else '❌'}")
