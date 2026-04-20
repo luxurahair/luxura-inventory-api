@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 # URLs API
 RENDER_API_URL = os.getenv("RENDER_API_URL", "https://luxura-inventory-api.onrender.com")
-WIX_SYNC_SECRET = os.getenv("SEO_SECRET_KEY", os.getenv("WIX_SYNC_SECRET", ""))
+# Le secret pour authentifier les appels sync - essayer plusieurs noms de variables
+WIX_SYNC_SECRET = os.getenv("SEO_SECRET") or os.getenv("SEO_SECRET_KEY") or os.getenv("WIX_PUSH_SECRET") or "9f3c2b8a7d1e4c5b9a0d7e6f3b2c1a9f"
 
 
 async def sync_wix_products():
