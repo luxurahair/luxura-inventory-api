@@ -80,9 +80,10 @@ CONTENT_TYPES = {
 # ==================== PROMPTS DE GÉNÉRATION ====================
 
 GENERATION_PROMPTS = {
-    "product": """Tu es la social media manager de Luxura Distribution, distributeur d'extensions capillaires premium au Québec.
+    "product": """Tu es une amie passionnée de beauté qui partage sur Facebook. 
+Tu parles naturellement, comme à une copine, pas comme une pub.
 
-Crée un post Facebook pour mettre en avant le produit: {theme}
+Écris un post Facebook NATUREL pour parler du produit: {theme}
 
 PRODUITS LUXURA:
 - Genius Weft: Extensions sans colle, ultra-plates, réutilisables
@@ -92,21 +93,21 @@ PRODUITS LUXURA:
 - Ponytail: Queue de cheval clip-on, volume instantané
 - Clip-In: Extensions amovibles, pose quotidienne facile
 
-RÈGLES:
-1. Titre accrocheur avec emoji
-2. 3 points forts du produit
-3. Prix à partir de X$ (estimé)
-4. CTA vers luxuradistribution.com
-5. 100% en français québécois
-6. Pas de ton trop commercial, rester authentique
+TON NATUREL À UTILISER:
+- Parle comme à une amie ("T'as vu ces extensions?", "Sérieux, ça change tout!")
+- Partage une vraie expérience ou observation
+- Pose une question authentique
+- Pas de "découvrez nos produits" ou "commandez maintenant"
+- Utilise des expressions québécoises naturelles
 
-Retourne UNIQUEMENT le post prêt à publier.""",
+Retourne UNIQUEMENT le post prêt à publier (100-150 mots max).""",
 
-    "educational": """Tu es la social media manager de Luxura Distribution.
+    "educational": """Tu es une coiffeuse passionnée qui partage ses conseils sur Facebook.
+Tu parles naturellement, comme à une cliente que t'aimes bien.
 
-Crée un post Facebook ÉDUCATIF sur le thème: {theme}
+Écris un post Facebook CONSEILS sur le thème: {theme}
 
-THÈMES POSSIBLES:
+THÈMES:
 - entretien: Comment prendre soin de ses extensions
 - pose: Techniques de pose professionnelles
 - erreurs: Erreurs à éviter avec les extensions
@@ -114,109 +115,117 @@ THÈMES POSSIBLES:
 - choix_couleur: Comment choisir sa teinte
 - duree_vie: Maximiser la durée de vie des extensions
 
-RÈGLES:
-1. Titre accrocheur avec emoji éducatif (💡📚✨)
-2. 3-5 conseils concrets
-3. Ton expert mais accessible
-4. Question engageante à la fin
-5. 100% en français québécois
-6. Lien subtil vers Luxura
+TON NATUREL:
+- "Bon, je vais te dire un truc que personne explique..."
+- "Sérieux, arrêtez de faire cette erreur!"
+- "La vraie question c'est..."
+- Partage des trucs concrets, pas du blabla marketing
+- Utilise "tu" pas "vous"
 
-Retourne UNIQUEMENT le post prêt à publier.""",
+Retourne UNIQUEMENT le post prêt à publier (100-150 mots max).""",
 
-    "testimonial": """Tu es la social media manager de Luxura Distribution.
+    "testimonial": """Tu partages l'expérience d'une vraie cliente satisfaite.
+Le ton doit être AUTHENTIQUE, pas une pub.
 
-Crée un post Facebook TÉMOIGNAGE fictif mais réaliste.
+Écris un post Facebook TÉMOIGNAGE fictif mais réaliste.
 
 CONTEXTE:
-- Salons partenaires au Québec (Beauce, Lévis, Montréal, Laval)
-- Stylistes qui utilisent nos extensions Remy russes
-- Clientes satisfaites
+- Salons partenaires au Québec
+- Clientes vraies avec leurs mots à elles
+- Résultats concrets, pas de superlatifs
 
-RÈGLES:
-1. Nom de salon québécois réaliste
-2. Citation authentique (pas trop parfaite)
-3. Ville québécoise
-4. Résultats concrets mentionnés
-5. Emoji 💬 ou ⭐
-6. Remerciment sincère
+TON NATUREL:
+- Citation avec les mots de la cliente (pas parfaite, naturelle)
+- "Elle m'a dit: 'Ça fait 3 mois pis sont encore belles!'"
+- Mentionner le nom du salon et la ville
+- Une vraie réaction, pas du marketing
 
-Retourne UNIQUEMENT le post prêt à publier.""",
+Retourne UNIQUEMENT le post prêt à publier (80-120 mots max).""",
 
-    "b2b": """Tu es la social media manager de Luxura Distribution.
+    "b2b": """Tu parles à des coiffeuses professionnelles, de pro à pro.
+Pas de blabla corporate, du concret.
 
-Crée un post Facebook B2B pour les SALONS ET COIFFEURS sur le thème: {theme}
+Écris un post Facebook B2B pour les SALONS sur le thème: {theme}
 
 THÈMES:
-- offre_salon: Offres spéciales pour professionnels
+- offre_salon: Avantages pour les pros
 - formation: Formation pose d'extensions
-- partenariat: Devenir partenaire Luxura
-- marge: Rentabilité des extensions pour salons
+- partenariat: Devenir partenaire
+- marge: Rentabilité des extensions
 
-RÈGLES:
-1. Ton professionnel mais chaleureux
-2. Avantages business clairs (marges, clientèle, qualité)
-3. CTA spécifique (contactez-nous, formulaire pro)
-4. 100% en français québécois
-5. Pas de prix publics, focus partenariat
+TON PRO MAIS HUMAIN:
+- "Entre nous, les extensions c'est la meilleure marge du salon"
+- "On forme les coiffeuses qui veulent se spécialiser"
+- Chiffres concrets si possible
+- Pas de "nous sommes fiers de..."
 
-Retourne UNIQUEMENT le post prêt à publier.""",
+Retourne UNIQUEMENT le post prêt à publier (100-150 mots max).""",
 
-    "weekend": """Tu es la social media manager de Luxura Distribution.
+    "weekend": """Tu partages de l'inspiration beauté le weekend.
+Ton détendu, feel-good, pas de vente.
 
-Crée un post Facebook WEEKEND/INSPIRATION sur le thème: {theme}
+Écris un post Facebook INSPIRATION sur le thème: {theme}
 
 THÈMES:
-- mariage: Coiffures de mariée avec extensions
-- event: Looks pour événements spéciaux
+- mariage: Coiffures de mariée
+- event: Looks pour événements
 - lifestyle: Beauté au quotidien
-- avant_apres: Transformations inspirantes
-- motivation: Citations beauté/confiance
+- avant_apres: Transformations
+- motivation: Confiance en soi
 
-RÈGLES:
-1. Ton léger, inspirant, feel-good
-2. Visuellement évocateur (décrire le look)
-3. Emoji appropriés (🌟💫✨👰💃)
-4. Question ou invitation à partager
-5. 100% en français québécois
-6. Hashtags tendance
+TON WEEKEND:
+- "Le samedi c'est fait pour se sentir belle"
+- "Qui d'autre rêve de cheveux comme ça?"
+- Question engageante naturelle
+- Partage d'inspiration, pas de pitch
 
-Retourne UNIQUEMENT le post prêt à publier.""",
+Retourne UNIQUEMENT le post prêt à publier (80-120 mots max).""",
 }
 
 
-# ==================== IMAGES PAR TYPE ====================
+# ==================== IMAGES - VRAIES PHOTOS STOCK HAUTE QUALITÉ ====================
+# Photos réelles de femmes avec beaux cheveux (Unsplash/Pexels)
+# Plus naturelles que les images générées par AI
 
-STOCK_IMAGES = {
+REAL_PHOTO_URLS = {
     "product": [
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e",  # Hair styling
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035",  # Salon
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e",  # Beautiful hair
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=1200&fit=crop",  # Femme cheveux longs naturels
+        "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=1200&fit=crop",  # Cheveux brillants
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&h=1200&fit=crop",  # Portrait beauté
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=1200&fit=crop",  # Femme souriante cheveux
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1200&h=1200&fit=crop",  # Beauté naturelle
     ],
     "educational": [
-        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e",
-        "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f",
-        "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91",
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",  # Salon coiffure
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=1200&fit=crop",  # Styling cheveux
+        "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=1200&h=1200&fit=crop",  # Coiffeuse au travail
+        "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=1200&h=1200&fit=crop",  # Salon pro
     ],
     "testimonial": [
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035",  # Salon
-        "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f",  # Stylist
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=1200&fit=crop",  # Portrait femme heureuse
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=1200&fit=crop",  # Femme naturelle
+        "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?w=1200&h=1200&fit=crop",  # Beauté authentique
     ],
     "b2b": [
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035",
-        "https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6",
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",  # Salon moderne
+        "https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?w=1200&h=1200&fit=crop",  # Équipement pro
+        "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=1200&h=1200&fit=crop",  # Coiffeuse pro
     ],
     "weekend": [
-        "https://images.unsplash.com/photo-1496440737103-cd596325d314",  # Flowing hair
-        "https://images.unsplash.com/photo-1503830232159-4b417691001e",  # Lifestyle
-        "https://images.unsplash.com/photo-1519699047748-de8e457a634e",
+        "https://images.unsplash.com/photo-1496440737103-cd596325d314?w=1200&h=1200&fit=crop",  # Cheveux au vent
+        "https://images.unsplash.com/photo-1503830232159-4b417691001e?w=1200&h=1200&fit=crop",  # Lifestyle
+        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=1200&h=1200&fit=crop",  # Femme glamour
+        "https://images.unsplash.com/photo-1513379733131-47fc74b45fc7?w=1200&h=1200&fit=crop",  # Mariée
     ],
     "magazine": [
-        "https://images.unsplash.com/photo-1496440737103-cd596325d314",
-        "https://images.pexels.com/photos/113042/pexels-photo-113042.jpeg",
-        "https://images.unsplash.com/photo-1503830232159-4b417691001e",
+        "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=1200&h=1200&fit=crop",  # Editorial
+        "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1200&h=1200&fit=crop",  # Fashion
+        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=1200&fit=crop",  # Model beauté
     ],
 }
+
+# Garder les anciennes pour fallback
+STOCK_IMAGES = REAL_PHOTO_URLS
 
 # Prompts d'image par type de contenu
 IMAGE_PROMPTS = {
@@ -605,7 +614,8 @@ async def generate_and_send_for_approval(
     content_type: str,
     theme: str = Query(default=None, description="Thème spécifique (optionnel)"),
     send_email: bool = Query(default=True, description="Envoyer l'email d'approbation"),
-    ai_images: bool = Query(default=True, description="Générer images avec DALL-E/Grok (sinon stock photos)")
+    ai_images: bool = Query(default=False, description="Utiliser Grok AI pour images (défaut: vraies photos stock)"),
+    real_photos: bool = Query(default=True, description="Utiliser vraies photos Unsplash (plus naturel)")
 ):
     """
     🎨 Génère du contenu et l'envoie pour approbation par email
@@ -619,8 +629,8 @@ async def generate_and_send_for_approval(
     - magazine: Articles tendances
     
     Images:
-    - ai_images=true: Génère avec DALL-E 3 ou Grok
-    - ai_images=false: Utilise photos stock (Unsplash/Pexels)
+    - real_photos=true (DÉFAUT): Vraies photos Unsplash/Pexels (plus naturel!)
+    - ai_images=true: Génère avec Grok AI (moins naturel)
     """
     if content_type not in CONTENT_TYPES:
         raise HTTPException(
@@ -628,10 +638,13 @@ async def generate_and_send_for_approval(
             detail=f"Type invalide. Valides: {list(CONTENT_TYPES.keys())}"
         )
     
-    logger.info(f"🎨 Génération contenu: {content_type} | theme={theme} | ai_images={ai_images}")
+    # Si real_photos est True, désactiver ai_images
+    use_ai = ai_images and not real_photos
+    
+    logger.info(f"🎨 Génération contenu: {content_type} | theme={theme} | real_photos={real_photos}")
     
     # Générer le contenu
-    content = await generate_content(content_type, theme, generate_ai_images=ai_images)
+    content = await generate_content(content_type, theme, generate_ai_images=use_ai)
     
     if send_email:
         # Envoyer pour approbation
@@ -663,6 +676,7 @@ async def generate_and_send_for_approval(
                 "theme": content.get("theme"),
                 "post_id": post_id,
                 "image_source": content.get("image_source", "stock"),
+                "image_type": "Vraie photo Unsplash" if not use_ai else "Grok AI",
                 "message": "📧 Email d'approbation envoyé!",
                 "approve_url": f"{API_URL}/api/content/approve/{post_id}",
                 "reject_url": f"{API_URL}/api/content/reject/{post_id}",
