@@ -402,7 +402,7 @@ async def generate_ai_image(content_type: str, text: str = "") -> Dict:
     
     if grok_key and text:
         try:
-            logger.info(f"🤖 Génération du prompt image avec Grok...")
+            logger.info(f"🤖 Génération du prompt image GLAMOUR LUXURA avec Grok...")
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
                     "https://api.x.ai/v1/chat/completions",
@@ -415,42 +415,53 @@ async def generate_ai_image(content_type: str, text: str = "") -> Dict:
                         "messages": [
                             {
                                 "role": "system", 
-                                "content": """Tu es un expert en création de prompts pour Grok Imagine, spécialisé en photographie beauté/coiffure haut de gamme.
+                                "content": """Tu es expert en création de prompts pour images GLAMOUR LUXURA.
 
-Crée un prompt DÉTAILLÉ en ANGLAIS pour générer une image EXCEPTIONNELLE de qualité magazine.
+RÈGLES CRITIQUES - STYLE LUXURA EXTENSIONS:
+1. Commence TOUJOURS par "Real photograph of a glamorous woman"
+2. ANGLE: 3/4 back view OU semi-profile OU looking over shoulder - pour montrer les cheveux
+3. CHEVEUX: EXTREMELY VOLUMINOUS, thick, full-bodied, bouncy hair - VOLUME SPECTACULAIRE
+4. Le VOLUME des cheveux doit être INCROYABLE - style pub L'Oréal/Pantene
+5. Cheveux épais, pleins, avec corps, rebond et mouvement naturel au vent
 
-ÉLÉMENTS OBLIGATOIRES dans le prompt:
-1. SUJET: Femme élégante avec cheveux magnifiques (mi-longs à longs, jamais courts)
-2. CHEVEUX: Brillants, soyeux, mouvement naturel, volume, texture visible
-3. ÉCLAIRAGE: Lumière naturelle douce, golden hour, rim lighting subtil
-4. COMPOSITION: Portrait ou demi-corps, regard engageant ou profil élégant
-5. STYLE: Editorial magazine, Vogue quality, high fashion beauty
-6. TECHNIQUE: Shot on Hasselblad, 85mm f/1.4, shallow depth of field, bokeh
-7. AMBIANCE: Luxueuse, aspirationnelle, féminine, sophistiquée
-8. COULEURS: Tons chauds, palette harmonieuse
+MOTS-CLÉS VOLUME OBLIGATOIRES (utilise au moins 2):
+- "incredibly voluminous thick bouncy hair"
+- "dramatic Hollywood-volume hair with stunning fullness"
+- "luxurious full-bodied hair with incredible volume"
+- "breathtaking voluminous glamorous hair"
+- "show-stopping thick voluminous hair with dramatic body"
 
-INTERDITS:
-- Texte, logos, watermarks
-- Visages déformés ou irréalistes
-- Cheveux courts ou abîmés
-- Poses rigides ou artificielles
+DÉCORS LUXUEUX À VARIER:
+- 🏖️ PLAGE: Amalfi Coast Italy, Santorini Greece, Maldives, Monaco beach club
+- 🌅 SUNSET: Luxury yacht deck, rooftop bar with city view, infinity pool
+- 🏛️ VILLE: Paris balcony Eiffel view, Milan fashion, Monaco harbor
+- 🌸 NATURE: Lavender fields Provence, Tuscan vineyard
+- ✨ SOIRÉE: Grand hotel terrace, gala event, luxury restaurant
 
-Retourne UNIQUEMENT le prompt en anglais (250 mots max), rien d'autre."""
+TENUES GLAMOUR:
+- 👙 Elegant swimsuit, chic bikini, resort wear
+- 👗 Flowing evening gown, silk cocktail dress
+- 🌞 Chic sundress, elegant linen outfit
+- 💎 Designer outfit, red carpet style
+
+AMBIANCE: Glamour, sensuel, aspirationnel, vie de rêve
+
+Retourne UNIQUEMENT le prompt en anglais (200 mots max), rien d'autre."""
                             },
                             {
                                 "role": "user",
-                                "content": f"Crée un prompt image PREMIUM pour ce post Facebook de Luxura Distribution (extensions capillaires):\n\n{text[:600]}"
+                                "content": f"Crée un prompt image GLAMOUR LUXURA pour ce post Facebook:\n\n{text[:600]}"
                             }
                         ],
                         "max_tokens": 350,
-                        "temperature": 0.8
+                        "temperature": 0.9
                     }
                 )
                 
                 if response.status_code == 200:
                     result = response.json()
                     contextual_prompt = result["choices"][0]["message"]["content"].strip()
-                    logger.info(f"✅ Prompt Grok généré: {contextual_prompt[:150]}...")
+                    logger.info(f"✅ Prompt Grok GLAMOUR généré: {contextual_prompt[:150]}...")
                 else:
                     logger.warning(f"Grok prompt failed: {response.status_code}")
         except Exception as e:
@@ -463,16 +474,24 @@ Retourne UNIQUEMENT le prompt en anglais (250 mots max), rien d'autre."""
         
         for model_name in grok_models:
             try:
-                logger.info(f"🤖 Génération image avec Grok ({model_name}) - 2K quality...")
+                logger.info(f"🤖 Génération image avec Grok ({model_name}) - GLAMOUR LUXURA...")
                 async with httpx.AsyncClient(timeout=120.0) as client:
-                    # Améliorer le prompt pour meilleure qualité
-                    enhanced_prompt = f"""{contextual_prompt}
+                    # Améliorer le prompt pour VOLUME et GLAMOUR
+                    enhanced_prompt = f"""REAL PHOTOGRAPH, NOT AI ART. {contextual_prompt}
 
-STYLE: Ultra high quality professional beauty photography, magazine editorial quality, 
-sharp focus, natural soft lighting, warm color tones, elegant and aspirational mood,
-shot with professional DSLR camera, shallow depth of field, bokeh background,
-skin texture visible but flattering, hair looks silky and healthy with natural shine,
-NO text, NO watermarks, NO logos, photorealistic, 8K quality render."""
+CRITICAL REQUIREMENTS FOR LUXURA GLAMOUR:
+- Real photograph of a glamorous woman, NOT illustration, NOT digital art
+- ANGLE: 3/4 back view or semi-profile or looking over shoulder
+- HAIR: EXTREMELY VOLUMINOUS, thick, full-bodied, bouncy with DRAMATIC VOLUME
+- Hair must look like L'Oréal/Pantene commercial - incredible fullness and body
+- Shot on Canon EOS R5 with 85mm f/1.4 portrait lens
+- Natural golden hour or sunset lighting highlighting hair volume
+- Luxurious setting: yacht, beach, Paris, rooftop, infinity pool
+- Glamorous outfit: evening gown, swimsuit, designer dress
+- Aspirational luxury lifestyle mood
+- NO text, NO watermarks, NO logos
+
+OUTPUT: Hyper-realistic glamorous photograph with show-stopping voluminous hair."""
 
                     response = await client.post(
                         "https://api.x.ai/v1/images/generations",
@@ -484,8 +503,6 @@ NO text, NO watermarks, NO logos, photorealistic, 8K quality render."""
                             "model": model_name,
                             "prompt": enhanced_prompt,
                             "n": 1,
-                            "resolution": "2k",  # Haute résolution
-                            "aspect_ratio": "1:1"  # Carré pour Facebook/Instagram
                         }
                     )
                     
