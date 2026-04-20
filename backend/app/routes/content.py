@@ -1,5 +1,6 @@
 """
 Routes API pour le système de contenu automatisé
+Inclut le nouveau générateur de contenu Magazine Féminin
 """
 
 import logging
@@ -10,6 +11,7 @@ from datetime import datetime
 
 from app.services.content_pipeline import ContentPipeline
 from app.services.content_discovery import ContentDiscoveryService
+from app.services.magazine_content_generator import MagazineContentGenerator, get_jour_semaine_fr
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +33,171 @@ class ScanResponse(BaseModel):
     errors: List[str] = []
 
 
+class MagazinePostResponse(BaseModel):
+    success: bool
+    theme: str
+    theme_name: str
+    country_inspiration: str
+    title: str
+    full_text: str
+    image_prompt: str
+    fallback_image_url: str
+    hashtags: List[str]
+    day_fr: str
+    generated_at: str
+
+
 class PostStatusUpdate(BaseModel):
     status: str  # draft, approved, rejected, published
 
 
 # ============================================
-# ENDPOINTS
+# ENDPOINTS - MAGAZINE CONTENT (NOUVEAU)
+# ============================================
+
+@router.post("/magazine/generate", response_model=MagazinePostResponse)
+async def generate_magazine_post(
+    theme: str = Query(default="auto", description="Thème du post: tendance_coupe, comparatif_extensions, conseils_erreurs, quiet_luxury, inspiration_internationale ou 'auto'"),
+    country: str = Query(default="auto", description="Pays d'inspiration: france, italy, usa, uk ou 'auto'")
+):
+    """
+    🎨 Génère un post Facebook style MAGAZINE FÉMININ
+    
+    Thèmes disponibles:
+    - tendance_coupe: Décryptage bob, lob, frange
+    - comparatif_extensions: Halo vs tape-in vs weft
+    - conseils_erreurs: Erreurs à éviter, conseils pro
+    - quiet_luxury: Tendance cheveux glossy/luxe
+    - inspiration_internationale: Tendances Paris, Milan, NYC
+    
+    Inspirations:
+    - france: Style parisien/français
+    - italy: Style milanais/italien
+    - usa: Style new-yorkais/américain
+    - uk: Style londonien/britannique
+    
+    Retourne un post complet avec texte, prompt image, et hashtags.
+    """
+    logger.info(f"🎨 Génération post magazine: theme={theme}, country={country}")
+    
+    try:
+        generator = MagazineContentGenerator()
+        result = await generator.generate_magazine_post(theme=theme, country_inspiration=country)
+        
+        return MagazinePostResponse(
+            success=True,
+            theme=result["theme"],
+            theme_name=result["theme_name"],
+            country_inspiration=result["country_inspiration"],
+            title=result["title"],
+            full_text=result["full_text"],
+            image_prompt=result["image_prompt"],
+            fallback_image_url=result["fallback_image_url"],
+            hashtags=result["hashtags"],
+            day_fr=result["day_fr"],
+            generated_at=result["generated_at"]
+        )
+        
+    except Exception as e:
+        logger.error(f"Erreur génération magazine: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/magazine/themes")
+async def list_magazine_themes():
+    """
+    📚 Liste les thèmes magazine disponibles
+    """
+    from app.services.content_sources import MAGAZINE_THEMES
+    
+    themes = []
+    for key, config in MAGAZINE_THEMES.items():
+        themes.append({
+            "id": key,
+            "name": config["name"],
+            "description": config["description"],
+            "tone": config["tone"],
+            "example_titles": config.get("example_titles", [])[:3]
+        })
+    
+    return {
+        "themes": themes,
+        "countries": [
+            {"id": "france", "name": "France (Paris)"},
+            {"id": "italy", "name": "Italie (Milan)"},
+            {"id": "usa", "name": "USA (New York)"},
+            {"id": "uk", "name": "UK (Londres)"},
+        ],
+        "today_theme": "auto",
+        "today_day_fr": get_jour_semaine_fr()
+    }
+
+
+@router.get("/magazine/week-plan")
+async def get_week_content_plan():
+    """
+    📅 Génère un plan de contenu pour la semaine
+    """
+    generator = MagazineContentGenerator()
+    week_plan = await generator.generate_week_content_plan()
+    
+    return {
+        "week_plan": week_plan,
+        "current_day": get_jour_semaine_fr(),
+        "description": "Plan éditorial suggéré pour la semaine"
+    }
+
+
+@router.post("/magazine/batch-generate")
+async def batch_generate_magazine_posts(
+    count: int = Query(default=3, le=7, description="Nombre de posts à générer"),
+    background_tasks: BackgroundTasks = None
+):
+    """
+    📦 Génère plusieurs posts magazine en lot
+    
+    Utile pour préparer une semaine de contenu.
+    Chaque post aura un thème et pays différent.
+    """
+    logger.info(f"📦 Génération batch: {count} posts magazine")
+    
+    themes = ["tendance_coupe", "comparatif_extensions", "conseils_erreurs", "quiet_luxury", "inspiration_internationale"]
+    countries = ["france", "italy", "usa", "uk"]
+    
+    posts = []
+    generator = MagazineContentGenerator()
+    
+    for i in range(count):
+        theme = themes[i % len(themes)]
+        country = countries[i % len(countries)]
+        
+        try:
+            result = await generator.generate_magazine_post(theme=theme, country_inspiration=country)
+            posts.append({
+                "index": i + 1,
+                "theme": result["theme"],
+                "country": result["country_inspiration"],
+                "title": result["title"],
+                "full_text": result["full_text"],
+                "image_prompt": result["image_prompt"],
+                "hashtags": result["hashtags"]
+            })
+        except Exception as e:
+            logger.error(f"Erreur post {i+1}: {e}")
+            posts.append({
+                "index": i + 1,
+                "error": str(e)
+            })
+    
+    return {
+        "success": True,
+        "posts_generated": len([p for p in posts if "error" not in p]),
+        "posts": posts
+    }
+
+
+# ============================================
+# ENDPOINTS - SCAN CLASSIQUE
 # ============================================
 
 @router.post("/ingest/hair-canada", response_model=ScanResponse)

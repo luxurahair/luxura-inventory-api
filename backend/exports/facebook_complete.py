@@ -500,43 +500,43 @@ def post_story(request: StoryRequest):
 def get_calendar():
     """📅 Voir le calendrier de publication."""
     
-    # Calendrier sur 4 semaines
+    # Calendrier sur 4 semaines - TOUT EN FRANÇAIS
     calendar = {
-        "week_1_products": {
-            "monday_10h": {"type": "post_product", "template": "vedette", "product_type": "genius"},
-            "tuesday_12h": {"type": "reel", "theme": "transformation"},
-            "wednesday_19h": {"type": "story", "theme": "coulisses"},
-            "thursday_08h": {"type": "post_b2b", "theme": "offre_salons"},
-            "friday_14h": {"type": "carousel", "theme": "couleurs_tendance"},
-            "saturday_11h": {"type": "reel", "theme": "tutoriel"},
-            "sunday_20h": {"type": "story", "theme": "temoignage"}
+        "semaine_1_produits": {
+            "lundi_10h": {"type": "post_product", "template": "vedette", "product_type": "genius"},
+            "mardi_12h": {"type": "reel", "theme": "transformation"},
+            "mercredi_19h": {"type": "story", "theme": "coulisses"},
+            "jeudi_08h": {"type": "post_b2b", "theme": "offre_salons"},
+            "vendredi_14h": {"type": "carousel", "theme": "couleurs_tendance"},
+            "samedi_11h": {"type": "reel", "theme": "tutoriel"},
+            "dimanche_20h": {"type": "story", "theme": "temoignage"}
         },
-        "week_2_education": {
-            "monday_10h": {"type": "post_product", "template": "vedette", "product_type": "tape"},
-            "tuesday_12h": {"type": "reel", "theme": "comparatif"},
-            "wednesday_19h": {"type": "story", "theme": "qa"},
-            "thursday_08h": {"type": "post_b2b", "theme": "formation"},
-            "friday_14h": {"type": "carousel", "theme": "erreurs_eviter"},
-            "saturday_11h": {"type": "reel", "theme": "routine_entretien"},
-            "sunday_20h": {"type": "story", "theme": "avant_apres"}
+        "semaine_2_education": {
+            "lundi_10h": {"type": "post_product", "template": "vedette", "product_type": "tape"},
+            "mardi_12h": {"type": "reel", "theme": "comparatif"},
+            "mercredi_19h": {"type": "story", "theme": "qa"},
+            "jeudi_08h": {"type": "post_b2b", "theme": "formation"},
+            "vendredi_14h": {"type": "carousel", "theme": "erreurs_eviter"},
+            "samedi_11h": {"type": "reel", "theme": "routine_entretien"},
+            "dimanche_20h": {"type": "story", "theme": "avant_apres"}
         },
-        "week_3_testimonials": {
-            "monday_10h": {"type": "post_testimonial", "salon": "Salon Carouso"},
-            "tuesday_12h": {"type": "reel", "theme": "reaction_wow"},
-            "wednesday_19h": {"type": "story", "theme": "pose_salon"},
-            "thursday_08h": {"type": "post_b2b", "theme": "resultats"},
-            "friday_14h": {"type": "carousel", "theme": "transformations"},
-            "saturday_11h": {"type": "reel", "theme": "texture_cheveux"},
-            "sunday_20h": {"type": "story", "theme": "weekend"}
+        "semaine_3_temoignages": {
+            "lundi_10h": {"type": "post_testimonial", "salon": "Salon Carouso"},
+            "mardi_12h": {"type": "reel", "theme": "reaction_wow"},
+            "mercredi_19h": {"type": "story", "theme": "pose_salon"},
+            "jeudi_08h": {"type": "post_b2b", "theme": "resultats"},
+            "vendredi_14h": {"type": "carousel", "theme": "transformations"},
+            "samedi_11h": {"type": "reel", "theme": "texture_cheveux"},
+            "dimanche_20h": {"type": "story", "theme": "weekend"}
         },
-        "week_4_inspiration": {
-            "monday_10h": {"type": "post_product", "template": "nouveau", "product_type": "halo"},
-            "tuesday_12h": {"type": "reel", "theme": "3_coiffures"},
-            "wednesday_19h": {"type": "story", "theme": "photoshoot"},
-            "thursday_08h": {"type": "post_b2b", "theme": "nouvelle_collection"},
-            "friday_14h": {"type": "carousel", "theme": "tendances_2025"},
-            "saturday_11h": {"type": "reel", "theme": "mariage"},
-            "sunday_20h": {"type": "story", "theme": "preparation"}
+        "semaine_4_inspiration": {
+            "lundi_10h": {"type": "post_product", "template": "nouveau", "product_type": "halo"},
+            "mardi_12h": {"type": "reel", "theme": "3_coiffures"},
+            "mercredi_19h": {"type": "story", "theme": "photoshoot"},
+            "jeudi_08h": {"type": "post_b2b", "theme": "nouvelle_collection"},
+            "vendredi_14h": {"type": "carousel", "theme": "tendances_2026"},
+            "samedi_11h": {"type": "reel", "theme": "mariage"},
+            "dimanche_20h": {"type": "story", "theme": "preparation"}
         }
     }
     
@@ -544,17 +544,17 @@ def get_calendar():
     week_number = ((datetime.now().isocalendar()[1] - 1) % 4) + 1
     week_key = list(calendar.keys())[week_number - 1]
     
-    # Trouver le prochain post
-    day_map = {0: "monday", 1: "tuesday", 2: "wednesday", 3: "thursday", 4: "friday", 5: "saturday", 6: "sunday"}
-    current_day = day_map[datetime.now().weekday()]
+    # Jours en français
+    jours_fr = {0: "lundi", 1: "mardi", 2: "mercredi", 3: "jeudi", 4: "vendredi", 5: "samedi", 6: "dimanche"}
+    current_day = jours_fr[datetime.now().weekday()]
     current_hour = datetime.now().hour
     
     return {
-        "current_week": week_number,
-        "week_theme": week_key.replace("week_", "").replace("_", " ").title(),
-        "current_day": current_day,
-        "schedule": calendar[week_key],
-        "full_calendar": calendar
+        "semaine_actuelle": week_number,
+        "theme_semaine": week_key.replace("semaine_", "").replace("_", " ").title(),
+        "jour_actuel": current_day,
+        "horaire": calendar[week_key],
+        "calendrier_complet": calendar
     }
 
 
