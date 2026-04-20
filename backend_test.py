@@ -589,6 +589,165 @@ class LuxuraAPITester:
         except Exception as e:
             self.log_result("Content Ingest Pipeline", False, f"Error: {str(e)}")
 
+    def test_watermark_service(self):
+        """Test LUXURA watermark service and content approval endpoints"""
+        print("\n🏷️ TESTING LUXURA WATERMARK SERVICE")
+        print("-" * 40)
+        
+        # Test 1: Watermark module unit test
+        print("   🧪 Testing watermark module directly...")
+        try:
+            # Add backend app to path
+            sys.path.append('/app/backend')
+            
+            # Import and test the watermark function
+            from app.services.watermark import process_image_with_watermark
+            
+            # Test with Unsplash image as specified in review request
+            test_image_url = "https://images.unsplash.com/photo-1496440737103-cd596325d314?w=800"
+            
+            # Run the watermark function
+            import asyncio
+            result = asyncio.run(process_image_with_watermark(test_image_url))
+            
+            if result and isinstance(result, bytes):
+                result_size = len(result)
+                if result_size > 100000:  # > 100KB as specified
+                    self.log_result("Watermark Module Unit Test", True, 
+                        f"Watermark function working: generated {result_size} bytes (>{result_size//1024}KB)", 
+                        {"image_size_bytes": result_size, "image_size_kb": result_size//1024})
+                else:
+                    self.log_result("Watermark Module Unit Test", False, 
+                        f"Image too small: {result_size} bytes (<100KB)", 
+                        {"image_size_bytes": result_size})
+            else:
+                self.log_result("Watermark Module Unit Test", False, 
+                    f"Watermark function returned invalid result: {type(result)}")
+                    
+        except ImportError as e:
+            self.log_result("Watermark Module Unit Test", False, f"Cannot import watermark module: {str(e)}")
+        except Exception as e:
+            self.log_result("Watermark Module Unit Test", False, f"Watermark test failed: {str(e)}")
+        
+        # Test 2: GET /api/content/pending - Should return pending posts list
+        try:
+            response = self.session.get(f"{BASE_URL}/content/pending")
+            if response.status_code == 200:
+                data = response.json()
+                if "pending_count" in data and "posts" in data:
+                    self.log_result("Content Pending API", True, 
+                        f"Returns pending posts: {data.get('pending_count', 0)} posts", data)
+                else:
+                    self.log_result("Content Pending API", False, "Missing expected fields", data)
+            else:
+                self.log_result("Content Pending API", False, f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_result("Content Pending API", False, f"Error: {str(e)}")
+        
+        # Test 3: POST /api/content/test-approval-flow - Should create test post and return URLs
+        try:
+            response = self.session.post(f"{BASE_URL}/content/test-approval-flow")
+            if response.status_code == 200:
+                data = response.json()
+                required_fields = ["success", "post_id", "approve_url", "reject_url"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields and data.get("success"):
+                    post_id = data.get("post_id")
+                    approve_url = data.get("approve_url")
+                    reject_url = data.get("reject_url")
+                    
+                    # Validate URLs contain the post_id
+                    if post_id in approve_url and post_id in reject_url:
+                        self.log_result("Content Test Approval Flow", True, 
+                            f"Test approval flow created successfully: post_id={post_id}", 
+                            {
+                                "post_id": post_id,
+                                "approve_url": approve_url,
+                                "reject_url": reject_url
+                            })
+                    else:
+                        self.log_result("Content Test Approval Flow", False, 
+                            "URLs don't contain post_id", data)
+                else:
+                    issues = []
+                    if missing_fields:
+                        issues.append(f"Missing fields: {missing_fields}")
+                    if not data.get("success"):
+                        issues.append("Flow reported failure")
+                    self.log_result("Content Test Approval Flow", False, "; ".join(issues), data)
+            else:
+                self.log_result("Content Test Approval Flow", False, f"HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_result("Content Test Approval Flow", False, f"Error: {str(e)}")
+        
+        # Test 4: Verify watermark integration in approval endpoint (without actually approving)
+        print("   🔍 Testing watermark integration readiness...")
+        try:
+            # Check if the approval endpoint exists by testing with a fake post_id
+            # This should return 404 but confirm the endpoint exists
+            fake_post_id = "test-watermark-integration-check"
+            response = self.session.get(f"{BASE_URL}/content/approve/{fake_post_id}")
+            
+            # We expect 404 for non-existent post, but endpoint should exist
+            if response.status_code == 404:
+                # Check if the response is HTML (indicating the endpoint exists)
+                if "text/html" in response.headers.get("content-type", ""):
+                    self.log_result("Watermark Integration Readiness", True, 
+                        "Approval endpoint exists and ready for watermark integration")
+                else:
+                    self.log_result("Watermark Integration Readiness", False, 
+                        "Approval endpoint exists but not returning HTML response")
+            elif response.status_code == 500:
+                # Server error might indicate watermark integration issues
+                self.log_result("Watermark Integration Readiness", False, 
+                    f"Approval endpoint has server error: {response.text}")
+            else:
+                self.log_result("Watermark Integration Readiness", False, 
+                    f"Unexpected response from approval endpoint: {response.status_code}")
+                    
+        except Exception as e:
+            self.log_result("Watermark Integration Readiness", False, f"Error testing approval endpoint: {str(e)}")
+        
+        # Test 5: Check watermark dependencies
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+            import httpx
+            self.log_result("Watermark Dependencies", True, "All watermark dependencies available (PIL, httpx)")
+        except ImportError as e:
+            self.log_result("Watermark Dependencies", False, f"Missing watermark dependencies: {str(e)}")
+        
+        # Test 6: Test image format validation
+        try:
+            # Test that watermark can handle JPEG format
+            from app.services.watermark import create_gold_text_watermark
+            from PIL import Image
+            import io
+            
+            # Create a test image
+            test_img = Image.new('RGB', (800, 600), color='white')
+            watermarked = create_gold_text_watermark(test_img, "LUXURA", "bottom-right", 0.35)
+            
+            # Convert to JPEG bytes
+            output = io.BytesIO()
+            if watermarked.mode == 'RGBA':
+                background = Image.new('RGB', watermarked.size, (255, 255, 255))
+                background.paste(watermarked, mask=watermarked.split()[3])
+                watermarked = background
+            
+            watermarked.save(output, format='JPEG', quality=95)
+            jpeg_bytes = output.getvalue()
+            
+            if len(jpeg_bytes) > 10000:  # Should be reasonable size
+                self.log_result("Watermark JPEG Format", True, 
+                    f"JPEG watermark generation working: {len(jpeg_bytes)} bytes")
+            else:
+                self.log_result("Watermark JPEG Format", False, 
+                    f"JPEG output too small: {len(jpeg_bytes)} bytes")
+                    
+        except Exception as e:
+            self.log_result("Watermark JPEG Format", False, f"JPEG format test failed: {str(e)}")
+
     def run_all_tests(self):
         """Run all tests including backlink automation"""
         print("🚀 Starting Luxura Distribution Complete Testing Suite")
@@ -617,6 +776,9 @@ class LuxuraAPITester:
         
         # Content Pipeline Tests
         self.test_content_pipeline_endpoints()
+        
+        # Watermark Service Tests
+        self.test_watermark_service()
         
         # Backlink Automation Tests
         self.test_backlink_automation_system()

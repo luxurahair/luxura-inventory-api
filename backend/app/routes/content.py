@@ -550,29 +550,21 @@ async def approve_post(post_id: str):
         
         if image_url:
             try:
-                from logo_overlay import process_image_with_logo
-                import base64
+                from app.services.watermark import process_image_with_watermark
                 
-                logger.info(f"🖼️ Ajout du logo Luxura sur l'image...")
+                logger.info(f"🏷️ Ajout du watermark doré LUXURA sur l'image...")
                 
-                # Créer l'image avec logo
-                image_bytes = await process_image_with_logo(
-                    image_url,
-                    position="bottom-right",
-                    size_percent=0.12,  # 12% de la largeur
-                    padding=15
-                )
+                # Créer l'image avec watermark doré
+                image_bytes = await process_image_with_watermark(image_url)
                 
                 if image_bytes:
-                    logger.info(f"✅ Logo ajouté! Taille: {len(image_bytes)} bytes")
-                    # L'image avec logo sera uploadée directement à Facebook
-                    # On garde l'URL originale pour fallback
+                    logger.info(f"✅ Watermark doré ajouté! Taille: {len(image_bytes)} bytes")
                 else:
-                    logger.warning("Logo non ajouté, utilisation image originale")
+                    logger.warning("Watermark non ajouté, utilisation image originale")
                     image_bytes = None
                     
             except Exception as e:
-                logger.warning(f"Erreur ajout logo: {e} - utilisation image originale")
+                logger.warning(f"Erreur ajout watermark: {e} - utilisation image originale")
                 image_bytes = None
         else:
             image_bytes = None
