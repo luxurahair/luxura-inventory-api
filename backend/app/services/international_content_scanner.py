@@ -590,42 +590,37 @@ ARTICLE SOURCE:
 POST FACEBOOK:
 {post_text[:400]}
 
-Crée un prompt image EN ANGLAIS pour une photo GLAMOUR, SENSUELLE et ASPIRATIONNELLE.
+Crée un prompt image EN ANGLAIS pour une photo ULTRA-GLAMOUR et ASPIRATIONNELLE.
 
-RÈGLES CRITIQUES - STYLE LUXURA EXTENSIONS:
+RÈGLES CRITIQUES - CHEVEUX LUXURA VOLUMINEUX:
 1. Commence TOUJOURS par "Real photograph of a glamorous woman"
-2. ANGLE: 3/4 back view OU semi-profile OU looking over shoulder - pour montrer les cheveux
-3. CHEVEUX LUXURA: Long (past shoulders to mid-back), voluminous, flowing, silky hair extensions
-4. Les cheveux doivent être LE FOCUS principal - en mouvement naturel
-5. LUMIÈRE: Golden hour, sunset, natural sunlight highlighting the hair shine
+2. ANGLE: 3/4 back view OU semi-profile OU looking over shoulder
+3. CHEVEUX: EXTREMELY VOLUMINOUS, thick, full-bodied, bouncy hair - VOLUME EST LA PRIORITÉ #1
+4. Le VOLUME des cheveux doit être SPECTACULAIRE - style pub L'Oréal/Pantene
+5. Cheveux épais, pleins, avec beaucoup de corps, de rebond et de mouvement
+6. LUMIÈRE: Golden hour, sunset highlighting the incredible hair volume
 
-DÉCORS LUXUEUX À VARIER (choisis selon le contexte de l'article):
-- 🏖️ PLAGE: Amalfi Coast Italy, Santorini Greece, Maldives, Monaco beach club
-- 🌅 SUNSET: Luxury yacht deck, rooftop bar with city view, infinity pool edge
-- 🏛️ VILLE: Paris balcony with Eiffel view, Milan fashion district, Monaco harbor
-- 🌸 NATURE: Lavender fields Provence, Tuscan vineyard, tropical garden
-- ✨ SOIRÉE: Grand hotel terrace, luxury restaurant, gala event entrance
+MOTS-CLÉS VOLUME OBLIGATOIRES (utilise au moins 2):
+- "incredibly voluminous thick bouncy hair"
+- "dramatic Hollywood-volume hair with stunning fullness"  
+- "luxurious full-bodied hair with incredible volume"
+- "breathtaking voluminous glamorous hair"
+- "show-stopping thick voluminous hair with dramatic body"
 
-TENUES GLAMOUR À VARIER:
-- 👙 Plage/Piscine: Elegant one-piece swimsuit, chic bikini with sarong, resort wear
-- 👗 Soirée: Flowing evening gown, elegant cocktail dress, silk maxi dress
-- 🌞 Jour: Chic sundress, elegant linen outfit, sophisticated casual
-- 💎 Luxe: Designer outfit, haute couture inspired, red carpet style
+DÉCORS LUXUEUX:
+- 🏖️ PLAGE: Amalfi Coast, Santorini, Maldives, Monaco beach club
+- 🌅 SUNSET: Luxury yacht deck, rooftop bar, infinity pool
+- 🏛️ VILLE: Paris Eiffel balcony, Milan fashion, Monaco harbor
+- 🌸 NATURE: Lavender Provence, Tuscan vineyard
+- ✨ SOIRÉE: Grand hotel, gala, luxury restaurant
 
-AMBIANCE:
-- Sensuelle mais élégante (jamais vulgaire)
-- Aspirationnelle - vie de rêve
-- Cheveux qui bougent au vent ou en mouvement
-- Femme confiante, séductrice naturelle
-- Maximum 200 caractères
+TENUES GLAMOUR:
+- 👙 Elegant swimsuit, chic bikini, resort wear
+- 👗 Evening gown, silk dress, cocktail dress
+- 🌞 Chic sundress, elegant linen
+- 💎 Designer outfit, red carpet style
 
-EXEMPLES BONS PROMPTS:
-- "Real photograph of glamorous woman from 3/4 back on Amalfi Coast beach, long voluminous hair flowing in sea breeze, elegant white swimsuit, golden sunset light, Mediterranean luxury"
-- "Real photo of sensual woman looking over shoulder on Monaco yacht deck, luxurious thick hair cascading down her back, silk evening dress, champagne sunset glow"
-- "Real photograph of elegant woman on Paris balcony with Eiffel Tower view, long flowing hair extensions catching golden hour light, chic black dress, glamorous Parisian mood"
-- "Real photo of glamorous woman walking through Santorini streets, voluminous wavy hair in motion, flowing white summer dress, stunning ocean backdrop"
-
-Retourne UNIQUEMENT le prompt en anglais. Sois créatif avec les décors!"""
+Maximum 200 caractères. Focus sur VOLUME SPECTACULAIRE des cheveux!"""
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:

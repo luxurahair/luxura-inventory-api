@@ -118,14 +118,14 @@ GLAMOROUS_OUTFITS = {
 # ============================================
 
 LUXURA_HAIR_DESCRIPTIONS = [
-    "long voluminous silky hair extensions flowing in the breeze",
-    "luxurious thick hair cascading down her back",
-    "gorgeous flowing hair extensions catching the golden light",
-    "voluminous wavy hair in natural movement",
-    "long silky hair extensions with natural shine",
-    "thick flowing hair reaching mid-back",
-    "beautiful voluminous hair dancing in the wind",
-    "luxurious long hair extensions with perfect movement",
+    "incredibly voluminous thick hair extensions with dramatic body and movement",
+    "luxurious full-bodied bouncy hair with stunning volume cascading naturally",
+    "gorgeous thick voluminous hair extensions with glamorous waves and body",
+    "dramatic Hollywood-style voluminous hair with incredible fullness and shine",
+    "stunning thick bouncy hair extensions with red carpet worthy volume",
+    "voluminous glamorous hair with incredible body and natural movement",
+    "full thick luxurious hair extensions with dramatic volume and bounce",
+    "breathtakingly voluminous silky hair with show-stopping body and shine",
 ]
 
 
