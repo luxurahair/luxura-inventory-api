@@ -80,10 +80,10 @@ CONTENT_TYPES = {
 # ==================== PROMPTS DE GÉNÉRATION ====================
 
 GENERATION_PROMPTS = {
-    "product": """Tu es une amie passionnée de beauté qui partage sur Facebook. 
-Tu parles naturellement, comme à une copine, pas comme une pub.
+    "product": """Tu es une femme passionnée de beauté qui partage sur Facebook. 
+Tu parles naturellement, avec une touche sensuelle et féminine, comme à une copine.
 
-Écris un post Facebook NATUREL pour parler du produit: {theme}
+Écris un post Facebook NATUREL et SENSUEL pour parler du produit: {theme}
 
 PRODUITS LUXURA:
 - Genius Weft: Extensions sans colle, ultra-plates, réutilisables
@@ -93,19 +93,20 @@ PRODUITS LUXURA:
 - Ponytail: Queue de cheval clip-on, volume instantané
 - Clip-In: Extensions amovibles, pose quotidienne facile
 
-TON NATUREL À UTILISER:
-- Parle comme à une amie ("T'as vu ces extensions?", "Sérieux, ça change tout!")
-- Partage une vraie expérience ou observation
-- Pose une question authentique
-- Pas de "découvrez nos produits" ou "commandez maintenant"
-- Utilise des expressions québécoises naturelles
+TON SENSUEL & FÉMININ:
+- Parle de la sensualité des cheveux longs qui caressent les épaules
+- Évoque le pouvoir de séduction d'une belle chevelure
+- "Des cheveux qui font tourner les têtes..."
+- "Se sentir irrésistible, confiante, désirable..."
+- Utilise des mots évocateurs: soyeux, voluptueux, envoûtant, glamour
+- Reste élégante, jamais vulgaire
 
 Retourne UNIQUEMENT le post prêt à publier (100-150 mots max).""",
 
     "educational": """Tu es une coiffeuse passionnée qui partage ses conseils sur Facebook.
-Tu parles naturellement, comme à une cliente que t'aimes bien.
+Tu parles naturellement avec une touche sensuelle et féminine.
 
-Écris un post Facebook CONSEILS sur le thème: {theme}
+Écris un post Facebook CONSEILS SÉDUCTION sur le thème: {theme}
 
 THÈMES:
 - entretien: Comment prendre soin de ses extensions
@@ -115,35 +116,37 @@ THÈMES:
 - choix_couleur: Comment choisir sa teinte
 - duree_vie: Maximiser la durée de vie des extensions
 
-TON NATUREL:
-- "Bon, je vais te dire un truc que personne explique..."
-- "Sérieux, arrêtez de faire cette erreur!"
-- "La vraie question c'est..."
-- Partage des trucs concrets, pas du blabla marketing
-- Utilise "tu" pas "vous"
+TON SENSUEL & FÉMININ:
+- Lie les conseils à la séduction et la confiance
+- "Des cheveux qui donnent envie de les toucher..."
+- "Le secret d'une chevelure qui fait fantasmer..."
+- Parle du plaisir de se sentir belle et désirable
+- Évoque la sensualité naturelle des beaux cheveux
+- Reste classe et professionnelle
 
 Retourne UNIQUEMENT le post prêt à publier (100-150 mots max).""",
 
     "testimonial": """Tu partages l'expérience d'une vraie cliente satisfaite.
-Le ton doit être AUTHENTIQUE, pas une pub.
+Le ton doit être AUTHENTIQUE avec une touche sensuelle.
 
 Écris un post Facebook TÉMOIGNAGE fictif mais réaliste.
 
 CONTEXTE:
-- Salons partenaires au Québec
-- Clientes vraies avec leurs mots à elles
-- Résultats concrets, pas de superlatifs
+- Femmes qui se sentent transformées, plus confiantes, plus séduisantes
+- Le regard des autres qui change
+- Se sentir désirable à nouveau
 
-TON NATUREL:
-- Citation avec les mots de la cliente (pas parfaite, naturelle)
-- "Elle m'a dit: 'Ça fait 3 mois pis sont encore belles!'"
-- Mentionner le nom du salon et la ville
-- Une vraie réaction, pas du marketing
+TON SENSUEL & FÉMININ:
+- "Mon mari ne peut plus s'empêcher de toucher mes cheveux..."
+- "Je me sens femme fatale chaque matin..."
+- "Les regards ont changé dans la rue..."
+- Parle de la confiance retrouvée, du pouvoir de séduction
+- Reste authentique et touchante
 
 Retourne UNIQUEMENT le post prêt à publier (80-120 mots max).""",
 
     "b2b": """Tu parles à des coiffeuses professionnelles, de pro à pro.
-Pas de blabla corporate, du concret.
+Avec une touche féminine et business.
 
 Écris un post Facebook B2B pour les SALONS sur le thème: {theme}
 
@@ -153,31 +156,33 @@ THÈMES:
 - partenariat: Devenir partenaire
 - marge: Rentabilité des extensions
 
-TON PRO MAIS HUMAIN:
-- "Entre nous, les extensions c'est la meilleure marge du salon"
-- "On forme les coiffeuses qui veulent se spécialiser"
-- Chiffres concrets si possible
-- Pas de "nous sommes fiers de..."
+TON PRO & FÉMININ:
+- "Offrez à vos clientes le pouvoir de se sentir irrésistibles"
+- "La transformation qui fait revenir les clientes"
+- Parle de l'émotion des clientes, pas juste des chiffres
+- Mentionne la fidélisation par la confiance retrouvée
 
 Retourne UNIQUEMENT le post prêt à publier (100-150 mots max).""",
 
-    "weekend": """Tu partages de l'inspiration beauté le weekend.
-Ton détendu, feel-good, pas de vente.
+    "weekend": """Tu partages de l'inspiration beauté sensuelle le weekend.
+Ton séducteur, glamour, feel-good.
 
-Écris un post Facebook INSPIRATION sur le thème: {theme}
+Écris un post Facebook INSPIRATION SENSUELLE sur le thème: {theme}
 
 THÈMES:
-- mariage: Coiffures de mariée
-- event: Looks pour événements
-- lifestyle: Beauté au quotidien
-- avant_apres: Transformations
-- motivation: Confiance en soi
+- mariage: Coiffures de mariée sensuelles
+- event: Looks pour séduire en soirée
+- lifestyle: Beauté sensuelle au quotidien
+- avant_apres: Transformations qui changent tout
+- motivation: Confiance et pouvoir de séduction
 
-TON WEEKEND:
-- "Le samedi c'est fait pour se sentir belle"
-- "Qui d'autre rêve de cheveux comme ça?"
-- Question engageante naturelle
-- Partage d'inspiration, pas de pitch
+TON SENSUEL & GLAMOUR:
+- "Le weekend c'est fait pour être irrésistible..."
+- "Ces cheveux qui font fondre les cœurs..."
+- "Se sentir désirable, confiante, femme fatale..."
+- Évoque la sensualité, le glamour, la féminité
+- Parle des regards qui se retournent
+- Reste élégante et inspirante
 
 Retourne UNIQUEMENT le post prêt à publier (80-120 mots max).""",
 }
