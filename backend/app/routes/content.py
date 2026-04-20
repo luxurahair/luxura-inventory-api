@@ -1,21 +1,70 @@
 """
 Routes API pour le système de contenu automatisé
 Inclut le nouveau générateur de contenu Magazine Féminin
++ Système d'approbation avec publication Facebook
 """
 
 import logging
-from typing import List, Optional
+import json
+import os
+from typing import List, Optional, Dict
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from datetime import datetime
+from pathlib import Path
 
 from app.services.content_pipeline import ContentPipeline
 from app.services.content_discovery import ContentDiscoveryService
 from app.services.magazine_content_generator import MagazineContentGenerator, get_jour_semaine_fr
+from app.services.facebook_publisher import FacebookPublisher
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/content", tags=["Content Automation"])
+
+# ============================================
+# STOCKAGE DES POSTS EN ATTENTE D'APPROBATION
+# ============================================
+PENDING_POSTS_FILE = Path("/tmp/luxura_pending_posts.json")
+
+
+def load_pending_posts() -> Dict:
+    """Charge les posts en attente"""
+    try:
+        if PENDING_POSTS_FILE.exists():
+            with open(PENDING_POSTS_FILE, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Erreur chargement pending posts: {e}")
+    return {}
+
+
+def save_pending_posts(posts: Dict):
+    """Sauvegarde les posts en attente"""
+    try:
+        with open(PENDING_POSTS_FILE, 'w') as f:
+            json.dump(posts, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"Erreur sauvegarde pending posts: {e}")
+
+
+def add_pending_post(post_id: str, post_data: Dict):
+    """Ajoute un post en attente"""
+    posts = load_pending_posts()
+    posts[post_id] = {
+        **post_data,
+        "created_at": datetime.now().isoformat(),
+        "status": "pending"
+    }
+    save_pending_posts(posts)
+    logger.info(f"📝 Post {post_id} ajouté en attente d'approbation")
+
+
+def get_pending_post(post_id: str) -> Optional[Dict]:
+    """Récupère un post en attente"""
+    posts = load_pending_posts()
+    return posts.get(post_id)
 
 
 # ============================================
@@ -352,3 +401,260 @@ async def trigger_daily_job(background_tasks: BackgroundTasks):
         "status": "started",
         "message": "Job quotidien démarré en arrière-plan"
     }
+
+
+# ============================================
+# ENDPOINTS - APPROBATION & PUBLICATION FACEBOOK
+# ============================================
+
+@router.get("/approve/{post_id}", response_class=HTMLResponse)
+async def approve_post(post_id: str):
+    """
+    ✅ Approuve un post et le publie sur Facebook
+    
+    Appelé depuis l'email d'approbation.
+    Publie directement sur la page Facebook si le post existe.
+    """
+    logger.info(f"✅ Approbation reçue pour post: {post_id}")
+    
+    # Récupérer le post en attente
+    post = get_pending_post(post_id)
+    
+    if not post:
+        logger.warning(f"Post {post_id} non trouvé dans les pending")
+        return HTMLResponse(content=f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Post non trouvé</title>
+            <style>
+                body {{ font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }}
+                .container {{ text-align: center; padding: 40px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                h1 {{ color: #dc3545; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>⚠️ Post non trouvé</h1>
+                <p>Le post <code>{post_id}</code> n'existe pas ou a déjà été traité.</p>
+                <p>Il a peut-être déjà été publié ou rejeté.</p>
+            </div>
+        </body>
+        </html>
+        """, status_code=404)
+    
+    # Publier sur Facebook
+    try:
+        publisher = FacebookPublisher()
+        
+        # Préparer le texte avec hashtags
+        full_text = post.get("text", post.get("full_text", ""))
+        hashtags = post.get("hashtags", [])
+        if hashtags:
+            if isinstance(hashtags, list):
+                full_text += "\n\n" + " ".join(hashtags)
+        
+        image_url = post.get("image_url", post.get("fallback_image_url"))
+        
+        logger.info(f"📘 Publication Facebook: {len(full_text)} caractères, image: {bool(image_url)}")
+        
+        success, fb_post_id, error = await publisher.publish_post(full_text, image_url)
+        
+        if success:
+            # Mettre à jour le status
+            posts = load_pending_posts()
+            if post_id in posts:
+                posts[post_id]["status"] = "published"
+                posts[post_id]["fb_post_id"] = fb_post_id
+                posts[post_id]["published_at"] = datetime.now().isoformat()
+                save_pending_posts(posts)
+            
+            logger.info(f"✅ Post {post_id} publié sur Facebook! FB ID: {fb_post_id}")
+            
+            return HTMLResponse(content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Publié avec succès!</title>
+                <style>
+                    body {{ font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }}
+                    .container {{ text-align: center; padding: 40px; background: white; border-radius: 10px; box-shadow: 0 2px 20px rgba(0,0,0,0.2); max-width: 500px; }}
+                    h1 {{ color: #28a745; margin-bottom: 10px; }}
+                    .emoji {{ font-size: 60px; margin-bottom: 20px; }}
+                    .fb-link {{ display: inline-block; margin-top: 20px; padding: 12px 24px; background: #1877f2; color: white; text-decoration: none; border-radius: 5px; }}
+                    .fb-link:hover {{ background: #166fe5; }}
+                    .post-id {{ color: #666; font-size: 12px; margin-top: 20px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="emoji">🎉</div>
+                    <h1>Publié avec succès!</h1>
+                    <p>Votre post a été publié sur la page Facebook Luxura Distribution.</p>
+                    <a href="https://www.facebook.com/profile.php?id=61575105214807" target="_blank" class="fb-link">📘 Voir sur Facebook</a>
+                    <p class="post-id">Post ID: {post_id} | FB ID: {fb_post_id}</p>
+                </div>
+            </body>
+            </html>
+            """)
+        else:
+            logger.error(f"❌ Erreur publication Facebook: {error}")
+            return HTMLResponse(content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Erreur de publication</title>
+                <style>
+                    body {{ font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }}
+                    .container {{ text-align: center; padding: 40px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; }}
+                    h1 {{ color: #dc3545; }}
+                    .error {{ background: #f8d7da; padding: 15px; border-radius: 5px; color: #721c24; margin-top: 20px; text-align: left; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>❌ Erreur de publication</h1>
+                    <p>Une erreur s'est produite lors de la publication sur Facebook.</p>
+                    <div class="error">
+                        <strong>Erreur:</strong> {error}
+                    </div>
+                    <p style="margin-top: 20px; color: #666;">Vérifiez que le token Facebook est valide.</p>
+                </div>
+            </body>
+            </html>
+            """, status_code=500)
+            
+    except Exception as e:
+        logger.error(f"❌ Exception publication: {e}")
+        return HTMLResponse(content=f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Erreur</title>
+            <style>
+                body {{ font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }}
+                .container {{ text-align: center; padding: 40px; background: white; border-radius: 10px; }}
+                h1 {{ color: #dc3545; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>❌ Erreur</h1>
+                <p>{str(e)}</p>
+            </div>
+        </body>
+        </html>
+        """, status_code=500)
+
+
+@router.get("/reject/{post_id}", response_class=HTMLResponse)
+async def reject_post(post_id: str):
+    """
+    ❌ Rejette un post (ne sera pas publié)
+    
+    Appelé depuis l'email d'approbation.
+    """
+    logger.info(f"❌ Rejet reçu pour post: {post_id}")
+    
+    # Mettre à jour le status
+    posts = load_pending_posts()
+    if post_id in posts:
+        posts[post_id]["status"] = "rejected"
+        posts[post_id]["rejected_at"] = datetime.now().isoformat()
+        save_pending_posts(posts)
+    
+    return HTMLResponse(content=f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Post rejeté</title>
+        <style>
+            body {{ font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }}
+            .container {{ text-align: center; padding: 40px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+            h1 {{ color: #6c757d; }}
+            .emoji {{ font-size: 60px; margin-bottom: 20px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="emoji">🗑️</div>
+            <h1>Post rejeté</h1>
+            <p>Le post <code>{post_id}</code> a été rejeté et ne sera pas publié.</p>
+        </div>
+    </body>
+    </html>
+    """)
+
+
+@router.get("/pending")
+async def list_pending_posts():
+    """
+    📋 Liste les posts en attente d'approbation
+    """
+    posts = load_pending_posts()
+    pending = [
+        {"post_id": pid, **data}
+        for pid, data in posts.items()
+        if data.get("status") == "pending"
+    ]
+    return {
+        "pending_count": len(pending),
+        "posts": pending
+    }
+
+
+@router.post("/test-approval-flow")
+async def test_approval_flow():
+    """
+    🧪 Test complet du flow d'approbation
+    
+    Crée un post de test, l'ajoute aux pending, et envoie l'email.
+    """
+    from app.services.email_approval import send_approval_email
+    
+    # Créer un post de test
+    test_post = {
+        "text": """✨ **Test du système d'approbation Luxura**
+
+Ceci est un post de test pour vérifier que le système fonctionne correctement.
+
+Quand vous cliquez "Approuver", ce post sera publié sur la page Facebook Luxura Distribution! 🎉
+
+#Luxura #Test #ExtensionsCapillaires""",
+        "full_text": """✨ **Test du système d'approbation Luxura**
+
+Ceci est un post de test pour vérifier que le système fonctionne correctement.
+
+Quand vous cliquez "Approuver", ce post sera publié sur la page Facebook Luxura Distribution! 🎉""",
+        "hashtags": ["#Luxura", "#Test", "#ExtensionsCapillaires"],
+        "image_url": "https://images.unsplash.com/photo-1496440737103-cd596325d314",
+        "fallback_image_url": "https://images.unsplash.com/photo-1496440737103-cd596325d314",
+        "source_title": "Test Système Approbation",
+        "source_url": "https://luxuradistribution.com"
+    }
+    
+    # Envoyer l'email et obtenir le post_id
+    result = await send_approval_email(test_post)
+    
+    if result.get("success"):
+        post_id = result.get("post_id")
+        # Ajouter aux posts en attente
+        add_pending_post(post_id, test_post)
+        
+        return {
+            "success": True,
+            "message": "Email de test envoyé! Vérifiez votre boîte mail.",
+            "post_id": post_id,
+            "approve_url": f"https://luxura-inventory-api.onrender.com/api/content/approve/{post_id}",
+            "reject_url": f"https://luxura-inventory-api.onrender.com/api/content/reject/{post_id}"
+        }
+    else:
+        return {
+            "success": False,
+            "error": result.get("message", "Erreur inconnue")
+        }
