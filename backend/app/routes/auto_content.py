@@ -265,34 +265,42 @@ async def generate_ai_image(content_type: str, text: str = "") -> Dict:
                         "messages": [
                             {
                                 "role": "system", 
-                                "content": """Tu es un expert en création de prompts pour générer des images de beauté/coiffure.
-Crée un prompt en ANGLAIS pour générer une image qui correspond parfaitement au contenu du post.
+                                "content": """Tu es un expert en création de prompts pour Grok Imagine, spécialisé en photographie beauté/coiffure haut de gamme.
 
-RÈGLES:
-- Maximum 150 mots
-- Style: photographie professionnelle beauté/lifestyle
-- Femmes avec cheveux mi-longs à longs (pas trop courts, pas au sol)
-- Lumière naturelle, tons chauds
-- Pas de texte dans l'image
-- Pas de visages déformés
-- Aspect premium et élégant
+Crée un prompt DÉTAILLÉ en ANGLAIS pour générer une image EXCEPTIONNELLE de qualité magazine.
 
-Retourne UNIQUEMENT le prompt, rien d'autre."""
+ÉLÉMENTS OBLIGATOIRES dans le prompt:
+1. SUJET: Femme élégante avec cheveux magnifiques (mi-longs à longs, jamais courts)
+2. CHEVEUX: Brillants, soyeux, mouvement naturel, volume, texture visible
+3. ÉCLAIRAGE: Lumière naturelle douce, golden hour, rim lighting subtil
+4. COMPOSITION: Portrait ou demi-corps, regard engageant ou profil élégant
+5. STYLE: Editorial magazine, Vogue quality, high fashion beauty
+6. TECHNIQUE: Shot on Hasselblad, 85mm f/1.4, shallow depth of field, bokeh
+7. AMBIANCE: Luxueuse, aspirationnelle, féminine, sophistiquée
+8. COULEURS: Tons chauds, palette harmonieuse
+
+INTERDITS:
+- Texte, logos, watermarks
+- Visages déformés ou irréalistes
+- Cheveux courts ou abîmés
+- Poses rigides ou artificielles
+
+Retourne UNIQUEMENT le prompt en anglais (250 mots max), rien d'autre."""
                             },
                             {
                                 "role": "user",
-                                "content": f"Crée un prompt image pour ce post Facebook:\n\n{text[:500]}"
+                                "content": f"Crée un prompt image PREMIUM pour ce post Facebook de Luxura Distribution (extensions capillaires):\n\n{text[:600]}"
                             }
                         ],
-                        "max_tokens": 200,
-                        "temperature": 0.7
+                        "max_tokens": 350,
+                        "temperature": 0.8
                     }
                 )
                 
                 if response.status_code == 200:
                     result = response.json()
                     contextual_prompt = result["choices"][0]["message"]["content"].strip()
-                    logger.info(f"✅ Prompt Grok généré: {contextual_prompt[:100]}...")
+                    logger.info(f"✅ Prompt Grok généré: {contextual_prompt[:150]}...")
                 else:
                     logger.warning(f"Grok prompt failed: {response.status_code}")
         except Exception as e:
@@ -305,8 +313,17 @@ Retourne UNIQUEMENT le prompt, rien d'autre."""
         
         for model_name in grok_models:
             try:
-                logger.info(f"🤖 Génération image avec Grok ({model_name})...")
-                async with httpx.AsyncClient(timeout=90.0) as client:
+                logger.info(f"🤖 Génération image avec Grok ({model_name}) - 2K quality...")
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    # Améliorer le prompt pour meilleure qualité
+                    enhanced_prompt = f"""{contextual_prompt}
+
+STYLE: Ultra high quality professional beauty photography, magazine editorial quality, 
+sharp focus, natural soft lighting, warm color tones, elegant and aspirational mood,
+shot with professional DSLR camera, shallow depth of field, bokeh background,
+skin texture visible but flattering, hair looks silky and healthy with natural shine,
+NO text, NO watermarks, NO logos, photorealistic, 8K quality render."""
+
                     response = await client.post(
                         "https://api.x.ai/v1/images/generations",
                         headers={
@@ -315,8 +332,10 @@ Retourne UNIQUEMENT le prompt, rien d'autre."""
                         },
                         json={
                             "model": model_name,
-                            "prompt": f"{contextual_prompt}. Professional beauty photography, no text, elegant.",
-                            "n": 1
+                            "prompt": enhanced_prompt,
+                            "n": 1,
+                            "resolution": "2k",  # Haute résolution
+                            "aspect_ratio": "1:1"  # Carré pour Facebook/Instagram
                         }
                     )
                     
@@ -332,11 +351,12 @@ Retourne UNIQUEMENT le prompt, rien d'autre."""
                             image_url = result["data"][0].get("url") or result["data"][0].get("b64_json")
                         
                         if image_url:
-                            logger.info(f"🤖 Image Grok ({model_name}) générée avec succès!")
+                            logger.info(f"🤖 Image Grok ({model_name}) 2K générée avec succès!")
                             return {
                                 "url": image_url, 
                                 "source": "grok",
                                 "model": model_name,
+                                "resolution": "2k",
                                 "prompt_used": contextual_prompt
                             }
                         else:
