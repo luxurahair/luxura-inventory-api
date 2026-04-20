@@ -231,20 +231,132 @@ IMAGE_PROMPTS = {
 
 async def generate_ai_image(content_type: str, text: str = "") -> Dict:
     """
-    Génère une image avec DALL-E 3 ou Grok
+    Génère une image avec Grok (priorité) ou DALL-E 3
+    
+    Flow:
+    1. Utilise Grok pour créer un prompt contextuel basé sur le texte
+    2. Génère l'image avec Grok
+    3. Fallback DALL-E si Grok échoue
+    4. Fallback Stock si tout échoue
     
     Returns:
-        Dict avec url et source (dalle/grok/stock)
+        Dict avec url et source (grok/dalle/stock)
     """
-    # Vérifier les clés API disponibles
-    dalle_key = os.getenv("OPENAI_API_KEY")
     grok_key = os.getenv("XAI_API_KEY") or os.getenv("GROK_API_KEY")
+    dalle_key = os.getenv("OPENAI_API_KEY")
     
     base_prompt = IMAGE_PROMPTS.get(content_type, IMAGE_PROMPTS["product"])
     
-    # Essayer DALL-E 3 d'abord
+    # ==================== ÉTAPE 1: GÉNÉRER LE PROMPT AVEC GROK ====================
+    contextual_prompt = base_prompt
+    
+    if grok_key and text:
+        try:
+            logger.info(f"🤖 Génération du prompt image avec Grok...")
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    "https://api.x.ai/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {grok_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "grok-3-mini",
+                        "messages": [
+                            {
+                                "role": "system", 
+                                "content": """Tu es un expert en création de prompts pour générer des images de beauté/coiffure.
+Crée un prompt en ANGLAIS pour générer une image qui correspond parfaitement au contenu du post.
+
+RÈGLES:
+- Maximum 150 mots
+- Style: photographie professionnelle beauté/lifestyle
+- Femmes avec cheveux mi-longs à longs (pas trop courts, pas au sol)
+- Lumière naturelle, tons chauds
+- Pas de texte dans l'image
+- Pas de visages déformés
+- Aspect premium et élégant
+
+Retourne UNIQUEMENT le prompt, rien d'autre."""
+                            },
+                            {
+                                "role": "user",
+                                "content": f"Crée un prompt image pour ce post Facebook:\n\n{text[:500]}"
+                            }
+                        ],
+                        "max_tokens": 200,
+                        "temperature": 0.7
+                    }
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    contextual_prompt = result["choices"][0]["message"]["content"].strip()
+                    logger.info(f"✅ Prompt Grok généré: {contextual_prompt[:100]}...")
+                else:
+                    logger.warning(f"Grok prompt failed: {response.status_code}")
+        except Exception as e:
+            logger.warning(f"Grok prompt error: {e}")
+    
+    # ==================== ÉTAPE 2: GÉNÉRER L'IMAGE AVEC GROK (PRIORITÉ) ====================
+    if grok_key:
+        # Essayer plusieurs modèles Grok
+        grok_models = ["grok-imagine-image", "grok-2-image", "grok-2-image-1212"]
+        
+        for model_name in grok_models:
+            try:
+                logger.info(f"🤖 Génération image avec Grok ({model_name})...")
+                async with httpx.AsyncClient(timeout=90.0) as client:
+                    response = await client.post(
+                        "https://api.x.ai/v1/images/generations",
+                        headers={
+                            "Authorization": f"Bearer {grok_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": model_name,
+                            "prompt": f"{contextual_prompt}. Professional beauty photography, no text, elegant.",
+                            "n": 1
+                        }
+                    )
+                    
+                    logger.info(f"Grok ({model_name}) response status: {response.status_code}")
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        logger.info(f"Grok response: {result}")
+                        
+                        # Grok peut retourner l'URL dans différents formats
+                        image_url = None
+                        if "data" in result and len(result["data"]) > 0:
+                            image_url = result["data"][0].get("url") or result["data"][0].get("b64_json")
+                        
+                        if image_url:
+                            logger.info(f"🤖 Image Grok ({model_name}) générée avec succès!")
+                            return {
+                                "url": image_url, 
+                                "source": "grok",
+                                "model": model_name,
+                                "prompt_used": contextual_prompt
+                            }
+                        else:
+                            logger.warning(f"Grok ({model_name}): pas d'URL dans la réponse: {result}")
+                    elif response.status_code == 404:
+                        # Modèle non disponible, essayer le suivant
+                        logger.info(f"Grok ({model_name}): modèle non disponible, essai suivant...")
+                        continue
+                    else:
+                        error_text = response.text[:500] if response.text else "No error text"
+                        logger.warning(f"Grok ({model_name}) failed: {response.status_code} - {error_text}")
+                        
+            except Exception as e:
+                logger.warning(f"Grok ({model_name}) error: {e}")
+                continue
+    
+    # ==================== ÉTAPE 3: FALLBACK DALL-E 3 ====================
     if dalle_key:
         try:
+            logger.info(f"🎨 Fallback vers DALL-E 3...")
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
                     "https://api.openai.com/v1/images/generations",
@@ -254,7 +366,7 @@ async def generate_ai_image(content_type: str, text: str = "") -> Dict:
                     },
                     json={
                         "model": "dall-e-3",
-                        "prompt": f"{base_prompt}. Style: premium beauty brand, no text in image.",
+                        "prompt": f"{contextual_prompt}. Style: premium beauty brand, no text in image.",
                         "n": 1,
                         "size": "1024x1024",
                         "quality": "standard"
@@ -265,39 +377,24 @@ async def generate_ai_image(content_type: str, text: str = "") -> Dict:
                     result = response.json()
                     image_url = result["data"][0]["url"]
                     logger.info(f"🎨 Image DALL-E 3 générée pour {content_type}")
-                    return {"url": image_url, "source": "dalle"}
-        except Exception as e:
-            logger.warning(f"DALL-E failed: {e}")
-    
-    # Essayer Grok/xAI
-    if grok_key:
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    "https://api.x.ai/v1/images/generations",
-                    headers={
-                        "Authorization": f"Bearer {grok_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "model": "grok-2-image",
-                        "prompt": f"{base_prompt}. Premium beauty photography.",
-                        "n": 1
+                    return {
+                        "url": image_url, 
+                        "source": "dalle",
+                        "prompt_used": contextual_prompt
                     }
-                )
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    image_url = result.get("data", [{}])[0].get("url")
-                    if image_url:
-                        logger.info(f"🤖 Image Grok générée pour {content_type}")
-                        return {"url": image_url, "source": "grok"}
+                else:
+                    logger.warning(f"DALL-E failed: {response.status_code}")
         except Exception as e:
-            logger.warning(f"Grok failed: {e}")
+            logger.warning(f"DALL-E error: {e}")
     
-    # Fallback vers images stock
+    # ==================== ÉTAPE 4: FALLBACK STOCK ====================
+    logger.info(f"📷 Fallback vers images stock")
     images = STOCK_IMAGES.get(content_type, STOCK_IMAGES["product"])
-    return {"url": random.choice(images), "source": "stock"}
+    return {
+        "url": random.choice(images), 
+        "source": "stock",
+        "prompt_used": None
+    }
 
 
 # ==================== GÉNÉRATION DE CONTENU ====================
