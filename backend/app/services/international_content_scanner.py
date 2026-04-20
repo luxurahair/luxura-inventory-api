@@ -578,9 +578,9 @@ Exemples de ton:
         """Génère un prompt image contextuel basé sur l'article"""
         
         if not self.openai_key:
-            return f"Beautiful woman with flowing hair extensions, {article['city']} style, elegant feminine aesthetic, natural lighting, no text"
+            return f"Real photograph of beautiful woman with flowing natural hair, {article['city']} street style, candid moment, natural daylight, shot on professional camera"
         
-        prompt = f"""Tu es expert en création de prompts pour Grok Imagine (génération d'images IA).
+        prompt = f"""Tu es expert en création de prompts pour générer des VRAIES PHOTOS (pas des illustrations IA).
 
 ARTICLE SOURCE:
 - Titre: {title_fr}
@@ -590,22 +590,30 @@ ARTICLE SOURCE:
 POST FACEBOOK:
 {post_text[:400]}
 
-Crée un prompt image EN ANGLAIS qui illustre PARFAITEMENT cet article.
+Crée un prompt image EN ANGLAIS pour une VRAIE PHOTO de magazine.
 
-RÈGLES OBLIGATOIRES:
-1. Femme élégante avec beaux cheveux (mi-longs à longs)
-2. Style {article['city']} authentique
-3. Cheveux soyeux, brillants, avec volume naturel
-4. Lumière naturelle, ambiance lifestyle
-5. Pas de texte, pas de logo, pas de watermark
-6. Photo candide, pas "stock photo"
-7. Maximum 200 caractères
+RÈGLES CRITIQUES POUR LE RÉALISME:
+1. Commence TOUJOURS par "Real candid photograph of a woman"
+2. Femme avec cheveux naturels (pas parfaits, avec texture naturelle)
+3. Lumière NATURELLE - soleil, fenêtre, lumière du jour - PAS de studio sombre
+4. Environnement RÉEL de {article['city']} (café, rue, parc)
+5. Moment CANDIDE - elle ne regarde pas l'appareil, elle vit sa vie
+6. Cheveux longs ou mi-longs, soyeux mais NATURELS (flyaways acceptés)
+7. Style vestimentaire casual chic adapté à {article['city']}
+8. AUCUN maquillage lourd - look naturel frais
+9. Scène LUMINEUSE et chaleureuse - pas sombre ni moody
+10. Maximum 150 caractères
 
-STYLE PAR VILLE:
-- Paris: élégance discrète, café parisien, Haussmann
-- Milan: sophistication, mode italienne, luxe
-- New York: dynamique, urbain chic, rooftop
-- Londres: classique, raffiné, jardin anglais
+INTERDITS:
+- Pas de pose de mannequin
+- Pas de fond noir ou studio
+- Pas de cheveux trop parfaits/brillants (ça fait faux)
+- Pas d'éclairage dramatique
+- Pas de femme qui regarde directement l'appareil
+
+EXEMPLES BONS PROMPTS:
+- "Real candid photograph of a woman laughing at a Paris cafe terrace, long wavy brown hair catching the sunlight, wearing a cream sweater, golden hour light, shallow depth of field"
+- "Natural street style photo of a woman walking in Milan, silky dark hair flowing, casual elegant outfit, soft daylight, bokeh background"
 
 Retourne UNIQUEMENT le prompt en anglais."""
 
@@ -634,15 +642,13 @@ Retourne UNIQUEMENT le prompt en anglais."""
         
         # Fallback
         city_styles = {
-            "Paris": "Parisian cafe terrace, Haussmann building",
-            "Milan": "elegant Italian piazza, luxury fashion",
-            "New York": "Manhattan rooftop, urban chic",
-            "Londres": "English garden, classic elegance",
-            "Montréal": "Old Montreal cobblestone, European charm",
+            "Paris": "Real candid photograph of a woman at a sunlit Paris cafe terrace, natural wavy hair, cream outfit, golden hour",
+            "Milan": "Real street photo of elegant woman in Milan, flowing dark hair, stylish casual outfit, soft daylight",
+            "New York": "Candid photo of woman walking in Manhattan, long shiny hair, casual chic style, natural light",
+            "Londres": "Natural photograph of woman in London park, beautiful hair in breeze, elegant casual look, soft afternoon light",
+            "Montréal": "Real photo of stylish woman in Old Montreal, gorgeous hair, European charm, warm natural lighting",
         }
-        style = city_styles.get(article['city'], "elegant urban setting")
-        
-        return f"Beautiful woman with long flowing silky hair, {style}, natural golden hour lighting, lifestyle photography, feminine elegant aesthetic, no text"
+        return city_styles.get(article['city'], "Real candid photograph of a beautiful woman with natural flowing hair, casual elegant style, bright natural daylight, lifestyle moment")
     
     async def _generate_grok_image(self, prompt: str) -> Optional[str]:
         """Génère une image avec Grok (xAI)"""
@@ -654,14 +660,25 @@ Retourne UNIQUEMENT le prompt en anglais."""
         logger.info(f"🎨 Génération image Grok...")
         logger.info(f"   Prompt: {prompt[:80]}...")
         
-        # Améliorer le prompt pour qualité premium
-        enhanced_prompt = f"""{prompt}
+        # NOUVEAU PROMPT ULTRA-RÉALISTE - Style photo magazine
+        enhanced_prompt = f"""REAL PHOTOGRAPH, NOT AI ART. {prompt}
 
-STYLE: Ultra high quality professional beauty photography, magazine editorial quality,
-sharp focus, natural soft lighting, warm color tones, elegant and aspirational mood,
-shot with professional camera, shallow depth of field, bokeh background,
-skin texture visible but flattering, hair looks silky and healthy with natural shine,
-photorealistic, 8K quality render, NO text, NO watermarks, NO logos."""
+CRITICAL REQUIREMENTS FOR REALISM:
+- Real candid photograph of a real woman, NOT illustration, NOT digital art, NOT 3D render
+- Shot on Canon EOS R5 or Sony A7R IV with 85mm f/1.4 portrait lens
+- Natural daylight, golden hour or soft window light - NO dramatic lighting
+- Bright, well-lit scene - NOT dark or moody
+- Hair should look natural with flyaways and natural texture, NOT perfect CGI hair
+- Skin with natural texture, pores visible, NOT airbrushed plastic skin
+- Natural makeup, NOT heavy editorial makeup
+- Candid lifestyle moment, woman NOT posing directly at camera
+- Background should be real environment (cafe, street, park) with natural blur
+- Colors should be warm but natural, NOT oversaturated
+- Style: Vogue Paris editorial, Harper's Bazaar lifestyle shoot
+- The woman should look like a real person you'd see on the street, NOT a perfect AI model
+- NO text, NO watermarks, NO logos, NO borders
+
+OUTPUT: Hyper-realistic photograph indistinguishable from a real camera photo."""
 
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
