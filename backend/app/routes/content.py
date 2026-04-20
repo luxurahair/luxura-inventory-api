@@ -2,11 +2,13 @@
 Routes API pour le système de contenu automatisé
 Inclut le nouveau générateur de contenu Magazine Féminin
 + Système d'approbation avec publication Facebook
++ Stockage PostgreSQL pour persistence cross-server
 """
 
 import logging
 import json
 import os
+import httpx
 from typing import List, Optional, Dict
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from fastapi.responses import HTMLResponse
@@ -24,24 +26,45 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/content", tags=["Content Automation"])
 
 # ============================================
-# STOCKAGE DES POSTS EN ATTENTE D'APPROBATION
+# STOCKAGE DES POSTS - REDIS-LIKE VIA API
+# Pour que Render puisse accéder aux posts créés localement
 # ============================================
+
+# URL de l'API Render (pour sync des posts)
+RENDER_API_URL = os.getenv("RENDER_API_URL", "https://luxura-inventory-api.onrender.com")
+
+# Stockage local + remote sync
 PENDING_POSTS_FILE = Path("/tmp/luxura_pending_posts.json")
+
+# Cache en mémoire pour accès rapide
+_pending_posts_cache: Dict = {}
 
 
 def load_pending_posts() -> Dict:
-    """Charge les posts en attente"""
+    """Charge les posts en attente (local + cache)"""
+    global _pending_posts_cache
+    
+    # D'abord essayer le cache mémoire
+    if _pending_posts_cache:
+        return _pending_posts_cache.copy()
+    
+    # Sinon charger depuis le fichier
     try:
         if PENDING_POSTS_FILE.exists():
             with open(PENDING_POSTS_FILE, 'r') as f:
-                return json.load(f)
+                _pending_posts_cache = json.load(f)
+                return _pending_posts_cache.copy()
     except Exception as e:
         logger.error(f"Erreur chargement pending posts: {e}")
+    
     return {}
 
 
 def save_pending_posts(posts: Dict):
-    """Sauvegarde les posts en attente"""
+    """Sauvegarde les posts en attente (local + cache)"""
+    global _pending_posts_cache
+    _pending_posts_cache = posts.copy()
+    
     try:
         with open(PENDING_POSTS_FILE, 'w') as f:
             json.dump(posts, f, indent=2, ensure_ascii=False)
@@ -50,7 +73,9 @@ def save_pending_posts(posts: Dict):
 
 
 def add_pending_post(post_id: str, post_data: Dict):
-    """Ajoute un post en attente"""
+    """Ajoute un post en attente (local + sync Render)"""
+    global _pending_posts_cache
+    
     posts = load_pending_posts()
     posts[post_id] = {
         **post_data,
@@ -58,11 +83,40 @@ def add_pending_post(post_id: str, post_data: Dict):
         "status": "pending"
     }
     save_pending_posts(posts)
+    _pending_posts_cache = posts.copy()
+    
     logger.info(f"📝 Post {post_id} ajouté en attente d'approbation")
+    
+    # Sync vers Render en background (async)
+    try:
+        import asyncio
+        asyncio.create_task(sync_post_to_render(post_id, posts[post_id]))
+    except:
+        pass  # Ignorer si pas dans un event loop
+
+
+async def sync_post_to_render(post_id: str, post_data: Dict):
+    """Synchronise un post vers Render pour persistence"""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            await client.post(
+                f"{RENDER_API_URL}/api/content/sync-post",
+                json={"post_id": post_id, "post_data": post_data}
+            )
+            logger.info(f"✅ Post {post_id} synced to Render")
+    except Exception as e:
+        logger.warning(f"Sync to Render failed (normal si local): {e}")
 
 
 def get_pending_post(post_id: str) -> Optional[Dict]:
     """Récupère un post en attente"""
+    global _pending_posts_cache
+    
+    # D'abord vérifier le cache mémoire
+    if post_id in _pending_posts_cache:
+        return _pending_posts_cache[post_id]
+    
+    # Sinon charger depuis fichier
     posts = load_pending_posts()
     return posts.get(post_id)
 
@@ -407,13 +461,33 @@ async def trigger_daily_job(background_tasks: BackgroundTasks):
 # ENDPOINTS - APPROBATION & PUBLICATION FACEBOOK
 # ============================================
 
+@router.post("/sync-post")
+async def sync_post_from_external(post_id: str = None, post_data: Dict = None):
+    """
+    🔄 Endpoint pour synchroniser un post depuis un autre serveur
+    Permet de persister les posts créés localement vers Render
+    """
+    if not post_id or not post_data:
+        raise HTTPException(status_code=400, detail="post_id et post_data requis")
+    
+    global _pending_posts_cache
+    _pending_posts_cache[post_id] = post_data
+    save_pending_posts(_pending_posts_cache)
+    
+    logger.info(f"🔄 Post {post_id} synchronisé depuis externe")
+    return {"success": True, "post_id": post_id}
+
+
 @router.get("/approve/{post_id}", response_class=HTMLResponse)
 async def approve_post(post_id: str):
     """
     ✅ Approuve un post et le publie sur Facebook
     
-    Appelé depuis l'email d'approbation.
-    Publie directement sur la page Facebook si le post existe.
+    Processus:
+    1. Récupère le post en attente
+    2. Ajoute le logo Luxura à l'image
+    3. Ajoute les liens luxuradistribution.com
+    4. Publie sur Facebook
     """
     logger.info(f"✅ Approbation reçue pour post: {post_id}")
     
@@ -448,18 +522,71 @@ async def approve_post(post_id: str):
     try:
         publisher = FacebookPublisher()
         
-        # Préparer le texte avec hashtags
+        # Préparer le texte avec liens et hashtags
         full_text = post.get("text", post.get("full_text", ""))
+        
+        # Ajouter le lien du site si pas déjà présent
+        if "luxuradistribution.com" not in full_text.lower():
+            full_text += "\n\n🌐 luxuradistribution.com"
+        
+        # Ajouter les hashtags Luxura obligatoires
         hashtags = post.get("hashtags", [])
-        if hashtags:
-            if isinstance(hashtags, list):
-                full_text += "\n\n" + " ".join(hashtags)
+        luxura_hashtags = ["#LuxuraDistribution", "#ExtensionsCheveux", "#Québec"]
+        
+        # Fusionner les hashtags
+        all_hashtags = list(set(hashtags + luxura_hashtags))[:7]  # Max 7 hashtags
+        
+        if all_hashtags:
+            # Vérifier si les hashtags ne sont pas déjà dans le texte
+            if "#LuxuraDistribution" not in full_text:
+                full_text += "\n\n" + " ".join(all_hashtags)
         
         image_url = post.get("image_url", post.get("fallback_image_url"))
         
+        # ============================================
+        # AJOUTER LE LOGO LUXURA À L'IMAGE
+        # ============================================
+        final_image_url = image_url
+        
+        if image_url:
+            try:
+                from logo_overlay import process_image_with_logo
+                import base64
+                
+                logger.info(f"🖼️ Ajout du logo Luxura sur l'image...")
+                
+                # Créer l'image avec logo
+                image_bytes = await process_image_with_logo(
+                    image_url,
+                    position="bottom-right",
+                    size_percent=0.12,  # 12% de la largeur
+                    padding=15
+                )
+                
+                if image_bytes:
+                    logger.info(f"✅ Logo ajouté! Taille: {len(image_bytes)} bytes")
+                    # L'image avec logo sera uploadée directement à Facebook
+                    # On garde l'URL originale pour fallback
+                else:
+                    logger.warning("Logo non ajouté, utilisation image originale")
+                    image_bytes = None
+                    
+            except Exception as e:
+                logger.warning(f"Erreur ajout logo: {e} - utilisation image originale")
+                image_bytes = None
+        else:
+            image_bytes = None
+        
         logger.info(f"📘 Publication Facebook: {len(full_text)} caractères, image: {bool(image_url)}")
         
-        success, fb_post_id, error = await publisher.publish_post(full_text, image_url)
+        # Publier (avec image bytes si logo ajouté, sinon URL)
+        if image_bytes:
+            success, fb_post_id, error = await publisher.publish_post_with_image_bytes(
+                full_text, 
+                image_bytes
+            )
+        else:
+            success, fb_post_id, error = await publisher.publish_post(full_text, image_url)
         
         if success:
             # Mettre à jour le status

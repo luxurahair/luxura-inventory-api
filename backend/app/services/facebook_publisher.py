@@ -230,6 +230,70 @@ class FacebookPublisher:
             logger.error(f"❌ Erreur publication: {e}")
             return False, None, str(e)
     
+    async def publish_post_with_image_bytes(
+        self, 
+        message: str, 
+        image_bytes: bytes
+    ) -> Tuple[bool, Optional[str], Optional[str]]:
+        """
+        Publie un post sur Facebook avec une image en bytes (pour les images avec logo).
+        
+        Args:
+            message: Texte du post
+            image_bytes: Bytes de l'image JPEG
+            
+        Returns:
+            Tuple (success, post_id, error_message)
+        """
+        if not self.fb_token:
+            logger.error("FB_PAGE_ACCESS_TOKEN non configuré")
+            return False, None, "FB_PAGE_ACCESS_TOKEN non configuré"
+        
+        if not image_bytes:
+            logger.warning("Pas d'image bytes, fallback vers post texte seul")
+            return await self.publish_post(message, None)
+        
+        logger.info(f"📘 Publication Facebook avec image bytes ({len(image_bytes)} bytes)...")
+        
+        try:
+            async with httpx.AsyncClient(timeout=90.0) as client:
+                # Upload multipart avec les bytes de l'image
+                files = {
+                    "source": ("luxura_post.jpg", image_bytes, "image/jpeg")
+                }
+                data = {
+                    "caption": message,
+                    "access_token": self.fb_token
+                }
+                
+                response = await client.post(
+                    f"https://graph.facebook.com/{self.fb_api_version}/{self.fb_page_id}/photos",
+                    files=files,
+                    data=data
+                )
+                
+                result = response.json()
+                
+                if "error" in result:
+                    error = result["error"]
+                    error_msg = error.get("message", "Erreur inconnue")
+                    logger.error(f"❌ Erreur Facebook: {error_msg}")
+                    
+                    if error.get("code") == 190:
+                        error_msg = "Token expiré! Mettez à jour FB_PAGE_ACCESS_TOKEN"
+                    
+                    return False, None, error_msg
+                
+                post_id = result.get("id") or result.get("post_id")
+                logger.info(f"✅ Publié avec logo! Post ID: {post_id}")
+                return True, post_id, None
+                
+        except Exception as e:
+            logger.error(f"❌ Erreur publication avec bytes: {e}")
+            # Fallback vers URL si erreur
+            logger.info("Tentative fallback vers URL...")
+            return False, None, str(e)
+    
     # ============================================
     # WORKFLOW COMPLET
     # ============================================
