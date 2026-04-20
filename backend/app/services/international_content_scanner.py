@@ -578,9 +578,9 @@ Exemples de ton:
         """Génère un prompt image contextuel basé sur l'article"""
         
         if not self.openai_key:
-            return f"Real photograph of beautiful woman with flowing natural hair, {article['city']} street style, candid moment, natural daylight, shot on professional camera"
+            return f"Real photograph of glamorous woman from 3/4 back angle, long voluminous flowing hair extensions, {article['city']} style, seductive elegant, natural daylight"
         
-        prompt = f"""Tu es expert en création de prompts pour générer des VRAIES PHOTOS (pas des illustrations IA).
+        prompt = f"""Tu es expert en création de prompts pour générer des VRAIES PHOTOS GLAMOUR de femmes avec EXTENSIONS CAPILLAIRES LUXURA.
 
 ARTICLE SOURCE:
 - Titre: {title_fr}
@@ -590,32 +590,42 @@ ARTICLE SOURCE:
 POST FACEBOOK:
 {post_text[:400]}
 
-Crée un prompt image EN ANGLAIS pour une VRAIE PHOTO de magazine.
+Crée un prompt image EN ANGLAIS pour une photo GLAMOUR, SENSUELLE et ASPIRATIONNELLE.
 
-RÈGLES CRITIQUES POUR LE RÉALISME:
-1. Commence TOUJOURS par "Real candid photograph of a woman"
-2. Femme avec cheveux naturels (pas parfaits, avec texture naturelle)
-3. Lumière NATURELLE - soleil, fenêtre, lumière du jour - PAS de studio sombre
-4. Environnement RÉEL de {article['city']} (café, rue, parc)
-5. Moment CANDIDE - elle ne regarde pas l'appareil, elle vit sa vie
-6. Cheveux longs ou mi-longs, soyeux mais NATURELS (flyaways acceptés)
-7. Style vestimentaire casual chic adapté à {article['city']}
-8. AUCUN maquillage lourd - look naturel frais
-9. Scène LUMINEUSE et chaleureuse - pas sombre ni moody
-10. Maximum 150 caractères
+RÈGLES CRITIQUES - STYLE LUXURA EXTENSIONS:
+1. Commence TOUJOURS par "Real photograph of a glamorous woman"
+2. ANGLE: 3/4 back view OU semi-profile OU looking over shoulder - pour montrer les cheveux
+3. CHEVEUX LUXURA: Long (past shoulders to mid-back), voluminous, flowing, silky hair extensions
+4. Les cheveux doivent être LE FOCUS principal - en mouvement naturel
+5. LUMIÈRE: Golden hour, sunset, natural sunlight highlighting the hair shine
 
-INTERDITS:
-- Pas de pose de mannequin
-- Pas de fond noir ou studio
-- Pas de cheveux trop parfaits/brillants (ça fait faux)
-- Pas d'éclairage dramatique
-- Pas de femme qui regarde directement l'appareil
+DÉCORS LUXUEUX À VARIER (choisis selon le contexte de l'article):
+- 🏖️ PLAGE: Amalfi Coast Italy, Santorini Greece, Maldives, Monaco beach club
+- 🌅 SUNSET: Luxury yacht deck, rooftop bar with city view, infinity pool edge
+- 🏛️ VILLE: Paris balcony with Eiffel view, Milan fashion district, Monaco harbor
+- 🌸 NATURE: Lavender fields Provence, Tuscan vineyard, tropical garden
+- ✨ SOIRÉE: Grand hotel terrace, luxury restaurant, gala event entrance
+
+TENUES GLAMOUR À VARIER:
+- 👙 Plage/Piscine: Elegant one-piece swimsuit, chic bikini with sarong, resort wear
+- 👗 Soirée: Flowing evening gown, elegant cocktail dress, silk maxi dress
+- 🌞 Jour: Chic sundress, elegant linen outfit, sophisticated casual
+- 💎 Luxe: Designer outfit, haute couture inspired, red carpet style
+
+AMBIANCE:
+- Sensuelle mais élégante (jamais vulgaire)
+- Aspirationnelle - vie de rêve
+- Cheveux qui bougent au vent ou en mouvement
+- Femme confiante, séductrice naturelle
+- Maximum 200 caractères
 
 EXEMPLES BONS PROMPTS:
-- "Real candid photograph of a woman laughing at a Paris cafe terrace, long wavy brown hair catching the sunlight, wearing a cream sweater, golden hour light, shallow depth of field"
-- "Natural street style photo of a woman walking in Milan, silky dark hair flowing, casual elegant outfit, soft daylight, bokeh background"
+- "Real photograph of glamorous woman from 3/4 back on Amalfi Coast beach, long voluminous hair flowing in sea breeze, elegant white swimsuit, golden sunset light, Mediterranean luxury"
+- "Real photo of sensual woman looking over shoulder on Monaco yacht deck, luxurious thick hair cascading down her back, silk evening dress, champagne sunset glow"
+- "Real photograph of elegant woman on Paris balcony with Eiffel Tower view, long flowing hair extensions catching golden hour light, chic black dress, glamorous Parisian mood"
+- "Real photo of glamorous woman walking through Santorini streets, voluminous wavy hair in motion, flowing white summer dress, stunning ocean backdrop"
 
-Retourne UNIQUEMENT le prompt en anglais."""
+Retourne UNIQUEMENT le prompt en anglais. Sois créatif avec les décors!"""
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -628,8 +638,8 @@ Retourne UNIQUEMENT le prompt en anglais."""
                     json={
                         "model": "gpt-4o",
                         "messages": [{"role": "user", "content": prompt}],
-                        "max_tokens": 150,
-                        "temperature": 0.7
+                        "max_tokens": 250,
+                        "temperature": 0.9  # Plus créatif pour varier les décors
                     }
                 )
                 
@@ -640,15 +650,19 @@ Retourne UNIQUEMENT le prompt en anglais."""
         except Exception as e:
             logger.error(f"Erreur prompt image: {e}")
         
-        # Fallback
-        city_styles = {
-            "Paris": "Real candid photograph of a woman at a sunlit Paris cafe terrace, natural wavy hair, cream outfit, golden hour",
-            "Milan": "Real street photo of elegant woman in Milan, flowing dark hair, stylish casual outfit, soft daylight",
-            "New York": "Candid photo of woman walking in Manhattan, long shiny hair, casual chic style, natural light",
-            "Londres": "Natural photograph of woman in London park, beautiful hair in breeze, elegant casual look, soft afternoon light",
-            "Montréal": "Real photo of stylish woman in Old Montreal, gorgeous hair, European charm, warm natural lighting",
-        }
-        return city_styles.get(article['city'], "Real candid photograph of a beautiful woman with natural flowing hair, casual elegant style, bright natural daylight, lifestyle moment")
+        # Fallback avec décors variés luxueux
+        import random
+        luxury_scenes = [
+            "Real photograph of glamorous woman from 3/4 back on Amalfi Coast beach, long voluminous silky hair flowing in Mediterranean breeze, elegant white swimsuit, golden sunset, Italian Riviera luxury",
+            "Real photo of sensual woman looking over shoulder on luxury yacht Monaco, thick flowing hair extensions cascading down bare back, silk champagne dress, sunset glow on water",
+            "Real photograph of elegant woman on Paris hotel balcony with Eiffel Tower, long gorgeous hair catching golden hour light, black evening gown, romantic Parisian glamour",
+            "Real photo of glamorous woman walking Santorini white streets, voluminous wavy hair in motion, flowing cream maxi dress, stunning blue ocean backdrop, Greek island luxury",
+            "Real photograph of sensual woman by infinity pool Maldives, long silky hair extensions wet and flowing, chic one-piece swimsuit, tropical sunset paradise",
+            "Real photo of elegant woman in Tuscan vineyard golden hour, luxurious thick hair blowing gently, sundress, rolling hills backdrop, Italian countryside glamour",
+            "Real photograph of glamorous woman on Monaco rooftop terrace, long flowing hair extensions in evening breeze, red silk gown, city lights and harbor view",
+            "Real photo of sensual woman at lavender fields Provence, voluminous hair catching sunset light, elegant linen dress, purple flower sea backdrop, French countryside luxury",
+        ]
+        return random.choice(luxury_scenes)
     
     async def _generate_grok_image(self, prompt: str) -> Optional[str]:
         """Génère une image avec Grok (xAI)"""
