@@ -190,15 +190,15 @@ Retourne UNIQUEMENT le post prêt à publier (80-120 mots max).""",
 THEMED_PHOTOS = {
     # ==== PRODUITS PAR TYPE ====
     "genius": [
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=1200&fit=crop",  # Cheveux longs lisses
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=1200&fit=crop",  # Cheveux brillants
+        "https://images.unsplash.com/photo-1623594675959-02360202d4d6?w=1200&h=1200&fit=crop",  # Cheveux longs lisses
+        "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?w=1200&h=1200&fit=crop",  # Cheveux brillants
     ],
     "tape": [
         "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=1200&fit=crop",  # Styling salon
         "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",  # Application salon
     ],
     "halo": [
-        "https://images.unsplash.com/photo-1592621385612-4d7129426394?w=1200&h=1200&fit=crop",  # Look naturel
+        "https://images.unsplash.com/photo-1544717304-a2db4a7b16ee?w=1200&h=1200&fit=crop",  # Look naturel
         "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=1200&fit=crop",  # Volume naturel
     ],
     "i-tip": [
@@ -206,12 +206,12 @@ THEMED_PHOTOS = {
         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=1200&fit=crop",  # Discret élégant
     ],
     "ponytail": [
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=1200&fit=crop",  # Queue de cheval glam
-        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=1200&fit=crop",  # Ponytail élégant
+        "https://images.unsplash.com/photo-1623594675959-02360202d4d6?w=1200&h=1200&fit=crop",  # Queue de cheval glam
+        "https://images.unsplash.com/photo-1712641970787-e178ca70c6c4?w=1200&h=1200&fit=crop",  # Ponytail élégant
     ],
     "clip-in": [
-        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=1200&fit=crop",  # Volume ajouté
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=1200&fit=crop",  # Transformation rapide
+        "https://images.unsplash.com/photo-1712641970787-e178ca70c6c4?w=1200&h=1200&fit=crop",  # Volume ajouté
+        "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?w=1200&h=1200&fit=crop",  # Transformation rapide
     ],
     
     # ==== ÉDUCATIF PAR THÈME ====
@@ -228,16 +228,16 @@ THEMED_PHOTOS = {
         "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=1200&h=1200&fit=crop",  # Conseils pro
     ],
     "comparatif": [
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=1200&fit=crop",  # Avant/après
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=1200&fit=crop",  # Comparaison
+        "https://images.unsplash.com/photo-1623594675959-02360202d4d6?w=1200&h=1200&fit=crop",  # Avant/après
+        "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?w=1200&h=1200&fit=crop",  # Comparaison
     ],
     "choix_couleur": [
         "https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=1200&h=1200&fit=crop",  # Palette couleurs
         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=1200&fit=crop",  # Teinte naturelle
     ],
     "duree_vie": [
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=1200&fit=crop",  # Cheveux sains
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=1200&fit=crop",  # Longévité
+        "https://images.unsplash.com/photo-1623594675959-02360202d4d6?w=1200&h=1200&fit=crop",  # Cheveux sains
+        "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?w=1200&h=1200&fit=crop",  # Longévité
     ],
     
     # ==== WEEKEND/LIFESTYLE ====
@@ -247,17 +247,17 @@ THEMED_PHOTOS = {
         "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=1200&h=1200&fit=crop",  # Préparation mariée
     ],
     "event": [
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=1200&fit=crop",  # Soirée glamour
-        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=1200&fit=crop",  # Événement chic
+        "https://images.unsplash.com/photo-1623594675959-02360202d4d6?w=1200&h=1200&fit=crop",  # Soirée glamour
+        "https://images.unsplash.com/photo-1712641970787-e178ca70c6c4?w=1200&h=1200&fit=crop",  # Événement chic
     ],
     "lifestyle": [
-        "https://images.unsplash.com/photo-1592621385612-4d7129426394?w=1200&h=1200&fit=crop",  # Cheveux au vent
+        "https://images.unsplash.com/photo-1544717304-a2db4a7b16ee?w=1200&h=1200&fit=crop",  # Cheveux au vent
         "https://images.unsplash.com/photo-1503830232159-4b417691001e?w=1200&h=1200&fit=crop",  # Liberté
-        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=1200&fit=crop",  # Naturel
+        "https://images.unsplash.com/photo-1712641970787-e178ca70c6c4?w=1200&h=1200&fit=crop",  # Naturel
     ],
     "avant_apres": [
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=1200&fit=crop",  # Transformation
-        "https://images.unsplash.com/photo-1592621385612-4d7129426394?w=1200&h=1200&fit=crop",  # Résultat wow
+        "https://images.unsplash.com/photo-1623594675959-02360202d4d6?w=1200&h=1200&fit=crop",  # Transformation
+        "https://images.unsplash.com/photo-1544717304-a2db4a7b16ee?w=1200&h=1200&fit=crop",  # Résultat wow
     ],
     "motivation": [
         "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=1200&fit=crop",  # Confiance
@@ -288,12 +288,12 @@ THEMED_PHOTOS = {
         "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=1200&fit=crop",  # Sourire satisfaction
     ],
     "transformation": [
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=1200&fit=crop",  # Avant/après
-        "https://images.unsplash.com/photo-1592621385612-4d7129426394?w=1200&h=1200&fit=crop",  # Wow effect
+        "https://images.unsplash.com/photo-1623594675959-02360202d4d6?w=1200&h=1200&fit=crop",  # Avant/après
+        "https://images.unsplash.com/photo-1544717304-a2db4a7b16ee?w=1200&h=1200&fit=crop",  # Wow effect
     ],
     "resultats": [
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=1200&fit=crop",  # Résultat brillant
-        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&h=1200&fit=crop",  # Naturel parfait
+        "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?w=1200&h=1200&fit=crop",  # Résultat brillant
+        "https://images.unsplash.com/photo-1712641970787-e178ca70c6c4?w=1200&h=1200&fit=crop",  # Naturel parfait
     ],
     
     # ==== MAGAZINE/TENDANCES ====
@@ -314,8 +314,8 @@ THEMED_PHOTOS = {
 # Fallback par type de contenu si le thème n'a pas de photos spécifiques
 FALLBACK_PHOTOS = {
     "product": [
-        "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=1200&fit=crop",
-        "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=1200&fit=crop",
+        "https://images.unsplash.com/photo-1623594675959-02360202d4d6?w=1200&h=1200&fit=crop",
+        "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?w=1200&h=1200&fit=crop",
     ],
     "educational": [
         "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=1200&fit=crop",
@@ -330,7 +330,7 @@ FALLBACK_PHOTOS = {
         "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=1200&h=1200&fit=crop",
     ],
     "weekend": [
-        "https://images.unsplash.com/photo-1592621385612-4d7129426394?w=1200&h=1200&fit=crop",
+        "https://images.unsplash.com/photo-1544717304-a2db4a7b16ee?w=1200&h=1200&fit=crop",
         "https://images.unsplash.com/photo-1503830232159-4b417691001e?w=1200&h=1200&fit=crop",
     ],
     "magazine": [
@@ -361,7 +361,7 @@ def select_photo_for_content(content_type: str, theme: str) -> str:
         return random.choice(photos)
     
     # Dernier recours
-    return "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=1200&h=1200&fit=crop"
+    return "https://images.unsplash.com/photo-1623594675959-02360202d4d6?w=1200&h=1200&fit=crop"
 
 # Prompts d'image par type de contenu
 IMAGE_PROMPTS = {
