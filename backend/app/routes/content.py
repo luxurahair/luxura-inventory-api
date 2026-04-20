@@ -437,7 +437,15 @@ async def scan_international_content(
                 results["posts"].append(post)
                 results["posts_generated"] += 1
                 
-                # 4. Envoyer email d'approbation
+                # 4. Marquer l'article comme traité dans l'historique (anti-répétition)
+                from app.services.international_content_scanner import mark_article_as_published
+                mark_article_as_published(
+                    article["title"], 
+                    article.get("url", ""), 
+                    article["country"]
+                )
+                
+                # 5. Envoyer email d'approbation
                 if send_email:
                     full_text = post["post_text"]
                     if post.get("hashtags"):
@@ -529,6 +537,39 @@ async def list_international_countries():
             "samedi": ["usa", "italy"],
             "dimanche": ["france", "uk"],
         }
+    }
+
+
+@router.get("/international/history")
+async def get_published_articles_history():
+    """
+    📜 Historique des articles publiés (30 derniers jours)
+    
+    Permet de voir les articles déjà traités pour éviter les répétitions.
+    """
+    from app.services.international_content_scanner import load_article_history
+    
+    history = load_article_history()
+    articles = history.get("articles", {})
+    
+    # Formatter pour affichage
+    published_articles = []
+    for key, data in articles.items():
+        if "title" in data:  # Seulement les entrées avec titre (pas les hashes d'URL)
+            published_articles.append({
+                "title": data.get("title"),
+                "country": data.get("country"),
+                "published_at": data.get("published_at"),
+            })
+    
+    # Trier par date (plus récent en premier)
+    published_articles.sort(key=lambda x: x.get("published_at", ""), reverse=True)
+    
+    return {
+        "total_articles": len(published_articles),
+        "history_days": 30,
+        "last_run": history.get("last_run"),
+        "articles": published_articles[:50]  # Max 50 pour la réponse
     }
 
 

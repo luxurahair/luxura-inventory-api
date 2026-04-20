@@ -11,10 +11,11 @@ Scrute les tendances mode féminine internationales:
 Flux:
 1. Scrutation Google News par pays (rotation quotidienne)
 2. Filtrage articles mode féminine/coiffure
-3. Traduction française (GPT-4o)
-4. Génération image contextuelle (Grok)
-5. Ajout watermark LUXURA doré
-6. Email approbation → Publication Facebook
+3. Dédoublonnage avec historique persistant (30 jours)
+4. Traduction française (GPT-4o)
+5. Génération image contextuelle (Grok)
+6. Ajout watermark LUXURA doré
+7. Email approbation → Publication Facebook
 """
 
 import os
@@ -22,11 +23,91 @@ import logging
 import httpx
 import hashlib
 import random
+import json
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
+from pathlib import Path
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
+
+# ============================================
+# HISTORIQUE DES ARTICLES PUBLIÉS (Anti-répétition)
+# ============================================
+
+HISTORY_FILE = Path("/tmp/luxura_international_history.json")
+HISTORY_MAX_DAYS = 30  # Garder l'historique 30 jours
+
+
+def load_article_history() -> Dict:
+    """Charge l'historique des articles déjà traités"""
+    try:
+        if HISTORY_FILE.exists():
+            with open(HISTORY_FILE, 'r') as f:
+                history = json.load(f)
+                # Nettoyer les vieux articles (> 30 jours)
+                cutoff = (datetime.now() - timedelta(days=HISTORY_MAX_DAYS)).isoformat()
+                history["articles"] = {
+                    k: v for k, v in history.get("articles", {}).items()
+                    if v.get("published_at", "") > cutoff
+                }
+                return history
+    except Exception as e:
+        logger.error(f"Erreur chargement historique: {e}")
+    return {"articles": {}, "last_run": None}
+
+
+def save_article_history(history: Dict):
+    """Sauvegarde l'historique"""
+    try:
+        history["last_run"] = datetime.now().isoformat()
+        with open(HISTORY_FILE, 'w') as f:
+            json.dump(history, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"Erreur sauvegarde historique: {e}")
+
+
+def is_article_already_published(title: str, url: str) -> bool:
+    """Vérifie si un article a déjà été publié"""
+    history = load_article_history()
+    
+    # Hash du titre normalisé
+    title_hash = hashlib.md5(title.lower()[:100].encode()).hexdigest()
+    
+    # Hash de l'URL
+    url_hash = hashlib.md5(url.encode()).hexdigest()
+    
+    articles = history.get("articles", {})
+    
+    # Vérifier si le titre ou l'URL existe déjà
+    if title_hash in articles or url_hash in articles:
+        return True
+    
+    return False
+
+
+def mark_article_as_published(title: str, url: str, country: str):
+    """Marque un article comme publié dans l'historique"""
+    history = load_article_history()
+    
+    title_hash = hashlib.md5(title.lower()[:100].encode()).hexdigest()
+    url_hash = hashlib.md5(url.encode()).hexdigest()
+    
+    now = datetime.now().isoformat()
+    
+    history["articles"][title_hash] = {
+        "title": title[:100],
+        "country": country,
+        "published_at": now
+    }
+    history["articles"][url_hash] = {
+        "url": url,
+        "country": country,
+        "published_at": now
+    }
+    
+    save_article_history(history)
+    logger.info(f"📝 Article ajouté à l'historique: {title[:50]}...")
 
 
 # ============================================
@@ -315,17 +396,32 @@ class InternationalContentScanner:
         return filtered
     
     def _deduplicate_articles(self, articles: List[Dict]) -> List[Dict]:
-        """Dédoublonne par titre similaire"""
+        """Dédoublonne par titre similaire ET vérifie l'historique des 30 derniers jours"""
         seen_titles = set()
         unique = []
+        skipped_history = 0
         
         for article in articles:
-            title_normalized = article["title"].lower()[:50]
+            title = article["title"]
+            url = article.get("url", "")
+            title_normalized = title.lower()[:50]
             title_hash = hashlib.md5(title_normalized.encode()).hexdigest()
             
-            if title_hash not in seen_titles:
-                seen_titles.add(title_hash)
-                unique.append(article)
+            # Vérifier si déjà vu dans cette session
+            if title_hash in seen_titles:
+                continue
+            
+            # Vérifier l'historique persistant (30 jours)
+            if is_article_already_published(title, url):
+                skipped_history += 1
+                logger.debug(f"⏭️ Article déjà publié: {title[:40]}...")
+                continue
+            
+            seen_titles.add(title_hash)
+            unique.append(article)
+        
+        if skipped_history > 0:
+            logger.info(f"⏭️ {skipped_history} articles ignorés (déjà publiés)")
         
         return unique
     
