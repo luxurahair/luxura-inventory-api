@@ -3668,10 +3668,10 @@ async def regenerate_all_blog_images(limit: int = 10):
 @api_router.post("/blog/regenerate-with-grok")
 async def regenerate_blog_images_with_grok(limit: int = 10):
     """
-    🎨 RÉGÉNÈRE LES IMAGES DES BLOGS AVEC GROK
+    🎨 RÉGÉNÈRE LES IMAGES DES BLOGS AVEC GROK - BASÉ SUR LE CONTENU
     
-    Utilise l'API Grok (grok-imagine-image) pour générer des images UNIQUES
-    pour chaque blog. Style Luxura: cheveux volumineux, décors glamour.
+    Analyse le contenu de chaque blog pour générer un prompt contextuel.
+    L'image générée reflète le sujet de l'article tout en gardant le style Luxura.
     
     Args:
         limit: Nombre de blogs récents à traiter (défaut: 10)
@@ -3680,10 +3680,95 @@ async def regenerate_blog_images_with_grok(limit: int = 10):
         Liste des blogs avec leurs nouvelles images générées
     """
     import requests as sync_requests
+    import re
+    
+    def extract_text_from_html(html_content: str) -> str:
+        """Extrait le texte brut du HTML"""
+        if not html_content:
+            return ""
+        # Supprimer les tags HTML
+        text = re.sub(r'<[^>]+>', ' ', html_content)
+        # Supprimer les entités HTML
+        text = re.sub(r'&[a-zA-Z]+;', ' ', text)
+        # Nettoyer les espaces
+        text = ' '.join(text.split())
+        return text[:2000]  # Limiter à 2000 caractères
+    
+    def build_contextual_prompt(title: str, content: str, excerpt: str) -> str:
+        """
+        Construit un prompt basé sur le contenu de l'article.
+        Combine le sujet de l'article avec le style Luxura.
+        """
+        # Analyser le contenu pour extraire le contexte
+        full_text = f"{title} {excerpt} {content}".lower()
+        
+        # Déterminer le sujet principal
+        subject_context = ""
+        setting = ""
+        outfit = ""
+        action = ""
+        
+        # Extensions spécifiques
+        if "genius weft" in full_text or "genius" in full_text:
+            subject_context = "showcasing seamless Genius Weft hair extensions"
+            action = "running fingers through her incredibly thick seamless extensions"
+        elif "tape-in" in full_text or "tape" in full_text:
+            subject_context = "with flawless tape-in hair extensions"
+            action = "showing off her perfectly blended tape extensions"
+        elif "halo" in full_text:
+            subject_context = "wearing invisible Halo wire extensions"
+            action = "adjusting her secret Halo extension wire"
+        elif "i-tip" in full_text or "itip" in full_text:
+            subject_context = "with luxurious I-Tip keratin extensions"
+            action = "touching her beautifully bonded extensions"
+        elif "clip" in full_text:
+            subject_context = "with voluminous clip-in extensions"
+            action = "flipping her instantly transformed hair"
+        else:
+            subject_context = "with stunning premium hair extensions"
+            action = "showcasing her dramatic hair transformation"
+        
+        # Contexte salon/professionnel
+        if any(w in full_text for w in ["salon", "coiffeuse", "professionnel", "affilié", "partenaire", "formation"]):
+            setting = "in a luxurious high-end hair salon with elegant mirrors and soft lighting"
+            outfit = "wearing a chic professional outfit"
+        # Mariage/événement
+        elif any(w in full_text for w in ["mariage", "wedding", "cérémonie", "événement", "gala", "soirée"]):
+            setting = "at an elegant wedding venue with romantic lighting"
+            outfit = "wearing a stunning evening gown"
+        # Entretien/soins
+        elif any(w in full_text for w in ["entretien", "soin", "laver", "brush", "routine"]):
+            setting = "in a bright luxurious bathroom with marble counters"
+            outfit = "wearing an elegant silk robe"
+        # Style de vie
+        elif any(w in full_text for w in ["lifestyle", "quotidien", "style de vie", "voyage"]):
+            setting = "at a chic Parisian café terrace"
+            outfit = "wearing designer casual wear"
+        # Tendances
+        elif any(w in full_text for w in ["tendance", "trend", "2025", "2026", "mode", "été", "printemps"]):
+            setting = "at a fashion-forward rooftop bar with city skyline"
+            outfit = "wearing the latest fashion trends"
+        # Comparatif/Guide
+        elif any(w in full_text for w in ["comparatif", "guide", "choisir", "différence", "vs"]):
+            setting = "in a bright modern studio with soft professional lighting"
+            outfit = "wearing an elegant neutral-toned outfit"
+        # Défaut: glamour général
+        else:
+            setting = "on a luxury yacht deck at golden hour sunset"
+            outfit = "wearing an elegant flowing dress"
+        
+        # Construire le prompt final
+        prompt = f"""Real photograph of a glamorous woman {subject_context}, {action}, {setting}. 
+She has incredibly voluminous, thick, flowing hair extensions with dramatic body and natural movement cascading past her shoulders. 
+{outfit}. 
+Shot from 3/4 back angle or semi-profile to showcase the hair length and volume. 
+Golden hour natural lighting highlighting the hair shine and texture. 
+Ultra-realistic, high-end beauty photography, aspirational luxury lifestyle. 
+No text, no watermarks, no logos."""
+        
+        return prompt.replace('\n', ' ').strip()
     
     try:
-        from app.services.luxura_image_prompts import get_prompt_for_content_type
-        
         wix_api_key = os.getenv("WIX_API_KEY")
         wix_site_id = os.getenv("WIX_SITE_ID")
         xai_api_key = os.getenv("XAI_API_KEY")
@@ -3694,7 +3779,7 @@ async def regenerate_blog_images_with_grok(limit: int = 10):
         if not xai_api_key:
             raise HTTPException(status_code=500, detail="XAI_API_KEY non configuré - impossible de générer des images Grok")
         
-        # 1. Lister les blogs Wix récents
+        # 1. Lister les blogs Wix récents avec contenu complet
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 f"{WIX_API_BASE}/blog/v3/posts/query",
@@ -3705,7 +3790,8 @@ async def regenerate_blog_images_with_grok(limit: int = 10):
                 },
                 json={
                     "paging": {"limit": limit},
-                    "sort": [{"fieldName": "firstPublishedDate", "order": "DESC"}]
+                    "sort": [{"fieldName": "firstPublishedDate", "order": "DESC"}],
+                    "fieldsets": ["CONTENT"]  # Inclure le contenu complet
                 }
             )
             
@@ -3714,29 +3800,34 @@ async def regenerate_blog_images_with_grok(limit: int = 10):
             
             posts = response.json().get("posts", [])
         
-        logger.info(f"🎨 Régénération Grok pour {len(posts)} blogs...")
+        logger.info(f"🎨 Régénération Grok CONTEXTUELLE pour {len(posts)} blogs...")
         results = []
         
         for i, post in enumerate(posts):
             try:
                 title = post.get("title", "Untitled")
                 post_id = post.get("id", "unknown")
+                excerpt = post.get("excerpt", "")
                 
-                # Déterminer le type de contenu
-                title_lower = title.lower()
-                if any(w in title_lower for w in ['mariage', 'cérémonie', 'événement', 'tendance', 'style']):
-                    content_type = "magazine"
-                elif any(w in title_lower for w in ['salon', 'professionnel', 'affilié', 'partenaire']):
-                    content_type = "b2b"
-                elif any(w in title_lower for w in ['entretien', 'soin', 'conseil', 'guide']):
-                    content_type = "educational"
-                else:
-                    content_type = "magazine"
+                # Extraire le contenu texte
+                rich_content = post.get("richContent", {})
+                content_html = ""
+                if rich_content:
+                    # Extraire le texte des nodes
+                    nodes = rich_content.get("nodes", [])
+                    for node in nodes:
+                        if node.get("type") == "PARAGRAPH":
+                            for text_node in node.get("nodes", []):
+                                if text_node.get("type") == "TEXT":
+                                    content_html += text_node.get("textData", {}).get("text", "") + " "
                 
-                # Générer le prompt Luxura
-                prompt = get_prompt_for_content_type(content_type)
+                content_text = extract_text_from_html(content_html) or excerpt
                 
-                logger.info(f"🖼️ [{i+1}/{len(posts)}] Génération Grok: {title[:50]}...")
+                # Construire le prompt CONTEXTUEL basé sur le contenu
+                prompt = build_contextual_prompt(title, content_text, excerpt)
+                
+                logger.info(f"🖼️ [{i+1}/{len(posts)}] Génération contextuelle: {title[:50]}...")
+                logger.info(f"   📝 Prompt: {prompt[:100]}...")
                 
                 # Appeler l'API Grok
                 grok_response = sync_requests.post(
@@ -3760,15 +3851,18 @@ async def regenerate_blog_images_with_grok(limit: int = 10):
                     if images and len(images) > 0:
                         new_image_url = images[0].get("url")
                         
-                        logger.info(f"✅ Image générée: {new_image_url[:80]}...")
+                        logger.info(f"✅ Image contextuelle générée: {new_image_url[:80]}...")
                         
                         results.append({
                             "wix_post_id": post_id,
                             "title": title[:60],
-                            "content_type": content_type,
                             "success": True,
                             "new_image_url": new_image_url,
-                            "prompt_used": prompt[:100] + "..."
+                            "prompt_used": prompt[:200] + "...",
+                            "context_detected": {
+                                "has_content": len(content_text) > 50,
+                                "content_preview": content_text[:100] + "..." if content_text else "N/A"
+                            }
                         })
                     else:
                         results.append({
