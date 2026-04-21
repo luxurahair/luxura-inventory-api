@@ -4135,6 +4135,252 @@ async def fix_blog_images_now(limit: int = 10):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.post("/blog/delete-and-recreate")
+async def delete_and_recreate_blogs(limit: int = 4):
+    """
+    🔄 SUPPRIME ET RECRÉE LES BLOGS AVEC NOUVELLES IMAGES GROK
+    
+    1. Supprime les blogs existants de Wix (move to trash)
+    2. Recrée les blogs avec le même contenu mais nouvelles images Grok contextuelles
+    3. Publie les nouveaux blogs
+    
+    Args:
+        limit: Nombre de blogs à traiter (défaut: 4)
+    """
+    import requests as sync_requests
+    import re
+    
+    def extract_text_from_nodes(nodes):
+        """Extrait le texte des nodes richContent"""
+        text = ""
+        for node in nodes:
+            if node.get("type") == "PARAGRAPH":
+                for text_node in node.get("nodes", []):
+                    if text_node.get("type") == "TEXT":
+                        text += text_node.get("textData", {}).get("text", "") + " "
+            elif node.get("type") == "HEADING":
+                for text_node in node.get("nodes", []):
+                    if text_node.get("type") == "TEXT":
+                        text += text_node.get("textData", {}).get("text", "") + " "
+        return text.strip()
+    
+    def build_contextual_prompt(title: str, content: str) -> str:
+        full_text = f"{title} {content}".lower()
+        
+        if "genius weft" in full_text or "genius" in full_text:
+            subject = "showcasing seamless Genius Weft hair extensions"
+            action = "running fingers through her incredibly thick seamless extensions"
+        elif "tape-in" in full_text or "tape" in full_text:
+            subject = "with flawless tape-in hair extensions"
+            action = "showing off her perfectly blended tape extensions"
+        elif "halo" in full_text:
+            subject = "wearing invisible Halo wire extensions"
+            action = "adjusting her secret Halo extension wire"
+        elif "i-tip" in full_text or "itip" in full_text:
+            subject = "with luxurious I-Tip keratin extensions"
+            action = "touching her beautifully bonded extensions"
+        else:
+            subject = "with stunning premium hair extensions"
+            action = "showcasing her dramatic hair transformation"
+        
+        if any(w in full_text for w in ["salon", "coiffeuse", "professionnel", "affilié", "partenaire"]):
+            setting = "in a luxurious high-end hair salon with elegant mirrors"
+        elif any(w in full_text for w in ["mariage", "wedding", "cérémonie"]):
+            setting = "at an elegant wedding venue with romantic lighting"
+        elif any(w in full_text for w in ["comparatif", "guide", "choisir"]):
+            setting = "in a bright modern studio with soft professional lighting"
+        else:
+            setting = "on a luxury yacht deck at golden hour sunset"
+        
+        return f"Real photograph of a glamorous woman {subject}, {action}, {setting}. Incredibly voluminous thick flowing hair with dramatic body cascading past shoulders. Shot from 3/4 back angle. Golden hour lighting. Ultra-realistic luxury photography. No text no watermarks."
+    
+    try:
+        wix_api_key = os.getenv("WIX_API_KEY")
+        wix_site_id = os.getenv("WIX_SITE_ID")
+        xai_api_key = os.getenv("XAI_API_KEY")
+        
+        if not all([wix_api_key, wix_site_id, xai_api_key]):
+            raise HTTPException(status_code=500, detail="API keys manquantes")
+        
+        results = []
+        
+        # 1. Récupérer les blogs existants avec contenu complet
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                f"{WIX_API_BASE}/blog/v3/posts/query",
+                headers={
+                    "Authorization": wix_api_key,
+                    "wix-site-id": wix_site_id,
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "paging": {"limit": limit},
+                    "sort": [{"fieldName": "firstPublishedDate", "order": "DESC"}],
+                    "fieldsets": ["CONTENT"]
+                }
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=f"Wix error: {response.text}")
+            
+            posts = response.json().get("posts", [])
+        
+        logger.info(f"🔄 SUPPRESSION ET RECRÉATION de {len(posts)} blogs...")
+        
+        for i, post in enumerate(posts):
+            post_id = post.get("id")
+            title = post.get("title", "Untitled")
+            excerpt = post.get("excerpt", "")
+            rich_content = post.get("richContent", {})
+            category_ids = post.get("categoryIds", [])
+            
+            try:
+                # Extraire le contenu texte
+                content_text = extract_text_from_nodes(rich_content.get("nodes", []))
+                
+                logger.info(f"🗑️ [{i+1}/{len(posts)}] Suppression: {title[:40]}...")
+                
+                # 2. Supprimer le blog de Wix (move to trash)
+                async with httpx.AsyncClient(timeout=30.0) as del_client:
+                    delete_response = await del_client.delete(
+                        f"{WIX_API_BASE}/blog/v3/posts/{post_id}",
+                        headers={
+                            "Authorization": wix_api_key,
+                            "wix-site-id": wix_site_id
+                        }
+                    )
+                    
+                    if delete_response.status_code not in [200, 204]:
+                        logger.warning(f"   ⚠️ Delete failed: {delete_response.status_code}")
+                        # Continuer quand même pour essayer de recréer
+                    else:
+                        logger.info(f"   ✅ Blog supprimé de Wix")
+                
+                # 3. Générer nouvelle image Grok contextuelle
+                prompt = build_contextual_prompt(title, content_text or excerpt)
+                logger.info(f"   🎨 Génération image Grok...")
+                
+                grok_response = sync_requests.post(
+                    "https://api.x.ai/v1/images/generations",
+                    headers={
+                        "Authorization": f"Bearer {xai_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={"model": "grok-imagine-image", "prompt": prompt, "n": 1},
+                    timeout=90
+                )
+                
+                if grok_response.status_code != 200:
+                    results.append({"post_id": post_id, "title": title[:50], "success": False, "error": "Grok failed"})
+                    continue
+                
+                grok_image_url = grok_response.json().get("data", [{}])[0].get("url")
+                logger.info(f"   ✅ Image Grok générée")
+                
+                # 4. Importer l'image dans Wix Media
+                async with httpx.AsyncClient(timeout=60.0) as upload_client:
+                    import_response = await upload_client.post(
+                        f"{WIX_API_BASE}/site-media/v1/files/import",
+                        headers={
+                            "Authorization": wix_api_key,
+                            "wix-site-id": wix_site_id,
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "url": grok_image_url,
+                            "displayName": f"blog_cover_{i+1}",
+                            "mimeType": "image/jpeg"
+                        }
+                    )
+                    
+                    wix_file_id = None
+                    if import_response.status_code == 200:
+                        wix_file = import_response.json().get("file", {})
+                        wix_file_id = wix_file.get("id")
+                        logger.info(f"   ✅ Image importée: {wix_file_id}")
+                
+                # 5. Créer un nouveau draft avec la nouvelle image
+                async with httpx.AsyncClient(timeout=60.0) as create_client:
+                    # Récupérer le member ID pour la publication
+                    from blog_automation import get_wix_member_id
+                    member_id = await get_wix_member_id(wix_api_key, wix_site_id)
+                    
+                    # Préparer le payload du draft
+                    draft_payload = {
+                        "draftPost": {
+                            "title": title,
+                            "richContent": rich_content,
+                            "excerpt": excerpt,
+                            "categoryIds": category_ids,
+                            "coverMedia": {
+                                "enabled": True,
+                                "displayed": True
+                            }
+                        },
+                        "publish": True  # Publier immédiatement
+                    }
+                    
+                    # Ajouter le memberId si disponible (requis pour apps tierces)
+                    if member_id:
+                        draft_payload["draftPost"]["memberId"] = member_id
+                    
+                    # Ajouter l'image si disponible
+                    if wix_file_id:
+                        draft_payload["draftPost"]["coverMedia"]["image"] = wix_file_id
+                    
+                    create_response = await create_client.post(
+                        f"{WIX_API_BASE}/blog/v3/draft-posts",
+                        headers={
+                            "Authorization": wix_api_key,
+                            "wix-site-id": wix_site_id,
+                            "Content-Type": "application/json"
+                        },
+                        json=draft_payload
+                    )
+                    
+                    if create_response.status_code in [200, 201]:
+                        new_post = create_response.json().get("draftPost", {}) or create_response.json().get("post", {})
+                        new_post_id = new_post.get("id")
+                        logger.info(f"   ✅ Blog recréé et publié! ID: {new_post_id}")
+                        
+                        results.append({
+                            "old_post_id": post_id,
+                            "new_post_id": new_post_id,
+                            "title": title[:50],
+                            "success": True,
+                            "wix_file_id": wix_file_id
+                        })
+                    else:
+                        logger.warning(f"   ⚠️ Create failed: {create_response.status_code} - {create_response.text[:200]}")
+                        results.append({
+                            "post_id": post_id,
+                            "title": title[:50],
+                            "success": False,
+                            "error": f"Create failed: {create_response.status_code}",
+                            "grok_image": grok_image_url
+                        })
+                
+            except Exception as e:
+                logger.error(f"   ❌ Erreur: {e}")
+                results.append({"post_id": post_id, "title": title[:50], "success": False, "error": str(e)})
+        
+        successful = sum(1 for r in results if r.get("success"))
+        
+        return {
+            "success": True,
+            "message": f"✅ {successful}/{len(results)} blogs supprimés et recréés!",
+            "results": results
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in delete-and-recreate: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.get("/blog/topics")
 async def get_blog_topics():
     """Liste tous les sujets de blog disponibles par catégorie"""
