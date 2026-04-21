@@ -3665,6 +3665,155 @@ async def regenerate_all_blog_images(limit: int = 10):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.post("/blog/regenerate-with-grok")
+async def regenerate_blog_images_with_grok(limit: int = 10):
+    """
+    🎨 RÉGÉNÈRE LES IMAGES DES BLOGS AVEC GROK
+    
+    Utilise l'API Grok (grok-imagine-image) pour générer des images UNIQUES
+    pour chaque blog. Style Luxura: cheveux volumineux, décors glamour.
+    
+    Args:
+        limit: Nombre de blogs récents à traiter (défaut: 10)
+    
+    Returns:
+        Liste des blogs avec leurs nouvelles images générées
+    """
+    import requests as sync_requests
+    
+    try:
+        from app.services.luxura_image_prompts import get_prompt_for_content_type
+        
+        wix_api_key = os.getenv("WIX_API_KEY")
+        wix_site_id = os.getenv("WIX_SITE_ID")
+        xai_api_key = os.getenv("XAI_API_KEY")
+        
+        if not wix_api_key or not wix_site_id:
+            raise HTTPException(status_code=500, detail="WIX_API_KEY ou WIX_SITE_ID non configuré")
+        
+        if not xai_api_key:
+            raise HTTPException(status_code=500, detail="XAI_API_KEY non configuré - impossible de générer des images Grok")
+        
+        # 1. Lister les blogs Wix récents
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{WIX_API_BASE}/blog/v3/posts/query",
+                headers={
+                    "Authorization": wix_api_key,
+                    "wix-site-id": wix_site_id,
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "paging": {"limit": limit},
+                    "sort": [{"fieldName": "firstPublishedDate", "order": "DESC"}]
+                }
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=f"Wix API error: {response.text}")
+            
+            posts = response.json().get("posts", [])
+        
+        logger.info(f"🎨 Régénération Grok pour {len(posts)} blogs...")
+        results = []
+        
+        for i, post in enumerate(posts):
+            try:
+                title = post.get("title", "Untitled")
+                post_id = post.get("id", "unknown")
+                
+                # Déterminer le type de contenu
+                title_lower = title.lower()
+                if any(w in title_lower for w in ['mariage', 'cérémonie', 'événement', 'tendance', 'style']):
+                    content_type = "magazine"
+                elif any(w in title_lower for w in ['salon', 'professionnel', 'affilié', 'partenaire']):
+                    content_type = "b2b"
+                elif any(w in title_lower for w in ['entretien', 'soin', 'conseil', 'guide']):
+                    content_type = "educational"
+                else:
+                    content_type = "magazine"
+                
+                # Générer le prompt Luxura
+                prompt = get_prompt_for_content_type(content_type)
+                
+                logger.info(f"🖼️ [{i+1}/{len(posts)}] Génération Grok: {title[:50]}...")
+                
+                # Appeler l'API Grok
+                grok_response = sync_requests.post(
+                    "https://api.x.ai/v1/images/generations",
+                    headers={
+                        "Authorization": f"Bearer {xai_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "grok-imagine-image",
+                        "prompt": prompt,
+                        "n": 1
+                    },
+                    timeout=90
+                )
+                
+                if grok_response.status_code == 200:
+                    grok_data = grok_response.json()
+                    images = grok_data.get("data", [])
+                    
+                    if images and len(images) > 0:
+                        new_image_url = images[0].get("url")
+                        
+                        logger.info(f"✅ Image générée: {new_image_url[:80]}...")
+                        
+                        results.append({
+                            "wix_post_id": post_id,
+                            "title": title[:60],
+                            "content_type": content_type,
+                            "success": True,
+                            "new_image_url": new_image_url,
+                            "prompt_used": prompt[:100] + "..."
+                        })
+                    else:
+                        results.append({
+                            "wix_post_id": post_id,
+                            "title": title[:60],
+                            "success": False,
+                            "error": "No image returned by Grok"
+                        })
+                else:
+                    results.append({
+                        "wix_post_id": post_id,
+                        "title": title[:60],
+                        "success": False,
+                        "error": f"Grok API error: {grok_response.status_code}"
+                    })
+                    
+            except Exception as post_error:
+                logger.error(f"Error processing post: {post_error}")
+                results.append({
+                    "wix_post_id": post.get("id", "unknown"),
+                    "title": post.get("title", "")[:60],
+                    "success": False,
+                    "error": str(post_error)
+                })
+        
+        successful = sum(1 for r in results if r.get("success"))
+        
+        return {
+            "success": True,
+            "total_processed": len(results),
+            "successful": successful,
+            "failed": len(results) - successful,
+            "results": results,
+            "note": "⚠️ Les URLs d'images sont temporaires (24h). Pour mettre à jour les blogs Wix, utilisez l'endpoint /blog/update-cover avec ces URLs."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in regenerate-with-grok: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.get("/blog/topics")
 async def get_blog_topics():
     """Liste tous les sujets de blog disponibles par catégorie"""
