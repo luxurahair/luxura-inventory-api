@@ -9,10 +9,17 @@ import os
 import numpy as np
 import cv2
 from PIL import Image
-from rembg import remove
 import io
 import base64
 from pathlib import Path
+
+# rembg est optionnel (trop lourd pour Render free tier)
+try:
+    from rembg import remove as rembg_remove
+    REMBG_AVAILABLE = True
+except ImportError:
+    REMBG_AVAILABLE = False
+    rembg_remove = None
 
 # Chemin du gabarit sauvegardé
 TEMPLATE_PATH = Path(__file__).parent / "templates" / "gabarit_genius.jpg"
@@ -28,7 +35,18 @@ def load_template() -> np.ndarray:
 
 def improve_hair_mask(image: np.ndarray) -> np.ndarray:
     """Crée un masque cheveux précis."""
-    person = remove(image)
+    if not REMBG_AVAILABLE:
+        # Fallback sans rembg: masque simplifié basé sur HSV
+        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        # Détecter les pixels non-blancs et non-peau
+        lower = np.array([0, 20, 20])
+        upper = np.array([180, 255, 200])
+        hair_mask = cv2.inRange(hsv, lower, upper)
+        kernel = np.ones((5, 5), np.uint8)
+        hair_mask = cv2.morphologyEx(hair_mask, cv2.MORPH_CLOSE, kernel)
+        return hair_mask
+    
+    person = rembg_remove(image)
     gray = cv2.cvtColor(np.array(person), cv2.COLOR_RGBA2GRAY)
     _, person_mask = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
 
@@ -48,7 +66,37 @@ def improve_hair_mask(image: np.ndarray) -> np.ndarray:
 
 def extract_color_profile(reference: np.ndarray) -> dict:
     """Extrait le profil couleur complet de la référence (teinte, sat, ombré)."""
-    ref_person = remove(reference)
+    if not REMBG_AVAILABLE:
+        # Fallback sans rembg
+        ref_hsv = cv2.cvtColor(reference, cv2.COLOR_RGB2HSV)
+        ref_lab = cv2.cvtColor(reference, cv2.COLOR_RGB2LAB)
+        # Masque simplifié pour les cheveux (pixels non-blancs)
+        gray = cv2.cvtColor(reference, cv2.COLOR_RGB2GRAY)
+        _, ref_hair = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY_INV)
+        
+        if np.sum(ref_hair > 0) == 0:
+            return {"l_top": 80, "l_bottom": 200, "a_avg": 128, "b_avg": 128}
+        
+        height = reference.shape[0]
+        top_mask = ref_hair[:height//5]
+        mid_mask = ref_hair[height//5:4*height//5]
+        bottom_mask = ref_hair[4*height//5:]
+        
+        l_channel = ref_lab[:,:,0]
+        l_top = np.median(l_channel[:height//5][top_mask > 0]) if np.sum(top_mask > 0) > 0 else 80
+        l_mid = np.median(l_channel[height//5:4*height//5][mid_mask > 0]) if np.sum(mid_mask > 0) > 0 else 140
+        l_bottom = np.median(l_channel[4*height//5:][bottom_mask > 0]) if np.sum(bottom_mask > 0) > 0 else 200
+        
+        hair_lab = ref_lab[ref_hair > 0]
+        a_avg = np.median(hair_lab[:, 1]) if len(hair_lab) > 0 else 128
+        b_avg = np.median(hair_lab[:, 2]) if len(hair_lab) > 0 else 128
+        
+        return {
+            "l_top": l_top, "l_mid": l_mid, "l_bottom": l_bottom,
+            "a_avg": a_avg, "b_avg": b_avg
+        }
+    
+    ref_person = rembg_remove(reference)
     ref_hsv = cv2.cvtColor(reference, cv2.COLOR_RGB2HSV)
     ref_lab = cv2.cvtColor(reference, cv2.COLOR_RGB2LAB)
     ref_gray = cv2.cvtColor(np.array(ref_person), cv2.COLOR_RGBA2GRAY)
