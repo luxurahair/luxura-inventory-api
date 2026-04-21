@@ -15,8 +15,29 @@ import httpx
 import json
 import asyncio
 from color_system import COLOR_SYSTEM, get_color_info, get_seo_description, get_all_colors_for_filter, get_colors_by_category, get_colors_by_type
-from color_engine_api import process_color_engine, base64_to_image, image_to_base64
-from auto_color_engine import auto_recolor
+
+# LAZY IMPORT: color_engine_api charge cv2 qui est lent
+# On l'importe seulement quand nécessaire dans les endpoints
+# from color_engine_api import process_color_engine, base64_to_image, image_to_base64
+# from auto_color_engine import auto_recolor
+COLOR_ENGINE_LOADED = False
+process_color_engine = None
+base64_to_image = None
+image_to_base64 = None
+auto_recolor = None
+
+def _load_color_engine():
+    """Charge le color engine à la demande (lazy loading)"""
+    global COLOR_ENGINE_LOADED, process_color_engine, base64_to_image, image_to_base64, auto_recolor
+    if not COLOR_ENGINE_LOADED:
+        from color_engine_api import process_color_engine as _pce, base64_to_image as _b2i, image_to_base64 as _i2b
+        from auto_color_engine import auto_recolor as _ar
+        process_color_engine = _pce
+        base64_to_image = _b2i
+        image_to_base64 = _i2b
+        auto_recolor = _ar
+        COLOR_ENGINE_LOADED = True
+        logging.getLogger(__name__).info("✅ Color Engine chargé (lazy load)")
 
 # Import Supabase database functions
 from database import (
@@ -5175,6 +5196,9 @@ async def color_engine_process(request: ColorEngineRequest):
     Envoie les images en base64, reçoit les images recolorisées en base64.
     """
     try:
+        # Lazy load du color engine (évite le chargement cv2 au démarrage)
+        _load_color_engine()
+        
         logger.info("🎨 Color Engine: Traitement en cours...")
         
         result = await process_color_engine(
@@ -5335,6 +5359,9 @@ async def color_engine_generate(request: GenerateColorRequest):
     from PIL import Image
     import io
     import numpy as np
+    
+    # Lazy load du color engine
+    _load_color_engine()
     
     try:
         logger.info(f"🎨 Color Engine Generate: series={request.series}, intensity={request.intensity}")
@@ -5622,6 +5649,9 @@ async def color_engine_auto(request: AutoColorRequest):
     Le gabarit est conservé côté serveur.
     """
     try:
+        # Lazy load du color engine
+        _load_color_engine()
+        
         logger.info("🎨 Auto Color Engine: Traitement...")
         
         result = await auto_recolor(
@@ -5645,6 +5675,9 @@ async def color_engine_auto_url(image_url: str, blend: float = 0.65):
     Envoie l'URL de l'image référence, reçois l'image recolorisée.
     """
     try:
+        # Lazy load du color engine
+        _load_color_engine()
+        
         import httpx
         import base64
         
