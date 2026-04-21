@@ -2642,8 +2642,71 @@ BLOG_IMAGES = {
 }
 
 def get_blog_image_for_topic(topic: str, keywords: list = None) -> str:
-    """Sélectionne une image appropriée basée sur le sujet et les mots-clés"""
+    """
+    Sélectionne une image pour le blog - PRIORITÉ GROK pour images UNIQUES.
+    
+    NOUVEAU: Utilise l'API Grok (grok-imagine-image) pour générer des images
+    uniques avec cheveux volumineux, décors glamour (yachts, plages italiennes, etc.)
+    
+    Fallback: Images statiques Unsplash si Grok échoue.
+    """
     import random
+    import os
+    import requests
+    
+    # ESSAYER GROK EN PREMIER
+    xai_api_key = os.getenv("XAI_API_KEY")
+    if xai_api_key:
+        try:
+            # Import du générateur de prompts Luxura
+            from app.services.luxura_image_prompts import get_prompt_for_content_type
+            
+            # Mapper le topic vers un type de contenu
+            topic_lower = topic.lower()
+            if any(word in topic_lower for word in ['mariage', 'wedding', 'cérémonie', 'événement', 'gala']):
+                content_type = "magazine"
+            elif any(word in topic_lower for word in ['tendance', 'trend', '2025', '2026', 'mode', 'style']):
+                content_type = "magazine"
+            elif any(word in topic_lower for word in ['entretien', 'soin', 'conseils', 'comment']):
+                content_type = "educational"
+            elif any(word in topic_lower for word in ['salon', 'professionnel', 'b2b']):
+                content_type = "b2b"
+            else:
+                content_type = "magazine"
+            
+            prompt = get_prompt_for_content_type(content_type)
+            
+            logger.info(f"🎨 Génération image Grok pour blog: {topic[:50]}...")
+            
+            response = requests.post(
+                "https://api.x.ai/v1/images/generations",
+                headers={
+                    "Authorization": f"Bearer {xai_api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "grok-imagine-image",
+                    "prompt": prompt,
+                    "n": 1
+                },
+                timeout=60
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                images = data.get("data", [])
+                if images and len(images) > 0:
+                    image_url = images[0].get("url")
+                    if image_url:
+                        logger.info(f"✅ Image Grok générée: {image_url[:80]}...")
+                        return image_url
+            
+            logger.warning(f"⚠️ Grok failed ({response.status_code}), using fallback")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Grok error: {e}, using fallback")
+    
+    # FALLBACK: Images statiques
     topic_lower = topic.lower()
     
     # Mapping sujet → catégorie d'image

@@ -43,6 +43,19 @@ except ImportError:
     logger.warning("Logo overlay module not available")
     LOGO_OVERLAY_AVAILABLE = False
 
+# Import du nouveau générateur d'images Grok (images uniques)
+try:
+    from app.services.blog_image_generator import (
+        generate_blog_image_sync,
+        get_blog_image_for_topic_v2,
+        generate_blog_image_prompt
+    )
+    GROK_IMAGE_AVAILABLE = True
+    logger.info("✅ Grok image generator loaded - Images UNIQUES pour chaque blog!")
+except ImportError as e:
+    logger.warning(f"⚠️ Grok image generator not available: {e}")
+    GROK_IMAGE_AVAILABLE = False
+
 # Import du module anti-doublon et contrôle éditorial
 try:
     from editorial_guard import (
@@ -707,13 +720,31 @@ BLOG_TOPICS_EXTENDED = [
 # Historique des images utilisées pour éviter les répétitions
 _used_images = set()
 
-def get_blog_image_by_category(category: str) -> str:
+def get_blog_image_by_category(category: str, blog_title: str = None) -> str:
     """
-    Retourne une image libre de droits selon la catégorie.
-    Évite de répéter les mêmes images en gardant un historique.
+    Retourne une image pour le blog.
+    
+    PRIORITÉ:
+    1. Grok (grok-imagine-image) - génère une image UNIQUE glamour
+    2. Fallback: Images statiques (si Grok échoue)
+    
+    Args:
+        category: Catégorie du blog (halo, genius, tape, etc.)
+        blog_title: Titre du blog (pour générer un prompt contextuel)
     """
     global _used_images
     
+    # PRIORITÉ 1: Utiliser Grok pour image unique
+    if GROK_IMAGE_AVAILABLE and blog_title:
+        logger.info(f"🎨 Génération image UNIQUE via Grok pour: {blog_title[:50]}...")
+        grok_url = generate_blog_image_sync(blog_title, keywords=[category])
+        if grok_url:
+            logger.info(f"✅ Image Grok générée: {grok_url[:80]}...")
+            return grok_url
+        else:
+            logger.warning("⚠️ Grok image failed, using fallback...")
+    
+    # PRIORITÉ 2: Fallback vers images statiques
     images = UNSPLASH_IMAGES.get(category, UNSPLASH_IMAGES["general"])
     
     # Filtrer les images déjà utilisées
@@ -839,24 +870,28 @@ async def import_image_with_retry(
     site_id: str,
     category: str,
     max_retries: int = 3,
-    add_logo: bool = True
+    add_logo: bool = True,
+    blog_title: str = None
 ) -> Optional[Dict]:
     """
     Importe une image avec retry automatique.
+    
+    NOUVEAU: Utilise Grok pour générer des images UNIQUES si blog_title fourni.
     Si une image échoue, essaie avec une autre image de la même catégorie.
     
     Args:
         add_logo: Si True, ajoute le logo Luxura sur l'image (coin bas-droit, 15%)
+        blog_title: Titre du blog (pour génération Grok d'image unique)
     """
     tried_images = set()
     
     for attempt in range(max_retries):
-        # Sélectionner une image pas encore essayée
-        image_url = get_blog_image_by_category(category)
+        # Sélectionner une image - PRIORITÉ Grok si blog_title fourni
+        image_url = get_blog_image_by_category(category, blog_title=blog_title)
         
-        # Éviter les doublons
+        # Éviter les doublons (seulement pour images statiques, Grok génère toujours unique)
         while image_url in tried_images and len(tried_images) < len(UNSPLASH_IMAGES.get(category, UNSPLASH_IMAGES["general"])):
-            image_url = get_blog_image_by_category(category)
+            image_url = get_blog_image_by_category(category, blog_title=blog_title)
         
         tried_images.add(image_url)
         
@@ -2726,21 +2761,23 @@ async def generate_daily_blogs(
 
             # 2) Fallback raisonnable seulement si nécessaire
             if not cover_image_data:
-                logger.info("Fallback cover import via curated source")
+                logger.info("Fallback cover import via Grok/curated source")
                 cover_image_data = await import_image_with_retry(
                     api_key=wix_api_key,
                     site_id=wix_site_id,
                     category=category,
-                    max_retries=3
+                    max_retries=3,
+                    blog_title=blog_title  # Permet génération Grok unique
                 )
 
             if not content_image_data:
-                logger.info("Fallback content import via curated source")
+                logger.info("Fallback content import via Grok/curated source")
                 content_image_data = await import_image_with_retry(
                     api_key=wix_api_key,
                     site_id=wix_site_id,
                     category=category,
-                    max_retries=2
+                    max_retries=2,
+                    blog_title=blog_title  # Permet génération Grok unique
                 )
 
             if cover_image_data:
