@@ -37,11 +37,11 @@ def _require_sync_secret(x_seo_secret: str) -> None:
     expected = (os.getenv("SEO_SECRET") or "").strip()
     got = (x_seo_secret or "").strip()
 
-    # Si tu veux "dev mode" quand SEO_SECRET vide, décommente :
-    # if not expected:
-    #     return
+    # Dev mode: si SEO_SECRET n'est pas configuré, on autorise tout
+    if not expected:
+        return  # Pas de secret requis en mode dev
 
-    if not expected or got != expected:
+    if got != expected:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
