@@ -98,14 +98,14 @@ EMERGENT_PROJECT_URL = "https://www.emergentagent.com"
 
 async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: str = None):
     """
-    📧 Envoie un email de validation avec boutons d'action:
-    - ✅ Approuver (publie sur Wix)
-    - ❌ Rejeter (supprime le brouillon)
-    - ✏️ Modifier dans Wix
-    - 🤖 Demander modification via Emergent
+    📧 Envoie un email de validation COMPLET avec:
+    - 📷 Preview de l'image
+    - 📝 Texte COMPLET du blog (pas seulement l'excerpt)
+    - ✅ Bouton direct vers Wix Dashboard pour publier
+    - 🤖 Lien Emergent pour modifications
     
     Args:
-        blog: Dict avec 'title', 'excerpt', 'image', 'category'
+        blog: Dict avec 'title', 'excerpt', 'content', 'image', 'category'
         draft_id: ID du brouillon Wix
         recipient_email: Email de destination
     """
@@ -117,21 +117,32 @@ async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: s
     
     try:
         title = blog.get('title', 'Sans titre')
-        excerpt = blog.get('excerpt', '')[:300] + '...' if len(blog.get('excerpt', '')) > 300 else blog.get('excerpt', '')
         category = blog.get('category', 'general')
+        
+        # CONTENU COMPLET du blog (pas seulement excerpt)
+        full_content = blog.get('content', '')
+        excerpt = blog.get('excerpt', '')
+        
+        # Nettoyer le HTML du contenu pour l'email
+        import re
+        content_preview = full_content or excerpt
+        # Garder seulement les premiers 1500 caractères pour l'email
+        if len(content_preview) > 1500:
+            content_preview = content_preview[:1500] + '...'
         
         # Chercher l'image dans plusieurs sources
         image_url = (
             blog.get('image') or 
             blog.get('wix_image_url') or 
             blog.get('wix_content_image_url') or
+            blog.get('grok_image') or
             # Fallback: image Luxura par défaut
             "https://customer-assets.emergentagent.com/job_hair-extensions-shop/artifacts/no4frw3t_vaVsE.jpg"
         )
         
-        # S'assurer que excerpt n'est pas vide
+        # S'assurer que l'excerpt n'est pas vide
         if not excerpt or excerpt == '...':
-            excerpt = f"Nouveau brouillon de blog dans la catégorie {category}. Cliquez pour voir le contenu complet dans Wix."
+            excerpt = content_preview[:300] + '...' if len(content_preview) > 300 else content_preview
         
         # URLs d'action - Utiliser directement Wix Dashboard (plus fiable)
         wix_edit_url = f"https://manage.wix.com/dashboard/6e62c946-d068-45c1-8f5f-7af998f0d7b3/blog/posts/{draft_id}"
@@ -147,7 +158,7 @@ async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: s
         msg['From'] = LUXURA_EMAIL
         msg['To'] = recipient
         
-        # Corps HTML avec boutons d'action
+        # Corps HTML avec boutons d'action et CONTENU COMPLET
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -161,7 +172,7 @@ async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: s
                     background-color: #f5f5f5;
                 }}
                 .container {{
-                    max-width: 600px;
+                    max-width: 700px;
                     margin: 0 auto;
                     background: #0c0c0c;
                     border-radius: 12px;
@@ -183,15 +194,23 @@ async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: s
                 }}
                 .blog-image {{
                     width: 100%;
-                    max-height: 300px;
+                    max-height: 350px;
                     object-fit: cover;
                     border-radius: 8px;
                     margin-bottom: 20px;
                 }}
+                .image-label {{
+                    text-align: center;
+                    color: #888;
+                    font-size: 12px;
+                    margin-top: -15px;
+                    margin-bottom: 20px;
+                }}
                 .blog-title {{
                     color: #c9a050;
-                    font-size: 22px;
+                    font-size: 24px;
                     margin-bottom: 10px;
+                    line-height: 1.3;
                 }}
                 .blog-category {{
                     display: inline-block;
@@ -202,12 +221,33 @@ async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: s
                     font-size: 12px;
                     margin-bottom: 15px;
                 }}
+                .section-title {{
+                    color: #c9a050;
+                    font-size: 14px;
+                    margin: 25px 0 10px 0;
+                    padding-bottom: 5px;
+                    border-bottom: 1px solid #333;
+                }}
                 .blog-excerpt {{
-                    color: #aaa;
+                    color: #ccc;
                     line-height: 1.6;
+                    margin-bottom: 20px;
+                    font-style: italic;
+                    background: rgba(201, 160, 80, 0.1);
+                    padding: 15px;
+                    border-radius: 8px;
+                    border-left: 4px solid #c9a050;
+                }}
+                .blog-content {{
+                    color: #ddd;
+                    line-height: 1.8;
                     margin-bottom: 25px;
-                    border-left: 3px solid #c9a050;
-                    padding-left: 15px;
+                    background: #1a1a1a;
+                    padding: 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    max-height: 400px;
+                    overflow-y: auto;
                 }}
                 .actions {{
                     display: flex;
@@ -218,25 +258,20 @@ async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: s
                 .btn {{
                     display: block;
                     text-align: center;
-                    padding: 14px 20px;
+                    padding: 16px 20px;
                     border-radius: 8px;
                     text-decoration: none;
                     font-weight: 600;
-                    font-size: 14px;
+                    font-size: 15px;
                 }}
                 .btn-approve {{
-                    background: #c9a050;
+                    background: linear-gradient(135deg, #c9a050 0%, #a07830 100%);
                     color: #000 !important;
-                }}
-                .btn-reject {{
-                    background: #333;
-                    color: #f44 !important;
-                    border: 1px solid #f44;
                 }}
                 .btn-edit {{
                     background: #1a1a1a;
-                    color: #fff !important;
-                    border: 1px solid #444;
+                    color: #c9a050 !important;
+                    border: 2px solid #c9a050;
                 }}
                 .btn-emergent {{
                     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
@@ -254,6 +289,12 @@ async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: s
                     background: #333;
                     margin: 20px 0;
                 }}
+                .draft-id {{
+                    color: #555;
+                    font-size: 10px;
+                    text-align: center;
+                    margin-top: 10px;
+                }}
             </style>
         </head>
         <body>
@@ -263,19 +304,27 @@ async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: s
                 </div>
                 
                 <div class="content">
+                    <h2 class="section-title">📷 Preview du post:</h2>
                     {f'<img src="{image_url}" class="blog-image" alt="{title}">' if image_url else ''}
+                    <p class="image-label">📸 Photo Stock (Unsplash/Pexels)</p>
                     
                     <div class="blog-category">{category.upper()}</div>
                     <h2 class="blog-title">{title}</h2>
                     
+                    <h3 class="section-title">📄 Résumé (Excerpt):</h3>
                     <div class="blog-excerpt">
                         {excerpt}
+                    </div>
+                    
+                    <h3 class="section-title">📝 Contenu complet du blog:</h3>
+                    <div class="blog-content">
+                        {content_preview}
                     </div>
                     
                     <div class="divider"></div>
                     
                     <p style="color: #888; font-size: 13px; text-align: center;">
-                        Que souhaitez-vous faire avec ce brouillon ?
+                        ✅ Cliquez ci-dessous pour ouvrir dans Wix et publier
                     </p>
                     
                     <div class="actions">
@@ -288,14 +337,14 @@ async def send_blog_approval_email(blog: Dict, draft_id: str, recipient_email: s
                         </a>
                     </div>
                     
-                    <p style="color: #666; font-size: 11px; text-align: center; margin-top: 15px;">
-                        Cliquez sur "Ouvrir dans Wix" puis sur le bouton "Publier" en haut à droite
+                    <p class="draft-id">
+                        Draft ID: {draft_id}
                     </p>
                 </div>
                 
                 <div class="footer">
                     Luxura Distribution - Système de blog automatisé<br>
-                    Ce brouillon ne sera PAS publié sans votre approbation.
+                    Ce brouillon ne sera PAS publié sans votre approbation dans Wix.
                 </div>
             </div>
         </body>
