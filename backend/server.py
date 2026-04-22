@@ -3297,43 +3297,60 @@ Le post doit:
             except Exception as e:
                 logger.warning(f"⚠️ Erreur GPT-4o: {e}")
         
-        # ==================== 2. GÉNÉRATION IMAGE DALL-E 3 ====================
-        if openai_key:
+        # ==================== 2. GÉNÉRATION IMAGE GROK (Ultra-Glamour v3) ====================
+        xai_api_key = os.getenv("XAI_API_KEY")
+        if xai_api_key:
             try:
-                logger.info("🎨 Génération de l'image avec DALL-E 3...")
+                logger.info("🎨 Génération de l'image avec GROK (Ultra-Glamour v3)...")
                 
-                if category == "educational":
-                    dalle_prompt = "Professional hair salon setting, beautiful woman with long flowing hair extensions, natural lighting, elegant and educational mood, high-end beauty photography, soft colors, Quebec Canadian style"
-                elif category == "product":
-                    dalle_prompt = "Luxurious hair extensions display, premium Remy human hair, multiple colors arranged beautifully, professional product photography, elegant gold and cream tones, high-end beauty brand aesthetic"
-                else:  # weekend
-                    dalle_prompt = "Happy confident woman with beautiful long hair extensions enjoying weekend, lifestyle photography, natural outdoor setting, warm golden hour lighting, joyful and relaxed mood, Quebec Canadian beauty"
+                # Import des prompts Luxura v3
+                from app.services.luxura_image_prompts import (
+                    generate_luxura_image_prompt,
+                    get_preset_prompt,
+                    get_multi_women_prompt
+                )
                 
-                dalle_response = await client.post(
-                    "https://api.openai.com/v1/images/generations",
+                # Mapper la catégorie vers le preset approprié
+                preset_mapping = {
+                    "educational": "facebook_educational",
+                    "product": "facebook_product",
+                    "weekend": "facebook_weekend"
+                }
+                preset_name = preset_mapping.get(category, "facebook_educational")
+                
+                # Générer le prompt avec les règles v3 (3/4 dos, salons haut de gamme, etc.)
+                grok_prompt = get_preset_prompt(preset_name)
+                
+                logger.info(f"📝 Prompt Grok v3: {grok_prompt[:100]}...")
+                
+                grok_response = await client.post(
+                    "https://api.x.ai/v1/images/generations",
                     headers={
-                        "Authorization": f"Bearer {openai_key}",
+                        "Authorization": f"Bearer {xai_api_key}",
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": "dall-e-3",
-                        "prompt": dalle_prompt,
-                        "n": 1,
-                        "size": "1024x1024",
-                        "quality": "standard"
-                    }
+                        "model": "grok-imagine-image",
+                        "prompt": grok_prompt,
+                        "n": 1
+                    },
+                    timeout=90.0
                 )
                 
-                if dalle_response.status_code == 200:
-                    dalle_result = dalle_response.json()
-                    generated_image_url = dalle_result["data"][0]["url"]
-                    logger.info(f"✅ Image DALL-E générée: {generated_image_url[:50]}...")
+                if grok_response.status_code == 200:
+                    grok_result = grok_response.json()
+                    images = grok_result.get("data", [])
+                    if images and len(images) > 0:
+                        generated_image_url = images[0].get("url")
+                        logger.info(f"✅ Image GROK Ultra-Glamour générée: {generated_image_url[:50]}...")
+                    else:
+                        logger.warning("⚠️ GROK: Pas d'image retournée")
                 else:
-                    error_detail = dalle_response.text[:200]
-                    logger.warning(f"⚠️ DALL-E erreur {dalle_response.status_code}: {error_detail}")
+                    error_detail = grok_response.text[:200]
+                    logger.warning(f"⚠️ GROK erreur {grok_response.status_code}: {error_detail}")
                     
             except Exception as e:
-                logger.warning(f"⚠️ Erreur DALL-E: {e}")
+                logger.warning(f"⚠️ Erreur GROK: {e}")
         
         # ==================== 3. CONSTRUIRE LE MESSAGE FINAL ====================
         if generated_text:

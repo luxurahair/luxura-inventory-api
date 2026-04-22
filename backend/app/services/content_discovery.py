@@ -419,99 +419,35 @@ Le post doit:
     
     async def _generate_image_prompt(self, item: Dict, post_text: str = "") -> str:
         """
-        Génère un prompt pour l'image APRÈS avoir créé le texte du post
-        L'image doit correspondre au contexte et au contenu du post
+        Génère un prompt pour l'image en utilisant les règles Luxura v3 Ultra-Glamour.
+        
+        UTILISE: luxura_image_prompts.py v3
+        - Cheveux 3/4 du dos (JAMAIS courts)
+        - Plusieurs femmes parfois
+        - Salons haut de gamme
+        - Décors luxueux (yachts, plages italiennes, etc.)
         """
         title = item.get("title_fr") or item["title"]
         
-        # Obtenir le contexte saisonnier
-        seasonal_ctx = get_seasonal_context()
-        season = seasonal_ctx["season"]
-        image_context = get_image_prompt_context()
-        
-        if not self.openai_key:
-            # Fallback avec le style Luxura + saison
-            return f"Beautiful woman with mid-back length hair extensions, {image_context}, lifestyle beauty photography, elegant and aspirational"
-        
-        system_prompt = f"""Tu es un expert en création de prompts pour Grok et DALL-E 3.
-Tu crées des images pour Luxura Distribution (extensions capillaires premium au Québec).
-
-CONTEXTE ACTUEL:
-- Saison: {season['name_fr']}
-- Occasion: {seasonal_ctx['occasion']}
-
-CHEVEUX - RÈGLES ESSENTIELLES (COMPAGNIE D'EXTENSIONS):
-1. Cheveux avec un BEAU VOLUME NATUREL - pas exagéré, pas artificiel
-2. Texture SOYEUSE, brillante mais naturelle
-3. LONGUEUR MINIMUM: mi-dos, tombant vers l'avant sur la poitrine
-4. LONGUEUR MAXIMUM: trois-quarts du dos
-5. Les cheveux peuvent tomber vers l'avant, encadrer le visage
-6. Volume élégant et naturel - pas "perruque" ou "trop parfait"
-7. Termes: "naturally full hair", "silky healthy hair", "hair falling over shoulders"
-
-STYLE NATUREL ET AUTHENTIQUE:
-1. Photos CANDIDES, moments naturels
-2. Maximum 1 à 2 personnes
-3. Lumière naturelle réaliste
-4. Expression naturelle
-5. Style lifestyle authentique
-
-CE QU'ON VEUT:
-- Cheveux BEAUX et SOYEUX avec volume naturel
-- Longueur mi-dos à 3/4 dos, peut tomber sur la poitrine
-- Aspect santé, brillance naturelle
-- Termes: "healthy shiny hair", "naturally full", "soft silky texture"
-
-CE QU'ON NE VEUT PAS:
-- Volume exagéré type publicité L'Oréal
-- Cheveux fins sans volume
-- Cheveux trop courts ou trop longs
-- Style "stock photo" artificiel
-- Groupes de 5+ personnes
-
-L'image doit montrer de BEAUX CHEVEUX naturels qui inspirent confiance.
-
-Retourne UNIQUEMENT le prompt en anglais (max 250 caractères)."""
-
-        user_prompt = f"""Crée un prompt image pour ce post Facebook sur les extensions capillaires:
-
-TITRE DE L'ARTICLE SOURCE: "{title}"
-
-TEXTE DU POST FACEBOOK:
-{post_text[:500] if post_text else "Post sur les extensions capillaires"}
-
-Saison: {season['name_fr']} | Occasion: {seasonal_ctx['occasion']}
-
-Le prompt doit illustrer EXACTEMENT le contexte et le thème du post."""
-        
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {self.openai_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "model": "gpt-4o",
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt}
-                        ],
-                        "max_tokens": 150,
-                        "temperature": 0.6
-                    }
-                )
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    return result["choices"][0]["message"]["content"].strip()
-                    
+            # Import des prompts Luxura v3 Ultra-Glamour
+            from app.services.luxura_image_prompts import (
+                get_contextual_prompt,
+                get_preset_prompt,
+                LUXURA_CRITICAL_RULES
+            )
+            
+            # Utiliser le générateur contextuel v3 qui analyse le titre
+            prompt = get_contextual_prompt(title, post_text)
+            
+            logger.info(f"📝 Prompt Luxura v3 généré pour '{title[:50]}...'")
+            return prompt
+            
         except Exception as e:
-            logger.error(f"Erreur prompt image: {e}")
+            logger.error(f"Erreur import luxura_image_prompts: {e}")
         
-        # Fallback Luxura style
-        return "Beautiful woman from behind showing long flowing hair extensions, golden hour natural lighting, lifestyle beauty photography, elegant aspirational mood, no face visible"
+        # Fallback Luxura style v3 (si import échoue)
+        return "Real photograph of a glamorous woman at an exclusive Beverly Hills hair salon, with incredibly voluminous thick hair extensions reaching three-quarters down her back with dramatic body and natural movement. Shot from 3/4 back angle showcasing the incredible hair length. Soft professional lighting highlighting the hair shine and volume. Ultra-realistic luxury beauty photography. No text, no watermarks."
     
     def _select_hashtags(self, item: Dict) -> List[str]:
         """
