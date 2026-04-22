@@ -4091,34 +4091,13 @@ async def delete_and_recreate_blogs(limit: int = 4):
         return text.strip()
     
     def build_contextual_prompt(title: str, content: str) -> str:
-        full_text = f"{title} {content}".lower()
-        
-        if "genius weft" in full_text or "genius" in full_text:
-            subject = "showcasing seamless Genius Weft hair extensions"
-            action = "running fingers through her incredibly thick seamless extensions"
-        elif "tape-in" in full_text or "tape" in full_text:
-            subject = "with flawless tape-in hair extensions"
-            action = "showing off her perfectly blended tape extensions"
-        elif "halo" in full_text:
-            subject = "wearing invisible Halo wire extensions"
-            action = "adjusting her secret Halo extension wire"
-        elif "i-tip" in full_text or "itip" in full_text:
-            subject = "with luxurious I-Tip keratin extensions"
-            action = "touching her beautifully bonded extensions"
-        else:
-            subject = "with stunning premium hair extensions"
-            action = "showcasing her dramatic hair transformation"
-        
-        if any(w in full_text for w in ["salon", "coiffeuse", "professionnel", "affilié", "partenaire"]):
-            setting = "in a luxurious high-end hair salon with elegant mirrors"
-        elif any(w in full_text for w in ["mariage", "wedding", "cérémonie"]):
-            setting = "at an elegant wedding venue with romantic lighting"
-        elif any(w in full_text for w in ["comparatif", "guide", "choisir"]):
-            setting = "in a bright modern studio with soft professional lighting"
-        else:
-            setting = "on a luxury yacht deck at golden hour sunset"
-        
-        return f"Real photograph of a glamorous woman {subject}, {action}, {setting}. Incredibly voluminous thick flowing hair with dramatic body cascading past shoulders. Shot from 3/4 back angle. Golden hour lighting. Ultra-realistic luxury photography. No text no watermarks."
+        """Utilise les prompts v3 Ultra-Glamour centralisés"""
+        try:
+            from app.services.luxura_image_prompts import get_contextual_prompt
+            return get_contextual_prompt(title, content)
+        except Exception as e:
+            logger.warning(f"Fallback prompt: {e}")
+            return "Real photograph of a glamorous woman at an exclusive Beverly Hills hair salon, with incredibly voluminous thick hair extensions reaching three-quarters down her back. Shot from 3/4 back angle. Soft professional lighting. Ultra-realistic luxury beauty photography. No text, no watermarks."
     
     try:
         wix_api_key = os.getenv("WIX_API_KEY")
