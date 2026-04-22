@@ -4143,6 +4143,65 @@ async def delete_and_recreate_blogs(limit: int = 4):
                 # Extraire le contenu texte
                 content_text = extract_text_from_nodes(rich_content.get("nodes", []))
                 
+                # Si pas de contenu, générer avec GPT
+                if not content_text or len(content_text) < 100:
+                    logger.info(f"   📝 Génération contenu GPT (richContent vide)...")
+                    openai_key = os.getenv("OPENAI_API_KEY") or os.getenv("EMERGENT_LLM_KEY")
+                    
+                    if openai_key:
+                        gpt_response = sync_requests.post(
+                            "https://api.openai.com/v1/chat/completions",
+                            headers={
+                                "Authorization": f"Bearer {openai_key}",
+                                "Content-Type": "application/json"
+                            },
+                            json={
+                                "model": "gpt-4o",
+                                "messages": [{
+                                    "role": "user",
+                                    "content": f"""Écris un article de blog SEO de 500 mots pour Luxura Distribution (extensions capillaires premium au Québec).
+
+Titre: {title}
+
+L'article doit:
+- Être informatif et engageant
+- Inclure des conseils pratiques
+- Mentionner les avantages des extensions Luxura
+- Terminer par un appel à l'action vers luxuradistribution.com
+- Être en français québécois
+
+Format: paragraphes simples, pas de markdown."""
+                                }],
+                                "max_tokens": 1200,
+                                "temperature": 0.7
+                            },
+                            timeout=60
+                        )
+                        
+                        if gpt_response.status_code == 200:
+                            content_text = gpt_response.json()["choices"][0]["message"]["content"]
+                            # Créer le richContent avec le format Wix Ricos correct
+                            paragraphs = [p.strip() for p in content_text.split('\n\n') if p.strip()]
+                            rich_content = {
+                                "nodes": [
+                                    {
+                                        "type": "PARAGRAPH",
+                                        "id": f"paragraph_{j}",
+                                        "nodes": [{
+                                            "type": "TEXT", 
+                                            "id": f"text_{j}",
+                                            "textData": {
+                                                "text": p,
+                                                "decorations": []
+                                            }
+                                        }],
+                                        "paragraphData": {}
+                                    }
+                                    for j, p in enumerate(paragraphs)
+                                ]
+                            }
+                            logger.info(f"   ✅ Contenu GPT généré ({len(content_text)} chars, {len(paragraphs)} paragraphes)")
+                
                 logger.info(f"🗑️ [{i+1}/{len(posts)}] Suppression: {title[:40]}...")
                 
                 # 2. Supprimer le blog de Wix (move to trash)
@@ -4247,7 +4306,29 @@ async def delete_and_recreate_blogs(limit: int = 4):
                         new_draft_id = new_draft.get("id")
                         logger.info(f"   ✅ Draft créé: {new_draft_id}")
                         
-                        # 6. PATCH pour ajouter l'image (méthode v2 stable)
+                        # 6. PATCH pour ajouter le contenu (Wix ignore richContent lors de la création)
+                        if rich_content and rich_content.get("nodes"):
+                            logger.info(f"   📝 PATCH richContent ({len(rich_content.get('nodes', []))} paragraphes)...")
+                            content_patch_response = await create_client.patch(
+                                f"{WIX_API_BASE}/blog/v3/draft-posts/{new_draft_id}",
+                                headers={
+                                    "Authorization": wix_api_key,
+                                    "wix-site-id": wix_site_id,
+                                    "Content-Type": "application/json"
+                                },
+                                json={
+                                    "draftPost": {
+                                        "richContent": rich_content
+                                    }
+                                }
+                            )
+                            
+                            if content_patch_response.status_code == 200:
+                                logger.info(f"   ✅ Contenu ajouté via PATCH!")
+                            else:
+                                logger.warning(f"   ⚠️ PATCH contenu échoué: {content_patch_response.status_code}")
+                        
+                        # 7. PATCH pour ajouter l'image (méthode v2 stable)
                         if wix_file_id:
                             # Extraire juste le media ID
                             media_id = wix_file_id.split("/")[-1] if "/" in wix_file_id else wix_file_id

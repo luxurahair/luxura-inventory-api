@@ -287,69 +287,65 @@ def get_preset_prompt(content_type: str) -> str:
 def get_contextual_prompt(title: str, content: str = "") -> str:
     """
     Génère un prompt basé sur le titre et contenu de l'article.
-    Analyse le texte pour déterminer le contexte approprié.
     
-    Args:
-        title: Titre du blog/post
-        content: Contenu ou excerpt du blog
-    
-    Returns:
-        Prompt v3 Ultra-Glamour adapté au contexte
+    RÈGLES CRITIQUES CHEVEUX:
+    - Maximum 3/4 du dos (juste au-dessus de la taille)
+    - JAMAIS plus long que la taille
+    - JAMAIS jusqu'aux fesses ou genoux
     """
     full_text = f"{title} {content}".lower()
     
+    # Contrainte stricte pour la longueur des cheveux
+    HAIR_CONSTRAINT = "Hair length MUST end at the natural waist level, approximately three-quarters down the back. Hair must NOT extend below the waist, NOT reach the hips, NOT reach the buttocks, NOT reach the knees. This is critical."
+    
     # Déterminer le contexte basé sur les mots-clés
     if any(w in full_text for w in ["salon", "coiffeuse", "styliste", "professionnel", "partenaire", "affilié"]):
-        # Contexte salon professionnel
-        return random.choice([
-            "Real photograph of a glamorous hairstylist working on a client's spectacular voluminous hair extensions in an ultra-luxury salon with crystal chandeliers. Both women beautiful, client's hair flowing to lower back. Soft professional lighting highlighting the hair shine and volume. Ultra-realistic luxury beauty photography. No text, no watermarks.",
-            "Real photograph of two women in an exclusive Beverly Hills hair salon, one styling the other's incredibly thick voluminous extensions. Elegant mirrors, marble counters. Hair cascading to three-quarters down the back. Soft professional lighting. No text, no watermarks.",
-            "Real photograph of a glamorous woman in an ultra-luxurious high-end hair salon with crystal chandeliers and elegant mirrors, with incredibly voluminous thick hair extensions reaching three-quarters down her back. Shot from 3/4 back angle showcasing the hair length. Soft professional lighting. No text, no watermarks."
+        base = random.choice([
+            "Real photograph of a glamorous hairstylist working on a client's voluminous hair extensions in an ultra-luxury salon with crystal chandeliers. Both women beautiful. Soft professional lighting. Ultra-realistic luxury beauty photography.",
+            "Real photograph of two women in an exclusive Beverly Hills hair salon, one styling the other's thick voluminous extensions. Elegant mirrors, marble counters. Soft professional lighting.",
+            "Real photograph of a glamorous woman in an ultra-luxurious high-end hair salon with crystal chandeliers. Shot from 3/4 back angle. Soft professional lighting."
         ])
     
     elif any(w in full_text for w in ["mariage", "wedding", "mariée", "bride", "cérémonie"]):
-        # Contexte mariage
-        return random.choice([
-            "Real photograph of three bridesmaids with matching gorgeous voluminous hair extensions at a luxury wedding venue, all hair reaching three-quarters down their backs. Romantic golden hour lighting. Ultra-realistic luxury photography. No text, no watermarks.",
-            "Real photograph of a glamorous bride at an Italian villa wedding venue in Tuscany, with stunning voluminous hair extensions cascading to her lower back. Shot from 3/4 back angle. Golden hour romantic lighting. No text, no watermarks.",
-            "Real photograph of elegant woman at a French château wedding reception, with incredibly thick flowing hair extensions reaching three-quarters down her back, wearing a stunning evening gown. Golden hour lighting. No text, no watermarks."
+        base = random.choice([
+            "Real photograph of three bridesmaids with matching gorgeous voluminous hair extensions at a luxury wedding venue. Romantic golden hour lighting. Ultra-realistic luxury photography.",
+            "Real photograph of a glamorous bride at an Italian villa wedding venue in Tuscany, with stunning voluminous hair extensions. Shot from 3/4 back angle. Golden hour romantic lighting.",
+            "Real photograph of elegant woman at a French château wedding reception, with thick flowing hair extensions, wearing a stunning evening gown. Golden hour lighting."
         ])
     
     elif any(w in full_text for w in ["plage", "beach", "été", "summer", "vacances", "vacation", "yacht"]):
-        # Contexte plage/été
-        return random.choice([
-            "Real photograph of two glamorous women on a luxury yacht deck at sunset, both showcasing their incredibly thick voluminous extensions blowing in the Mediterranean breeze. Hair reaching lower back. Golden hour lighting. No text, no watermarks.",
-            "Real photograph of a glamorous woman on the pristine white sand beach of Santorini Greece at golden hour, with luxurious full-bodied bouncy hair cascading to her lower back. Elegant white one-piece swimsuit. Shot from 3/4 back angle. No text, no watermarks.",
-            "Real photograph of elegant woman at an exclusive Amalfi Coast beach club with turquoise waters, with gorgeous thick voluminous hair extensions flowing to three-quarters down her back. Chic designer bikini with flowing silk sarong. Golden sunset lighting. No text, no watermarks."
+        base = random.choice([
+            "Real photograph of two glamorous women on a luxury yacht deck at sunset, both with thick voluminous extensions blowing in the Mediterranean breeze. Golden hour lighting.",
+            "Real photograph of a glamorous woman on the white sand beach of Santorini at golden hour, with luxurious bouncy hair. Elegant white one-piece swimsuit. Shot from 3/4 back angle.",
+            "Real photograph of elegant woman at an exclusive Amalfi Coast beach club, with gorgeous thick hair extensions. Chic designer bikini with flowing silk sarong. Golden sunset lighting."
         ])
     
     elif any(w in full_text for w in ["soirée", "gala", "événement", "party", "fête", "red carpet"]):
-        # Contexte soirée/gala
-        return random.choice([
-            "Real photograph of two glamorous women in evening gowns at a gala event, both with spectacular voluminous hair extensions flowing down their backs. Red carpet elegance, dramatic lighting. Ultra-realistic luxury photography. No text, no watermarks.",
-            "Real photograph of elegant woman on the red carpet at a film premiere, with stunning thick bouncy hair extensions reaching three-quarters down her back. Designer backless sequined gown. Shot looking over shoulder. Dramatic lighting. No text, no watermarks.",
-            "Real photograph of glamorous woman at a Cannes Film Festival gala, with incredibly voluminous Hollywood-style hair cascading to her lower back. Stunning red silk evening gown with open back. Golden hour lighting. No text, no watermarks."
+        base = random.choice([
+            "Real photograph of two glamorous women in evening gowns at a gala event, both with spectacular voluminous hair extensions. Red carpet elegance, dramatic lighting. Ultra-realistic photography.",
+            "Real photograph of elegant woman on the red carpet at a film premiere, with stunning thick bouncy hair extensions. Designer backless sequined gown. Shot looking over shoulder.",
+            "Real photograph of glamorous woman at a Cannes Film Festival gala, with voluminous Hollywood-style hair. Stunning red silk evening gown with open back. Golden hour lighting."
         ])
     
     elif any(w in full_text for w in ["entretien", "soin", "routine", "laver", "brush", "shampoo"]):
-        # Contexte soins/entretien
-        return random.choice([
-            "Real photograph of a glamorous woman at a luxury spa resort in Bali with tropical gardens, with voluminous silky hair extensions reaching three-quarters down her back. Elegant silk robe. Natural soft lighting highlighting hair shine. No text, no watermarks.",
-            "Real photograph of elegant woman in a Swiss Alps wellness retreat with mountain views, with stunning thick healthy hair extensions cascading to her lower back. Chic spa outfit. Soft natural lighting. No text, no watermarks."
+        base = random.choice([
+            "Real photograph of a glamorous woman at a luxury spa resort in Bali, with voluminous silky hair extensions. Elegant silk robe. Natural soft lighting highlighting hair shine.",
+            "Real photograph of elegant woman in a Swiss Alps wellness retreat with mountain views, with stunning thick healthy hair extensions. Chic spa outfit. Soft natural lighting."
         ])
     
     elif any(w in full_text for w in ["tendance", "trend", "mode", "fashion", "style", "2025", "2026"]):
-        # Contexte tendances/mode
-        return random.choice([
-            "Real photograph of glamorous woman strolling through Milan's Quadrilatero della Moda district, with gorgeous thick voluminous hair extensions flowing to three-quarters down her back. Chic designer summer dress. Golden hour natural lighting. No text, no watermarks.",
-            "Real photograph of elegant woman at a Paris haute couture show, with stunning voluminous hair in dramatic motion reaching her lower back. Sophisticated designer outfit. Fashion week atmosphere. No text, no watermarks."
+        base = random.choice([
+            "Real photograph of glamorous woman strolling through Milan's fashion district, with gorgeous thick voluminous hair extensions. Chic designer summer dress. Golden hour natural lighting.",
+            "Real photograph of elegant woman at a Paris haute couture show, with stunning voluminous hair in motion. Sophisticated designer outfit. Fashion week atmosphere."
         ])
     
     else:
-        # Contexte par défaut: glamour lifestyle varié
-        return random.choice([
-            "Real photograph of a glamorous woman on the deck of a luxury superyacht at sunset Mediterranean, with incredibly voluminous thick hair extensions reaching three-quarters down her back. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting. No text, no watermarks.",
-            "Real photograph of two glamorous best friends with matching incredibly voluminous hair extensions reaching three-quarters down their backs, laughing together at a luxurious rooftop bar at sunset. Both showing dramatic hair volume from behind. Golden hour lighting. No text, no watermarks.",
-            "Real photograph of elegant woman on a Paris rooftop terrace with Eiffel Tower view at dusk, with stunning thick bouncy hair extensions flowing to her lower back. Chic Parisian outfit. Shot looking over shoulder. Romantic lighting. No text, no watermarks.",
-            "Real photograph of a glamorous woman at a prestigious Milan salon with modern minimalist design and natural light, with gorgeous voluminous hair extensions cascading to three-quarters down her back. Elegant casual outfit. Soft professional lighting. No text, no watermarks."
+        base = random.choice([
+            "Real photograph of a glamorous woman on the deck of a luxury superyacht at sunset Mediterranean, with voluminous thick hair extensions. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting.",
+            "Real photograph of two glamorous best friends with matching voluminous hair extensions, laughing together at a luxurious rooftop bar at sunset. Golden hour lighting.",
+            "Real photograph of elegant woman on a Paris rooftop terrace with Eiffel Tower view at dusk, with stunning thick bouncy hair extensions. Chic Parisian outfit. Shot looking over shoulder.",
+            "Real photograph of a glamorous woman at a prestigious Milan salon with modern minimalist design, with gorgeous voluminous hair extensions. Elegant casual outfit. Soft professional lighting."
         ])
+    
+    # Ajouter la contrainte stricte de longueur
+    return f"{base} {HAIR_CONSTRAINT} No text, no watermarks."
