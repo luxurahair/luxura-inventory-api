@@ -4199,40 +4199,39 @@ async def delete_and_recreate_blogs(limit: int = 4):
                     )
                     
                     wix_file_id = None
+                    wix_image_uri = None
                     if import_response.status_code == 200:
                         wix_file = import_response.json().get("file", {})
-                        wix_file_id = wix_file.get("id")
-                        logger.info(f"   ✅ Image importée: {wix_file_id}")
+                        wix_file_id = wix_file.get("id", "")
+                        # Extraire le media ID du format "wix:image://v1/xxx~mv2.jpeg/filename"
+                        # ou du format direct "f1b961_xxx~mv2.jpeg"
+                        media_id = wix_file_id.split("/")[-1] if "/" in wix_file_id else wix_file_id
+                        if "~mv2" in media_id:
+                            # Format correct pour coverMedia.image
+                            wix_image_uri = f"wix:image://v1/{media_id}/blog_cover.jpeg#originWidth=1024&originHeight=1024"
+                        logger.info(f"   ✅ Image importée: {media_id}")
                 
                 # 5. Créer un nouveau draft avec la nouvelle image
                 async with httpx.AsyncClient(timeout=60.0) as create_client:
                     # Récupérer le member ID pour la publication
-                    from blog_automation import get_wix_member_id
+                    from blog_automation import get_wix_member_id, attach_cover_image_to_wix_draft
                     member_id = await get_wix_member_id(wix_api_key, wix_site_id)
                     
-                    # Préparer le payload du draft
+                    # Préparer le payload du draft SANS image (on l'ajoute après via PATCH)
                     draft_payload = {
                         "draftPost": {
                             "title": title,
                             "richContent": rich_content,
                             "excerpt": excerpt,
-                            "categoryIds": category_ids,
-                            "coverMedia": {
-                                "enabled": True,
-                                "displayed": True
-                            }
-                        },
-                        "publish": True  # Publier immédiatement
+                            "categoryIds": category_ids
+                        }
                     }
                     
                     # Ajouter le memberId si disponible (requis pour apps tierces)
                     if member_id:
                         draft_payload["draftPost"]["memberId"] = member_id
                     
-                    # Ajouter l'image si disponible
-                    if wix_file_id:
-                        draft_payload["draftPost"]["coverMedia"]["image"] = wix_file_id
-                    
+                    # Créer le draft d'abord
                     create_response = await create_client.post(
                         f"{WIX_API_BASE}/blog/v3/draft-posts",
                         headers={
@@ -4244,17 +4243,61 @@ async def delete_and_recreate_blogs(limit: int = 4):
                     )
                     
                     if create_response.status_code in [200, 201]:
-                        new_post = create_response.json().get("draftPost", {}) or create_response.json().get("post", {})
-                        new_post_id = new_post.get("id")
-                        logger.info(f"   ✅ Blog recréé et publié! ID: {new_post_id}")
+                        new_draft = create_response.json().get("draftPost", {})
+                        new_draft_id = new_draft.get("id")
+                        logger.info(f"   ✅ Draft créé: {new_draft_id}")
                         
-                        results.append({
-                            "old_post_id": post_id,
-                            "new_post_id": new_post_id,
-                            "title": title[:50],
-                            "success": True,
-                            "wix_file_id": wix_file_id
-                        })
+                        # 6. PATCH pour ajouter l'image (méthode v2 stable)
+                        if wix_file_id:
+                            # Extraire juste le media ID
+                            media_id = wix_file_id.split("/")[-1] if "/" in wix_file_id else wix_file_id
+                            
+                            cover_image_data = {
+                                "file_id": media_id,
+                                "width": 1024,
+                                "height": 1024
+                            }
+                            
+                            image_attached = await attach_cover_image_to_wix_draft(
+                                wix_api_key, wix_site_id, new_draft_id, cover_image_data
+                            )
+                            
+                            if image_attached:
+                                logger.info(f"   ✅ Cover image attachée!")
+                            else:
+                                logger.warning(f"   ⚠️ Cover image non attachée")
+                        
+                        # 7. Publier le draft
+                        publish_response = await create_client.post(
+                            f"{WIX_API_BASE}/blog/v3/draft-posts/{new_draft_id}/publish",
+                            headers={
+                                "Authorization": wix_api_key,
+                                "wix-site-id": wix_site_id,
+                                "Content-Type": "application/json"
+                            },
+                            json={}
+                        )
+                        
+                        if publish_response.status_code == 200:
+                            new_post = publish_response.json().get("post", {})
+                            new_post_id = new_post.get("id", new_draft_id)
+                            logger.info(f"   ✅ Blog publié! ID: {new_post_id}")
+                            
+                            results.append({
+                                "old_post_id": post_id,
+                                "new_post_id": new_post_id,
+                                "title": title[:50],
+                                "success": True,
+                                "wix_file_id": wix_file_id
+                            })
+                        else:
+                            logger.warning(f"   ⚠️ Publish failed: {publish_response.status_code}")
+                            results.append({
+                                "post_id": post_id,
+                                "title": title[:50],
+                                "success": False,
+                                "error": f"Publish failed: {publish_response.status_code}"
+                            })
                     else:
                         logger.warning(f"   ⚠️ Create failed: {create_response.status_code} - {create_response.text[:200]}")
                         results.append({
