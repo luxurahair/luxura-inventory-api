@@ -3713,77 +3713,18 @@ async def regenerate_blog_images_with_grok(limit: int = 10):
     
     def build_contextual_prompt(title: str, content: str, excerpt: str) -> str:
         """
-        Construit un prompt basé sur le contenu de l'article.
-        Combine le sujet de l'article avec le style Luxura.
+        UTILISE les prompts v3 Ultra-Glamour centralisés de luxura_image_prompts.py
+        - Cheveux 3/4 du dos (JAMAIS courts)
+        - Plusieurs femmes parfois
+        - Salons haut de gamme
+        - Yachts, plages italiennes, etc.
         """
-        # Analyser le contenu pour extraire le contexte
-        full_text = f"{title} {excerpt} {content}".lower()
-        
-        # Déterminer le sujet principal
-        subject_context = ""
-        setting = ""
-        outfit = ""
-        action = ""
-        
-        # Extensions spécifiques
-        if "genius weft" in full_text or "genius" in full_text:
-            subject_context = "showcasing seamless Genius Weft hair extensions"
-            action = "running fingers through her incredibly thick seamless extensions"
-        elif "tape-in" in full_text or "tape" in full_text:
-            subject_context = "with flawless tape-in hair extensions"
-            action = "showing off her perfectly blended tape extensions"
-        elif "halo" in full_text:
-            subject_context = "wearing invisible Halo wire extensions"
-            action = "adjusting her secret Halo extension wire"
-        elif "i-tip" in full_text or "itip" in full_text:
-            subject_context = "with luxurious I-Tip keratin extensions"
-            action = "touching her beautifully bonded extensions"
-        elif "clip" in full_text:
-            subject_context = "with voluminous clip-in extensions"
-            action = "flipping her instantly transformed hair"
-        else:
-            subject_context = "with stunning premium hair extensions"
-            action = "showcasing her dramatic hair transformation"
-        
-        # Contexte salon/professionnel
-        if any(w in full_text for w in ["salon", "coiffeuse", "professionnel", "affilié", "partenaire", "formation"]):
-            setting = "in a luxurious high-end hair salon with elegant mirrors and soft lighting"
-            outfit = "wearing a chic professional outfit"
-        # Mariage/événement
-        elif any(w in full_text for w in ["mariage", "wedding", "cérémonie", "événement", "gala", "soirée"]):
-            setting = "at an elegant wedding venue with romantic lighting"
-            outfit = "wearing a stunning evening gown"
-        # Entretien/soins
-        elif any(w in full_text for w in ["entretien", "soin", "laver", "brush", "routine"]):
-            setting = "in a bright luxurious bathroom with marble counters"
-            outfit = "wearing an elegant silk robe"
-        # Style de vie
-        elif any(w in full_text for w in ["lifestyle", "quotidien", "style de vie", "voyage"]):
-            setting = "at a chic Parisian café terrace"
-            outfit = "wearing designer casual wear"
-        # Tendances
-        elif any(w in full_text for w in ["tendance", "trend", "2025", "2026", "mode", "été", "printemps"]):
-            setting = "at a fashion-forward rooftop bar with city skyline"
-            outfit = "wearing the latest fashion trends"
-        # Comparatif/Guide
-        elif any(w in full_text for w in ["comparatif", "guide", "choisir", "différence", "vs"]):
-            setting = "in a bright modern studio with soft professional lighting"
-            outfit = "wearing an elegant neutral-toned outfit"
-        # Défaut: glamour général
-        else:
-            setting = "on a luxury yacht deck at golden hour sunset"
-            outfit = "wearing an elegant flowing dress"
-        
-        # Construire le prompt final
-        prompt = f"""Real photograph of a glamorous woman {subject_context}, {action}, {setting}. 
-She has incredibly voluminous, thick, flowing hair extensions with dramatic body and natural movement cascading past her shoulders. 
-{outfit}. 
-Shot from 3/4 back angle or semi-profile to showcase the hair length and volume. 
-Golden hour natural lighting highlighting the hair shine and texture. 
-Ultra-realistic, high-end beauty photography, aspirational luxury lifestyle. 
-No text, no watermarks, no logos."""
-        
-        return prompt.replace('\n', ' ').strip()
+        try:
+            from app.services.luxura_image_prompts import get_contextual_prompt
+            return get_contextual_prompt(title, content or excerpt)
+        except Exception as e:
+            logger.warning(f"Fallback prompt (import error): {e}")
+            return "Real photograph of a glamorous woman at an exclusive Beverly Hills hair salon, with incredibly voluminous thick hair extensions reaching three-quarters down her back. Shot from 3/4 back angle. Soft professional lighting. Ultra-realistic luxury beauty photography. No text, no watermarks."
     
     try:
         wix_api_key = os.getenv("WIX_API_KEY")
@@ -3955,49 +3896,17 @@ async def fix_blog_images_now(limit: int = 10):
         return text[:2000]
     
     def build_contextual_prompt(title: str, content: str, excerpt: str) -> str:
-        full_text = f"{title} {excerpt} {content}".lower()
-        
-        # Déterminer le sujet principal
-        if "genius weft" in full_text or "genius" in full_text:
-            subject = "showcasing seamless Genius Weft hair extensions"
-            action = "running fingers through her incredibly thick seamless extensions"
-        elif "tape-in" in full_text or "tape" in full_text:
-            subject = "with flawless tape-in hair extensions"
-            action = "showing off her perfectly blended tape extensions"
-        elif "halo" in full_text:
-            subject = "wearing invisible Halo wire extensions"
-            action = "adjusting her secret Halo extension wire"
-        elif "i-tip" in full_text or "itip" in full_text:
-            subject = "with luxurious I-Tip keratin extensions"
-            action = "touching her beautifully bonded extensions"
-        elif "clip" in full_text:
-            subject = "with voluminous clip-in extensions"
-            action = "flipping her instantly transformed hair"
-        else:
-            subject = "with stunning premium hair extensions"
-            action = "showcasing her dramatic hair transformation"
-        
-        # Contexte/décor
-        if any(w in full_text for w in ["salon", "coiffeuse", "professionnel", "affilié", "partenaire"]):
-            setting = "in a luxurious high-end hair salon with elegant mirrors"
-            outfit = "wearing a chic professional outfit"
-        elif any(w in full_text for w in ["mariage", "wedding", "cérémonie", "événement"]):
-            setting = "at an elegant wedding venue with romantic lighting"
-            outfit = "wearing a stunning evening gown"
-        elif any(w in full_text for w in ["entretien", "soin", "laver", "routine"]):
-            setting = "in a bright luxurious bathroom with marble counters"
-            outfit = "wearing an elegant silk robe"
-        elif any(w in full_text for w in ["comparatif", "guide", "choisir", "différence"]):
-            setting = "in a bright modern studio with soft professional lighting"
-            outfit = "wearing an elegant neutral-toned outfit"
-        elif any(w in full_text for w in ["tendance", "trend", "2025", "mode", "été"]):
-            setting = "at a fashion-forward rooftop bar with city skyline"
-            outfit = "wearing the latest fashion trends"
-        else:
-            setting = "on a luxury yacht deck at golden hour sunset"
-            outfit = "wearing an elegant flowing dress"
-        
-        return f"Real photograph of a glamorous woman {subject}, {action}, {setting}. Incredibly voluminous thick flowing hair extensions with dramatic body cascading past shoulders. {outfit}. Shot from 3/4 back angle. Golden hour lighting. Ultra-realistic luxury photography. No text no watermarks."
+        """
+        UTILISE les prompts v3 Ultra-Glamour centralisés de luxura_image_prompts.py
+        """
+        try:
+            from app.services.luxura_image_prompts import get_contextual_prompt
+            # Utiliser le générateur v3 qui applique toutes les règles
+            return get_contextual_prompt(title, content or excerpt)
+        except Exception as e:
+            logger.warning(f"Fallback prompt (import error): {e}")
+            # Fallback v3 style
+            return "Real photograph of a glamorous woman at an exclusive Beverly Hills hair salon with crystal chandeliers, with incredibly voluminous thick hair extensions reaching three-quarters down her back with dramatic body and natural movement. Shot from 3/4 back angle showcasing the incredible hair length. Soft professional lighting highlighting the hair shine and volume. Ultra-realistic luxury beauty photography. No text, no watermarks."
     
     try:
         wix_api_key = os.getenv("WIX_API_KEY")
