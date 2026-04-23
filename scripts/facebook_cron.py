@@ -317,30 +317,53 @@ Génère un prompt d'image qui capture l'essence et le contexte de ce post."""
         return f"Professional hair extensions photography, beautiful long flowing hair, premium beauty brand aesthetic, luxury salon setting, soft lighting, no text"
 
 
-def generate_image_dalle(prompt: str) -> Optional[str]:
+def generate_image_grok(post_type: str) -> Optional[str]:
     """
-    Génère une image avec DALL-E et retourne l'URL.
+    Génère une image avec GROK et les prompts v3 Ultra-Glamour.
+    TOUJOURS des femmes glamour, JAMAIS des produits sur table.
     """
-    if not OPENAI_API_KEY:
-        log("❌ OPENAI_API_KEY non configuré")
+    xai_api_key = os.getenv("XAI_API_KEY")
+    if not xai_api_key:
+        log("❌ XAI_API_KEY non configuré")
         return None
     
-    log(f"🎨 Génération image DALL-E...")
+    log(f"🎨 Génération image GROK v3 Ultra-Glamour...")
+    
+    # Import des prompts v3 Luxura
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+        from app.services.luxura_image_prompts import get_preset_prompt
+        
+        # Mapper le post_type vers le preset
+        preset_mapping = {
+            "educational": "educational",
+            "product": "product",  # Utilise les prompts v3 avec FEMMES
+            "weekend": "weekend"
+        }
+        preset = preset_mapping.get(post_type, "product")
+        base_prompt = get_preset_prompt(preset)
+        
+    except Exception as e:
+        log(f"⚠️ Import prompts échoué, utilisation fallback: {e}")
+        base_prompt = "Real photograph of a glamorous woman on a luxury yacht deck at sunset, with voluminous thick hair extensions flowing in the breeze. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting."
+    
+    # Ajouter la contrainte de longueur des cheveux
+    hair_constraint = "Hair length MUST end at the natural waist level, approximately three-quarters down the back. Hair must NOT extend below the waist, NOT reach the hips or knees. This is critical."
+    prompt = f"{base_prompt} {hair_constraint} No text, no watermarks, no logos."
+    
     log(f"   Prompt: {prompt[:100]}...")
     
     try:
         response = requests.post(
-            "https://api.openai.com/v1/images/generations",
+            "https://api.x.ai/v1/images/generations",
             headers={
-                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Authorization": f"Bearer {xai_api_key}",
                 "Content-Type": "application/json"
             },
             json={
-                "model": "dall-e-3",
+                "model": "grok-imagine-image",
                 "prompt": prompt,
-                "n": 1,
-                "size": "1792x1024",  # Format paysage pour Facebook
-                "quality": "standard"
+                "n": 1
             },
             timeout=120
         )
@@ -348,10 +371,10 @@ def generate_image_dalle(prompt: str) -> Optional[str]:
         if response.status_code == 200:
             data = response.json()
             image_url = data["data"][0]["url"]
-            log(f"✅ Image générée!")
+            log(f"✅ Image GROK générée!")
             return image_url
         else:
-            log(f"❌ Erreur DALL-E: {response.status_code}")
+            log(f"❌ Erreur GROK: {response.status_code}")
             log(response.text[:300])
             return None
             
@@ -443,13 +466,10 @@ def main():
     log(f"")
     log(f"📝 Titre: {content['title']}")
     
-    # Générer le prompt d'image À PARTIR DU TEXTE du post
+    # Générer l'image avec GROK et prompts v3 Ultra-Glamour
+    # TOUJOURS des femmes glamour, JAMAIS des produits sur table
     log(f"")
-    image_prompt = generate_image_prompt_from_text(content["text"], post_type)
-    
-    # Générer l'image avec le prompt contextuel
-    log(f"")
-    image_url = generate_image_dalle(image_prompt)
+    image_url = generate_image_grok(post_type)
     
     # Publier sur Facebook
     log(f"")
