@@ -5766,6 +5766,126 @@ async def ping_services():
 
 # ==================== BLOG APPROVAL ENDPOINTS ====================
 
+# ==================== FACEBOOK APPROVAL (BACKUP - bypasses content router) ====================
+@api_router.get("/fb-approve/{post_id}")
+async def approve_facebook_post_backup(post_id: str):
+    """
+    ✅ BACKUP: Approuve et publie un post Facebook
+    Contourne le router content qui ne se charge pas sur Render
+    """
+    import psycopg2
+    from psycopg2.extras import Json
+    from fastapi.responses import HTMLResponse
+    
+    logger.info(f"📱 FB Approval (backup): {post_id}")
+    
+    # 1. Récupérer le post depuis Supabase
+    try:
+        DATABASE_URL = os.getenv('DATABASE_URL', '')
+        if DATABASE_URL.startswith("postgres://"):
+            DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        if DATABASE_URL.startswith("postgresql+psycopg://"):
+            DATABASE_URL = DATABASE_URL.replace("postgresql+psycopg://", "postgresql://", 1)
+        
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute("SELECT post_data FROM pending_posts WHERE post_id = %s AND status = 'pending'", (post_id,))
+        row = cur.fetchone()
+        
+        if not row:
+            cur.close()
+            conn.close()
+            return HTMLResponse(content=f"""
+                <!DOCTYPE html>
+                <html>
+                <head><title>Post non trouvé</title>
+                <style>body{{font-family:Arial;background:#0c0c0c;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}}
+                .card{{background:#1a1a1a;padding:40px;border-radius:12px;text-align:center;}}</style></head>
+                <body><div class="card">
+                <h1 style="color:#f44;">❌ Post non trouvé</h1>
+                <p>Le post {post_id[:8]}... n'existe pas ou a déjà été traité.</p>
+                </div></body></html>
+            """, status_code=404)
+        
+        post_data = row[0] if isinstance(row[0], dict) else json.loads(row[0])
+        cur.close()
+        conn.close()
+        
+    except Exception as e:
+        logger.error(f"❌ DB error: {e}")
+        return HTMLResponse(content=f"<h1>Erreur DB: {e}</h1>", status_code=500)
+    
+    # 2. Publier sur Facebook
+    try:
+        fb_page_id = os.getenv("FACEBOOK_PAGE_ID")
+        fb_access_token = os.getenv("FACEBOOK_ACCESS_TOKEN")
+        
+        if not fb_page_id or not fb_access_token:
+            return HTMLResponse(content="<h1>❌ Config Facebook manquante</h1>", status_code=500)
+        
+        message = post_data.get("full_text") or post_data.get("text", "")
+        image_url = post_data.get("image_url")
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            if image_url:
+                # Post avec image
+                response = await client.post(
+                    f"https://graph.facebook.com/v21.0/{fb_page_id}/photos",
+                    data={
+                        "url": image_url,
+                        "caption": message,
+                        "access_token": fb_access_token
+                    }
+                )
+            else:
+                # Post texte seulement
+                response = await client.post(
+                    f"https://graph.facebook.com/v21.0/{fb_page_id}/feed",
+                    data={
+                        "message": message,
+                        "access_token": fb_access_token
+                    }
+                )
+            
+            if response.status_code == 200:
+                fb_result = response.json()
+                fb_post_id = fb_result.get("id") or fb_result.get("post_id")
+                logger.info(f"✅ FB Post publié: {fb_post_id}")
+                
+                # 3. Marquer comme traité
+                try:
+                    conn = psycopg2.connect(DATABASE_URL)
+                    cur = conn.cursor()
+                    cur.execute("UPDATE pending_posts SET status = 'processed', processed_at = NOW() WHERE post_id = %s", (post_id,))
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+                except:
+                    pass
+                
+                return HTMLResponse(content=f"""
+                    <!DOCTYPE html>
+                    <html>
+                    <head><title>Post Publié!</title>
+                    <style>body{{font-family:Arial;background:#0c0c0c;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}}
+                    .card{{background:#1a1a1a;padding:40px;border-radius:12px;text-align:center;}}
+                    .gold{{color:#c9a050;}}</style></head>
+                    <body><div class="card">
+                    <h1 class="gold">✅ Post Facebook Publié!</h1>
+                    <p>ID: {fb_post_id}</p>
+                    <a href="https://www.facebook.com/{fb_page_id}" style="color:#c9a050;">Voir la page Facebook</a>
+                    </div></body></html>
+                """)
+            else:
+                error = response.text[:200]
+                logger.error(f"❌ FB error: {error}")
+                return HTMLResponse(content=f"<h1>❌ Erreur Facebook</h1><p>{error}</p>", status_code=500)
+                
+    except Exception as e:
+        logger.error(f"❌ FB publish error: {e}")
+        return HTMLResponse(content=f"<h1>❌ Erreur: {e}</h1>", status_code=500)
+
+
 @api_router.get("/blog/approve/{draft_id}")
 async def approve_blog(draft_id: str):
     """
