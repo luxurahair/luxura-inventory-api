@@ -4144,30 +4144,71 @@ async def delete_and_recreate_blogs(limit: int = 4):
                 content_text = extract_text_from_nodes(rich_content.get("nodes", []))
                 
                 # ============================================
-                # ÉTAPE 1: GÉNÉRER L'IMAGE GROK D'ABORD
+                # ÉTAPE 1: GÉNÉRER 3 IMAGES GROK DIFFÉRENTES
                 # ============================================
-                logger.info(f"   🎨 Génération image Grok pour: {title[:40]}...")
-                prompt = build_contextual_prompt(title, content_text or excerpt)
+                logger.info(f"   🎨 Génération de 3 images Grok pour: {title[:40]}...")
                 
-                grok_image_url = None
-                try:
-                    grok_response = sync_requests.post(
-                        "https://api.x.ai/v1/images/generations",
-                        headers={
-                            "Authorization": f"Bearer {xai_api_key}",
-                            "Content-Type": "application/json"
-                        },
-                        json={"model": "grok-imagine-image", "prompt": prompt, "n": 1},
-                        timeout=90
-                    )
+                # Fonction locale pour créer des prompts variés
+                def get_varied_prompts(title: str, content: str):
+                    """Génère 3 prompts différents pour le même article"""
+                    base_context = f"Article: {title[:100]}"
                     
-                    if grok_response.status_code == 200:
-                        grok_image_url = grok_response.json().get("data", [{}])[0].get("url")
-                        logger.info(f"   ✅ Image Grok générée: {grok_image_url[:50]}...")
-                    else:
-                        logger.warning(f"   ⚠️ Grok failed: {grok_response.status_code}")
-                except Exception as e:
-                    logger.warning(f"   ⚠️ Grok error: {e}")
+                    # Prompt 1: Hero image - Vue glamour générale
+                    prompt1 = f"""Ultra-realistic photograph of a glamorous woman at an exclusive luxury hair salon in Beverly Hills. 
+She has incredibly voluminous, thick hair extensions reaching exactly three-quarters down her back (not short, not to knees).
+Shot from elegant 3/4 back angle showing the beautiful hair flow.
+Luxurious marble and gold salon interior with soft professional lighting.
+{base_context}
+No text, no watermarks, no logos. Magazine quality beauty photography."""
+
+                    # Prompt 2: Application/Transformation - Styliste au travail
+                    prompt2 = f"""Ultra-realistic photograph of a professional hair stylist applying premium hair extensions to a client.
+The stylist works delicately while the client sits in a luxurious salon chair.
+Client's hair is voluminous, reaching three-quarters down her back.
+Warm, inviting salon atmosphere with elegant decor and soft lighting.
+{base_context}
+No text, no watermarks. Professional beauty editorial style."""
+
+                    # Prompt 3: Résultat final - Femme heureuse avec ses extensions
+                    prompt3 = f"""Ultra-realistic photograph of a confident, radiant woman showing off her stunning hair transformation.
+She has thick, lustrous hair extensions flowing three-quarters down her back.
+Natural pose, perhaps touching her hair or looking over her shoulder with a subtle smile.
+Soft natural lighting, elegant background suggesting wealth and sophistication.
+{base_context}
+No text, no watermarks. High-end beauty campaign aesthetic."""
+
+                    return [prompt1, prompt2, prompt3]
+                
+                # Générer les 3 images
+                grok_images = []
+                varied_prompts = get_varied_prompts(title, content_text or excerpt)
+                
+                for img_idx, prompt in enumerate(varied_prompts):
+                    try:
+                        logger.info(f"   🎨 Génération image {img_idx + 1}/3...")
+                        grok_response = sync_requests.post(
+                            "https://api.x.ai/v1/images/generations",
+                            headers={
+                                "Authorization": f"Bearer {xai_api_key}",
+                                "Content-Type": "application/json"
+                            },
+                            json={"model": "grok-imagine-image", "prompt": prompt, "n": 1},
+                            timeout=90
+                        )
+                        
+                        if grok_response.status_code == 200:
+                            img_url = grok_response.json().get("data", [{}])[0].get("url")
+                            if img_url:
+                                grok_images.append(img_url)
+                                logger.info(f"   ✅ Image {img_idx + 1} générée!")
+                        else:
+                            logger.warning(f"   ⚠️ Image {img_idx + 1} failed: {grok_response.status_code}")
+                    except Exception as e:
+                        logger.warning(f"   ⚠️ Image {img_idx + 1} error: {e}")
+                
+                # Utiliser la première image comme image principale (pour la cover)
+                grok_image_url = grok_images[0] if grok_images else None
+                logger.info(f"   📸 {len(grok_images)} images générées au total")
                 
                 # ============================================
                 # ÉTAPE 2: GÉNÉRER LE CONTENU GPT SI NÉCESSAIRE
@@ -4234,8 +4275,8 @@ Format: paragraphes simples, pas de markdown."""
                 # ============================================
                 # ÉTAPE 3: INJECTER LES IMAGES DANS LE CONTENU
                 # ============================================
-                if grok_image_url and rich_content.get("nodes"):
-                    logger.info(f"   🖼️ Injection des images dans le contenu...")
+                if grok_images and rich_content.get("nodes"):
+                    logger.info(f"   🖼️ Injection des {len(grok_images)} images dans le contenu...")
                     original_nodes = rich_content.get("nodes", [])
                     
                     # Filtrer les nodes de type paragraphe/heading (pas les images existantes)
@@ -4245,20 +4286,21 @@ Format: paragraphes simples, pas de markdown."""
                         new_nodes = []
                         
                         # IMAGE 1: Au tout début (hero image)
-                        new_nodes.append({
-                            "type": "IMAGE",
-                            "id": f"img_hero_{uuid.uuid4().hex[:8]}",
-                            "imageData": {
-                                "image": {
-                                    "src": {"url": grok_image_url},
-                                    "width": 1200,
-                                    "height": 630
-                                },
-                                "altText": f"Extensions capillaires Luxura - {title[:50]}",
-                                "disableExpand": False,
-                                "disableDownload": True
-                            }
-                        })
+                        if len(grok_images) >= 1:
+                            new_nodes.append({
+                                "type": "IMAGE",
+                                "id": f"img_hero_{uuid.uuid4().hex[:8]}",
+                                "imageData": {
+                                    "image": {
+                                        "src": {"url": grok_images[0]},
+                                        "width": 1200,
+                                        "height": 630
+                                    },
+                                    "altText": f"Extensions capillaires Luxura - {title[:50]}",
+                                    "disableExpand": False,
+                                    "disableDownload": True
+                                }
+                            })
                         
                         # Positions pour images additionnelles (1/3 et 2/3 du contenu)
                         total_text_nodes = len(text_nodes)
@@ -4269,35 +4311,35 @@ Format: paragraphes simples, pas de markdown."""
                         for idx, node in enumerate(text_nodes):
                             new_nodes.append(node)
                             
-                            # IMAGE 2: Après 1/3 du contenu
-                            if idx == img2_position and total_text_nodes > 3:
+                            # IMAGE 2: Après 1/3 du contenu (styliste au travail)
+                            if idx == img2_position and total_text_nodes > 3 and len(grok_images) >= 2:
                                 new_nodes.append({
                                     "type": "IMAGE",
                                     "id": f"img_mid1_{uuid.uuid4().hex[:8]}",
                                     "imageData": {
                                         "image": {
-                                            "src": {"url": grok_image_url},
+                                            "src": {"url": grok_images[1]},
                                             "width": 1200,
                                             "height": 630
                                         },
-                                        "altText": "Extensions capillaires professionnelles Luxura",
+                                        "altText": "Application professionnelle d'extensions capillaires Luxura",
                                         "disableExpand": False,
                                         "disableDownload": True
                                     }
                                 })
                             
-                            # IMAGE 3: Après 2/3 du contenu
-                            if idx == img3_position and total_text_nodes > 5:
+                            # IMAGE 3: Après 2/3 du contenu (résultat final)
+                            if idx == img3_position and total_text_nodes > 5 and len(grok_images) >= 3:
                                 new_nodes.append({
                                     "type": "IMAGE",
                                     "id": f"img_mid2_{uuid.uuid4().hex[:8]}",
                                     "imageData": {
                                         "image": {
-                                            "src": {"url": grok_image_url},
+                                            "src": {"url": grok_images[2]},
                                             "width": 1200,
                                             "height": 630
                                         },
-                                        "altText": "Résultat extensions Luxura Distribution",
+                                        "altText": "Résultat transformation extensions Luxura Distribution",
                                         "disableExpand": False,
                                         "disableDownload": True
                                     }
@@ -4305,7 +4347,7 @@ Format: paragraphes simples, pas de markdown."""
                         
                         rich_content = {"nodes": new_nodes}
                         img_count = sum(1 for n in new_nodes if n.get("type") == "IMAGE")
-                        logger.info(f"   ✅ {img_count} images injectées dans le contenu!")
+                        logger.info(f"   ✅ {img_count} images UNIQUES injectées dans le contenu!")
                 
                 logger.info(f"🗑️ [{i+1}/{len(posts)}] Suppression: {title[:40]}...")
                 
@@ -4325,10 +4367,10 @@ Format: paragraphes simples, pas de markdown."""
                     else:
                         logger.info(f"   ✅ Blog supprimé de Wix")
                 
-                # (Image Grok déjà générée à l'étape 1 - pas de double génération)
-                if not grok_image_url:
-                    logger.warning(f"   ⚠️ Pas d'image Grok disponible, skip")
-                    results.append({"post_id": post_id, "title": title[:50], "success": False, "error": "No Grok image"})
+                # (Images Grok déjà générées à l'étape 1 - pas de double génération)
+                if not grok_images:
+                    logger.warning(f"   ⚠️ Pas d'images Grok disponibles, skip")
+                    results.append({"post_id": post_id, "title": title[:50], "success": False, "error": "No Grok images"})
                     continue
                 
                 # 5. Importer l'image dans Wix Media
