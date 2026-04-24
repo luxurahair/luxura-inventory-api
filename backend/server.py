@@ -5817,11 +5817,11 @@ async def approve_facebook_post_backup(post_id: str):
     
     # 2. Publier sur Facebook
     try:
-        fb_page_id = os.getenv("FACEBOOK_PAGE_ID")
-        fb_access_token = os.getenv("FACEBOOK_ACCESS_TOKEN")
+        fb_page_id = os.getenv("FB_PAGE_ID")
+        fb_access_token = os.getenv("FB_PAGE_ACCESS_TOKEN")
         
         if not fb_page_id or not fb_access_token:
-            return HTMLResponse(content="<h1>❌ Config Facebook manquante</h1>", status_code=500)
+            return HTMLResponse(content="<h1>❌ Config Facebook manquante (FB_PAGE_ID ou FB_PAGE_ACCESS_TOKEN)</h1>", status_code=500)
         
         message = post_data.get("full_text") or post_data.get("text", "")
         image_url = post_data.get("image_url")
