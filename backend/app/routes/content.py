@@ -40,15 +40,91 @@ PENDING_POSTS_FILE = Path("/tmp/luxura_pending_posts.json")
 _pending_posts_cache: Dict = {}
 
 
+def load_pending_posts_from_db() -> Dict:
+    """Charge les posts en attente depuis Supabase"""
+    try:
+        import psycopg2
+        DATABASE_URL = os.environ.get('DATABASE_URL', '')
+        if DATABASE_URL.startswith("postgres://"):
+            DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        if DATABASE_URL.startswith("postgresql+psycopg://"):
+            DATABASE_URL = DATABASE_URL.replace("postgresql+psycopg://", "postgresql://", 1)
+        
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT post_id, post_data 
+            FROM pending_posts 
+            WHERE status = 'pending'
+            AND created_at > NOW() - INTERVAL '7 days'
+        """)
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return {row[0]: row[1] for row in rows}
+    except Exception as e:
+        logger.warning(f"DB load failed, using file fallback: {e}")
+        return {}
+
+
+def save_pending_post_to_db(post_id: str, post_data: Dict):
+    """Sauvegarde un post en attente dans Supabase"""
+    try:
+        import psycopg2
+        DATABASE_URL = os.environ.get('DATABASE_URL', '')
+        if DATABASE_URL.startswith("postgres://"):
+            DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        if DATABASE_URL.startswith("postgresql+psycopg://"):
+            DATABASE_URL = DATABASE_URL.replace("postgresql+psycopg://", "postgresql://", 1)
+        
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        from psycopg2.extras import Json
+        cur.execute("""
+            INSERT INTO pending_posts (post_id, post_data, status, created_at)
+            VALUES (%s, %s, 'pending', NOW())
+            ON CONFLICT (post_id) 
+            DO UPDATE SET post_data = %s, status = 'pending', created_at = NOW()
+        """, (post_id, Json(post_data), Json(post_data)))
+        conn.commit()
+        cur.close()
+        conn.close()
+        logger.info(f"✅ Post {post_id} sauvegardé en DB")
+    except Exception as e:
+        logger.warning(f"DB save failed: {e}")
+
+
+def mark_post_processed_in_db(post_id: str):
+    """Marque un post comme traité dans Supabase"""
+    try:
+        from database import get_connection
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE pending_posts 
+                    SET status = 'processed', processed_at = NOW()
+                    WHERE post_id = %s
+                """, (post_id,))
+                conn.commit()
+    except Exception as e:
+        logger.warning(f"DB mark processed failed: {e}")
+
+
 def load_pending_posts() -> Dict:
-    """Charge les posts en attente (local + cache)"""
+    """Charge les posts en attente (DB > cache > fichier)"""
     global _pending_posts_cache
     
-    # D'abord essayer le cache mémoire
+    # D'abord essayer la base de données (persistant)
+    db_posts = load_pending_posts_from_db()
+    if db_posts:
+        _pending_posts_cache = db_posts.copy()
+        return db_posts
+    
+    # Sinon essayer le cache mémoire
     if _pending_posts_cache:
         return _pending_posts_cache.copy()
     
-    # Sinon charger depuis le fichier
+    # Sinon charger depuis le fichier (fallback)
     try:
         if PENDING_POSTS_FILE.exists():
             with open(PENDING_POSTS_FILE, 'r') as f:
@@ -61,38 +137,48 @@ def load_pending_posts() -> Dict:
 
 
 def save_pending_posts(posts: Dict):
-    """Sauvegarde les posts en attente (local + cache)"""
+    """Sauvegarde les posts en attente (DB + fichier fallback)"""
     global _pending_posts_cache
     _pending_posts_cache = posts.copy()
     
+    # Sauvegarder chaque post en DB
+    for post_id, post_data in posts.items():
+        save_pending_post_to_db(post_id, post_data)
+    
+    # Aussi sauvegarder en fichier (fallback)
     try:
         with open(PENDING_POSTS_FILE, 'w') as f:
             json.dump(posts, f, indent=2, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"Erreur sauvegarde pending posts: {e}")
+        logger.error(f"Erreur sauvegarde pending posts fichier: {e}")
 
 
 def add_pending_post(post_id: str, post_data: Dict):
-    """Ajoute un post en attente (local + sync Render)"""
+    """Ajoute un post en attente (DB + cache + fichier)"""
     global _pending_posts_cache
     
-    posts = load_pending_posts()
-    posts[post_id] = {
+    post_with_meta = {
         **post_data,
         "created_at": datetime.now().isoformat(),
         "status": "pending"
     }
-    save_pending_posts(posts)
+    
+    # Sauvegarder en DB d'abord (persistant)
+    save_pending_post_to_db(post_id, post_with_meta)
+    
+    # Mettre à jour le cache
+    posts = load_pending_posts()
+    posts[post_id] = post_with_meta
     _pending_posts_cache = posts.copy()
     
-    logger.info(f"📝 Post {post_id} ajouté en attente d'approbation")
-    
-    # Sync vers Render en background (async)
+    # Aussi sauvegarder en fichier (fallback)
     try:
-        import asyncio
-        asyncio.create_task(sync_post_to_render(post_id, posts[post_id]))
+        with open(PENDING_POSTS_FILE, 'w') as f:
+            json.dump(posts, f, indent=2, ensure_ascii=False)
     except:
-        pass  # Ignorer si pas dans un event loop
+        pass
+    
+    logger.info(f"📝 Post {post_id} ajouté en attente d'approbation (DB + cache)")
 
 
 async def sync_post_to_render(post_id: str, post_data: Dict):
@@ -109,15 +195,47 @@ async def sync_post_to_render(post_id: str, post_data: Dict):
 
 
 def get_pending_post(post_id: str) -> Optional[Dict]:
-    """Récupère un post en attente"""
+    """Récupère un post en attente (DB > cache > fichier)"""
     global _pending_posts_cache
     
     # D'abord vérifier le cache mémoire
     if post_id in _pending_posts_cache:
         return _pending_posts_cache[post_id]
     
+    # Ensuite vérifier la base de données (persistant)
+    try:
+        import psycopg2
+        DATABASE_URL = os.environ.get('DATABASE_URL', '')
+        if DATABASE_URL.startswith("postgres://"):
+            DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        if DATABASE_URL.startswith("postgresql+psycopg://"):
+            DATABASE_URL = DATABASE_URL.replace("postgresql+psycopg://", "postgresql://", 1)
+        
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT post_data 
+            FROM pending_posts 
+            WHERE post_id = %s AND status = 'pending'
+        """, (post_id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if row:
+            post_data = row[0] if isinstance(row[0], dict) else json.loads(row[0])
+            _pending_posts_cache[post_id] = post_data
+            logger.info(f"✅ Post {post_id} récupéré depuis DB")
+            return post_data
+    except Exception as e:
+        logger.warning(f"DB lookup failed: {e}")
+    
     # Sinon charger depuis fichier
     posts = load_pending_posts()
+    if post_id in posts:
+        return posts[post_id]
+    
+    return None
     return posts.get(post_id)
 
 
