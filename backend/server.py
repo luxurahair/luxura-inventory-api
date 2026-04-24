@@ -4143,7 +4143,35 @@ async def delete_and_recreate_blogs(limit: int = 4):
                 # Extraire le contenu texte
                 content_text = extract_text_from_nodes(rich_content.get("nodes", []))
                 
-                # Si pas de contenu, générer avec GPT
+                # ============================================
+                # ÉTAPE 1: GÉNÉRER L'IMAGE GROK D'ABORD
+                # ============================================
+                logger.info(f"   🎨 Génération image Grok pour: {title[:40]}...")
+                prompt = build_contextual_prompt(title, content_text or excerpt)
+                
+                grok_image_url = None
+                try:
+                    grok_response = sync_requests.post(
+                        "https://api.x.ai/v1/images/generations",
+                        headers={
+                            "Authorization": f"Bearer {xai_api_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json={"model": "grok-imagine-image", "prompt": prompt, "n": 1},
+                        timeout=90
+                    )
+                    
+                    if grok_response.status_code == 200:
+                        grok_image_url = grok_response.json().get("data", [{}])[0].get("url")
+                        logger.info(f"   ✅ Image Grok générée: {grok_image_url[:50]}...")
+                    else:
+                        logger.warning(f"   ⚠️ Grok failed: {grok_response.status_code}")
+                except Exception as e:
+                    logger.warning(f"   ⚠️ Grok error: {e}")
+                
+                # ============================================
+                # ÉTAPE 2: GÉNÉRER LE CONTENU GPT SI NÉCESSAIRE
+                # ============================================
                 if not content_text or len(content_text) < 100:
                     logger.info(f"   📝 Génération contenu GPT (richContent vide)...")
                     openai_key = os.getenv("OPENAI_API_KEY") or os.getenv("EMERGENT_LLM_KEY")
@@ -4180,27 +4208,80 @@ Format: paragraphes simples, pas de markdown."""
                         
                         if gpt_response.status_code == 200:
                             content_text = gpt_response.json()["choices"][0]["message"]["content"]
-                            # Créer le richContent avec le format Wix Ricos correct
+                            # Créer le richContent avec IMAGES intégrées dans le texte
                             paragraphs = [p.strip() for p in content_text.split('\n\n') if p.strip()]
-                            rich_content = {
-                                "nodes": [
-                                    {
-                                        "type": "PARAGRAPH",
-                                        "id": f"paragraph_{j}",
-                                        "nodes": [{
-                                            "type": "TEXT", 
-                                            "id": f"text_{j}",
-                                            "textData": {
-                                                "text": p,
-                                                "decorations": []
-                                            }
-                                        }],
-                                        "paragraphData": {}
+                            
+                            nodes = []
+                            
+                            # IMAGE 1: Au début du contenu (après le premier paragraphe)
+                            if grok_image_url:
+                                nodes.append({
+                                    "type": "IMAGE",
+                                    "id": f"img1_{uuid.uuid4().hex[:8]}",
+                                    "imageData": {
+                                        "image": {
+                                            "src": {"url": grok_image_url},
+                                            "width": 1200,
+                                            "height": 630
+                                        },
+                                        "altText": f"Extensions capillaires Luxura - {title[:50]}",
+                                        "disableExpand": False,
+                                        "disableDownload": True
                                     }
-                                    for j, p in enumerate(paragraphs)
-                                ]
-                            }
-                            logger.info(f"   ✅ Contenu GPT généré ({len(content_text)} chars, {len(paragraphs)} paragraphes)")
+                                })
+                            
+                            # Ajouter les paragraphes avec images intercalées
+                            for j, p in enumerate(paragraphs):
+                                nodes.append({
+                                    "type": "PARAGRAPH",
+                                    "id": f"paragraph_{j}",
+                                    "nodes": [{
+                                        "type": "TEXT", 
+                                        "id": f"text_{j}",
+                                        "textData": {
+                                            "text": p,
+                                            "decorations": []
+                                        }
+                                    }],
+                                    "paragraphData": {}
+                                })
+                                
+                                # IMAGE 2: À 1/3 du contenu
+                                if j == len(paragraphs) // 3 and grok_image_url:
+                                    nodes.append({
+                                        "type": "IMAGE",
+                                        "id": f"img2_{uuid.uuid4().hex[:8]}",
+                                        "imageData": {
+                                            "image": {
+                                                "src": {"url": grok_image_url},
+                                                "width": 1200,
+                                                "height": 630
+                                            },
+                                            "altText": "Extensions capillaires professionnelles Luxura",
+                                            "disableExpand": False,
+                                            "disableDownload": True
+                                        }
+                                    })
+                                
+                                # IMAGE 3: À 2/3 du contenu
+                                if j == (len(paragraphs) * 2) // 3 and grok_image_url:
+                                    nodes.append({
+                                        "type": "IMAGE",
+                                        "id": f"img3_{uuid.uuid4().hex[:8]}",
+                                        "imageData": {
+                                            "image": {
+                                                "src": {"url": grok_image_url},
+                                                "width": 1200,
+                                                "height": 630
+                                            },
+                                            "altText": "Résultat extensions Luxura Distribution",
+                                            "disableExpand": False,
+                                            "disableDownload": True
+                                        }
+                                    })
+                            
+                            rich_content = {"nodes": nodes}
+                            logger.info(f"   ✅ Contenu GPT généré ({len(content_text)} chars, {len(paragraphs)} paragraphes, 3 images)")
                 
                 logger.info(f"🗑️ [{i+1}/{len(posts)}] Suppression: {title[:40]}...")
                 
@@ -5828,23 +5909,23 @@ async def approve_facebook_post_backup(post_id: str):
         
         async with httpx.AsyncClient(timeout=60.0) as client:
             if image_url:
-                # Post avec image en BROUILLON (published=false)
+                # Post avec image - PUBLICATION DIRECTE
                 response = await client.post(
                     f"https://graph.facebook.com/v21.0/{fb_page_id}/photos",
                     data={
                         "url": image_url,
                         "caption": message,
-                        "published": "false",  # BROUILLON
+                        "published": "true",  # PUBLICATION DIRECTE
                         "access_token": fb_access_token
                     }
                 )
             else:
-                # Post texte seulement en BROUILLON
+                # Post texte seulement - PUBLICATION DIRECTE
                 response = await client.post(
                     f"https://graph.facebook.com/v21.0/{fb_page_id}/feed",
                     data={
                         "message": message,
-                        "published": "false",  # BROUILLON
+                        "published": "true",  # PUBLICATION DIRECTE
                         "access_token": fb_access_token
                     }
                 )
