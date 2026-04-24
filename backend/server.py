@@ -4208,31 +4208,13 @@ Format: paragraphes simples, pas de markdown."""
                         
                         if gpt_response.status_code == 200:
                             content_text = gpt_response.json()["choices"][0]["message"]["content"]
-                            # Créer le richContent avec IMAGES intégrées dans le texte
+                            # Convertir en paragraphes
                             paragraphs = [p.strip() for p in content_text.split('\n\n') if p.strip()]
                             
-                            nodes = []
-                            
-                            # IMAGE 1: Au début du contenu (après le premier paragraphe)
-                            if grok_image_url:
-                                nodes.append({
-                                    "type": "IMAGE",
-                                    "id": f"img1_{uuid.uuid4().hex[:8]}",
-                                    "imageData": {
-                                        "image": {
-                                            "src": {"url": grok_image_url},
-                                            "width": 1200,
-                                            "height": 630
-                                        },
-                                        "altText": f"Extensions capillaires Luxura - {title[:50]}",
-                                        "disableExpand": False,
-                                        "disableDownload": True
-                                    }
-                                })
-                            
-                            # Ajouter les paragraphes avec images intercalées
+                            # Créer les nodes de base
+                            original_nodes = []
                             for j, p in enumerate(paragraphs):
-                                nodes.append({
+                                original_nodes.append({
                                     "type": "PARAGRAPH",
                                     "id": f"paragraph_{j}",
                                     "nodes": [{
@@ -4245,47 +4227,89 @@ Format: paragraphes simples, pas de markdown."""
                                     }],
                                     "paragraphData": {}
                                 })
-                                
-                                # IMAGE 2: À 1/3 du contenu
-                                if j == len(paragraphs) // 3 and grok_image_url:
-                                    nodes.append({
-                                        "type": "IMAGE",
-                                        "id": f"img2_{uuid.uuid4().hex[:8]}",
-                                        "imageData": {
-                                            "image": {
-                                                "src": {"url": grok_image_url},
-                                                "width": 1200,
-                                                "height": 630
-                                            },
-                                            "altText": "Extensions capillaires professionnelles Luxura",
-                                            "disableExpand": False,
-                                            "disableDownload": True
-                                        }
-                                    })
-                                
-                                # IMAGE 3: À 2/3 du contenu
-                                if j == (len(paragraphs) * 2) // 3 and grok_image_url:
-                                    nodes.append({
-                                        "type": "IMAGE",
-                                        "id": f"img3_{uuid.uuid4().hex[:8]}",
-                                        "imageData": {
-                                            "image": {
-                                                "src": {"url": grok_image_url},
-                                                "width": 1200,
-                                                "height": 630
-                                            },
-                                            "altText": "Résultat extensions Luxura Distribution",
-                                            "disableExpand": False,
-                                            "disableDownload": True
-                                        }
-                                    })
                             
-                            rich_content = {"nodes": nodes}
-                            logger.info(f"   ✅ Contenu GPT généré ({len(content_text)} chars, {len(paragraphs)} paragraphes, 3 images)")
+                            rich_content = {"nodes": original_nodes}
+                            logger.info(f"   ✅ Contenu GPT généré ({len(content_text)} chars, {len(paragraphs)} paragraphes)")
+                
+                # ============================================
+                # ÉTAPE 3: INJECTER LES IMAGES DANS LE CONTENU
+                # ============================================
+                if grok_image_url and rich_content.get("nodes"):
+                    logger.info(f"   🖼️ Injection des images dans le contenu...")
+                    original_nodes = rich_content.get("nodes", [])
+                    
+                    # Filtrer les nodes de type paragraphe/heading (pas les images existantes)
+                    text_nodes = [n for n in original_nodes if n.get("type") in ["PARAGRAPH", "HEADING"]]
+                    
+                    if len(text_nodes) > 0:
+                        new_nodes = []
+                        
+                        # IMAGE 1: Au tout début (hero image)
+                        new_nodes.append({
+                            "type": "IMAGE",
+                            "id": f"img_hero_{uuid.uuid4().hex[:8]}",
+                            "imageData": {
+                                "image": {
+                                    "src": {"url": grok_image_url},
+                                    "width": 1200,
+                                    "height": 630
+                                },
+                                "altText": f"Extensions capillaires Luxura - {title[:50]}",
+                                "disableExpand": False,
+                                "disableDownload": True
+                            }
+                        })
+                        
+                        # Positions pour images additionnelles (1/3 et 2/3 du contenu)
+                        total_text_nodes = len(text_nodes)
+                        img2_position = total_text_nodes // 3
+                        img3_position = (total_text_nodes * 2) // 3
+                        
+                        # Reconstruire avec images intercalées
+                        for idx, node in enumerate(text_nodes):
+                            new_nodes.append(node)
+                            
+                            # IMAGE 2: Après 1/3 du contenu
+                            if idx == img2_position and total_text_nodes > 3:
+                                new_nodes.append({
+                                    "type": "IMAGE",
+                                    "id": f"img_mid1_{uuid.uuid4().hex[:8]}",
+                                    "imageData": {
+                                        "image": {
+                                            "src": {"url": grok_image_url},
+                                            "width": 1200,
+                                            "height": 630
+                                        },
+                                        "altText": "Extensions capillaires professionnelles Luxura",
+                                        "disableExpand": False,
+                                        "disableDownload": True
+                                    }
+                                })
+                            
+                            # IMAGE 3: Après 2/3 du contenu
+                            if idx == img3_position and total_text_nodes > 5:
+                                new_nodes.append({
+                                    "type": "IMAGE",
+                                    "id": f"img_mid2_{uuid.uuid4().hex[:8]}",
+                                    "imageData": {
+                                        "image": {
+                                            "src": {"url": grok_image_url},
+                                            "width": 1200,
+                                            "height": 630
+                                        },
+                                        "altText": "Résultat extensions Luxura Distribution",
+                                        "disableExpand": False,
+                                        "disableDownload": True
+                                    }
+                                })
+                        
+                        rich_content = {"nodes": new_nodes}
+                        img_count = sum(1 for n in new_nodes if n.get("type") == "IMAGE")
+                        logger.info(f"   ✅ {img_count} images injectées dans le contenu!")
                 
                 logger.info(f"🗑️ [{i+1}/{len(posts)}] Suppression: {title[:40]}...")
                 
-                # 2. Supprimer le blog de Wix (move to trash)
+                # 4. Supprimer le blog de Wix (move to trash)
                 async with httpx.AsyncClient(timeout=30.0) as del_client:
                     delete_response = await del_client.delete(
                         f"{WIX_API_BASE}/blog/v3/posts/{post_id}",
@@ -4301,28 +4325,13 @@ Format: paragraphes simples, pas de markdown."""
                     else:
                         logger.info(f"   ✅ Blog supprimé de Wix")
                 
-                # 3. Générer nouvelle image Grok contextuelle
-                prompt = build_contextual_prompt(title, content_text or excerpt)
-                logger.info(f"   🎨 Génération image Grok...")
-                
-                grok_response = sync_requests.post(
-                    "https://api.x.ai/v1/images/generations",
-                    headers={
-                        "Authorization": f"Bearer {xai_api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json={"model": "grok-imagine-image", "prompt": prompt, "n": 1},
-                    timeout=90
-                )
-                
-                if grok_response.status_code != 200:
-                    results.append({"post_id": post_id, "title": title[:50], "success": False, "error": "Grok failed"})
+                # (Image Grok déjà générée à l'étape 1 - pas de double génération)
+                if not grok_image_url:
+                    logger.warning(f"   ⚠️ Pas d'image Grok disponible, skip")
+                    results.append({"post_id": post_id, "title": title[:50], "success": False, "error": "No Grok image"})
                     continue
                 
-                grok_image_url = grok_response.json().get("data", [{}])[0].get("url")
-                logger.info(f"   ✅ Image Grok générée")
-                
-                # 4. Importer l'image dans Wix Media
+                # 5. Importer l'image dans Wix Media
                 async with httpx.AsyncClient(timeout=60.0) as upload_client:
                     import_response = await upload_client.post(
                         f"{WIX_API_BASE}/site-media/v1/files/import",
@@ -4349,9 +4358,9 @@ Format: paragraphes simples, pas de markdown."""
                         if "~mv2" in media_id:
                             # Format correct pour coverMedia.image
                             wix_image_uri = f"wix:image://v1/{media_id}/blog_cover.jpeg#originWidth=1024&originHeight=1024"
-                        logger.info(f"   ✅ Image importée: {media_id}")
+                        logger.info(f"   ✅ Image importée dans Wix Media: {media_id}")
                 
-                # 5. Créer un nouveau draft avec la nouvelle image
+                # 6. Créer un nouveau draft avec le richContent (images intégrées)
                 async with httpx.AsyncClient(timeout=60.0) as create_client:
                     # Récupérer le member ID pour la publication
                     from blog_automation import get_wix_member_id, attach_cover_image_to_wix_draft
