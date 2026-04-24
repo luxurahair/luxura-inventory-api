@@ -97,15 +97,24 @@ def save_pending_post_to_db(post_id: str, post_data: Dict):
 def mark_post_processed_in_db(post_id: str):
     """Marque un post comme traité dans Supabase"""
     try:
-        from database import get_connection
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    UPDATE pending_posts 
-                    SET status = 'processed', processed_at = NOW()
-                    WHERE post_id = %s
-                """, (post_id,))
-                conn.commit()
+        import psycopg2
+        DATABASE_URL = os.environ.get('DATABASE_URL', '')
+        if DATABASE_URL.startswith("postgres://"):
+            DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        if DATABASE_URL.startswith("postgresql+psycopg://"):
+            DATABASE_URL = DATABASE_URL.replace("postgresql+psycopg://", "postgresql://", 1)
+        
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE pending_posts 
+            SET status = 'processed', processed_at = NOW()
+            WHERE post_id = %s
+        """, (post_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        logger.info(f"✅ Post {post_id} marqué comme traité")
     except Exception as e:
         logger.warning(f"DB mark processed failed: {e}")
 
