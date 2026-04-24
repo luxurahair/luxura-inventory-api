@@ -3,6 +3,8 @@ Routes API pour le système de contenu automatisé
 Inclut le nouveau générateur de contenu Magazine Féminin
 + Système d'approbation avec publication Facebook
 + Stockage PostgreSQL pour persistence cross-server
+
+BUILD: 2026-04-24-v3-force-cache-clear
 """
 
 import logging
@@ -22,6 +24,9 @@ from app.services.magazine_content_generator import MagazineContentGenerator, ge
 from app.services.facebook_publisher import FacebookPublisher
 
 logger = logging.getLogger(__name__)
+
+# Log au démarrage pour confirmer le chargement
+logger.info("🔵 CONTENT ROUTER LOADING - BUILD 2026-04-24-v3")
 
 router = APIRouter(prefix="/content", tags=["Content Automation"])
 
@@ -1124,3 +1129,23 @@ Quand vous cliquez "Approuver", ce post sera publié sur la page Facebook Luxura
             "success": False,
             "error": result.get("message", "Erreur inconnue")
         }
+
+
+
+# ============================================
+# ENDPOINT DE VÉRIFICATION DE DÉPLOIEMENT
+# ============================================
+
+@router.get("/deployment-check")
+async def deployment_check():
+    """
+    🔍 Vérifie que le dernier code est bien déployé
+    """
+    return {
+        "build": "2026-04-24-v3",
+        "deployed_at": datetime.now().isoformat(),
+        "router_prefix": router.prefix,
+        "routes_count": len(router.routes),
+        "status": "OK",
+        "message": "Si vous voyez ceci, le router content est bien chargé!"
+    }
