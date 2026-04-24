@@ -57,11 +57,11 @@ MAGAZINE_THEMES = [
     {"country": "Grèce", "topic": "Beauté intemporelle des îles grecques", "vibe": "déesse moderne"},
 ]
 
-# Prompts v3 Ultra-Glamour pour images
+# Prompts v3 Ultra-Glamour pour images - LONGUEUR STRICTE
 MAGAZINE_IMAGE_PROMPTS = [
-    "Real photograph of glamorous woman on luxury yacht deck at sunset Mediterranean, with voluminous thick hair extensions. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting. Hair MUST end at waist level, NOT below. No text, no watermarks.",
-    "Real photograph of two elegant women at exclusive Paris rooftop bar with Eiffel Tower view, both with stunning voluminous hair extensions. Chic evening wear. Hair reaching waist, NOT longer. Golden hour lighting. No text.",
-    "Real photograph of glamorous woman at Milan fashion week backstage, with gorgeous thick bouncy hair extensions. Designer outfit. Hair length at waist maximum. Soft professional lighting. No text.",
+    "Real photograph of glamorous woman on luxury yacht deck at sunset, with voluminous thick hair extensions ending at mid-back level ONLY. Hair must stop at bra-strap level, NEVER longer than waist. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting. No text, no watermarks.",
+    "Real photograph of two elegant women at exclusive rooftop bar, both with stunning voluminous hair extensions at mid-back length maximum. Hair STOPS at shoulder blade level, NOT below waist. Chic evening wear. Golden hour lighting. No text.",
+    "Real photograph of glamorous woman at fashion week backstage, with gorgeous thick bouncy hair extensions. Hair length at MID-BACK only, ending between shoulder blades and waist. NEVER reaching hips or below. Soft professional lighting. No text.",
 ]
 
 
@@ -121,15 +121,23 @@ def generate_text_gpt(theme: dict) -> str:
                 "messages": [{
                     "role": "user",
                     "content": f"""Écris un post Facebook style MAGAZINE de luxe (150-200 mots) pour Luxura Distribution.
-                    
-Thème: {theme['topic']} ({theme['country']})
+
+CONTEXTE IMPORTANT:
+- Luxura Distribution est basée à St-Georges, Beauce, QUÉBEC
+- C'est un DISTRIBUTEUR QUÉBÉCOIS d'extensions capillaires premium
+- On S'INSPIRE des tendances de {theme['country']}, on n'est PAS un fournisseur là-bas
+- Le ton doit être: "Les tendances de {theme['country']} arrivent au Québec grâce à Luxura"
+
+Thème d'inspiration: {theme['topic']}
 Vibe: {theme['vibe']}
 
-- Ton sophistiqué et inspirant
-- Extensions capillaires haut de gamme
-- Référence à {theme['country']}
+RÈGLES:
+- Luxura = référence québécoise qui suit les tendances internationales
+- NE PAS dire qu'on fournit {theme['country']} ou qu'on est présent là-bas
+- Parler de comment ces tendances inspirent notre collection
 - Appel à l'action vers luxuradistribution.com
-- Français québécois élégant"""
+- Français québécois élégant et authentique
+- Livraison partout au Québec"""
                 }],
                 "max_tokens": 400
             },

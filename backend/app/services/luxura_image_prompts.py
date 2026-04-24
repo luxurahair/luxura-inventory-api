@@ -289,21 +289,21 @@ def get_contextual_prompt(title: str, content: str = "") -> str:
     Génère un prompt basé sur le titre et contenu de l'article.
     
     RÈGLES CRITIQUES CHEVEUX:
-    - Maximum 3/4 du dos (juste au-dessus de la taille)
+    - Maximum mi-dos (entre omoplates et taille)
     - JAMAIS plus long que la taille
-    - JAMAIS jusqu'aux fesses ou genoux
+    - JAMAIS jusqu'aux hanches, fesses ou genoux
     """
     full_text = f"{title} {content}".lower()
     
-    # Contrainte stricte pour la longueur des cheveux
-    HAIR_CONSTRAINT = "Hair length MUST end at the natural waist level, approximately three-quarters down the back. Hair must NOT extend below the waist, NOT reach the hips, NOT reach the buttocks, NOT reach the knees. This is critical."
+    # Contrainte STRICTE pour la longueur des cheveux - RENFORCÉE
+    HAIR_CONSTRAINT = "CRITICAL HAIR LENGTH RULE: Hair MUST end at MID-BACK level only, between shoulder blades and waist. Hair must NEVER extend below the waist. Hair must NEVER reach the hips. Hair must NEVER reach the buttocks or knees. Maximum length is bra-strap level. This constraint is absolutely critical and non-negotiable."
     
     # Déterminer le contexte basé sur les mots-clés
     if any(w in full_text for w in ["salon", "coiffeuse", "styliste", "professionnel", "partenaire", "affilié"]):
         base = random.choice([
-            "Real photograph of a glamorous hairstylist working on a client's voluminous hair extensions in an ultra-luxury salon with crystal chandeliers. Both women beautiful. Soft professional lighting. Ultra-realistic luxury beauty photography.",
-            "Real photograph of two women in an exclusive Beverly Hills hair salon, one styling the other's thick voluminous extensions. Elegant mirrors, marble counters. Soft professional lighting.",
-            "Real photograph of a glamorous woman in an ultra-luxurious high-end hair salon with crystal chandeliers. Shot from 3/4 back angle. Soft professional lighting."
+            "Real photograph of a glamorous hairstylist working on a client's voluminous hair extensions in an ultra-luxury salon with crystal chandeliers. Hair at mid-back length only. Both women beautiful. Soft professional lighting.",
+            "Real photograph of two women in an exclusive Beverly Hills hair salon, one styling the other's thick voluminous extensions at shoulder-blade length. Elegant mirrors, marble counters. Soft professional lighting.",
+            "Real photograph of a glamorous woman in an ultra-luxurious high-end hair salon with crystal chandeliers. Hair ending at mid-back. Shot from 3/4 back angle. Soft professional lighting."
         ])
     
     elif any(w in full_text for w in ["mariage", "wedding", "mariée", "bride", "cérémonie"]):
