@@ -5828,21 +5828,23 @@ async def approve_facebook_post_backup(post_id: str):
         
         async with httpx.AsyncClient(timeout=60.0) as client:
             if image_url:
-                # Post avec image
+                # Post avec image en BROUILLON (published=false)
                 response = await client.post(
                     f"https://graph.facebook.com/v21.0/{fb_page_id}/photos",
                     data={
                         "url": image_url,
                         "caption": message,
+                        "published": "false",  # BROUILLON
                         "access_token": fb_access_token
                     }
                 )
             else:
-                # Post texte seulement
+                # Post texte seulement en BROUILLON
                 response = await client.post(
                     f"https://graph.facebook.com/v21.0/{fb_page_id}/feed",
                     data={
                         "message": message,
+                        "published": "false",  # BROUILLON
                         "access_token": fb_access_token
                     }
                 )
@@ -5850,7 +5852,7 @@ async def approve_facebook_post_backup(post_id: str):
             if response.status_code == 200:
                 fb_result = response.json()
                 fb_post_id = fb_result.get("id") or fb_result.get("post_id")
-                logger.info(f"✅ FB Post publié: {fb_post_id}")
+                logger.info(f"✅ FB Brouillon créé: {fb_post_id}")
                 
                 # 3. Marquer comme traité
                 try:
@@ -5866,14 +5868,20 @@ async def approve_facebook_post_backup(post_id: str):
                 return HTMLResponse(content=f"""
                     <!DOCTYPE html>
                     <html>
-                    <head><title>Post Publié!</title>
+                    <head><title>Brouillon Créé!</title>
                     <style>body{{font-family:Arial;background:#0c0c0c;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}}
-                    .card{{background:#1a1a1a;padding:40px;border-radius:12px;text-align:center;}}
+                    .card{{background:#1a1a1a;padding:40px;border-radius:12px;text-align:center;max-width:500px;}}
                     .gold{{color:#c9a050;}}</style></head>
                     <body><div class="card">
-                    <h1 class="gold">✅ Post Facebook Publié!</h1>
-                    <p>ID: {fb_post_id}</p>
-                    <a href="https://www.facebook.com/{fb_page_id}" style="color:#c9a050;">Voir la page Facebook</a>
+                    <h1 class="gold">📝 Brouillon Facebook Créé!</h1>
+                    <p>Le post a été ajouté à vos <strong>brouillons Facebook</strong>.</p>
+                    <p style="color:#888;">ID: {fb_post_id}</p>
+                    <br>
+                    <a href="https://business.facebook.com/latest/home" style="background:#c9a050;color:#000;padding:15px 30px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">
+                        📱 Ouvrir Facebook pour Publier
+                    </a>
+                    <br><br>
+                    <p style="color:#666;font-size:12px;">Allez dans: Page → Outils de publication → Brouillons</p>
                     </div></body></html>
                 """)
             else:
