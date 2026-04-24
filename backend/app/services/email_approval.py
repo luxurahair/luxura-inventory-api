@@ -121,7 +121,7 @@ def create_approval_email_html(post: Dict, post_id: str) -> str:
     image_source_label = IMAGE_SOURCE_LABELS.get(image_source, "📷 Photo Stock")
     
     # URLs d'action
-    approve_url = f"{API_URL}/api/content/approve/{post_id}"
+    approve_url = f"{API_URL}/api/fb-approve/{post_id}"
     reject_url = f"{API_URL}/api/content/reject/{post_id}"
     
     # Preview de l'image
@@ -258,7 +258,7 @@ Nouveau post Facebook à approuver
 Source: {post.get('source_title', '')}
 URL: {post.get('source_url', '')}
 
-Pour approuver: {API_URL}/api/content/approve/{post_id}
+Pour approuver: {API_URL}/api/fb-approve/{post_id}
 Pour rejeter: {API_URL}/api/content/reject/{post_id}
 """
         

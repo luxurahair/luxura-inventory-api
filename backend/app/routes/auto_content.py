@@ -841,7 +841,7 @@ async def generate_and_send_for_approval(
                 "image_source": content.get("image_source", "stock"),
                 "image_type": "Vraie photo Unsplash" if not use_ai else "Grok AI",
                 "message": "📧 Email d'approbation envoyé!",
-                "approve_url": f"{API_URL}/api/content/approve/{post_id}",
+                "approve_url": f"{API_URL}/api/fb-approve/{post_id}",
                 "reject_url": f"{API_URL}/api/content/reject/{post_id}",
                 "preview": content["text"][:200] + "..."
             }

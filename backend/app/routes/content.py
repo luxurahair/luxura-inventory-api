@@ -1121,7 +1121,7 @@ Quand vous cliquez "Approuver", ce post sera publié sur la page Facebook Luxura
             "success": True,
             "message": "Email de test envoyé! Vérifiez votre boîte mail.",
             "post_id": post_id,
-            "approve_url": f"https://luxura-inventory-api.onrender.com/api/content/approve/{post_id}",
+            "approve_url": f"https://luxura-inventory-api.onrender.com/api/fb-approve/{post_id}",
             "reject_url": f"https://luxura-inventory-api.onrender.com/api/content/reject/{post_id}"
         }
     else:
