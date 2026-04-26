@@ -186,7 +186,7 @@ def publish_to_facebook(post_data: dict):
     
     if not FB_PAGE_ID or not FB_PAGE_ACCESS_TOKEN:
         log("❌ FB_PAGE_ID ou FB_PAGE_ACCESS_TOKEN manquant")
-        return False
+        return False, None
     
     message = post_data.get('full_text', post_data.get('text', ''))
     image_url = post_data.get('image_url')
@@ -220,12 +220,94 @@ def publish_to_facebook(post_data: dict):
             result = response.json()
             post_fb_id = result.get('id') or result.get('post_id')
             log(f"✅ Publié sur Facebook! ID: {post_fb_id}")
-            return True
+            return True, post_fb_id
         else:
             log(f"❌ Erreur Facebook: {response.status_code} - {response.text[:200]}")
-            return False
+            return False, None
     except Exception as e:
         log(f"❌ Exception Facebook: {e}")
+        return False, None
+
+
+def send_published_notification(post_data: dict, fb_post_id: str = None):
+    """Envoie une notification que le post a été publié"""
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    
+    if not LUXURA_APP_PASSWORD:
+        log("⚠️ LUXURA_APP_PASSWORD manquant - notification non envoyée")
+        return False
+    
+    theme = post_data.get('theme', {})
+    image_url = post_data.get('image_url', '')
+    text_preview = post_data.get('text', '')[:200]
+    
+    # Lien vers la page Facebook
+    FB_PAGE_ID = os.getenv("FB_PAGE_ID", "")
+    fb_page_url = f"https://www.facebook.com/{FB_PAGE_ID}"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #fff; padding: 20px; }}
+            .container {{ max-width: 600px; margin: 0 auto; background: #1a1a1a; border-radius: 16px; overflow: hidden; }}
+            .header {{ background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 24px; text-align: center; }}
+            .header h1 {{ margin: 0; color: #fff; font-size: 24px; }}
+            .content {{ padding: 24px; }}
+            .preview-image {{ width: 100%; border-radius: 12px; margin: 16px 0; }}
+            .text-preview {{ background: #2a2a2a; padding: 16px; border-radius: 8px; color: #ccc; font-size: 14px; line-height: 1.6; }}
+            .btn {{ display: inline-block; background: #c9a050; color: #000; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 16px; }}
+            .footer {{ padding: 16px; text-align: center; color: #666; font-size: 12px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>✅ Post Facebook Publié!</h1>
+            </div>
+            <div class="content">
+                <p style="color: #c9a050; font-size: 18px; margin-bottom: 8px;">
+                    🗞️ MAGAZINE {theme.get('country', '')}
+                </p>
+                
+                {f'<img src="{image_url}" class="preview-image" alt="Image du post"/>' if image_url else ''}
+                
+                <div class="text-preview">
+                    {text_preview}...
+                </div>
+                
+                <div style="text-align: center;">
+                    <a href="{fb_page_url}" class="btn">📱 Voir sur Facebook</a>
+                </div>
+            </div>
+            <div class="footer">
+                Luxura Distribution - Publication automatique
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['From'] = LUXURA_EMAIL
+        msg['To'] = LUXURA_EMAIL
+        msg['Subject'] = f"✅ [Publié] 📱 Magazine {theme.get('country', '')} - Luxura"
+        
+        msg.attach(MIMEText(html_content, 'html', 'utf-8'))
+        
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(LUXURA_EMAIL, LUXURA_APP_PASSWORD)
+            server.send_message(msg)
+        
+        log("✅ Notification email envoyée!")
+        return True
+    except Exception as e:
+        log(f"⚠️ Erreur envoi notification: {e}")
         return False
 
 
@@ -346,8 +428,12 @@ def main():
         log("❌ Échec sauvegarde DB - arrêt")
         sys.exit(1)
     
-    # 6. PUBLIER DIRECTEMENT SUR FACEBOOK (plus d'email d'approbation)
-    if not publish_to_facebook(post_data):
+    # 6. PUBLIER DIRECTEMENT SUR FACEBOOK
+    success, fb_post_id = publish_to_facebook(post_data)
+    if success:
+        # 7. Envoyer notification email
+        send_published_notification(post_data, fb_post_id)
+    else:
         log("⚠️ Publication Facebook échouée mais post sauvegardé en DB")
     
     log("=" * 60)
