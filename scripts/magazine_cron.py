@@ -2,24 +2,25 @@
 """
 LUXURA MAGAZINE CRON - Posts Facebook Magazine
 ==============================================
-Génère des posts Facebook style MAGAZINE avec approbation email.
+Génère UN post Facebook style MAGAZINE et le publie directement.
 
 Flow:
-1. Génère un post Magazine avec image Grok v3
-2. Sauvegarde en DB Supabase
-3. Envoie email d'approbation
-4. User clique → Crée brouillon Facebook
+1. Vérifie si un post a déjà été fait aujourd'hui (évite les doublons)
+2. Génère un post Magazine avec image Grok v3
+3. Publie directement sur Facebook
+4. Envoie notification email
 
-Configuration Render:
-  - Build Command: pip install requests psycopg2-binary
-  - Start Command: python scripts/magazine_cron.py
-  - Schedule: 0 10 * * 0  (Dimanche 10h)
+Configuration Render (3 crons séparés pour 3 jours différents):
+  - Cron 1: 0 10 * * 1  (Lundi 10h)
+  - Cron 2: 0 10 * * 3  (Mercredi 10h)
+  - Cron 3: 0 10 * * 5  (Vendredi 10h)
 
 Variables requises:
   - DATABASE_URL: PostgreSQL Supabase
   - XAI_API_KEY: Pour images Grok
   - OPENAI_API_KEY: Pour texte GPT
-  - LUXURA_EMAIL + LUXURA_APP_PASSWORD: Pour emails
+  - FB_PAGE_ID + FB_PAGE_ACCESS_TOKEN: Pour Facebook
+  - LUXURA_EMAIL + LUXURA_APP_PASSWORD: Pour notifications
 """
 
 import os
@@ -154,6 +155,43 @@ RÈGLES:
     except Exception as e:
         log(f"❌ Erreur: {e}")
         return None
+
+
+def already_posted_today():
+    """Vérifie si un post Magazine a déjà été publié aujourd'hui"""
+    import psycopg2
+    from datetime import datetime, timedelta
+    
+    if not DATABASE_URL:
+        log("⚠️ DATABASE_URL manquant - skip vérification doublon")
+        return False
+    
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        
+        # Vérifier s'il y a un post magazine publié aujourd'hui
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        cur.execute("""
+            SELECT COUNT(*) FROM pending_posts 
+            WHERE created_at >= %s 
+            AND status = 'published'
+            AND post_data->>'content_type' = 'magazine'
+        """, (today_start,))
+        
+        count = cur.fetchone()[0]
+        cur.close()
+        conn.close()
+        
+        if count > 0:
+            log(f"⚠️ {count} post(s) magazine déjà publié(s) aujourd'hui - SKIP")
+            return True
+        
+        return False
+    except Exception as e:
+        log(f"⚠️ Erreur vérification doublon: {e}")
+        return False  # En cas d'erreur, on continue
 
 
 def save_to_db(post_id: str, post_data: dict):
@@ -390,6 +428,13 @@ def main():
     log("🗞️ LUXURA MAGAZINE CRON")
     log(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log("=" * 60)
+    
+    # 0. VÉRIFIER SI DÉJÀ POSTÉ AUJOURD'HUI (évite les doublons)
+    if already_posted_today():
+        log("=" * 60)
+        log("⏭️ POST DÉJÀ FAIT AUJOURD'HUI - ARRÊT")
+        log("=" * 60)
+        sys.exit(0)  # Exit propre, pas d'erreur
     
     # 1. Sélectionner le thème
     theme = get_theme_for_today()
