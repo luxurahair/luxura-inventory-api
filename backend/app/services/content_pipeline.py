@@ -153,22 +153,27 @@ class ContentPipeline:
                     # Étape 6: PUBLICATION DIRECTE SUR FACEBOOK
                     logger.info(f"📘 Étape 6: Publication directe sur Facebook...")
                     try:
+                        # Construire le message complet avec hashtags
+                        full_message = post.get("post_text", "")
+                        if post.get("hashtags"):
+                            hashtags_str = " ".join([f"#{h}" for h in post["hashtags"][:5]])
+                            full_message = f"{full_message}\n\n{hashtags_str}"
+                        
                         # Publier sur Facebook
-                        fb_result = await self.facebook_publisher.publish_post(
-                            text=post.get("post_text", ""),
-                            image_url=post.get("image_url"),
-                            hashtags=post.get("hashtags", [])
+                        success, fb_post_id, error = await self.facebook_publisher.publish_post(
+                            message=full_message,
+                            image_url=post.get("image_url")
                         )
                         
-                        if fb_result.get("success"):
-                            logger.info(f"   ✅ Publié sur Facebook! ID: {fb_result.get('post_id')}")
+                        if success:
+                            logger.info(f"   ✅ Publié sur Facebook! ID: {fb_post_id}")
                             post["published_to_facebook"] = True
-                            post["facebook_post_id"] = fb_result.get("post_id")
+                            post["facebook_post_id"] = fb_post_id
                             
                             # Envoyer notification email (pas approbation)
                             await self._send_published_notification(post)
                         else:
-                            logger.warning(f"   ⚠️ Publication échouée: {fb_result.get('error')}")
+                            logger.warning(f"   ⚠️ Publication échouée: {error}")
                             post["published_to_facebook"] = False
                     except Exception as fb_error:
                         logger.warning(f"   ⚠️ Erreur publication Facebook: {fb_error}")
