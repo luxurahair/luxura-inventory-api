@@ -150,20 +150,29 @@ class ContentPipeline:
                     if post.get("status") == "approved":
                         results["posts_approved"] += 1
                     
-                    # Étape 6: Envoi email d'approbation
-                    logger.info(f"📧 Étape 6: Envoi email d'approbation...")
+                    # Étape 6: PUBLICATION DIRECTE SUR FACEBOOK
+                    logger.info(f"📘 Étape 6: Publication directe sur Facebook...")
                     try:
-                        email_result = await send_approval_email(post)
-                        if email_result.get("success"):
-                            logger.info(f"   ✅ Email envoyé! ID: {email_result.get('post_id')}")
-                            post["approval_email_sent"] = True
-                            post["approval_post_id"] = email_result.get("post_id")
+                        # Publier sur Facebook
+                        fb_result = await self.facebook_publisher.publish_post(
+                            text=post.get("post_text", ""),
+                            image_url=post.get("image_url"),
+                            hashtags=post.get("hashtags", [])
+                        )
+                        
+                        if fb_result.get("success"):
+                            logger.info(f"   ✅ Publié sur Facebook! ID: {fb_result.get('post_id')}")
+                            post["published_to_facebook"] = True
+                            post["facebook_post_id"] = fb_result.get("post_id")
+                            
+                            # Envoyer notification email (pas approbation)
+                            await self._send_published_notification(post)
                         else:
-                            logger.warning(f"   ⚠️ Email non envoyé: {email_result.get('message')}")
-                            post["approval_email_sent"] = False
-                    except Exception as email_error:
-                        logger.warning(f"   ⚠️ Erreur email: {email_error}")
-                        post["approval_email_sent"] = False
+                            logger.warning(f"   ⚠️ Publication échouée: {fb_result.get('error')}")
+                            post["published_to_facebook"] = False
+                    except Exception as fb_error:
+                        logger.warning(f"   ⚠️ Erreur publication Facebook: {fb_error}")
+                        post["published_to_facebook"] = False
                     
                     logger.info(f"   ✅ Post généré: {post.get('post_title', '')[:50]}...")
                     logger.info(f"      Score: {post.get('confidence_score', 0):.2f} | Status: {post.get('status')} | Image: {'✅' if post.get('has_image') else '❌'}")
@@ -272,3 +281,74 @@ class ContentPipeline:
         """
         # TODO: Implémenter avec SQLAlchemy
         pass
+    
+    async def _send_published_notification(self, post: Dict):
+        """
+        Envoie une notification email après publication (pas d'approbation)
+        """
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        
+        LUXURA_EMAIL = os.getenv("LUXURA_EMAIL", "info@luxuradistribution.com")
+        LUXURA_APP_PASSWORD = os.getenv("LUXURA_APP_PASSWORD")
+        
+        if not LUXURA_APP_PASSWORD:
+            logger.warning("⚠️ LUXURA_APP_PASSWORD manquant - notification non envoyée")
+            return
+        
+        try:
+            title = post.get("post_title", "Post Facebook")[:100]
+            text_preview = post.get("post_text", "")[:200]
+            image_url = post.get("image_url", "")
+            fb_post_id = post.get("facebook_post_id", "")
+            
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #fff; padding: 20px; }}
+                    .container {{ max-width: 600px; margin: 0 auto; background: #1a1a1a; border-radius: 16px; overflow: hidden; }}
+                    .header {{ background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 24px; text-align: center; }}
+                    .header h1 {{ margin: 0; color: #fff; font-size: 24px; }}
+                    .content {{ padding: 24px; }}
+                    .preview-image {{ width: 100%; border-radius: 12px; margin: 16px 0; }}
+                    .text-preview {{ background: #2a2a2a; padding: 16px; border-radius: 8px; color: #ccc; font-size: 14px; }}
+                    .btn {{ display: inline-block; background: #c9a050; color: #000; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 16px; }}
+                    .footer {{ padding: 16px; text-align: center; color: #666; font-size: 12px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>✅ Post Facebook Publié!</h1>
+                    </div>
+                    <div class="content">
+                        <p style="color: #c9a050; font-size: 16px;">{title}</p>
+                        {f'<img src="{image_url}" class="preview-image" alt="Image"/>' if image_url else ''}
+                        <div class="text-preview">{text_preview}...</div>
+                        <div style="text-align: center;">
+                            <a href="https://www.facebook.com/luxuradistribution" class="btn">📱 Voir sur Facebook</a>
+                        </div>
+                    </div>
+                    <div class="footer">Luxura Distribution - Publication automatique</div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            msg = MIMEMultipart('alternative')
+            msg['From'] = LUXURA_EMAIL
+            msg['To'] = LUXURA_EMAIL
+            msg['Subject'] = f"✅ [Publié] {title[:50]}... - Luxura"
+            msg.attach(MIMEText(html_content, 'html', 'utf-8'))
+            
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(LUXURA_EMAIL, LUXURA_APP_PASSWORD)
+                server.send_message(msg)
+            
+            logger.info("   ✅ Notification email envoyée!")
+        except Exception as e:
+            logger.warning(f"   ⚠️ Erreur notification email: {e}")

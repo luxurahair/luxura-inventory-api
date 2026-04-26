@@ -433,8 +433,7 @@ Le post doit:
             # Import des prompts Luxura v3 Ultra-Glamour
             from app.services.luxura_image_prompts import (
                 get_contextual_prompt,
-                get_preset_prompt,
-                LUXURA_CRITICAL_RULES
+                get_preset_prompt
             )
             
             # Utiliser le générateur contextuel v3 qui analyse le titre
