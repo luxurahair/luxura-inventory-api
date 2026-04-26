@@ -166,8 +166,8 @@ def save_to_db(post_id: str, post_data: dict):
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO pending_posts (post_id, post_data, status, created_at)
-            VALUES (%s, %s, 'pending', NOW())
-            ON CONFLICT (post_id) DO UPDATE SET post_data = %s, status = 'pending'
+            VALUES (%s, %s, 'published', NOW())
+            ON CONFLICT (post_id) DO UPDATE SET post_data = %s, status = 'published'
         """, (post_id, Json(post_data), Json(post_data)))
         conn.commit()
         cur.close()
@@ -179,7 +179,63 @@ def save_to_db(post_id: str, post_data: dict):
         return False
 
 
+def publish_to_facebook(post_data: dict):
+    """Publie directement sur Facebook (plus d'approbation email)"""
+    FB_PAGE_ID = os.getenv("FB_PAGE_ID", "").strip()
+    FB_PAGE_ACCESS_TOKEN = os.getenv("FB_PAGE_ACCESS_TOKEN", "").strip()
+    
+    if not FB_PAGE_ID or not FB_PAGE_ACCESS_TOKEN:
+        log("❌ FB_PAGE_ID ou FB_PAGE_ACCESS_TOKEN manquant")
+        return False
+    
+    message = post_data.get('full_text', post_data.get('text', ''))
+    image_url = post_data.get('image_url')
+    
+    try:
+        if image_url:
+            # Post avec image
+            response = requests.post(
+                f"https://graph.facebook.com/v21.0/{FB_PAGE_ID}/photos",
+                data={
+                    "url": image_url,
+                    "caption": message,
+                    "published": "true",  # PUBLICATION DIRECTE
+                    "access_token": FB_PAGE_ACCESS_TOKEN
+                },
+                timeout=60
+            )
+        else:
+            # Post texte seulement
+            response = requests.post(
+                f"https://graph.facebook.com/v21.0/{FB_PAGE_ID}/feed",
+                data={
+                    "message": message,
+                    "published": "true",  # PUBLICATION DIRECTE
+                    "access_token": FB_PAGE_ACCESS_TOKEN
+                },
+                timeout=60
+            )
+        
+        if response.status_code == 200:
+            result = response.json()
+            post_fb_id = result.get('id') or result.get('post_id')
+            log(f"✅ Publié sur Facebook! ID: {post_fb_id}")
+            return True
+        else:
+            log(f"❌ Erreur Facebook: {response.status_code} - {response.text[:200]}")
+            return False
+    except Exception as e:
+        log(f"❌ Exception Facebook: {e}")
+        return False
+
+
 def send_approval_email(post_data: dict):
+    """DÉSACTIVÉ - On publie directement maintenant"""
+    log("⏭️ Email d'approbation DÉSACTIVÉ - publication directe activée")
+    return True  # Skip email
+
+
+def _old_send_approval_email(post_data: dict):
     """Envoie l'email d'approbation"""
     import smtplib
     from email.mime.multipart import MIMEMultipart
@@ -290,12 +346,12 @@ def main():
         log("❌ Échec sauvegarde DB - arrêt")
         sys.exit(1)
     
-    # 6. Envoyer email
-    if not send_approval_email(post_data):
-        log("⚠️ Email non envoyé mais post sauvegardé")
+    # 6. PUBLIER DIRECTEMENT SUR FACEBOOK (plus d'email d'approbation)
+    if not publish_to_facebook(post_data):
+        log("⚠️ Publication Facebook échouée mais post sauvegardé en DB")
     
     log("=" * 60)
-    log("✅ MAGAZINE CRON TERMINÉ!")
+    log("✅ MAGAZINE CRON TERMINÉ - POST PUBLIÉ!")
     log("=" * 60)
     sys.exit(0)
 
