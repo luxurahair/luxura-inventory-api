@@ -185,32 +185,38 @@ class FacebookPublisher:
             return False, None, "FB_PAGE_ACCESS_TOKEN non configuré"
         
         logger.info(f"📘 Publication Facebook...")
+        logger.info(f"   FB_PAGE_ID: {self.fb_page_id}")
+        logger.info(f"   Token: {self.fb_token[:20]}..." if self.fb_token else "   Token: MANQUANT!")
         
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 if image_url:
-                    # Post avec image (photo)
+                    # Post avec image (photo) - PUBLICATION DIRECTE
                     logger.info(f"   Avec image: {image_url[:60]}...")
                     response = await client.post(
                         f"https://graph.facebook.com/{self.fb_api_version}/{self.fb_page_id}/photos",
                         data={
                             "url": image_url,
                             "caption": message,
+                            "published": "true",  # PUBLICATION DIRECTE
                             "access_token": self.fb_token
                         }
                     )
                 else:
-                    # Post texte seul
+                    # Post texte seul - PUBLICATION DIRECTE
                     logger.info(f"   Sans image (texte seul)")
                     response = await client.post(
                         f"https://graph.facebook.com/{self.fb_api_version}/{self.fb_page_id}/feed",
                         data={
                             "message": message,
+                            "published": "true",  # PUBLICATION DIRECTE
                             "access_token": self.fb_token
                         }
                     )
                 
+                logger.info(f"   Response status: {response.status_code}")
                 result = response.json()
+                logger.info(f"   Response: {str(result)[:200]}")
                 
                 if "error" in result:
                     error = result["error"]
