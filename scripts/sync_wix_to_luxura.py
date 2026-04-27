@@ -3,6 +3,7 @@
 LUXURA CRON: Sync Wix to Luxura
 ================================
 Script pour le Render Cron Job.
+- Réveille l'API avant sync (évite cold start timeout)
 - Renouvelle le token Wix
 - Synchronise les produits Wix vers Supabase
 - Déclenche la génération de blogs si c'est l'heure
@@ -15,6 +16,7 @@ Usage sur Render Cron:
 
 import os
 import sys
+import time
 import logging
 from datetime import datetime
 
@@ -40,7 +42,9 @@ except ImportError:
 # Configuration
 LUXURA_API_URL = os.getenv("LUXURA_API_URL", "https://luxura-inventory-api.onrender.com")
 SEO_SECRET = os.getenv("SEO_SECRET", os.getenv("WIX_PUSH_SECRET", ""))
-TIMEOUT = 180  # 3 minutes for long operations
+TIMEOUT = 300  # 5 minutes pour les opérations longues
+WAKEUP_TIMEOUT = 60  # 1 minute pour le wake-up
+WAKEUP_MAX_RETRIES = 5  # Nombre de tentatives de réveil
 
 
 def log_banner(message: str):
@@ -48,6 +52,44 @@ def log_banner(message: str):
     print("=" * 60)
     print(f"[CRON] {message}")
     print("=" * 60)
+
+
+def wakeup_api() -> bool:
+    """
+    Réveille l'API Render avec plusieurs tentatives.
+    Render free tier met l'API en sommeil après 15 min d'inactivité.
+    Le cold start peut prendre 30-60 secondes.
+    """
+    print(f"[CRON] 🌅 Réveil de l'API Render...")
+    
+    for attempt in range(1, WAKEUP_MAX_RETRIES + 1):
+        try:
+            print(f"[CRON]    Tentative {attempt}/{WAKEUP_MAX_RETRIES}...")
+            
+            with httpx.Client(timeout=WAKEUP_TIMEOUT) as client:
+                # Ping simple pour réveiller l'API
+                response = client.get(f"{LUXURA_API_URL}/api/ping")
+                
+                if response.status_code == 200:
+                    print(f"[CRON] ✅ API réveillée! (tentative {attempt})")
+                    return True
+                else:
+                    print(f"[CRON]    ⚠️ Response: {response.status_code}")
+                    
+        except httpx.TimeoutException:
+            print(f"[CRON]    ⏰ Timeout (l'API se réveille...)")
+            
+        except Exception as e:
+            print(f"[CRON]    ⚠️ Erreur: {e}")
+        
+        # Attendre avant la prochaine tentative
+        if attempt < WAKEUP_MAX_RETRIES:
+            wait_time = 10 * attempt  # 10s, 20s, 30s, 40s
+            print(f"[CRON]    Attente {wait_time}s avant prochaine tentative...")
+            time.sleep(wait_time)
+    
+    print(f"[CRON] ❌ Impossible de réveiller l'API après {WAKEUP_MAX_RETRIES} tentatives")
+    return False
 
 
 def refresh_wix_token() -> bool:
@@ -191,23 +233,28 @@ def main():
     
     print(f"[CRON] 🌐 API URL: {LUXURA_API_URL}")
     print(f"[CRON] 🔑 SEO_SECRET configuré: {'✅ Oui' if SEO_SECRET else '❌ Non'}")
+    print(f"[CRON] ⏱️ Timeout: {TIMEOUT}s (5 min)")
     
-    # 1. Vérifier la santé de l'API
-    if not check_api_health():
-        print("[CRON] ❌ API non disponible, abandon du cron")
+    # 1. RÉVEILLER L'API AVANT TOUTE OPÉRATION
+    if not wakeup_api():
+        print("[CRON] ❌ API non disponible après plusieurs tentatives, abandon")
         sys.exit(1)
+    
+    # 2. Vérifier la santé de l'API
+    if not check_api_health():
+        print("[CRON] ⚠️ Health check failed, mais API réveillée - on continue")
     
     success = True
     
-    # 2. Renouveler le token Wix
+    # 3. Renouveler le token Wix
     if not refresh_wix_token():
         print("[CRON] ⚠️ Token refresh failed (continuing anyway)")
     
-    # 3. Synchroniser l'inventaire
+    # 4. Synchroniser l'inventaire
     if not sync_wix_inventory():
         print("[CRON] ⚠️ Inventory sync failed (continuing anyway)")
     
-    # 4. Déclencher la génération de blog si c'est l'heure
+    # 5. Déclencher la génération de blog si c'est l'heure
     if not trigger_blog_generation():
         print("[CRON] ⚠️ Blog generation failed (continuing anyway)")
     
