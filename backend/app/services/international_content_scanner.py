@@ -39,6 +39,37 @@ HISTORY_FILE = Path("/tmp/luxura_international_history.json")
 HISTORY_MAX_DAYS = 30  # Garder l'historique 30 jours
 
 
+def _count_today_posts() -> int:
+    """Compte le nombre de posts publiés aujourd'hui via la DB pending_posts"""
+    import psycopg2
+    
+    DATABASE_URL = os.getenv("DATABASE_URL", "")
+    if not DATABASE_URL:
+        logger.warning("DATABASE_URL non configuré - skip vérification doublon")
+        return 0
+    
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        
+        # Compter les posts d'aujourd'hui
+        cur.execute("""
+            SELECT COUNT(*) FROM pending_posts 
+            WHERE created_at >= CURRENT_DATE 
+            AND status = 'published'
+        """)
+        
+        count = cur.fetchone()[0]
+        cur.close()
+        conn.close()
+        
+        logger.info(f"📊 Posts publiés aujourd'hui: {count}")
+        return count
+    except Exception as e:
+        logger.warning(f"Erreur comptage posts: {e}")
+        return 0
+
+
 def load_article_history() -> Dict:
     """Charge l'historique des articles déjà traités"""
     try:
@@ -748,9 +779,8 @@ async def run_international_content_scan(max_posts: int = 3, send_email: bool = 
     Returns:
         Dict avec les résultats du scan
     """
-    from app.services.email_approval import send_approval_email
+    from app.services.facebook_publisher import FacebookPublisher
     from app.services.watermark import process_image_with_watermark
-    from app.routes.content import add_pending_post
     
     scanner = InternationalContentScanner()
     
@@ -768,6 +798,15 @@ async def run_international_content_scan(max_posts: int = 3, send_email: bool = 
     logger.info(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     logger.info("=" * 60)
     
+    # Vérifier combien de posts ont déjà été publiés aujourd'hui
+    today_posts_count = _count_today_posts()
+    if today_posts_count >= max_posts:
+        logger.info(f"⏭️ {today_posts_count} posts déjà publiés aujourd'hui - SKIP")
+        return results
+    
+    remaining_posts = max_posts - today_posts_count
+    logger.info(f"📊 Posts restants à générer: {remaining_posts}")
+    
     try:
         # 1. Scanner les actualités internationales
         articles = await scanner.scan_international_news(max_per_country=5)
@@ -777,8 +816,8 @@ async def run_international_content_scan(max_posts: int = 3, send_email: bool = 
             logger.warning("Aucun article trouvé")
             return results
         
-        # 2. Générer les posts (max 3)
-        for article in articles[:max_posts]:
+        # 2. Générer les posts (max restant)
+        for article in articles[:remaining_posts]:
             try:
                 logger.info(f"\n📝 Génération post: {article['title'][:50]}...")
                 
@@ -797,7 +836,7 @@ async def run_international_content_scan(max_posts: int = 3, send_email: bool = 
                 results["posts"].append(post)
                 results["posts_generated"] += 1
                 
-                # 4. Envoyer email d'approbation
+                # 4. PUBLIER DIRECTEMENT SUR FACEBOOK (plus d'email d'approbation)
                 if send_email:
                     post_data = {
                         "text": post["post_text"],
@@ -809,17 +848,31 @@ async def run_international_content_scan(max_posts: int = 3, send_email: bool = 
                         "country": post["country"],
                     }
                     
-                    email_result = await send_approval_email(post_data)
-                    
-                    if email_result.get("success"):
-                        post_id = email_result.get("post_id")
-                        add_pending_post(post_id, {
-                            **post_data,
-                            "watermarked_image_bytes": post.get("watermarked_image_bytes"),
-                        })
-                        post["post_id"] = post_id
-                        post["email_sent"] = True
-                        logger.info(f"   📧 Email envoyé! ID: {post_id}")
+                    # Publier directement sur Facebook
+                    try:
+                        from app.services.facebook_publisher import FacebookPublisher
+                        fb_publisher = FacebookPublisher()
+                        
+                        full_message = post["post_text"]
+                        if post.get("hashtags"):
+                            hashtags_str = " ".join([f"#{h}" for h in post["hashtags"][:5]])
+                            full_message = f"{full_message}\n\n{hashtags_str}"
+                        
+                        success, fb_post_id, error = await fb_publisher.publish_post(
+                            message=full_message,
+                            image_url=post.get("image_url")
+                        )
+                        
+                        if success:
+                            post["post_id"] = fb_post_id
+                            post["published_to_facebook"] = True
+                            logger.info(f"   ✅ Publié sur Facebook! ID: {fb_post_id}")
+                        else:
+                            logger.warning(f"   ⚠️ Publication échouée: {error}")
+                            post["published_to_facebook"] = False
+                    except Exception as fb_error:
+                        logger.warning(f"   ⚠️ Erreur Facebook: {fb_error}")
+                        post["published_to_facebook"] = False
                 
                 logger.info(f"   ✅ Post généré: {post['country_flag']} {post['title_fr'][:40]}...")
                 
