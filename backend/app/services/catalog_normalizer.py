@@ -98,6 +98,68 @@ def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Option
 
     handle = _clean_str(parent.get("slug") or parent.get("handle") or parent.get("urlPart"))
 
+    # =========================================
+    # EXTRACTION DES IMAGES DU PRODUIT WIX
+    # =========================================
+    images = []
+    
+    def extract_image_url(media_obj):
+        """Extrait l'URL d'image depuis un objet media Wix (plusieurs formats possibles)"""
+        if not isinstance(media_obj, dict):
+            return None
+        
+        # Format 1: media_obj est directement {url: "..."} ou {image: {url: "..."}}
+        url = (
+            media_obj.get("url") or
+            media_obj.get("src") or
+            media_obj.get("fullUrl") or
+            (media_obj.get("image") or {}).get("url") or
+            (media_obj.get("image") or {}).get("src")
+        )
+        
+        if url and isinstance(url, str) and url.startswith("http"):
+            return url
+        return None
+    
+    # 1. Images de la variante (priorité - rarement présentes)
+    variant_media = variant.get("media") or variant.get("mediaItems") or {}
+    if isinstance(variant_media, dict):
+        # Essayer mainMedia d'abord
+        main_media = variant_media.get("mainMedia")
+        if main_media:
+            url = extract_image_url(main_media)
+            if url and url not in images:
+                images.append(url)
+        
+        # Puis les items
+        items = variant_media.get("items") or []
+        if isinstance(items, list):
+            for item in items:
+                url = extract_image_url(item)
+                if url and url not in images:
+                    images.append(url)
+    
+    # 2. Images du parent (IMPORTANT: c'est là que sont les vraies images)
+    parent_media = parent.get("media") or parent.get("mediaItems") or {}
+    if isinstance(parent_media, dict):
+        # mainMedia contient l'image principale du produit
+        main_media = parent_media.get("mainMedia")
+        if main_media:
+            url = extract_image_url(main_media)
+            if url and url not in images:
+                images.append(url)
+        
+        # items contient toutes les images (incluant mainMedia parfois)
+        items = parent_media.get("items") or []
+        if isinstance(items, list):
+            for item in items:
+                url = extract_image_url(item)
+                if url and url not in images:
+                    images.append(url)
+    
+    # Limiter à 5 images max
+    images = images[:5]
+
     return {
         "wix_id": wix_product_id_s,
         "sku": sku,
@@ -110,6 +172,7 @@ def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Option
         "options": {
             "wix_variant_id": wix_variant_id_s,
             "choices": choices,
+            "images": images,  # AJOUT DES IMAGES
         },
         "_track_quantity": track,
         "_quantity": qty,
