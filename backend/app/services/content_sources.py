@@ -2,10 +2,12 @@
 Sources et requêtes pour la collecte de contenu
 Centralise les mots-clés, sources fiables et filtres
 NOUVELLE VERSION: Tendances Mode Féminine Internationale (Europe, Italie, USA)
+IMPORTANT: Anti-doublon - évite de répéter les mêmes sujets
 """
 
 from typing import List, Dict
 from dataclasses import dataclass
+import random
 
 
 @dataclass
@@ -21,43 +23,61 @@ class ContentSource:
 # ============================================
 # REQUÊTES DE RECHERCHE - DIVERSIFIÉES INTERNATIONALES
 # ============================================
+# IMPORTANT: On randomise les requêtes pour éviter de toujours 
+# obtenir les mêmes résultats (ex: bob haircuts répétés)
 
 SEARCH_QUERIES = [
-    # ==== TENDANCES COIFFURE 2026 ====
-    "bob haircut trends 2026",
-    "lob hairstyle women 2026",
-    "fringe bangs trends 2026",
-    "micro bang hairstyle",
-    "curtain bangs styling",
-    "glossy hair trend 2026",
-    
-    # ==== EXTENSIONS CAPILLAIRES ====
+    # ==== EXTENSIONS CAPILLAIRES (PRIORITÉ HAUTE) ====
     "hair extensions trends 2026",
-    "tape-in hair extensions natural",
-    "halo extensions invisible",
-    "weft extensions seamless",
-    "clip-in extensions styling",
-    "hand-tied weft extensions",
+    "tape-in hair extensions natural look",
+    "halo extensions invisible install",
+    "weft extensions seamless blending",
+    "clip-in extensions styling tutorial",
+    "hand-tied weft extensions benefits",
+    "hair extensions for thin hair",
+    "hair extensions wedding bridal",
+    "hair extensions maintenance tips",
+    "hair extensions volume women",
+    
+    # ==== TENDANCES COIFFURE 2026 (VARIÉES) ====
+    "women hairstyle trends 2026",
+    "lob hairstyle women elegant",
+    "fringe bangs trends modern",
+    "curtain bangs styling tips",
+    "glossy hair trend healthy",
+    "long hair trends women 2026",
+    "layered haircut trends 2026",
+    "balayage hair color trends",
     
     # ==== MODE FÉMININE INTERNATIONALE ====
     "women hair trends Europe 2026",
-    "Italian fashion hairstyles 2026",
-    "French women hair trends",
-    "Milan fashion week hair",
-    "Paris fashion hair trends",
+    "Italian fashion hairstyles elegant",
+    "French women hair chic trends",
+    "Milan fashion week hair looks",
+    "Paris fashion hair elegant",
+    "celebrity hairstyles red carpet",
     
     # ==== LIFESTYLE & BEAUTÉ ====
     "quiet luxury hair aesthetic",
-    "healthy shiny hair tips",
-    "hair volume solutions women",
-    "bridal hairstyles 2026",
-    "celebrity hairstyles 2026",
+    "healthy shiny hair tips natural",
+    "hair volume solutions fine hair",
+    "bridal hairstyles extensions",
+    "professional hair care routine",
     
     # ==== CANADA/QUÉBEC ====
-    "hair extensions Canada salon",
+    "hair extensions Canada salon quality",
     "extensions cheveux Québec tendance",
     "coiffure femme tendance Montréal",
 ]
+
+def get_randomized_queries(max_queries: int = 8) -> List[str]:
+    """
+    Retourne une liste aléatoire de requêtes pour diversifier les résultats.
+    Évite de toujours commencer par les mêmes requêtes.
+    """
+    shuffled = SEARCH_QUERIES.copy()
+    random.shuffle(shuffled)
+    return shuffled[:max_queries]
 
 # ============================================
 # REQUÊTES SPÉCIFIQUES PAR PAYS (ROTATION)
@@ -163,11 +183,23 @@ INTERNATIONAL_RSS_FEEDS = {
 # ============================================
 
 # =============================================
+# SUJETS RÉCEMMENT PUBLIÉS À ÉVITER (anti-boucle)
+# Ces mots-clés seront temporairement exclus après publication
+# =============================================
+TEMPORARY_COOLDOWN_KEYWORDS = [
+    # Sujets qui génèrent des doublons si répétés
+    "bob haircut", "bob cut", "coupe bob",
+    "lob haircut", "lob hairstyle",
+    "micro bang", "micro bangs",
+]
+
+# =============================================
 # MOTS-CLÉS OBLIGATOIRES - EXTENSIONS OU TENDANCES COIFFURE
 # Un article DOIT contenir au moins UN de ces mots pour être accepté
+# PRIORITÉ: Extensions > Tendances (pour éviter la boucle "bob haircuts")
 # =============================================
 REQUIRED_EXTENSION_KEYWORDS = [
-    # ==== EXTENSIONS CAPILLAIRES ====
+    # ==== EXTENSIONS CAPILLAIRES (PRIORITÉ HAUTE) ====
     "extension", "extensions", "hair extension", "hair extensions",
     "rallonge", "rallonges", "rajout", "rajouts",
     "tape-in", "tape in", "tapein", "tape extension",
@@ -182,9 +214,11 @@ REQUIRED_EXTENSION_KEYWORDS = [
     "weave", "sew-in", "sew in",
     "hair piece", "hairpiece", "postiche",
     
-    # ==== TENDANCES COIFFURE 2026 (NOUVEAU) ====
+    # ==== TENDANCES COIFFURE 2026 (PRIORITÉ BASSE - diversité) ====
+    # Note: Ces mots-clés sont gardés mais les articles de ce type
+    # seront limités pour éviter les répétitions
     "bob haircut", "bob cut", "lob haircut", "lob hairstyle",
-    "fringe", "bangs", "frange", "micro bang", "curtain bangs",
+    "fringe", "bangs", "frange", "curtain bangs",
     "glossy hair", "shiny hair", "cheveux brillants",
     "hair trends", "tendances coiffure", "tendance cheveux",
     "hairstyle", "coiffure femme", "coupe femme",

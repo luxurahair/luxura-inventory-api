@@ -18,7 +18,8 @@ from .content_sources import (
     SEARCH_QUERIES, TRUSTED_SOURCES,
     REQUIRED_EXTENSION_KEYWORDS, INCLUDE_KEYWORDS, 
     EXCLUDE_KEYWORDS, CANADA_KEYWORDS,
-    LUXURA_TONE, POST_TEMPLATES
+    LUXURA_TONE, POST_TEMPLATES,
+    get_randomized_queries
 )
 from .seasonal_context import (
     get_seasonal_context, get_image_prompt_context, 
@@ -41,18 +42,53 @@ class ContentDiscoveryService:
     # COLLECTE
     # ============================================
     
-    async def discover_canada_hair_news(self, max_items: int = 20) -> List[Dict]:
+    async def discover_canada_hair_news(self, max_items: int = 20, recent_topics: List[str] = None) -> List[Dict]:
         """
         Collecte les actualités sur les extensions capillaires au Canada
+        ANTI-DOUBLON: Filtre les sujets déjà publiés récemment
+        
+        Args:
+            max_items: Nombre maximum d'articles à retourner
+            recent_topics: Liste des sujets récemment publiés à éviter
         """
         all_items = []
+        recent_topics = recent_topics or []
+        
+        # Normaliser les topics récents pour comparaison
+        recent_normalized = [self._normalize_text(t) for t in recent_topics]
+        
+        # Utiliser des requêtes randomisées pour diversifier les résultats
+        queries = get_randomized_queries(max_queries=8)
         
         async with httpx.AsyncClient(timeout=30.0) as client:
             # Limiter à 5 requêtes pour éviter le rate limiting
-            for query in SEARCH_QUERIES[:5]:
+            for query in queries[:5]:
                 try:
                     items = await self._fetch_google_news(client, query)
-                    all_items.extend(items)
+                    
+                    # Filtrer les items qui ressemblent aux topics récents
+                    for item in items:
+                        item_title_norm = self._normalize_text(item.get('title', ''))
+                        
+                        # Vérifier si le sujet est trop similaire à un post récent
+                        is_duplicate = False
+                        for recent in recent_normalized:
+                            # Calculer la similarité (mots en commun)
+                            item_words = set(item_title_norm.split())
+                            recent_words = set(recent.split())
+                            
+                            if len(item_words) > 0 and len(recent_words) > 0:
+                                common = item_words & recent_words
+                                similarity = len(common) / min(len(item_words), len(recent_words))
+                                
+                                if similarity > 0.5:  # Plus de 50% de mots en commun = doublon
+                                    is_duplicate = True
+                                    logger.debug(f"🚫 Doublon détecté: {item['title'][:50]}...")
+                                    break
+                        
+                        if not is_duplicate:
+                            all_items.append(item)
+                    
                     logger.info(f"Collecté {len(items)} articles pour '{query}'")
                 except Exception as e:
                     logger.error(f"Erreur collecte '{query}': {e}")
