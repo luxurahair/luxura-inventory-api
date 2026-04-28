@@ -1872,8 +1872,29 @@ async def get_products(
                 if product_category in ['halo', 'genius', 'tape', 'i-tip', 'ponytail', 'clip-in']:
                     clean_name = generate_product_name_from_handle(best_handle, product_category)
                 
-                # Get image - use color_code for accurate image mapping
-                image = get_product_image(best_handle, product_category, color_code)
+                # Get image - PRIORITÉ aux vraies images Wix stockées dans options
+                # Fallback vers le mapping statique si pas d'image
+                parent_options = parent.get('options', {}) if isinstance(parent.get('options'), dict) else {}
+                db_images = parent_options.get('images', [])
+                
+                # Si pas d'images dans parent, chercher dans les produits originaux groupés
+                if not db_images:
+                    # Chercher les images dans les produits originaux qui ont formé ce groupe
+                    for p in products:
+                        p_handle = p.get('handle', '')
+                        if p_handle in data['handles']:
+                            p_options = p.get('options', {}) if isinstance(p.get('options'), dict) else {}
+                            p_images = p_options.get('images', [])
+                            if p_images and len(p_images) > 0 and p_images[0]:
+                                db_images = p_images
+                                break
+                
+                if db_images and len(db_images) > 0 and db_images[0]:
+                    # Utiliser la vraie image Wix depuis la DB
+                    image = db_images[0]
+                else:
+                    # Fallback: mapping statique par code couleur
+                    image = get_product_image(best_handle, product_category, color_code)
                 
                 # Build Wix URL using the best handle
                 wix_url = f"https://www.luxuradistribution.com/product-page/{best_handle}" if best_handle else "https://www.luxuradistribution.com"
