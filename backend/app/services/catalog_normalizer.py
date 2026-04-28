@@ -160,6 +160,13 @@ def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Option
     # Limiter à 5 images max
     images = images[:5]
 
+    # Récupérer le numericId pour le tri (ordre Wix)
+    wix_numeric_id = parent.get("numericId") or 0
+    try:
+        wix_sort_order = int(wix_numeric_id)
+    except (ValueError, TypeError):
+        wix_sort_order = 0
+
     return {
         "wix_id": wix_product_id_s,
         "sku": sku,
@@ -172,7 +179,8 @@ def normalize_variant(parent: Dict[str, Any], variant: Dict[str, Any]) -> Option
         "options": {
             "wix_variant_id": wix_variant_id_s,
             "choices": choices,
-            "images": images,  # AJOUT DES IMAGES
+            "images": images,
+            "wix_sort_order": wix_sort_order,  # ORDRE WIX POUR LE TRI
         },
         "_track_quantity": track,
         "_quantity": qty,

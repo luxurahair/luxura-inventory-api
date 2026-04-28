@@ -1932,6 +1932,20 @@ async def get_products(
                     "clip-in": "Sophia"
                 }
                 
+                # Récupérer wix_sort_order pour le tri (ordre Wix)
+                wix_sort_order = 0
+                if parent_options.get('wix_sort_order'):
+                    wix_sort_order = parent_options.get('wix_sort_order', 0)
+                else:
+                    # Chercher dans les produits originaux
+                    for p in products:
+                        p_handle = p.get('handle', '')
+                        if p_handle in data['handles']:
+                            p_options = p.get('options', {}) if isinstance(p.get('options'), dict) else {}
+                            if p_options.get('wix_sort_order'):
+                                wix_sort_order = p_options.get('wix_sort_order', 0)
+                                break
+
                 # IMPORTANT: Use handle as the product ID for frontend navigation
                 # This ensures consistency between list and detail pages
                 # The handle is unique per product color variant in Wix
@@ -1952,7 +1966,8 @@ async def get_products(
                     "handle": best_handle,
                     "color_code": color_code,  # NEW: Expose color code
                     "variant_count": len(sorted_variants),
-                    "luxura_id": parent.get('id')  # Keep original Luxura ID for reference
+                    "luxura_id": parent.get('id'),  # Keep original Luxura ID for reference
+                    "wix_sort_order": wix_sort_order  # Ordre Wix pour le tri
                 }
                 
                 # Include variant details if requested
@@ -1961,9 +1976,13 @@ async def get_products(
                 
                 result.append(product_data)
             
-            # Sort by category order, then by name
+            # Sort by category order, then by Wix sort order DESC (numericId)
+            # DESC = les plus récents en premier, comme affiché sur Wix (#1, #1B, #3, #6...)
             category_order = {'genius': 0, 'halo': 1, 'tape': 2, 'i-tip': 3, 'ponytail': 4, 'clip-in': 5, 'essentiels': 6}
-            result.sort(key=lambda x: (category_order.get(x['category'], 99), x['name']))
+            result.sort(key=lambda x: (
+                category_order.get(x['category'], 99),
+                -x.get('wix_sort_order', 0)  # Négatif = ordre DESC (comme Wix)
+            ))
             
             return result
             
