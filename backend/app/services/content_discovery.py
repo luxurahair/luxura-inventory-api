@@ -19,7 +19,11 @@ from .content_sources import (
     REQUIRED_EXTENSION_KEYWORDS, INCLUDE_KEYWORDS, 
     EXCLUDE_KEYWORDS, CANADA_KEYWORDS,
     LUXURA_TONE, POST_TEMPLATES,
-    get_randomized_queries
+    get_randomized_queries,
+    TEMPORARY_COOLDOWN_KEYWORDS,
+    EXTENSION_KEYWORDS_HIGH_PRIORITY,
+    HAIR_CARE_KEYWORDS,
+    FASHION_LOOK_KEYWORDS
 )
 from .seasonal_context import (
     get_seasonal_context, get_image_prompt_context, 
@@ -45,7 +49,10 @@ class ContentDiscoveryService:
     async def discover_canada_hair_news(self, max_items: int = 20, recent_topics: List[str] = None) -> List[Dict]:
         """
         Collecte les actualités sur les extensions capillaires au Canada
-        ANTI-DOUBLON: Filtre les sujets déjà publiés récemment
+        ANTI-DOUBLON v3: 
+        - Filtre les sujets déjà publiés récemment
+        - Exclut les mots-clés en cooldown (bob, refinery29, etc.)
+        - Priorise les articles sur les extensions vs tendances générales
         
         Args:
             max_items: Nombre maximum d'articles à retourner
@@ -58,22 +65,34 @@ class ContentDiscoveryService:
         recent_normalized = [self._normalize_text(t) for t in recent_topics]
         
         # Utiliser des requêtes randomisées pour diversifier les résultats
-        queries = get_randomized_queries(max_queries=8)
+        queries = get_randomized_queries(max_queries=10)  # Augmenté à 10
         
         async with httpx.AsyncClient(timeout=30.0) as client:
-            # Limiter à 5 requêtes pour éviter le rate limiting
-            for query in queries[:5]:
+            # Limiter à 6 requêtes pour plus de diversité
+            for query in queries[:6]:
                 try:
                     items = await self._fetch_google_news(client, query)
                     
-                    # Filtrer les items qui ressemblent aux topics récents
+                    # Filtrer les items
                     for item in items:
-                        item_title_norm = self._normalize_text(item.get('title', ''))
+                        item_title = item.get('title', '')
+                        item_title_lower = item_title.lower()
+                        item_title_norm = self._normalize_text(item_title)
                         
-                        # Vérifier si le sujet est trop similaire à un post récent
+                        # 1. FILTRER: Mots-clés en cooldown (bob, refinery29, etc.)
+                        is_cooldown = False
+                        for cooldown_word in TEMPORARY_COOLDOWN_KEYWORDS:
+                            if cooldown_word.lower() in item_title_lower:
+                                is_cooldown = True
+                                logger.debug(f"🧊 Cooldown '{cooldown_word}': {item_title[:50]}...")
+                                break
+                        
+                        if is_cooldown:
+                            continue
+                        
+                        # 2. FILTRER: Similarité avec posts récents
                         is_duplicate = False
                         for recent in recent_normalized:
-                            # Calculer la similarité (mots en commun)
                             item_words = set(item_title_norm.split())
                             recent_words = set(recent.split())
                             
@@ -83,11 +102,32 @@ class ContentDiscoveryService:
                                 
                                 if similarity > 0.5:  # Plus de 50% de mots en commun = doublon
                                     is_duplicate = True
-                                    logger.debug(f"🚫 Doublon détecté: {item['title'][:50]}...")
+                                    logger.debug(f"🚫 Doublon détecté: {item_title[:50]}...")
                                     break
                         
-                        if not is_duplicate:
-                            all_items.append(item)
+                        if is_duplicate:
+                            continue
+                        
+                        # 3. CALCULER: Score de priorité (extensions > hair care > fashion > trends)
+                        priority_score = 0
+                        
+                        for kw in EXTENSION_KEYWORDS_HIGH_PRIORITY:
+                            if kw.lower() in item_title_lower:
+                                priority_score += 10
+                                break
+                        
+                        for kw in HAIR_CARE_KEYWORDS:
+                            if kw.lower() in item_title_lower:
+                                priority_score += 7
+                                break
+                        
+                        for kw in FASHION_LOOK_KEYWORDS:
+                            if kw.lower() in item_title_lower:
+                                priority_score += 5
+                                break
+                        
+                        item['priority_score'] = priority_score
+                        all_items.append(item)
                     
                     logger.info(f"Collecté {len(items)} articles pour '{query}'")
                 except Exception as e:
@@ -102,7 +142,10 @@ class ContentDiscoveryService:
                 seen_urls.add(item["source_url"])
                 unique_items.append(item)
         
-        logger.info(f"Total unique: {len(unique_items)} articles")
+        # Trier par score de priorité (extensions d'abord)
+        unique_items.sort(key=lambda x: x.get('priority_score', 0), reverse=True)
+        
+        logger.info(f"Total unique: {len(unique_items)} articles (triés par priorité)")
         return unique_items[:max_items]
     
     async def _fetch_google_news(self, client: httpx.AsyncClient, query: str) -> List[Dict]:

@@ -1,7 +1,9 @@
 """
 Sources et requêtes pour la collecte de contenu
 Centralise les mots-clés, sources fiables et filtres
-NOUVELLE VERSION: Tendances Mode Féminine Internationale (Europe, Italie, USA)
+VERSION 3.0: Grands Magazines Féminins Internationaux + Sujets Diversifiés
+- Vogue, Elle, Harper's Bazaar, Marie Claire, Cosmopolitan, Glamour, Allure, Grazia
+- Entretien cheveux, Look féminin, Mode internationale
 IMPORTANT: Anti-doublon - évite de répéter les mêmes sujets
 """
 
@@ -21,59 +23,90 @@ class ContentSource:
 
 
 # ============================================
-# REQUÊTES DE RECHERCHE - DIVERSIFIÉES INTERNATIONALES
+# REQUÊTES DE RECHERCHE - MAGAZINES FÉMININS INTERNATIONAUX
 # ============================================
-# IMPORTANT: On randomise les requêtes pour éviter de toujours 
-# obtenir les mêmes résultats (ex: bob haircuts répétés)
+# VERSION 3.0: Diversité maximale - plus de bob haircuts en boucle!
+# Sources: Vogue, Elle, Harper's Bazaar, Marie Claire, Glamour, Allure, Cosmopolitan
 
 SEARCH_QUERIES = [
-    # ==== EXTENSIONS CAPILLAIRES (PRIORITÉ HAUTE) ====
-    "hair extensions trends 2026",
-    "tape-in hair extensions natural look",
-    "halo extensions invisible install",
-    "weft extensions seamless blending",
-    "clip-in extensions styling tutorial",
-    "hand-tied weft extensions benefits",
-    "hair extensions for thin hair",
-    "hair extensions wedding bridal",
-    "hair extensions maintenance tips",
-    "hair extensions volume women",
+    # ==== 🌟 EXTENSIONS CAPILLAIRES (PRIORITÉ HAUTE) ====
+    "hair extensions trends 2026 Vogue",
+    "tape-in extensions natural look Elle magazine",
+    "halo extensions invisible styling Harper's Bazaar",
+    "weft extensions seamless Marie Claire",
+    "clip-in extensions transformation Glamour",
+    "hand-tied weft extensions luxury Allure",
+    "hair extensions thin hair volume solutions",
+    "hair extensions wedding bridal looks",
+    "hair extensions celebrity red carpet",
+    "ponytail extensions elegant style",
     
-    # ==== TENDANCES COIFFURE 2026 (VARIÉES) ====
-    "women hairstyle trends 2026",
-    "lob hairstyle women elegant",
-    "fringe bangs trends modern",
-    "curtain bangs styling tips",
-    "glossy hair trend healthy",
-    "long hair trends women 2026",
-    "layered haircut trends 2026",
-    "balayage hair color trends",
+    # ==== 💇‍♀️ ENTRETIEN CHEVEUX (NOUVEAU - ÉLARGI) ====
+    "hair care routine healthy shiny 2026",
+    "hair maintenance tips professional salon",
+    "deep conditioning treatment damaged hair",
+    "hair oil treatment benefits natural",
+    "protect hair from heat styling tips",
+    "hair mask DIY natural ingredients",
+    "how to prevent hair breakage tips",
+    "best hair products for volume 2026",
+    "scalp care routine healthy hair growth",
+    "overnight hair treatments beauty sleep",
     
-    # ==== MODE FÉMININE INTERNATIONALE ====
-    "women hair trends Europe 2026",
-    "Italian fashion hairstyles elegant",
-    "French women hair chic trends",
-    "Milan fashion week hair looks",
-    "Paris fashion hair elegant",
-    "celebrity hairstyles red carpet",
+    # ==== 👠 LOOK FÉMININ & MODE (NOUVEAU) ====
+    "women fashion look trends 2026 Vogue",
+    "elegant feminine style Milan Fashion Week",
+    "Paris Fashion Week women looks 2026",
+    "Italian women style la dolce vita chic",
+    "French girl aesthetic effortless beauty",
+    "quiet luxury fashion trend women",
+    "celebrity fashion looks red carpet 2026",
+    "office chic women professional style",
+    "weekend casual elegant women look",
+    "evening glamour women style gala",
     
-    # ==== LIFESTYLE & BEAUTÉ ====
-    "quiet luxury hair aesthetic",
-    "healthy shiny hair tips natural",
-    "hair volume solutions fine hair",
-    "bridal hairstyles extensions",
-    "professional hair care routine",
+    # ==== 📰 MAGAZINES FÉMININS - ACTUALITÉS MODE ====
+    "Vogue beauty hair trends 2026",
+    "Elle magazine hair styling tips",
+    "Harper's Bazaar women fashion 2026",
+    "Marie Claire beauty secrets",
+    "Glamour magazine hair transformation",
+    "Allure best hair products 2026",
+    "Cosmopolitan beauty trends women",
+    "Grazia fashion style women Italy",
+    "InStyle celebrity hair looks",
+    "Who What Wear fashion trends",
     
-    # ==== CANADA/QUÉBEC ====
-    "hair extensions Canada salon quality",
-    "extensions cheveux Québec tendance",
-    "coiffure femme tendance Montréal",
+    # ==== 🌍 TENDANCES INTERNATIONALES ====
+    "Italian bob haircut elegant Milan",
+    "French girl hair effortless chic Paris",
+    "Hollywood celebrity hairstyles 2026",
+    "London Fashion Week hair trends",
+    "New York women style trends",
+    "Korean beauty hair trends K-beauty",
+    "Scandinavian minimalist hair style",
+    
+    # ==== 💄 BEAUTÉ & LIFESTYLE ====
+    "natural beauty tips women 2026",
+    "self care routine hair skin",
+    "bridal beauty hair makeup wedding",
+    "summer hair care beach protection",
+    "winter hair care moisturizing tips",
+    "hair color trends 2026 balayage highlights",
+    "healthy hair diet nutrition tips",
+    
+    # ==== 🇨🇦 CANADA/QUÉBEC ====
+    "hair extensions Canada premium quality",
+    "coiffure femme Montréal tendance 2026",
+    "extensions cheveux Québec salons",
+    "beauté femme canadienne tendances",
 ]
 
-def get_randomized_queries(max_queries: int = 8) -> List[str]:
+def get_randomized_queries(max_queries: int = 10) -> List[str]:
     """
     Retourne une liste aléatoire de requêtes pour diversifier les résultats.
     Évite de toujours commencer par les mêmes requêtes.
+    Augmenté à 10 requêtes pour plus de diversité.
     """
     shuffled = SEARCH_QUERIES.copy()
     random.shuffle(shuffled)
@@ -111,50 +144,79 @@ INTERNATIONAL_QUERIES = {
 }
 
 # ============================================
-# SOURCES FIABLES - INTERNATIONALES
+# SOURCES FIABLES - GRANDS MAGAZINES FÉMININS INTERNATIONAUX
 # ============================================
+# VERSION 3.0: Top magazines mondiaux pour contenu premium
 
 TRUSTED_SOURCES = [
+    # ==== 🌟 TOP 10 MAGAZINES MONDIAUX ====
+    "vogue.com",
+    "harpersbazaar.com",
+    "elle.com",
+    "marieclaire.com",
+    "cosmopolitan.com",
+    "glamour.com",
+    "allure.com",
+    "instyle.com",
+    "wmagazine.com",
+    "whowhatwear.com",
+    
     # ==== 🇫🇷 FRANCE ====
-    "elle.fr",
     "vogue.fr",
+    "elle.fr",
     "marieclaire.fr",
     "glamourparis.com",
+    "grazia.fr",
     "journaldesfemmes.fr",
     "femmeactuelle.fr",
-    "grazia.fr",
+    "madamefigaro.fr",
     
     # ==== 🇮🇹 ITALIE ====
     "vogue.it",
-    "grazia.it",
     "elle.it",
+    "grazia.it",
     "vanityfair.it",
     "marieclaire.it",
+    "cosmopolitan.it",
     
     # ==== 🇺🇸 USA ====
-    "allure.com",
-    "elle.com",
-    "glamour.com",
     "byrdie.com",
-    "harpersbazaar.com",
-    "vogue.com",
-    "cosmopolitan.com",
     "refinery29.com",
     "beautylaunchpad.com",
-    "instyle.com",
+    "thecut.com",
+    "popsugar.com",
+    "today.com",
+    "goodhousekeeping.com",
     
     # ==== 🇬🇧 UK ====
+    "vogue.co.uk",
     "elle.com/uk",
-    "glamourmagazine.co.uk",
     "harpersbazaar.com/uk",
+    "glamourmagazine.co.uk",
     "marieclaire.co.uk",
+    "stylist.co.uk",
+    
+    # ==== 🇪🇸 ESPAGNE ====
+    "vogue.es",
+    "elle.es",
+    "harpersbazaar.com/es",
+    
+    # ==== 🇩🇪 ALLEMAGNE ====
+    "vogue.de",
+    "elle.de",
+    "glamour.de",
     
     # ==== 🇨🇦 CANADA ====
     "fashionmagazine.com",
     "thekit.ca",
     "cbc.ca/life",
-    "modernbeauty.ca",
     "salonmagazine.ca",
+    "beautycouncil.ca",
+    
+    # ==== 🌏 ASIE ====
+    "vogue.co.jp",
+    "elle.co.kr",
+    "harpersbazaar.com.hk",
 ]
 
 # ============================================
@@ -183,23 +245,43 @@ INTERNATIONAL_RSS_FEEDS = {
 # ============================================
 
 # =============================================
-# SUJETS RÉCEMMENT PUBLIÉS À ÉVITER (anti-boucle)
-# Ces mots-clés seront temporairement exclus après publication
+# SUJETS EN COOLDOWN - ÉVITER TEMPORAIREMENT
+# Ces sujets ont été répétés trop souvent récemment
 # =============================================
 TEMPORARY_COOLDOWN_KEYWORDS = [
-    # Sujets qui génèrent des doublons si répétés
-    "bob haircut", "bob cut", "coupe bob",
+    # 🚫 Sujets sur-utilisés à éviter pendant 7 jours
+    "bob haircut", "bob cut", "coupe bob", "coupes bob",
     "lob haircut", "lob hairstyle",
     "micro bang", "micro bangs",
+    "refinery29",  # Source qui génère trop de doublons
+    "12 coupes",   # Article spécifique répété
 ]
 
 # =============================================
-# MOTS-CLÉS OBLIGATOIRES - EXTENSIONS OU TENDANCES COIFFURE
-# Un article DOIT contenir au moins UN de ces mots pour être accepté
-# PRIORITÉ: Extensions > Tendances (pour éviter la boucle "bob haircuts")
+# EXCLUSIONS PERMANENTES
+# Ces termes indiquent du contenu non pertinent
 # =============================================
-REQUIRED_EXTENSION_KEYWORDS = [
-    # ==== EXTENSIONS CAPILLAIRES (PRIORITÉ HAUTE) ====
+EXCLUDE_KEYWORDS = [
+    # Contenu non pertinent
+    "man", "men", "homme", "masculin",
+    "barbe", "beard", "mustache",
+    "children", "enfant", "kids", "bébé",
+    "pet", "dog", "cat", "animal",
+    "politics", "politique", "election",
+    "sport", "football", "basketball",
+    "cryptocurrency", "bitcoin",
+    # Marques concurrentes
+    "great lengths", "balmain hair",
+    # Sujets médicaux
+    "cancer", "chemotherapy", "alopecia medical",
+]
+
+# =============================================
+# MOTS-CLÉS OBLIGATOIRES - HIÉRARCHIE DE PRIORITÉ
+# =============================================
+
+# PRIORITÉ 1: EXTENSIONS CAPILLAIRES (Score +10)
+EXTENSION_KEYWORDS_HIGH_PRIORITY = [
     "extension", "extensions", "hair extension", "hair extensions",
     "rallonge", "rallonges", "rajout", "rajouts",
     "tape-in", "tape in", "tapein", "tape extension",
@@ -213,19 +295,49 @@ REQUIRED_EXTENSION_KEYWORDS = [
     "topper", "toppers", "hair topper", "wiglet",
     "weave", "sew-in", "sew in",
     "hair piece", "hairpiece", "postiche",
-    
-    # ==== TENDANCES COIFFURE 2026 (PRIORITÉ BASSE - diversité) ====
-    # Note: Ces mots-clés sont gardés mais les articles de ce type
-    # seront limités pour éviter les répétitions
-    "bob haircut", "bob cut", "lob haircut", "lob hairstyle",
-    "fringe", "bangs", "frange", "curtain bangs",
-    "glossy hair", "shiny hair", "cheveux brillants",
+]
+
+# PRIORITÉ 2: ENTRETIEN CHEVEUX (Score +7)
+HAIR_CARE_KEYWORDS = [
+    "hair care", "hair maintenance", "entretien cheveux",
+    "shampoo", "conditioner", "masque cheveux", "hair mask",
+    "hair oil", "huile cheveux", "treatment", "traitement",
+    "healthy hair", "cheveux sains", "shiny hair", "cheveux brillants",
+    "deep conditioning", "hydration cheveux",
+    "protect hair", "protéger cheveux", "heat protection",
+    "hair growth", "pousse cheveux", "scalp care", "soin cuir chevelu",
+    "hair breakage", "casse cheveux", "split ends", "pointes fourchues",
+]
+
+# PRIORITÉ 3: LOOK FÉMININ & MODE (Score +5)
+FASHION_LOOK_KEYWORDS = [
+    "fashion look", "look féminin", "women style", "style femme",
+    "elegant", "élégant", "chic", "sophisticated", "glamour",
+    "Milan Fashion Week", "Paris Fashion Week", "London Fashion Week",
+    "red carpet", "tapis rouge", "celebrity style", "celebrity look",
+    "French girl", "Italian style", "quiet luxury", "luxe discret",
+    "office style", "professional look", "evening look", "look soirée",
+    "bridal", "mariage", "wedding", "gala",
+]
+
+# PRIORITÉ 4: TENDANCES COIFFURE (Score +3) - LIMITÉ pour éviter bob-spam
+HAIRSTYLE_TRENDS_KEYWORDS = [
     "hair trends", "tendances coiffure", "tendance cheveux",
     "hairstyle", "coiffure femme", "coupe femme",
     "hair volume", "volume cheveux",
     "long hair", "cheveux longs", "longueurs",
-    "healthy hair", "cheveux sains",
+    "fringe", "bangs", "frange", "curtain bangs",
+    "glossy hair", "balayage", "highlights", "mèches",
+    "layers", "dégradé", "layered cut",
 ]
+
+# Combinaison pour backward compatibility
+REQUIRED_EXTENSION_KEYWORDS = (
+    EXTENSION_KEYWORDS_HIGH_PRIORITY + 
+    HAIR_CARE_KEYWORDS + 
+    FASHION_LOOK_KEYWORDS + 
+    HAIRSTYLE_TRENDS_KEYWORDS
+)
 
 # Mots-clés bonus (augmentent le score mais pas obligatoires)
 INCLUDE_KEYWORDS = [
