@@ -860,6 +860,11 @@ def detect_category_from_handle(handle: str, name: str) -> str:
     
     # PRIORITY 0: Check name FIRST for specific series names (most reliable)
     # This catches cases where handle is wrong but name is correct
+    
+    # IMPORTANT: Hand-Tied Aurora = Genius Weft (NOT Tape!)
+    # Tape Aurora = actual Tape products
+    if 'hand-tied' in name_lower or 'hand tied' in name_lower:
+        return 'genius'  # Hand-Tied Aurora = Genius Weft
     if 'vivian' in name_lower:
         return 'genius'
     if 'victoria' in name_lower:
@@ -868,7 +873,8 @@ def detect_category_from_handle(handle: str, name: str) -> str:
         return 'clip-in'
     if 'everly' in name_lower and ('clip' not in name_lower and 'ponytail' not in name_lower):
         return 'halo'
-    if 'aurora' in name_lower:
+    # FIXED: Only classify as Tape if it starts with "Tape" (not just contains "aurora")
+    if name_lower.startswith('tape '):
         return 'tape'
     if 'eleanor' in name_lower:
         return 'i-tip'
@@ -880,11 +886,12 @@ def detect_category_from_handle(handle: str, name: str) -> str:
     # NEW: Clip-In (Sophia series) - STRICT: must have clip-in or clips keyword
     elif 'clip-in' in handle_lower or 'clips' in handle_lower:
         return 'clip-in'
-    elif 'genius' in handle_lower or 'vivian' in handle_lower or 'trame-invisible' in handle_lower:
+    elif 'genius' in handle_lower or 'vivian' in handle_lower or 'trame-invisible' in handle_lower or 'hand-tied' in handle_lower:
         return 'genius'
     elif 'halo' in handle_lower or 'everly' in handle_lower:
         return 'halo'
-    elif 'bande' in handle_lower or 'aurora' in handle_lower or 'tape' in handle_lower or 'adhésive' in handle_lower:
+    # FIXED: Don't use 'aurora' alone - too ambiguous. Use more specific patterns.
+    elif 'tape' in handle_lower or ('bande' in handle_lower and 'adhésive' in handle_lower):
         return 'tape'
     elif 'i-tip' in handle_lower or 'itip' in handle_lower or 'eleanor' in handle_lower:
         return 'i-tip'
@@ -902,11 +909,12 @@ def detect_category_from_handle(handle: str, name: str) -> str:
         return 'ponytail'
     elif 'clip-in' in name_lower:
         return 'clip-in'
-    elif 'genius' in name_lower or 'trame invisible' in name_lower:
+    elif 'genius' in name_lower or 'trame invisible' in name_lower or 'hand-tied' in name_lower:
         return 'genius'
     elif 'halo' in name_lower:
         return 'halo'
-    elif 'bande' in name_lower or 'adhésive' in name_lower:
+    # FIXED: Only "Tape Aurora" products, not accessories
+    elif name_lower.startswith('tape '):
         return 'tape'
     elif 'i-tip' in name_lower or 'itip' in name_lower:
         return 'i-tip'
