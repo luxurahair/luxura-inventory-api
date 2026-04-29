@@ -571,13 +571,19 @@ async def db_create_blog_post(post_data: Dict) -> Optional[int]:
     finally:
         session.close()
 
-async def db_update_blog_post(post_id: str, updates: Dict) -> bool:
+async def db_update_blog_post(post_id, updates: Dict) -> bool:
     """Mettre à jour un article de blog"""
     session = get_db_session()
     if not session:
         return False
     try:
-        post = session.query(BlogPostDB).filter(BlogPostDB.id == post_id).first()
+        # Convertir en entier si c'est une chaîne numérique
+        try:
+            post_id_int = int(post_id)
+        except (ValueError, TypeError):
+            post_id_int = post_id
+        
+        post = session.query(BlogPostDB).filter(BlogPostDB.id == post_id_int).first()
         if post:
             for key, value in updates.items():
                 if hasattr(post, key):
@@ -592,13 +598,19 @@ async def db_update_blog_post(post_id: str, updates: Dict) -> bool:
     finally:
         session.close()
 
-async def db_delete_blog_post(post_id: str) -> bool:
+async def db_delete_blog_post(post_id) -> bool:
     """Supprimer un article de blog"""
     session = get_db_session()
     if not session:
         return False
     try:
-        result = session.query(BlogPostDB).filter(BlogPostDB.id == post_id).delete()
+        # Convertir en entier si c'est une chaîne numérique
+        try:
+            post_id_int = int(post_id)
+        except (ValueError, TypeError):
+            post_id_int = post_id
+            
+        result = session.query(BlogPostDB).filter(BlogPostDB.id == post_id_int).delete()
         session.commit()
         return result > 0
     except Exception as e:
