@@ -863,6 +863,7 @@ def detect_category_from_handle(handle: str, name: str) -> str:
     
     # IMPORTANT: Hand-Tied Aurora = Genius Weft (NOT Tape!)
     # Tape Aurora = actual Tape products
+    # Bande Adhésive Aurora = also Tape products
     if 'hand-tied' in name_lower or 'hand tied' in name_lower:
         return 'genius'  # Hand-Tied Aurora = Genius Weft
     if 'vivian' in name_lower:
@@ -873,8 +874,8 @@ def detect_category_from_handle(handle: str, name: str) -> str:
         return 'clip-in'
     if 'everly' in name_lower and ('clip' not in name_lower and 'ponytail' not in name_lower):
         return 'halo'
-    # FIXED: Only classify as Tape if it starts with "Tape" (not just contains "aurora")
-    if name_lower.startswith('tape '):
+    # FIXED: Tape Aurora OR Bande Adhésive Aurora = Tape
+    if name_lower.startswith('tape ') or name_lower.startswith('bande adhésive aurora'):
         return 'tape'
     if 'eleanor' in name_lower:
         return 'i-tip'

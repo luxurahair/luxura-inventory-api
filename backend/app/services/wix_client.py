@@ -81,18 +81,17 @@ class WixClient:
         """
         POST /stores-reader/v1/products/query
         Souvent plus riche (collectionIds, etc.)
+        FIXED: Use offset-based pagination instead of cursor
         """
         url = f"{WIX_API_BASE}/stores-reader/v1/products/query"
         per_page = min(max(int(limit), 1), 100)
 
-        cursor: Optional[str] = None
+        offset = 0
         all_items: List[Dict[str, Any]] = []
         pages = 0
 
         while True:
-            body: Dict[str, Any] = {"query": {"paging": {"limit": per_page}}}
-            if cursor:
-                body["cursorPaging"] = {"cursor": cursor}
+            body: Dict[str, Any] = {"query": {"paging": {"limit": per_page, "offset": offset}}}
 
             resp = self.session.post(url, headers=self._headers(), json=body, timeout=self.timeout)
             if resp.status_code != 200:
@@ -103,12 +102,14 @@ class WixClient:
             if not isinstance(items, list):
                 items = []
 
+            if not items:
+                break  # No more products
+                
             all_items.extend(items)
-            cursor = data.get("nextCursor") or (data.get("cursorPaging") or {}).get("nextCursor")
-
+            
             pages += 1
-            if not cursor:
-                break
+            offset += per_page
+            
             if max_pages is not None and pages >= max_pages:
                 break
 
