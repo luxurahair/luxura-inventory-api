@@ -1069,11 +1069,11 @@ def generate_product_name_from_handle(handle: str, category: str) -> str:
         "clip-in": "Sophia"
     }
     
-    # Type de produit
+    # Type de produit - UTILISER "Tape" au lieu de "Bande Adhésive" pour cohérence Wix
     type_map = {
         "halo": "Halo",
         "genius": "Genius",
-        "tape": "Bande Adhésive",
+        "tape": "Tape",  # CHANGED: "Bande Adhésive" → "Tape" pour matcher Wix
         "i-tip": "I-Tip",
         "ponytail": "Queue de Cheval",
         "clip-in": "Extensions à Clips"
@@ -1873,12 +1873,39 @@ async def get_products(
                     continue
                 
                 name = parent.get('name', '')
-                # Clean up name (remove variant suffix)
+                # Clean up name (remove variant suffix like " — 18" 25 grammes")
                 clean_name = name.split(' — ')[0].strip()
                 
-                # TOUJOURS générer le nom de luxe depuis le handle pour TOUTES les catégories d'extensions
-                # Cela garantit que les noms sont cohérents et utilisent la nomenclature Luxura
-                if product_category in ['halo', 'genius', 'tape', 'i-tip', 'ponytail', 'clip-in']:
+                # UTILISER LE VRAI NOM WIX s'il commence par le bon préfixe de série
+                # Ex: "Tape Aurora Onyx Noir #1" est gardé tel quel
+                # Sinon, générer un nom de luxe depuis le handle
+                series_prefixes = {
+                    'tape': ['Tape Aurora', 'Bande Adhésive Aurora'],
+                    'genius': ['Genius Vivian', 'Hand-Tied Aurora', 'Trame Invisible'],
+                    'halo': ['Halo Everly'],
+                    'i-tip': ['I-Tip Eleanor'],
+                    'ponytail': ['Ponytail Victoria'],
+                    'clip-in': ['Clip-In Sophia'],
+                }
+                
+                has_valid_name = False
+                if product_category in series_prefixes:
+                    for prefix in series_prefixes[product_category]:
+                        if clean_name.startswith(prefix):
+                            # Convertir "Bande Adhésive Aurora" en "Tape Aurora" pour cohérence
+                            if clean_name.startswith('Bande Adhésive Aurora'):
+                                clean_name = clean_name.replace('Bande Adhésive Aurora', 'Tape Aurora')
+                            has_valid_name = True
+                            break
+                
+                # TOUJOURS convertir "Bande Adhésive Aurora" en "Tape Aurora" même si pas dans la boucle
+                if 'bande adhésive aurora' in clean_name.lower():
+                    clean_name = clean_name.replace('Bande Adhésive Aurora', 'Tape Aurora')
+                    clean_name = clean_name.replace('bande adhésive aurora', 'Tape Aurora')
+                    has_valid_name = True
+                
+                # Si le nom Wix n'est pas valide, générer depuis le handle
+                if not has_valid_name and product_category in ['halo', 'genius', 'tape', 'i-tip', 'ponytail', 'clip-in']:
                     clean_name = generate_product_name_from_handle(best_handle, product_category)
                 
                 # Get image - PRIORITÉ aux vraies images Wix stockées dans options
