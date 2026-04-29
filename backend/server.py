@@ -3024,7 +3024,7 @@ FORMAT DE RÉPONSE (JSON):
         blog_image = get_blog_image_for_topic(topic_title, keywords_to_use)
         
         blog_post = {
-            "id": post_id,
+            # Note: ne pas inclure "id" - la DB le génère automatiquement
             "title": topic_title,
             "excerpt": blog_data.get("excerpt", topic_data["meta_description"]),
             "content": blog_data.get("content", ""),
@@ -4664,14 +4664,21 @@ async def publish_blog_to_wix(post_id: str):
             raise HTTPException(status_code=500, detail="Configuration Wix manquante")
         
         # Créer et publier le draft
+        # cover_image_data doit être un dictionnaire avec "static_url"
+        cover_image_url = post.get("image", "")
+        cover_image_data = {"static_url": cover_image_url} if cover_image_url else None
+        
+        # memberId du propriétaire du blog Wix (requis par l'API v3)
+        wix_member_id = os.getenv("WIX_MEMBER_ID", "2b3e717e-1fa7-45a3-b5f5-4b9e9303ee7f")
+        
         wix_result = await create_wix_draft_post(
             api_key=wix_api_key,
             site_id=wix_site_id,
             title=post["title"],
             content=post["content"],
             excerpt=post.get("excerpt", ""),
-            cover_image=post.get("image", ""),
-            tags=post.get("tags", [])
+            cover_image_data=cover_image_data,
+            member_id=wix_member_id
         )
         
         if wix_result:

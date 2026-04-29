@@ -89,8 +89,9 @@ class CartItemDB(Base):
 
 class BlogPostDB(Base):
     __tablename__ = "blog_posts"
-    id = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-increment
     title = Column(String, nullable=False)
+    slug = Column(String, nullable=False)  # Ajouté - requis par la table
     content = Column(Text, nullable=False)
     excerpt = Column(Text, nullable=True)
     image = Column(String, nullable=True)
@@ -482,18 +483,25 @@ async def db_get_blog_posts(limit: int = 100) -> List[Dict]:
     finally:
         session.close()
 
-async def db_get_blog_post(post_id: str) -> Optional[Dict]:
+async def db_get_blog_post(post_id) -> Optional[Dict]:
     """Obtenir un article de blog par ID avec timeout protection"""
     session = get_db_session()
     if not session:
         logger.warning("⚠️ db_get_blog_post: No database session available")
         return None
     try:
-        post = session.query(BlogPostDB).filter(BlogPostDB.id == post_id).first()
+        # Convertir en entier si c'est une chaîne numérique
+        try:
+            post_id_int = int(post_id)
+        except (ValueError, TypeError):
+            post_id_int = post_id
+        
+        post = session.query(BlogPostDB).filter(BlogPostDB.id == post_id_int).first()
         if post:
             return {
                 "id": post.id,
                 "title": post.title,
+                "slug": post.slug,
                 "content": post.content,
                 "excerpt": post.excerpt,
                 "image": post.image,
@@ -524,16 +532,23 @@ async def db_get_blog_titles() -> List[str]:
     finally:
         session.close()
 
-async def db_create_blog_post(post_data: Dict) -> Optional[str]:
+async def db_create_blog_post(post_data: Dict) -> Optional[int]:
     """Créer un nouvel article de blog"""
     session = get_db_session()
     if not session:
         return None
     try:
-        post_id = post_data.get("id", str(uuid.uuid4()))
+        # Générer un slug à partir du titre
+        import re
+        title = post_data.get("title", "article")
+        slug = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')[:100]
+        # Ajouter un suffixe unique pour éviter les doublons
+        slug = f"{slug}-{uuid.uuid4().hex[:6]}"
+        
+        # Note: ne pas passer id - il est auto-généré par la DB
         post = BlogPostDB(
-            id=post_id,
             title=post_data.get("title", ""),
+            slug=slug,
             content=post_data.get("content", ""),
             excerpt=post_data.get("excerpt", ""),
             image=post_data.get("image"),
@@ -547,7 +562,8 @@ async def db_create_blog_post(post_data: Dict) -> Optional[str]:
         )
         session.add(post)
         session.commit()
-        return post_id
+        session.refresh(post)  # Récupérer l'ID généré
+        return post.id
     except Exception as e:
         session.rollback()
         logger.error(f"Error creating blog post: {e}")
