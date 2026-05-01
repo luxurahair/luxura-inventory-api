@@ -1468,21 +1468,34 @@ async def create_wix_draft_post(
         async with httpx.AsyncClient(timeout=80) as client:
             cover_static_url = cover_image_data.get("static_url") if cover_image_data else None
             content_static_url = content_image_data.get("static_url") if content_image_data else None
+            
+            # V12: Extraire les Wix Media IDs pour un affichage correct des images
+            cover_wix_id = cover_image_data.get("file_id") if cover_image_data else None
+            content_wix_id = content_image_data.get("file_id") if content_image_data else None
 
-            # On met l'image principale dans le contenu riche,
-            # mais on ne l'utilise plus comme "media" du draft ici.
+            # On met l'image principale dans le contenu riche avec le Wix Media ID
+            # V12: Utilise les file_id Wix pour un affichage correct
             rich_content = html_to_ricos(
                 content,
                 None,               # hero_image_uri deprecated
-                cover_static_url,   # image affichée dans l'article
-                content_static_url  # deuxième image dans le contenu
+                cover_static_url,   # fallback URL si pas de wix_id
+                content_static_url, # fallback URL si pas de wix_id
+                None,               # image3_url
+                None,               # video_url
+                True,               # add_logo
+                cover_wix_id,       # Wix Media ID image1 (RECOMMANDÉ)
+                content_wix_id      # Wix Media ID image2 (RECOMMANDÉ)
             )
 
             logger.info(f"Creating Wix draft post: {title}")
-            if cover_static_url:
-                logger.info(f"  - Inline top image: {cover_static_url[:80]}")
-            if content_static_url:
-                logger.info(f"  - Inline content image: {content_static_url[:80]}")
+            if cover_wix_id:
+                logger.info(f"  - Image 1 Wix ID: {cover_wix_id[:50]}...")
+            elif cover_static_url:
+                logger.info(f"  - Image 1 URL fallback: {cover_static_url[:80]}")
+            if content_wix_id:
+                logger.info(f"  - Image 2 Wix ID: {content_wix_id[:50]}...")
+            elif content_static_url:
+                logger.info(f"  - Image 2 URL fallback: {content_static_url[:80]}")
 
             draft_post = {
                 "title": title,
@@ -1795,22 +1808,23 @@ async def add_seo_metadata_to_draft(api_key: str, site_id: str, draft_id: str, t
 LUXURA_LOGO_URL = "https://static.wixstatic.com/media/f1b961_e8c5f3e0f0ff4c899c5cf99e2d0c8c4c~mv2.png"
 LUXURA_WEBSITE = "https://www.luxuradistribution.com"
 
-def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str = None, image2_url: str = None, image3_url: str = None, video_url: str = None, add_logo: bool = True) -> Dict:
+def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str = None, image2_url: str = None, image3_url: str = None, video_url: str = None, add_logo: bool = True, image1_wix_id: str = None, image2_wix_id: str = None, image3_wix_id: str = None) -> Dict:
     """
-    Convertit le HTML en format Ricos (Wix rich content format) - VERSION V11.
+    Convertit le HTML en format Ricos (Wix rich content format) - VERSION V12.
     
-    V11: Support de 3 images + 1 vidéo
-    - image1_url: Première image (début du contenu) - Installation technique
-    - image2_url: Deuxième image (1/3 du contenu) - Close-up technique
-    - image3_url: Troisième image (2/3 du contenu) - Résultat glamour
-    - video_url: URL de la vidéo (ajoutée avant la dernière image)
+    V12: Support des Wix Media IDs pour les images (FIX: images ne s'affichent pas)
+    - Wix exige un Media ID (src.id) et non une URL externe (src.url)
+    - Les images doivent être importées via l'API Media avant
     
     Args:
         html_content: Le contenu HTML à convertir
         hero_image_uri: URI Wix de l'image principale (deprecated)
-        image1_url: URL de la première image (début)
-        image2_url: URL de la deuxième image (1/3)
-        image3_url: URL de la troisième image (2/3)
+        image1_url: URL de la première image (fallback si pas de wix_id)
+        image2_url: URL de la deuxième image (fallback)
+        image3_url: URL de la troisième image (fallback)
+        image1_wix_id: Wix Media ID de la première image (RECOMMANDÉ)
+        image2_wix_id: Wix Media ID de la deuxième image (RECOMMANDÉ)
+        image3_wix_id: Wix Media ID de la troisième image (RECOMMANDÉ)
         video_url: URL de la vidéo MP4 (optionnel)
         add_logo: Ajouter le logo Luxura à la fin du contenu
     """
@@ -1821,15 +1835,19 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
     
     # =====================================================
     # IMAGE 1: Au début du contenu (technique installation)
-    # Chaque image a un ID unique pour éviter les problèmes de galerie
+    # V12: Utilise src.id (Wix Media ID) au lieu de src.url
     # =====================================================
-    if image1_url:
-        nodes.append({
+    if image1_wix_id or image1_url:
+        image_node = {
             "type": "IMAGE",
             "id": f"img1_{uuid.uuid4().hex[:8]}",
+            "nodes": [],
             "imageData": {
+                "containerData": {
+                    "width": {"size": "CONTENT"},
+                    "alignment": "CENTER"
+                },
                 "image": {
-                    "src": {"url": image1_url},
                     "width": 1200,
                     "height": 630
                 },
@@ -1837,7 +1855,13 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
                 "disableExpand": False,
                 "disableDownload": True
             }
-        })
+        }
+        # Utiliser le Wix Media ID si disponible, sinon fallback URL
+        if image1_wix_id:
+            image_node["imageData"]["image"]["src"] = {"id": image1_wix_id}
+        else:
+            image_node["imageData"]["image"]["src"] = {"url": image1_url}
+        nodes.append(image_node)
     
     # Nettoyer le HTML
     content = html_content.strip()
@@ -2040,15 +2064,20 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
     text_nodes_count = len([n for n in nodes if n.get("type") != "IMAGE"])
     
     # IMAGE 2: À environ 1/3 du contenu (close-up technique)
-    if image2_url and text_nodes_count > 3:
+    # V12: Support Wix Media ID
+    if (image2_wix_id or image2_url) and text_nodes_count > 3:
         insert_point_2 = max(3, len(nodes) // 3)
         
         image2_node = {
             "type": "IMAGE",
             "id": f"img2_{uuid.uuid4().hex[:8]}",
+            "nodes": [],
             "imageData": {
+                "containerData": {
+                    "width": {"size": "CONTENT"},
+                    "alignment": "CENTER"
+                },
                 "image": {
-                    "src": {"url": image2_url},
                     "width": 1200,
                     "height": 630
                 },
@@ -2057,6 +2086,11 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
                 "disableDownload": True
             }
         }
+        # Utiliser le Wix Media ID si disponible
+        if image2_wix_id:
+            image2_node["imageData"]["image"]["src"] = {"id": image2_wix_id}
+        else:
+            image2_node["imageData"]["image"]["src"] = {"url": image2_url}
         
         # Insérer après un H2 si possible
         inserted = False
@@ -2070,15 +2104,20 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
             nodes.insert(insert_point_2, image2_node)
     
     # IMAGE 3: À environ 2/3 du contenu (résultat glamour)
-    if image3_url and text_nodes_count > 6:
+    # V12: Support Wix Media ID
+    if (image3_wix_id or image3_url) and text_nodes_count > 6:
         insert_point_3 = max(6, (len(nodes) * 2) // 3)
         
         image3_node = {
             "type": "IMAGE",
             "id": f"img3_{uuid.uuid4().hex[:8]}",
+            "nodes": [],
             "imageData": {
+                "containerData": {
+                    "width": {"size": "CONTENT"},
+                    "alignment": "CENTER"
+                },
                 "image": {
-                    "src": {"url": image3_url},
                     "width": 1200,
                     "height": 630
                 },
@@ -2087,6 +2126,11 @@ def html_to_ricos(html_content: str, hero_image_uri: str = None, image1_url: str
                 "disableDownload": True
             }
         }
+        # Utiliser le Wix Media ID si disponible
+        if image3_wix_id:
+            image3_node["imageData"]["image"]["src"] = {"id": image3_wix_id}
+        else:
+            image3_node["imageData"]["image"]["src"] = {"url": image3_url}
         
         # Insérer après un H2 si possible
         inserted = False

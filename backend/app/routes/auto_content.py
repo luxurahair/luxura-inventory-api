@@ -207,8 +207,8 @@ THEMED_PHOTOS = {
         "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=1200&fit=crop",  # Volume naturel
     ],
     "i-tip": [
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&h=1200&fit=crop",  # Cheveux fins
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=1200&fit=crop",  # Discret élégant
+        "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=1200&fit=crop",  # Femme cheveux longs ondulés
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=1200&fit=crop",  # Femme élégante cheveux longs
     ],
     "ponytail": [
         "https://images.unsplash.com/photo-1623594675959-02360202d4d6?w=1200&h=1200&fit=crop",  # Queue de cheval glam
