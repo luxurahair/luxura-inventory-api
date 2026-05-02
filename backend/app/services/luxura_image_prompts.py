@@ -41,6 +41,17 @@ LUXURY_LOCATIONS = {
         "Positano Italy coastline",
         "Mykonos Greece beach",
         "Bora Bora overwater",
+        # V3 - Plus de variété
+        "St. Tropez exclusive beach club",
+        "Capri Italy marina",
+        "Seychelles pristine beach",
+        "Ibiza sunset beach",
+        "Côte d'Azur glamorous bay",
+        "Caribbean turquoise waters",
+        "Bali luxury beach resort",
+        "Tulum Mexico bohemian beach",
+        "Hawaii golden sand sunset",
+        "Sardinia crystal clear waters",
     ],
     "sunset": [
         "luxury yacht deck at sunset",
@@ -49,6 +60,15 @@ LUXURY_LOCATIONS = {
         "private terrace sunset view",
         "beachfront restaurant at golden hour",
         "Monaco harbor at dusk",
+        # V3 - Plus de variété
+        "champagne terrace overlooking sea",
+        "private villa pool at sunset",
+        "desert resort at golden hour",
+        "cliffside restaurant Santorini",
+        "penthouse balcony twilight",
+        "wine country sunset terrace",
+        "lakeside villa golden hour",
+        "mountain chalet sunset view",
     ],
     "city": [
         "Paris balcony with Eiffel Tower view",
@@ -58,6 +78,17 @@ LUXURY_LOCATIONS = {
         "New York Manhattan rooftop",
         "London Mayfair elegant street",
         "Dubai Marina skyline",
+        # V3 - Plus de variété
+        "Barcelona Gothic Quarter",
+        "Vienna Opera House steps",
+        "Prague Old Town square",
+        "Amsterdam canal bridge",
+        "Los Angeles Beverly Hills",
+        "Singapore Marina Bay",
+        "Tokyo Ginza district",
+        "Sydney Harbour Bridge view",
+        "Florence Ponte Vecchio",
+        "Lisbon Alfama viewpoint",
     ],
     "nature": [
         "Lavender fields Provence France",
@@ -66,6 +97,16 @@ LUXURY_LOCATIONS = {
         "Cherry blossom garden Japan",
         "Amalfi Coast lemon grove",
         "Swiss Alps luxury chalet terrace",
+        # V3 - Plus de variété
+        "Napa Valley wine estate",
+        "English countryside manor garden",
+        "Greek olive grove",
+        "Italian cypress tree avenue",
+        "Moroccan riad garden",
+        "California palm tree paradise",
+        "Mediterranean terraced garden",
+        "Scottish Highland castle grounds",
+        "Australian rainforest retreat",
     ],
     "evening": [
         "grand hotel terrace evening",
@@ -74,6 +115,16 @@ LUXURY_LOCATIONS = {
         "opera house steps",
         "champagne bar rooftop",
         "casino Monte Carlo entrance",
+        # V3 - Plus de variété
+        "Art gallery opening night",
+        "Fashion show backstage",
+        "Exclusive nightclub entrance",
+        "Michelin restaurant interior",
+        "Private members club London",
+        "Theatre premiere red carpet",
+        "Charity gala ballroom",
+        "Yacht party deck at night",
+        "Penthouse party skyline view",
     ]
 }
 
@@ -126,6 +177,58 @@ LUXURA_HAIR_DESCRIPTIONS = [
     "voluminous glamorous hair with incredible body and natural movement",
     "full thick luxurious hair extensions with dramatic volume and bounce",
     "breathtakingly voluminous silky hair with show-stopping body and shine",
+    # V3 ULTRA-GLAMOUR - Plus de variété
+    "spectacular platinum blonde flowing mane with incredible volume and movement",
+    "rich chocolate brown cascading waves with stunning natural shine",
+    "fiery auburn hair extensions flowing dramatically in the breeze",
+    "deep espresso brown voluminous curls with Hollywood glamour",
+    "honey blonde ombre hair with beachy waves and incredible body",
+    "sleek jet black hair with mirror-like shine and dramatic length",
+    "caramel highlighted extensions with sun-kissed natural movement",
+    "dimensional balayage hair with sophisticated volume and texture",
+    "mermaid-length flowing hair with romantic soft waves",
+    "glossy chestnut hair extensions catching light beautifully",
+    "warm copper tones in thick voluminous waves",
+    "cool ash blonde hair with editorial-worthy volume",
+    "rich burgundy tinted hair with luxurious body",
+    "natural brunette extensions with effortless glamour",
+    "golden highlighted waves cascading past shoulders",
+]
+
+
+# ============================================
+# POSES ET ACTIONS VARIÉES
+# ============================================
+
+GLAMOROUS_POSES = [
+    "running fingers through her hair",
+    "hair caught in a gentle breeze",
+    "tossing hair with elegant movement",
+    "wind-swept hair moment",
+    "touching her hair softly",
+    "hair dramatically blowing",
+    "tucking hair behind ear elegantly",
+    "shaking hair with confidence",
+    "hair flowing in natural motion",
+    "holding hair up showing length",
+]
+
+
+# ============================================
+# EXPRESSIONS ET MOODS
+# ============================================
+
+MOOD_EXPRESSIONS = [
+    "mysterious confident smile",
+    "serene elegant expression",
+    "playful sophisticated look",
+    "dreamy romantic gaze",
+    "confident radiant smile",
+    "sultry mysterious expression",
+    "natural candid moment",
+    "joyful carefree mood",
+    "elegant contemplative look",
+    "passionate sensual expression",
 ]
 
 
@@ -187,8 +290,12 @@ def generate_luxura_image_prompt(
     # Sélectionner angle
     angle = random.choice(PHOTO_ANGLES)
     
-    # Construire le prompt
-    prompt = f"Real photograph of a glamorous woman {angle} at {location}, {hair}, wearing {outfit}, golden hour natural lighting, seductive elegant mood, aspirational luxury lifestyle, no text, no watermarks"
+    # V3: Ajouter pose et expression pour plus de variété
+    pose = random.choice(GLAMOROUS_POSES)
+    expression = random.choice(MOOD_EXPRESSIONS)
+    
+    # Construire le prompt avec plus de variété
+    prompt = f"Real photograph of a glamorous woman {angle} at {location}, {pose}, {hair}, wearing {outfit}, {expression}, golden hour natural lighting, seductive elegant mood, aspirational luxury lifestyle, no text, no watermarks"
     
     return prompt
 
