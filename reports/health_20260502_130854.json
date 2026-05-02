@@ -1,0 +1,246 @@
+{
+  "timestamp": "2026-05-02T13:08:54.526567+00:00",
+  "api_url": "https://luxura-inventory-api.onrender.com",
+  "tests": [
+    {
+      "id": "api_ping",
+      "name": "API Principale",
+      "category": "infrastructure",
+      "status": "ok",
+      "message": "OK",
+      "response_time_ms": 1695.7830000000001,
+      "details": {
+        "timestamp": "2026-05-02T13:08:47.040274+00:00",
+        "local_api": "ok",
+        "luxura_render_api": "ok",
+        "wix_api": "ok"
+      }
+    },
+    {
+      "id": "wix_api",
+      "name": "Wix API Connection",
+      "category": "external",
+      "status": "ok",
+      "message": "OK",
+      "response_time_ms": 1338.713,
+      "details": {
+        "timestamp": "2026-05-02T13:08:48.633460+00:00",
+        "local_api": "ok",
+        "luxura_render_api": "ok",
+        "wix_api": "ok"
+      }
+    },
+    {
+      "id": "wix_oauth",
+      "name": "Wix OAuth Status",
+      "category": "auth",
+      "status": "error",
+      "message": "HTTP 404",
+      "response_time_ms": 304.99199999999996,
+      "details": {}
+    },
+    {
+      "id": "facebook_status",
+      "name": "Facebook Connection",
+      "category": "external",
+      "status": "warning",
+      "message": "Cl\u00e9s manquantes: ['ok']",
+      "response_time_ms": 1938.922,
+      "details": {
+        "local": {
+          "configured": true,
+          "page_id": "1838415193042352",
+          "token_preview": "EAAU4dnLcR8IBROB9l6zGn4AZBtdWM...",
+          "token_valid": true,
+          "page_name": "Luxura Distribution Extension Capillaire"
+        },
+        "render": {
+          "available": false,
+          "token_valid": false,
+          "page_name": null
+        },
+        "recommendation": "\u26a0\ufe0f Token local OK, mais ajoutez les endpoints Facebook sur Render pour un contr\u00f4le permanent"
+      }
+    },
+    {
+      "id": "database",
+      "name": "Database (Supabase)",
+      "category": "infrastructure",
+      "status": "ok",
+      "message": "15 tables OK",
+      "details": {
+        "tables_count": 15,
+        "critical_tables_ok": true,
+        "missing_tables": [],
+        "wix_oauth_has_token": true,
+        "wix_oauth_has_refresh": false
+      }
+    },
+    {
+      "id": "cron_status",
+      "name": "Cron Scheduler Status",
+      "category": "scheduler",
+      "status": "ok",
+      "message": "OK",
+      "response_time_ms": 194.094,
+      "details": {
+        "scheduler_running": false,
+        "timezone": "America/Montreal",
+        "current_time": "2026-05-02T13:08:52.828622+00:00",
+        "facebook_enabled": true,
+        "wix_enabled": true,
+        "calendar_available": true,
+        "rotation_week": 2,
+        "today_category": "tutoriel",
+        "should_publish_today": true,
+        "publish_reason": "Jour de publication: Tutoriel coiffure - Styles avec extensions (cible: femmes)",
+        "weekly_schedule": [
+          {
+            "slot": 8,
+            "week": 2,
+            "day": "monday",
+            "hour": 7,
+            "category": "entretien",
+            "type": "consommateur",
+            "target": "femmes",
+            "description": "Entretien extensions - Soins et durabilit\u00e9"
+          },
+          {
+            "slot": 9,
+            "week": 2,
+            "day": "tuesday",
+            "hour": 12,
+            "category": "guide",
+            "type": "consommateur",
+            "target": "femmes",
+            "description": "Guide complet - Conseils achat et choix"
+          },
+          {
+            "slot": 10,
+            "week": 2,
+            "day": "wednesday",
+            "hour": 19,
+            "category": "occasions",
+            "type": "consommateur",
+            "target": "femmes",
+            "description": "Extensions occasions sp\u00e9ciales - Mariage, gala"
+          },
+          {
+            "slot": 11,
+            "week": 2,
+            "day": "thursday",
+            "hour": 7,
+            "category": "b2b_inventaire",
+            "type": "b2b",
+            "target": "salons",
+            "description": "Article B2B - Programme d\u00e9p\u00f4t inventaire"
+          },
+          {
+            "slot": 12,
+            "week": 2,
+            "day": "friday",
+            "hour": 12,
+            "category": "couleurs",
+            "type": "consommateur",
+            "target": "femmes",
+            "description": "Guide couleurs - Trouver sa teinte parfaite"
+          },
+          {
+            "slot": 13,
+            "week": 2,
+            "day": "saturday",
+            "hour": 10,
+            "category": "tutoriel",
+            "type": "lifestyle",
+            "target": "femmes",
+            "description": "Tutoriel coiffure - Styles avec extensions"
+          },
+          {
+            "slot": 14,
+            "week": 2,
+            "day": "sunday",
+            "hour": 20,
+            "category": "self_care",
+            "type": "lifestyle",
+            "target": "femmes",
+            "description": "Self-care beaut\u00e9 - Routine capillaire compl\u00e8te"
+          }
+        ]
+      }
+    }
+  ],
+  "crons": [
+    {
+      "id": "luxura-blog-cron",
+      "name": "Blog Wix Automatique",
+      "status": "ok",
+      "message": "Endpoint accessible",
+      "details": {
+        "schedule": "0 7,10,12,19,20 * * *",
+        "frequency": "1 blog/jour",
+        "target": "/api/blog/auto-generate"
+      }
+    },
+    {
+      "id": "luxura-inventory-sync-cron",
+      "name": "Sync Inventaire Wix",
+      "status": "ok",
+      "message": "Endpoint accessible",
+      "details": {
+        "schedule": "*/30 * * * *",
+        "frequency": "Toutes les 30 min",
+        "target": "/wix/sync"
+      }
+    },
+    {
+      "id": "luxura-content-scan",
+      "name": "Scan Contenu Magazine",
+      "status": "ok",
+      "message": "Endpoint accessible",
+      "details": {
+        "schedule": "*/15 * * * *",
+        "frequency": "Toutes les 15 min",
+        "target": "/api/content/scan"
+      }
+    },
+    {
+      "id": "facebook-product-posts",
+      "name": "Facebook Product Posts",
+      "status": "ok",
+      "message": "Endpoint accessible",
+      "details": {
+        "schedule": "0 10 * * 1-5",
+        "frequency": "Lun-Ven 10h",
+        "target": "/api/auto-content/facebook-posts"
+      }
+    },
+    {
+      "id": "facebook-educational-posts",
+      "name": "Facebook Educational Posts",
+      "status": "ok",
+      "message": "Endpoint accessible",
+      "details": {
+        "schedule": "0 14 * * 1-5",
+        "frequency": "Lun-Ven 14h",
+        "target": "/api/auto-content/facebook-posts"
+      }
+    },
+    {
+      "id": "facebook-weekend-posts",
+      "name": "Facebook Weekend Posts",
+      "status": "ok",
+      "message": "Endpoint accessible",
+      "details": {
+        "schedule": "0 11 * * 0,6",
+        "frequency": "Sam-Dim 11h",
+        "target": "/api/auto-content/facebook-posts"
+      }
+    }
+  ],
+  "repairs": [],
+  "summary": {
+    "ok": 4,
+    "warnings": 1,
+    "errors": 1
+  }
+}
