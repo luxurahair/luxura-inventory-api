@@ -7280,6 +7280,14 @@ try:
 except Exception:
     logger.exception("❌ Failed to mount wix_oauth router")
 
+# ==================== STATUS DASHBOARD ====================
+try:
+    from app.routes.status_dashboard import router as status_dashboard_router
+    app.include_router(status_dashboard_router)
+    logger.info("✅ Mounted app/routes/status_dashboard.py router (/api/status)")
+except Exception:
+    logger.exception("❌ Failed to mount status_dashboard router")
+
 
 # ==================== WIX TOKEN ROUTES (compatibilité avec anciennes versions) ====================
 
