@@ -7,9 +7,10 @@ Endpoints pour OAuth Wix avec échange de code et refresh automatique.
 import os
 import logging
 from urllib.parse import urlencode
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import httpx
+import asyncpg
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse, JSONResponse
 
@@ -99,12 +100,26 @@ async def wix_oauth_callback(request: Request):
 
                 logger.info(f"OAuth tokens received - expires_in: {expires_in}")
 
-                # Sauvegarder dans la DB
+                # Sauvegarder dans la DB directement (sans dépendre de wix_cron_service)
                 try:
-                    from wix_cron_service import save_tokens_to_db, token_cache
-                    await save_tokens_to_db(access_token, refresh_token, expires_in)
-                    token_cache.set_token(access_token, refresh_token, expires_in)
-                    logger.info("Tokens saved to DB and cache")
+                    from datetime import timedelta
+                    expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+                    
+                    db_url = os.getenv("DATABASE_URL", "").replace("postgresql+psycopg://", "postgresql://")
+                    conn = await asyncpg.connect(db_url)
+                    
+                    await conn.execute("""
+                        INSERT INTO wix_oauth (id, access_token, refresh_token, expires_at, updated_at)
+                        VALUES (1, $1, $2, $3, NOW())
+                        ON CONFLICT (id) DO UPDATE SET
+                            access_token = EXCLUDED.access_token,
+                            refresh_token = EXCLUDED.refresh_token,
+                            expires_at = EXCLUDED.expires_at,
+                            updated_at = NOW()
+                    """, access_token, refresh_token, expires_at)
+                    
+                    await conn.close()
+                    logger.info("Tokens saved to DB successfully")
                 except Exception as e:
                     logger.warning(f"Could not save tokens to DB: {e}")
 
