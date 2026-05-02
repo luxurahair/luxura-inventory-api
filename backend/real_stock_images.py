@@ -1,8 +1,10 @@
-# real_stock_images.py - V8
+# real_stock_images.py - V9
 """
 Banque d'images RÉELLES (stock photos) pour les articles techniques
 Ces images montrent de VRAIES techniques d'installation, pas des images IA
 
+V9: SUPPRESSION des images cheveux courts (photo-1580489944761, photo-1494790108377)
+    Remplacées par des images cheveux longs GARANTIS
 V8: Ajout du mode installation_halo_wire
 """
 
@@ -11,16 +13,17 @@ V8: Ajout du mode installation_halo_wire
 # =====================================================
 
 # Images de femmes avec cheveux très longs - pour résultats
+# V9: Suppression des images cheveux courts (photo-1580489944761, photo-1494790108377)
 REAL_LONG_HAIR_WOMEN = [
-    # Femmes avec cheveux très longs - Unsplash
+    # Femmes avec cheveux TRÈS LONGS GARANTIS - Unsplash
     "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",  # Femme cheveux longs ondulés
     "https://images.unsplash.com/photo-1596178060671-7a80dc8059ea?w=1200&h=630&fit=crop",  # Femme cheveux longs bruns
-    "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&h=630&fit=crop",  # Portrait cheveux longs
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=630&fit=crop",  # Femme élégante
+    "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Cheveux extra longs luxueux glamour
+    "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&h=630&fit=crop",  # Ondulations glamour cheveux longs
     "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&h=630&fit=crop",  # Cheveux longs naturels
     "https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=1200&h=630&fit=crop",  # Femme cheveux flowing
-    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&h=630&fit=crop",  # Portrait femme souriante
-    "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",  # Femme cheveux lisses
+    "https://images.unsplash.com/photo-1595959183082-7b570b7e1dfa?w=1200&h=630&fit=crop",  # Cheveux lisses parfaits longs
+    "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1200&h=630&fit=crop",  # Femme cheveux lisses longs
 ]
 
 # Images salon de coiffure - pour installations
@@ -49,11 +52,12 @@ LUXURA_LIFESTYLE_IMAGES = [
 ]
 
 # Images spécifiques Halo - pose facile à la maison
+# V9: Suppression de l'image cheveux courts (photo-1580489944761)
 REAL_HALO_HOME_IMAGES = [
-    # Femmes se préparant / devant miroir - représente la pose facile à la maison
+    # Femmes se préparant / devant miroir - représente la pose facile à la maison (CHEVEUX LONGS GARANTIS)
     "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=1200&h=630&fit=crop",
     "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=1200&h=630&fit=crop",
-    "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&h=630&fit=crop",
+    "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&h=630&fit=crop",  # Remplace cheveux courts
 ]
 
 # =====================================================
