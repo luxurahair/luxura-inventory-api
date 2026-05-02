@@ -783,34 +783,6 @@ PRODUCT_CATEGORIES = {
         ],
         "hashtags": ["#ITipExtensions", "#EleanorCollection", "#LuxuraITip"],
     },
-    "ponytail": {
-        "name": "Queue de Cheval",
-        "collection": "Victoria",
-        "description": "ponytail clip-in glamour",
-        "benefits": ["pose instantanée", "volume dramatique", "événements spéciaux"],
-        "ideal_for": "look glamour pour occasions spéciales",
-        "selfie_context": [
-            "rocking her dramatic ponytail for date night",
-            "showing off her red carpet worthy ponytail",
-            "loving her instant glamour ponytail transformation",
-            "proving a ponytail can be THIS dramatic",
-        ],
-        "hashtags": ["#PonytailExtensions", "#VictoriaCollection", "#LuxuraPonytail"],
-    },
-    "clip-in": {
-        "name": "Extensions à Clips",
-        "collection": "Sophia",
-        "description": "extensions clips amovibles",
-        "benefits": ["aucun engagement", "versatile", "weekend glamour", "DIY facile"],
-        "ideal_for": "transformation occasionnelle sans engagement",
-        "selfie_context": [
-            "clip-ins in for the weekend vibes",
-            "showing her DIY clip-in transformation",
-            "loving how easy clip-ins are for special occasions",
-            "weekend hair don't care with her clip-ins",
-        ],
-        "hashtags": ["#ClipInExtensions", "#SophiaCollection", "#LuxuraClips"],
-    },
 }
 
 # Couleurs de cheveux pour matcher les produits
@@ -882,7 +854,7 @@ def generate_product_selfie_prompt(
     Génère un prompt selfie pour un produit spécifique.
     
     Args:
-        category: genius, tape, halo, i-tip, ponytail, clip-in
+        category: genius, tape, halo, i-tip
         hair_color_type: blonde, brunette, black, auburn, ombre
         selfie_type: mirror, car, outdoor, event, casual
     
