@@ -91,7 +91,8 @@ HEALTH_CHECKS = [
         "category": "external",
         "endpoint": "/api/facebook/status",
         "method": "GET",
-        "expected_keys": ["ok"],
+        "expected_keys": ["local"],
+        "check_nested": {"path": "local.token_valid", "value": True},
         "critical": False,
     },
     {
@@ -218,7 +219,7 @@ async def test_endpoint(check: Dict) -> Dict:
                         result["status"] = "ok"
                         result["message"] = "OK"
                 
-                # Vérifier la valeur attendue
+                # Vérifier la valeur attendue (simple)
                 if "expected_value" in check:
                     ev = check["expected_value"]
                     if data.get(ev["key"]) != ev["value"]:
@@ -227,6 +228,28 @@ async def test_endpoint(check: Dict) -> Dict:
                     else:
                         result["status"] = "ok"
                         result["message"] = "OK"
+                
+                # Vérifier valeur imbriquée (ex: local.token_valid)
+                if "check_nested" in check:
+                    nested = check["check_nested"]
+                    path = nested["path"].split(".")
+                    expected = nested["value"]
+                    
+                    # Parcourir le chemin
+                    current = data
+                    for key in path:
+                        if isinstance(current, dict) and key in current:
+                            current = current[key]
+                        else:
+                            current = None
+                            break
+                    
+                    if current == expected:
+                        result["status"] = "ok"
+                        result["message"] = f"{nested['path']} = {current} ✓"
+                    else:
+                        result["status"] = "error"
+                        result["message"] = f"{nested['path']} = {current} (attendu: {expected})"
                 
                 if result["status"] == "unknown":
                     result["status"] = "ok"
