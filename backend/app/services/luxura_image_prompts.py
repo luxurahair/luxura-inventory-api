@@ -722,6 +722,344 @@ def get_contextual_prompt(title: str, content: str = "") -> str:
 
 
 # ============================================
+# 📱 SELFIES PRODUITS LUXURA - AVEC LIENS CLIQUABLES
+# Pour annonces des vraies catégories de produits
+# ============================================
+
+PRODUCT_CATEGORIES = {
+    "genius": {
+        "name": "Genius Weft",
+        "collection": "Vivian",
+        "description": "extensions weft cousues ultra-plates",
+        "benefits": ["invisibles", "légères", "volume naturel", "installation rapide"],
+        "ideal_for": "volume maximal sans poids",
+        "selfie_context": [
+            "showing off her new voluminous weft extensions",
+            "flipping her thick gorgeous hair from genius weft",
+            "running fingers through her incredibly full hair",
+            "showing the seamless blend of her new weft extensions",
+        ],
+        "hashtags": ["#GeniusWeft", "#VolumeMaximal", "#LuxuraGenius"],
+    },
+    "tape": {
+        "name": "Tape Extensions", 
+        "collection": "Aurora",
+        "description": "extensions adhésives ultra-discrètes",
+        "benefits": ["pose rapide 45min", "réutilisables", "indétectables", "confortables"],
+        "ideal_for": "discrétion absolue et confort quotidien",
+        "selfie_context": [
+            "revealing her secret tape-in extensions",
+            "showing how invisible her tape extensions are",
+            "flaunting her natural-looking tape-in transformation",
+            "proving tape extensions are undetectable",
+        ],
+        "hashtags": ["#TapeExtensions", "#AuroraCollection", "#LuxuraTape"],
+    },
+    "halo": {
+        "name": "Halo Extensions",
+        "collection": "Everly", 
+        "description": "extensions fil invisible sans clips",
+        "benefits": ["pose 60 secondes", "aucun dommage", "réversible", "facile"],
+        "ideal_for": "transformation instantanée sans engagement",
+        "selfie_context": [
+            "after putting on her Halo in just 60 seconds",
+            "showing her instant hair transformation with Halo",
+            "loving her damage-free Halo extensions",
+            "proving anyone can have long hair in a minute",
+        ],
+        "hashtags": ["#HaloExtensions", "#60Secondes", "#LuxuraHalo"],
+    },
+    "i-tip": {
+        "name": "I-Tip Extensions",
+        "collection": "Eleanor",
+        "description": "extensions kératine micro-anneaux",
+        "benefits": ["durée 4-6 mois", "mouvement naturel", "sans chaleur", "premium"],
+        "ideal_for": "résultat longue durée haut de gamme",
+        "selfie_context": [
+            "4 months into her I-Tip journey still looking perfect",
+            "showing the natural movement of her I-Tip extensions",
+            "flaunting her premium keratin bond extensions",
+            "loving how her I-Tips move like real hair",
+        ],
+        "hashtags": ["#ITipExtensions", "#EleanorCollection", "#LuxuraITip"],
+    },
+    "ponytail": {
+        "name": "Queue de Cheval",
+        "collection": "Victoria",
+        "description": "ponytail clip-in glamour",
+        "benefits": ["pose instantanée", "volume dramatique", "événements spéciaux"],
+        "ideal_for": "look glamour pour occasions spéciales",
+        "selfie_context": [
+            "rocking her dramatic ponytail for date night",
+            "showing off her red carpet worthy ponytail",
+            "loving her instant glamour ponytail transformation",
+            "proving a ponytail can be THIS dramatic",
+        ],
+        "hashtags": ["#PonytailExtensions", "#VictoriaCollection", "#LuxuraPonytail"],
+    },
+    "clip-in": {
+        "name": "Extensions à Clips",
+        "collection": "Sophia",
+        "description": "extensions clips amovibles",
+        "benefits": ["aucun engagement", "versatile", "weekend glamour", "DIY facile"],
+        "ideal_for": "transformation occasionnelle sans engagement",
+        "selfie_context": [
+            "clip-ins in for the weekend vibes",
+            "showing her DIY clip-in transformation",
+            "loving how easy clip-ins are for special occasions",
+            "weekend hair don't care with her clip-ins",
+        ],
+        "hashtags": ["#ClipInExtensions", "#SophiaCollection", "#LuxuraClips"],
+    },
+}
+
+# Couleurs de cheveux pour matcher les produits
+PRODUCT_HAIR_COLORS = {
+    "blonde": ["Platine Pur #60A", "Champagne Doré #18/22", "Blond Balayage Doré", "Cendré Étoilé"],
+    "brunette": ["Châtaigne Douce #3", "Chocolat Profond", "Caramel Doré #6", "Noisette Balayage"],
+    "black": ["Onyx Noir #1", "Noir Soie #1B", "Noir Jet Black"],
+    "auburn": ["Caramel Soleil", "Golden Hour", "Cuivré Oriental"],
+    "ombre": ["Ombré Balayage", "Cachemire Oriental", "Cristal Polaire"],
+}
+
+# Contextes selfie glamour
+SELFIE_CONTEXTS = {
+    "mirror": [
+        "taking a mirror selfie in her luxurious bathroom",
+        "mirror selfie showing her new hair transformation",
+        "bathroom vanity mirror selfie revealing gorgeous hair",
+        "full-length mirror selfie flaunting her new look",
+    ],
+    "car": [
+        "car selfie with perfect lighting showing her hair",
+        "driving seat selfie with hair cascading over shoulder",
+        "golden hour car selfie with stunning hair",
+    ],
+    "outdoor": [
+        "outdoor selfie with wind in her beautiful hair",
+        "terrasse selfie with hair glowing in sunset",
+        "balcony selfie showing her glamorous mane",
+    ],
+    "event": [
+        "getting ready selfie before her big night out",
+        "pre-event selfie showing her special occasion hair",
+        "date night ready selfie with perfect hair",
+    ],
+    "casual": [
+        "casual cozy selfie with gorgeous flowing hair",
+        "morning coffee selfie with effortlessly beautiful hair",
+        "work from home selfie still looking glamorous",
+    ],
+}
+
+# Expressions selfie
+SELFIE_EXPRESSIONS = [
+    "confident smile showing off her transformation",
+    "sultry look into camera with hair framing face",
+    "playful hair flip captured mid-motion",
+    "serene confident gaze with perfect hair",
+    "joyful candid moment touching her new hair",
+    "mysterious half-smile with hair draped sensually",
+    "proud confident expression showing results",
+]
+
+# Angles selfie
+SELFIE_ANGLES = [
+    "front-facing selfie angle",
+    "slightly angled showing hair length",
+    "side profile selfie showing volume",
+    "looking over shoulder selfie",
+    "hair flip action shot selfie",
+]
+
+
+def generate_product_selfie_prompt(
+    category: str,
+    hair_color_type: str = None,
+    selfie_type: str = None,
+) -> dict:
+    """
+    Génère un prompt selfie pour un produit spécifique.
+    
+    Args:
+        category: genius, tape, halo, i-tip, ponytail, clip-in
+        hair_color_type: blonde, brunette, black, auburn, ombre
+        selfie_type: mirror, car, outdoor, event, casual
+    
+    Returns:
+        dict avec prompt, product_info, hashtags, caption_template
+    """
+    if category not in PRODUCT_CATEGORIES:
+        category = random.choice(list(PRODUCT_CATEGORIES.keys()))
+    
+    product = PRODUCT_CATEGORIES[category]
+    
+    # Sélectionner couleur de cheveux
+    if hair_color_type is None:
+        hair_color_type = random.choice(list(PRODUCT_HAIR_COLORS.keys()))
+    hair_color = random.choice(PRODUCT_HAIR_COLORS.get(hair_color_type, PRODUCT_HAIR_COLORS["brunette"]))
+    
+    # Sélectionner type de selfie
+    if selfie_type is None:
+        selfie_type = random.choice(list(SELFIE_CONTEXTS.keys()))
+    selfie_context = random.choice(SELFIE_CONTEXTS[selfie_type])
+    
+    # Contexte produit spécifique
+    product_context = random.choice(product["selfie_context"])
+    
+    # Expression et angle
+    expression = random.choice(SELFIE_EXPRESSIONS)
+    angle = random.choice(SELFIE_ANGLES)
+    
+    # Construire le prompt
+    prompt = f"Real photograph selfie of a gorgeous sensual woman {selfie_context}, {product_context}, {angle}, beautiful {hair_color_type} hair in shade {hair_color}, {expression}, iPhone quality natural selfie lighting, authentic social media style, glamorous yet relatable, no heavy filters, no text, no watermarks"
+    
+    # Template de caption pour les réseaux sociaux
+    caption_templates = [
+        f"Obsédée par mes nouvelles {product['name']} 😍 Collection {product['collection']} en {hair_color}! {' '.join(product['hashtags'])} #Luxura",
+        f"Le secret de mes cheveux? {product['name']} {product['collection']} 💁‍♀️ {product['benefits'][0].capitalize()}! {' '.join(product['hashtags'])}",
+        f"Transformation: AVANT vs APRÈS 🔥 Merci {product['name']}! {' '.join(product['hashtags'])} #TransformationCapillaire",
+        f"Mon chum: \"T'as fait quoi à tes cheveux?!\" Moi: \"😏\" {' '.join(product['hashtags'])} #Luxura",
+        f"60 secondes. C'est tout ce que ça prend. 💫 {product['name']} {product['collection']} {' '.join(product['hashtags'])}",
+    ]
+    
+    return {
+        "prompt": prompt,
+        "category": category,
+        "product_name": product["name"],
+        "collection": product["collection"],
+        "hair_color": hair_color,
+        "hair_color_type": hair_color_type,
+        "benefits": product["benefits"],
+        "ideal_for": product["ideal_for"],
+        "hashtags": product["hashtags"],
+        "caption": random.choice(caption_templates),
+        "product_link": f"/products?category={category}",
+        "cta": f"Découvrez la collection {product['collection']} →",
+    }
+
+
+def generate_all_category_selfies() -> list:
+    """
+    Génère un selfie pour chaque catégorie de produits.
+    Utile pour créer une campagne complète.
+    """
+    selfies = []
+    for category in PRODUCT_CATEGORIES.keys():
+        selfie = generate_product_selfie_prompt(category)
+        selfies.append(selfie)
+    return selfies
+
+
+def get_product_selfie_for_ad(category: str, color_preference: str = None) -> dict:
+    """
+    Génère un selfie optimisé pour une publicité avec lien cliquable.
+    
+    Returns dict avec:
+    - prompt: pour générer l'image
+    - ad_copy: texte publicitaire
+    - cta_button: texte du bouton
+    - landing_url: URL de destination
+    """
+    selfie = generate_product_selfie_prompt(category, color_preference)
+    
+    product = PRODUCT_CATEGORIES[category]
+    
+    ad_copies = [
+        f"✨ {product['name']} Collection {product['collection']}\n\n{product['ideal_for'].capitalize()}.\n\n💫 {' • '.join(product['benefits'][:3])}\n\n👇 Cliquez pour découvrir votre teinte parfaite",
+        f"🔥 NOUVEAU: {product['name']}\n\nLe secret des cheveux de rêve?\nCollection {product['collection']} - {selfie['hair_color']}\n\n{product['benefits'][0].capitalize()} | {product['benefits'][1].capitalize()}\n\n💁‍♀️ Trouvez votre match parfait →",
+        f"Elle a dit OUI aux {product['name']} 💍\n\nCollection {product['collection']} en {selfie['hair_color']}\n\n✅ {product['benefits'][0]}\n✅ {product['benefits'][1]}\n✅ {product['benefits'][2]}\n\n🛒 Découvrez maintenant",
+    ]
+    
+    return {
+        "prompt": selfie["prompt"],
+        "ad_copy": random.choice(ad_copies),
+        "cta_button": f"Voir {product['name']} →",
+        "landing_url": f"https://luxuradistribution.com/products?category={category}",
+        "category": category,
+        "collection": product["collection"],
+        "hashtags": selfie["hashtags"],
+        "price_range": "À partir de 199$",
+    }
+
+
+# ============================================
+# 📊 TEMPLATES POSTS PRODUITS POUR RÉSEAUX SOCIAUX
+# ============================================
+
+SOCIAL_MEDIA_TEMPLATES = {
+    "instagram_post": {
+        "format": "square",
+        "template": """
+{selfie_prompt}
+
+---
+CAPTION:
+{caption}
+
+HASHTAGS:
+{hashtags}
+
+CTA: Lien en bio 👆 ou DM pour commander
+""",
+    },
+    "facebook_ad": {
+        "format": "landscape",
+        "template": """
+{selfie_prompt}
+
+---
+AD COPY:
+{ad_copy}
+
+BUTTON: {cta_button}
+URL: {landing_url}
+""",
+    },
+    "story": {
+        "format": "vertical",
+        "template": """
+{selfie_prompt}, vertical 9:16 format for Instagram story
+
+---
+OVERLAY TEXT: "{product_name} 🔥"
+SWIPE UP: {landing_url}
+""",
+    },
+}
+
+
+def generate_social_media_post(category: str, platform: str = "instagram_post") -> dict:
+    """
+    Génère un post complet pour les réseaux sociaux.
+    
+    Args:
+        category: catégorie de produit
+        platform: instagram_post, facebook_ad, story
+    
+    Returns:
+        dict avec prompt, caption, hashtags, etc.
+    """
+    selfie = generate_product_selfie_prompt(category)
+    ad_data = get_product_selfie_for_ad(category)
+    
+    template = SOCIAL_MEDIA_TEMPLATES.get(platform, SOCIAL_MEDIA_TEMPLATES["instagram_post"])
+    
+    return {
+        "platform": platform,
+        "format": template["format"],
+        "prompt": selfie["prompt"],
+        "caption": selfie["caption"],
+        "hashtags": " ".join(selfie["hashtags"]),
+        "ad_copy": ad_data["ad_copy"],
+        "cta_button": ad_data["cta_button"],
+        "landing_url": ad_data["landing_url"],
+        "product_name": selfie["product_name"],
+        "collection": selfie["collection"],
+    }
+
+
+# ============================================
 # TEST
 # ============================================
 
@@ -746,3 +1084,16 @@ if __name__ == "__main__":
     print("\n--- EXEMPLES TITRES BLOG ---")
     for _ in range(5):
         print(f"• {generate_blog_title()}")
+    
+    print("\n" + "=" * 70)
+    print("📱 SELFIES PRODUITS LUXURA")
+    print("=" * 70)
+    
+    for category in ["genius", "tape", "halo", "i-tip"]:
+        selfie = generate_product_selfie_prompt(category)
+        print(f"\n🏷️ {selfie['product_name']} ({selfie['collection']})")
+        print(f"   Couleur: {selfie['hair_color']}")
+        print(f"   Prompt: {selfie['prompt'][:150]}...")
+        print(f"   Caption: {selfie['caption']}")
+        print(f"   Lien: {selfie['product_link']}")
+
