@@ -7272,6 +7272,13 @@ try:
 except Exception:
     logger.exception("❌ Failed to mount grok router")
 
+# ==================== WIX OAUTH ROUTES ====================
+try:
+    from app.routes.wix_oauth import router as wix_oauth_router
+    app.include_router(wix_oauth_router)
+    logger.info("✅ Mounted app/routes/wix_oauth.py router (/wix/oauth)")
+except Exception:
+    logger.exception("❌ Failed to mount wix_oauth router")
 
 
 # ==================== WIX TOKEN ROUTES (compatibilité avec anciennes versions) ====================
