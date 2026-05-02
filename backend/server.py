@@ -5655,6 +5655,167 @@ async def refresh_wix_token_endpoint():
         logger.error(f"Error refreshing Wix token: {e}")
         return {"ok": False, "error": str(e)}
 
+
+# ==================== WIX OAUTH FLOW ====================
+
+@api_router.get("/wix/oauth/start")
+async def start_wix_oauth():
+    """
+    Démarre le flux OAuth Wix pour obtenir un refresh_token.
+    Redirige vers la page d'autorisation Wix.
+    
+    Étapes:
+    1. Appeler cet endpoint
+    2. Vous serez redirigé vers Wix pour autoriser l'app
+    3. Wix vous redirige vers /api/wix/oauth/callback avec un code
+    4. Le callback échange le code contre un access_token + refresh_token
+    """
+    wix_client_id = os.getenv("WIX_CLIENT_ID", "")
+    wix_redirect_url = os.getenv("WIX_REDIRECT_URL", f"{os.getenv('RENDER_SERVICE_URL', 'http://localhost:8001')}/api/wix/oauth/callback")
+    
+    if not wix_client_id:
+        return {"ok": False, "error": "WIX_CLIENT_ID not configured"}
+    
+    # URL d'autorisation Wix OAuth
+    # https://dev.wix.com/api/rest/getting-started/authentication
+    auth_url = (
+        f"https://www.wix.com/installer/install"
+        f"?appId={wix_client_id}"
+        f"&redirectUrl={wix_redirect_url}"
+        f"&token=APP_TOKEN"  # Wix remplacera par le vrai token
+    )
+    
+    return {
+        "ok": True,
+        "message": "Cliquez sur le lien ci-dessous pour autoriser l'application Wix",
+        "auth_url": auth_url,
+        "redirect_url": wix_redirect_url,
+        "instructions": [
+            "1. Cliquez sur le lien auth_url",
+            "2. Connectez-vous à Wix si nécessaire",
+            "3. Autorisez l'application",
+            "4. Vous serez redirigé vers /api/wix/oauth/callback",
+            "5. Le refresh_token sera automatiquement sauvegardé"
+        ]
+    }
+
+
+@api_router.get("/wix/oauth/callback")
+async def wix_oauth_callback(code: str = None, instanceId: str = None, state: str = None):
+    """
+    Callback OAuth Wix - échange le code contre un access_token + refresh_token.
+    Cet endpoint est appelé automatiquement par Wix après l'autorisation.
+    """
+    import httpx
+    
+    logger.info(f"Wix OAuth callback received - code: {code[:20] if code else 'None'}..., instanceId: {instanceId}")
+    
+    if not code:
+        return {"ok": False, "error": "No authorization code received"}
+    
+    wix_client_id = os.getenv("WIX_CLIENT_ID", "")
+    wix_client_secret = os.getenv("WIX_CLIENT_SECRET", "")
+    
+    if not wix_client_id or not wix_client_secret:
+        return {"ok": False, "error": "WIX_CLIENT_ID or WIX_CLIENT_SECRET not configured"}
+    
+    try:
+        # Échanger le code contre des tokens
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "https://www.wixapis.com/oauth2/token",
+                headers={"Content-Type": "application/json"},
+                json={
+                    "grant_type": "authorization_code",
+                    "client_id": wix_client_id,
+                    "client_secret": wix_client_secret,
+                    "code": code
+                }
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                access_token = data.get("access_token")
+                refresh_token = data.get("refresh_token")
+                expires_in = data.get("expires_in", 3600)
+                
+                logger.info(f"OAuth tokens received - expires_in: {expires_in}")
+                
+                # Sauvegarder dans la DB
+                from wix_cron_service import save_tokens_to_db, token_cache
+                await save_tokens_to_db(access_token, refresh_token, expires_in)
+                token_cache.set_token(access_token, refresh_token, expires_in)
+                
+                return {
+                    "ok": True,
+                    "message": "✅ Wix OAuth configuré avec succès!",
+                    "has_access_token": bool(access_token),
+                    "has_refresh_token": bool(refresh_token),
+                    "expires_in_hours": expires_in // 3600,
+                    "auto_renewal": "Le token sera renouvelé automatiquement via le cron"
+                }
+            else:
+                error = f"Wix OAuth token exchange failed: {response.status_code} - {response.text}"
+                logger.error(error)
+                return {"ok": False, "error": error}
+                
+    except Exception as e:
+        logger.error(f"OAuth callback error: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+@api_router.get("/wix/oauth/status")
+async def wix_oauth_status():
+    """
+    Vérifie le statut du token Wix OAuth.
+    """
+    import asyncpg
+    
+    try:
+        db_url = os.getenv("DATABASE_URL", "").replace("postgresql+psycopg://", "postgresql://")
+        conn = await asyncpg.connect(db_url)
+        
+        row = await conn.fetchrow("SELECT * FROM wix_oauth WHERE id = 1")
+        await conn.close()
+        
+        if row:
+            from datetime import datetime, timezone
+            expires_at = row['expires_at']
+            now = datetime.now(timezone.utc)
+            
+            if expires_at:
+                is_valid = expires_at > now
+                time_remaining = expires_at - now if is_valid else None
+            else:
+                is_valid = False
+                time_remaining = None
+            
+            return {
+                "ok": True,
+                "has_access_token": bool(row['access_token']),
+                "has_refresh_token": bool(row['refresh_token']),
+                "expires_at": expires_at.isoformat() if expires_at else None,
+                "is_valid": is_valid,
+                "time_remaining": str(time_remaining) if time_remaining else "EXPIRÉ",
+                "updated_at": row['updated_at'].isoformat() if row['updated_at'] else None,
+                "can_auto_renew": bool(row['refresh_token']),
+                "action_needed": "Aucune" if (is_valid and row['refresh_token']) else (
+                    "Appeler /api/wix/oauth/start pour configurer OAuth" if not row['refresh_token'] 
+                    else "Appeler /api/wix/token/refresh pour renouveler"
+                )
+            }
+        else:
+            return {
+                "ok": False,
+                "error": "Aucun token configuré",
+                "action_needed": "Appeler /api/wix/oauth/start pour configurer OAuth"
+            }
+            
+    except Exception as e:
+        logger.error(f"OAuth status error: {e}")
+        return {"ok": False, "error": str(e)}
+
+
 # ==================== WIX INVENTORY SYNC ====================
 # NOTE: The real sync is now handled by app/routes/wix.py mounted at /wix/*
 # These routes under /api/* are kept for backwards compatibility
