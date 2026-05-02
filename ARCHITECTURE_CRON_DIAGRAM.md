@@ -109,15 +109,17 @@
 ║  │                                                                                  │    ║
 ║  │   TOKEN              │ STOCKAGE         │ EXPIRATION    │ RENOUVELLEMENT        │    ║
 ║  │   ═══════════════════╪══════════════════╪═══════════════╪════════════════════   │    ║
-║  │   WIX_API_KEY        │ .secrets.env     │ 14 jours      │ /wix/oauth/start      │    ║
+║  │   WIX_API_KEY        │ DB wix_oauth     │ 14 jours      │ AUTO via cron         │    ║
 ║  │   FB_PAGE_ACCESS     │ .secrets.env     │ ~60 jours     │ Manuel (Graph API)    │    ║
 ║  │   OPENAI_API_KEY     │ .secrets.env     │ Jamais        │ N/A                   │    ║
 ║  │   XAI_API_KEY        │ .secrets.env     │ Jamais        │ N/A                   │    ║
 ║  │   DATABASE_URL       │ .secrets.env     │ Jamais        │ N/A                   │    ║
 ║  │                                                                                  │    ║
-║  │   ⚠️  STATUT ACTUEL:                                                            │    ║
-║  │   • WIX OAuth: Token valide, expire dans 13 jours, PAS de refresh_token         │    ║
-║  │   • Action: Aller sur /wix/oauth/start pour activer auto-renouvellement         │    ║
+║  │   ✅ OAUTH WIX AUTO-RENOUVELLEMENT (Implémenté 2026-05):                         │    ║
+║  │   • Cron: scripts/token_refresh_cron.py (quotidien)                              │    ║
+║  │   • Endpoints: /api/wix/oauth/start & /callback                                  │    ║
+║  │   • Stockage: Table wix_oauth (access_token, refresh_token, expires_at)          │    ║
+║  │   • Le refresh se fait automatiquement avant expiration                          │    ║
 ║  └─────────────────────────────────────────────────────────────────────────────────┘    ║
 ║                                                                                          ║
 ╚══════════════════════════════════════════════════════════════════════════════════════════╝

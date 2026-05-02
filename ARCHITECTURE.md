@@ -410,18 +410,48 @@ curl https://luxura-inventory-api.onrender.com/facebook/test
 
 ### Tâches Cron
 
-| Tâche | Fréquence | Description |
-|-------|-----------|-------------|
-| Blog generation | Selon calendrier | Génère brouillons |
-| Render ping | 5 min | Garde API éveillée |
-| Wix token refresh | 3h | Renouvelle OAuth |
+| Tâche | Fréquence | Description | Start Command |
+|-------|-----------|-------------|---------------|
+| luxura-blog-cron | Selon calendrier | Génère 1 blog/jour | `python scripts/blog_cron.py` |
+| luxura-inventory-sync-cron | */30 * * * * | Sync inventaire Wix | `python scripts/sync_wix_to_luxura.py` |
+| luxura-content-scan | */15 * * * * | Scan RSS magazines | `python scripts/content_scan.py` |
+| luxura-token-refresh | 0 6 * * * | Renouvelle tokens | `python scripts/token_refresh_cron.py` |
+| Facebook Product Posts | 0 10 * * 1-5 | Posts produits | `python scripts/facebook_cron.py --type product` |
+| Facebook Educational | 0 14 * * 1-5 | Posts éducatifs | `python scripts/facebook_cron.py --type educational` |
+| Facebook Weekend | 0 11 * * 0,6 | Posts weekend | `python scripts/facebook_cron.py --type lifestyle` |
+
+### 📊 Dashboard Monitoring
+
+**URLs de monitoring:**
+- **Dashboard HTML (live):** https://luxura-inventory-api.onrender.com/api/status/dashboard
+- **API JSON:** https://luxura-inventory-api.onrender.com/api/status/live
+- **App Mobile:** Admin → Status Monitoring
+
+**Scripts de diagnostic:**
+```bash
+# Test complet avec auto-repair
+python scripts/health_monitor.py --repair --email
+
+# Diagramme de connexions
+python scripts/connection_diagram.py
+
+# Vérification token
+python scripts/token_refresh_cron.py
+```
 
 ### Tokens à surveiller
 
-| Token | Expiration | Renouvellement |
-|-------|------------|----------------|
-| Wix OAuth | 14 jours | Auto via cron |
-| Facebook Page | ~60 jours | Manuel via Graph Explorer |
+| Token | Expiration | Renouvellement | Status Endpoint |
+|-------|------------|----------------|-----------------|
+| Wix OAuth | 14 jours | Auto via cron ou /wix/oauth/start | /wix/oauth/status |
+| Facebook Page | ~60 jours | Manuel via Graph Explorer | /api/facebook/status |
+
+### ⚠️ Alertes automatiques
+
+Le système envoie des emails à `info@luxuradistribution.com` dans les cas suivants:
+- Token Wix expire dans moins de 3 jours
+- Erreur critique détectée par le health monitor
+- Échec d'un cron important
 
 ---
 
@@ -433,4 +463,4 @@ curl https://luxura-inventory-api.onrender.com/facebook/test
 
 ---
 
-*Dernière mise à jour: Avril 2025*
+*Dernière mise à jour: Mai 2026*
