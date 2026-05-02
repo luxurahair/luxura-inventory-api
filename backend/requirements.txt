@@ -134,3 +134,4 @@ asyncpg==0.31.0
 # Build trigger: 1776996296
 # Build trigger: 1777728872 - Force Render to rebuild with wix_oauth router
 psycopg-binary==3.2.0
+psycopg==3.2.0
