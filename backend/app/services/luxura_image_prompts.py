@@ -1,458 +1,684 @@
 """
-🏖️ LUXURA IMAGE PROMPT RULES v2
-================================
+🏖️ LUXURA IMAGE PROMPT RULES v4 - QUEBEC EDITION
+==================================================
 Règles centralisées pour toutes les générations d'images Luxura.
 Appliquées à tous les crons et services.
 
-STYLE: Glamour, sensuel, élégant avec focus sur cheveux extensions longs volumineux.
+V4 NOUVEAUTÉS:
+- Détection automatique des SAISONS (pas de neige au printemps!)
+- Lieux QUÉBEC/CANADA prioritaires
+- Styles plus SENSUELS et SEXY
+- Diversité ethnique et artistique
+- Photos éditoriales variées
+
+STYLE: Glamour, sensuel, élégant, SEXY avec focus sur cheveux extensions longs volumineux.
 """
 
 import random
+from datetime import datetime
 
 
 # ============================================
-# RÈGLES DE BASE LUXURA
+# 🗓️ DÉTECTION AUTOMATIQUE DES SAISONS
+# ============================================
+
+def get_current_season() -> str:
+    """
+    Détecte la saison actuelle au Québec.
+    Retourne: 'winter', 'spring', 'summer', 'fall'
+    """
+    month = datetime.now().month
+    
+    # Saisons Québec (climat nordique)
+    if month in [12, 1, 2]:
+        return "winter"
+    elif month in [3, 4, 5]:
+        return "spring"
+    elif month in [6, 7, 8]:
+        return "summer"
+    else:  # 9, 10, 11
+        return "fall"
+
+
+def get_seasonal_context() -> dict:
+    """
+    Retourne le contexte saisonnier complet pour les prompts.
+    """
+    season = get_current_season()
+    month = datetime.now().month
+    
+    contexts = {
+        "winter": {
+            "season": "winter",
+            "weather": ["snowy", "cold elegant", "cozy chic", "frosty glamour"],
+            "clothing_style": ["luxurious fur coat", "elegant cashmere", "chic wool ensemble", "designer winter coat with fur trim"],
+            "locations_priority": ["ski_resort", "city_winter", "cozy_luxury"],
+            "mood": ["warm intimate", "cozy glamour", "winter wonderland elegance"],
+            "avoid": ["beach", "swimsuit", "summer dress", "tropical"],
+            "holidays": ["Christmas glamour", "New Year's Eve", "Valentine's romantic"] if month in [12, 1, 2] else [],
+        },
+        "spring": {
+            "season": "spring",
+            "weather": ["blooming", "fresh", "renewal", "soft light"],
+            "clothing_style": ["light elegant dress", "chic trench coat", "floral designer dress", "pastel silk blouse"],
+            "locations_priority": ["city_spring", "garden", "nature_spring"],
+            "mood": ["fresh romantic", "renewal energy", "blooming beauty"],
+            "avoid": ["heavy winter coat", "snow", "Christmas"],
+            "holidays": ["Easter elegance", "Mother's Day"] if month in [4, 5] else [],
+        },
+        "summer": {
+            "season": "summer",
+            "weather": ["sunny", "warm", "golden", "tropical heat"],
+            "clothing_style": ["elegant bikini", "flowing summer dress", "chic sundress", "designer swimwear", "silk maxi dress"],
+            "locations_priority": ["beach", "yacht", "rooftop", "quebec_summer"],
+            "mood": ["hot sensual", "beach glamour", "summer paradise", "sexy vacation"],
+            "avoid": ["winter coat", "snow", "Christmas", "heavy clothing"],
+            "holidays": ["Festival season", "Summer vacation", "Saint-Jean-Baptiste"] if month in [6, 7] else [],
+        },
+        "fall": {
+            "season": "fall",
+            "weather": ["golden leaves", "crisp air", "warm tones", "cozy autumn"],
+            "clothing_style": ["elegant sweater dress", "chic leather jacket", "designer fall outfit", "cashmere wrap"],
+            "locations_priority": ["vineyard", "city_fall", "nature_fall", "quebec_fall"],
+            "mood": ["cozy sensual", "autumn romance", "harvest glamour"],
+            "avoid": ["swimsuit", "beach", "heavy snow"],
+            "holidays": ["Thanksgiving glamour", "Halloween chic"] if month in [10, 11] else [],
+        }
+    }
+    
+    return contexts[season]
+
+
+# ============================================
+# RÈGLES DE BASE LUXURA - V4 SEXY
 # ============================================
 
 LUXURA_IMAGE_RULES = """
-RÈGLES CRITIQUES - STYLE LUXURA EXTENSIONS:
-1. Commence TOUJOURS par "Real photograph of a glamorous woman"
-2. ANGLE: 3/4 back view OU semi-profile OU looking over shoulder - pour montrer les cheveux
+RÈGLES CRITIQUES - STYLE LUXURA SEXY GLAMOUR:
+1. Commence TOUJOURS par "Real photograph of a sensual glamorous woman"
+2. ANGLE: 3/4 back view OU semi-profile OU looking over shoulder - pour montrer les cheveux ET silhouette
 3. CHEVEUX LUXURA: Long (past shoulders to mid-back), voluminous, flowing, silky hair extensions
 4. Les cheveux doivent être LE FOCUS principal - en mouvement naturel
 5. LUMIÈRE: Golden hour, sunset, natural sunlight highlighting the hair shine
-6. AMBIANCE: Glamorous, seductive, feminine, aspirational but natural
-7. Sensuelle mais élégante (jamais vulgaire)
+6. AMBIANCE: Glamorous, SEDUCTIVE, SENSUAL, feminine, aspirational but classy
+7. SENSUELLE ET SEXY mais élégante (jamais vulgaire, toujours classe)
 8. NO text, NO watermarks, NO logos in image
+9. Peau lisse et bronzée, corps féminin mis en valeur de façon élégante
 """
 
 
 # ============================================
-# DÉCORS LUXUEUX VARIÉS
+# 🍁 LIEUX QUÉBEC/CANADA - PRIORITÉ HAUTE
+# ============================================
+
+QUEBEC_CANADA_LOCATIONS = {
+    "summer": [
+        "Old Montreal cobblestone terrace at sunset",
+        "Mont-Tremblant luxury resort by the lake",
+        "Charlevoix boutique hotel terrace overlooking St. Lawrence",
+        "Quebec City Château Frontenac terrace",
+        "Laurentian Mountains luxury spa deck",
+        "Toronto Yorkville rooftop at golden hour",
+        "Vancouver waterfront luxury restaurant",
+        "Muskoka lakeside luxury cottage dock",
+        "Prince Edward County vineyard sunset",
+        "Niagara-on-the-Lake wine estate",
+        "Whistler summer resort terrace",
+        "Halifax waterfront at sunset",
+        "Îles-de-la-Madeleine pristine beach",
+        "Tadoussac whale watching lodge terrace",
+    ],
+    "fall": [
+        "Mont-Tremblant fall foliage luxury resort",
+        "Charlevoix autumn colors vineyard",
+        "Quebec City Plains of Abraham golden leaves",
+        "Laurentian Mountains autumn panorama",
+        "Old Montreal fall terrace with maple leaves",
+        "Niagara wine region harvest season",
+        "Ottawa Parliament Hill autumn backdrop",
+        "Prince Edward County fall harvest",
+        "Eastern Townships autumn vineyard",
+        "Muskoka fall colors lakeside",
+    ],
+    "winter": [
+        "Mont-Tremblant ski chalet terrace",
+        "Quebec City winter wonderland Château Frontenac",
+        "Laurentian spa resort snowy evening",
+        "Whistler luxury ski lodge fireplace",
+        "Charlevoix winter resort elegant lobby",
+        "Old Montreal Christmas lights terrace",
+        "Banff Springs Hotel winter elegance",
+        "Lake Louise frozen lake backdrop",
+    ],
+    "spring": [
+        "Montreal botanical garden spring bloom",
+        "Quebec City spring terrace flowers",
+        "Niagara Falls spring mist rainbow",
+        "Ottawa tulip festival backdrop",
+        "Vancouver cherry blossom garden",
+        "Toronto High Park spring bloom",
+    ],
+}
+
+
+# ============================================
+# 🌍 DÉCORS LUXUEUX INTERNATIONAUX PAR SAISON
 # ============================================
 
 LUXURY_LOCATIONS = {
-    "beach": [
-        "Amalfi Coast Italy beach",
-        "Santorini Greece white sand beach", 
-        "Maldives tropical beach",
-        "Monaco beach club",
-        "French Riviera beach",
-        "Positano Italy coastline",
-        "Mykonos Greece beach",
-        "Bora Bora overwater",
-        # V3 - Plus de variété
-        "St. Tropez exclusive beach club",
-        "Capri Italy marina",
-        "Seychelles pristine beach",
-        "Ibiza sunset beach",
-        "Côte d'Azur glamorous bay",
-        "Caribbean turquoise waters",
-        "Bali luxury beach resort",
-        "Tulum Mexico bohemian beach",
-        "Hawaii golden sand sunset",
-        "Sardinia crystal clear waters",
-    ],
-    "sunset": [
-        "luxury yacht deck at sunset",
-        "rooftop bar with city skyline view",
-        "infinity pool edge overlooking ocean",
-        "private terrace sunset view",
-        "beachfront restaurant at golden hour",
-        "Monaco harbor at dusk",
-        # V3 - Plus de variété
-        "champagne terrace overlooking sea",
-        "private villa pool at sunset",
-        "desert resort at golden hour",
-        "cliffside restaurant Santorini",
-        "penthouse balcony twilight",
-        "wine country sunset terrace",
-        "lakeside villa golden hour",
-        "mountain chalet sunset view",
-    ],
-    "city": [
-        "Paris balcony with Eiffel Tower view",
-        "Milan fashion district street",
-        "Monaco harbor promenade",
-        "Rome Spanish Steps area",
-        "New York Manhattan rooftop",
-        "London Mayfair elegant street",
-        "Dubai Marina skyline",
-        # V3 - Plus de variété
-        "Barcelona Gothic Quarter",
-        "Vienna Opera House steps",
-        "Prague Old Town square",
-        "Amsterdam canal bridge",
-        "Los Angeles Beverly Hills",
-        "Singapore Marina Bay",
-        "Tokyo Ginza district",
-        "Sydney Harbour Bridge view",
-        "Florence Ponte Vecchio",
-        "Lisbon Alfama viewpoint",
-    ],
-    "nature": [
-        "Lavender fields Provence France",
-        "Tuscan vineyard golden hour",
-        "Tropical garden luxury resort",
-        "Cherry blossom garden Japan",
-        "Amalfi Coast lemon grove",
-        "Swiss Alps luxury chalet terrace",
-        # V3 - Plus de variété
-        "Napa Valley wine estate",
-        "English countryside manor garden",
-        "Greek olive grove",
-        "Italian cypress tree avenue",
-        "Moroccan riad garden",
-        "California palm tree paradise",
-        "Mediterranean terraced garden",
-        "Scottish Highland castle grounds",
-        "Australian rainforest retreat",
-    ],
-    "evening": [
-        "grand hotel terrace evening",
-        "luxury restaurant terrace",
-        "gala event red carpet entrance",
-        "opera house steps",
-        "champagne bar rooftop",
-        "casino Monte Carlo entrance",
-        # V3 - Plus de variété
-        "Art gallery opening night",
-        "Fashion show backstage",
-        "Exclusive nightclub entrance",
-        "Michelin restaurant interior",
-        "Private members club London",
-        "Theatre premiere red carpet",
-        "Charity gala ballroom",
-        "Yacht party deck at night",
-        "Penthouse party skyline view",
-    ]
+    "beach": {
+        "summer": [
+            "Amalfi Coast Italy beach club",
+            "Santorini Greece white sand beach",
+            "Maldives overwater bungalow",
+            "Monaco Beach Club Riviera",
+            "French Riviera St-Tropez exclusive beach",
+            "Positano Italy colorful coastline",
+            "Mykonos Greece beach bar",
+            "Bora Bora crystal lagoon",
+            "Ibiza sunset beach club",
+            "Côte d'Azur glamorous bay",
+            "Sardinia Costa Smeralda",
+            "Seychelles pristine white sand",
+            "Tulum Mexico bohemian luxury beach",
+            "Bali Seminyak beach club",
+            "Miami South Beach art deco",
+            "Capri Italy marina beach",
+        ],
+        "spring": [
+            "Cannes Film Festival beach",
+            "Barcelona Barceloneta sunny day",
+            "Lisbon Cascais beach",
+            "Greek Islands early season",
+        ],
+        "fall": [
+            "Maldives autumn escape",
+            "Bali fall retreat",
+            "Caribbean late season",
+        ],
+        "winter": [
+            "Maldives winter sun",
+            "Caribbean winter escape",
+            "Dubai beach winter warmth",
+        ],
+    },
+    "yacht": {
+        "all_seasons": [
+            "luxury superyacht deck Mediterranean sunset",
+            "Monaco harbor yacht party",
+            "Amalfi Coast yacht cruise",
+            "Dubai Marina superyacht",
+            "Caribbean yacht charter",
+            "French Riviera yacht sunset",
+            "Mykonos yacht party sunset",
+            "Ibiza yacht club sunset",
+        ]
+    },
+    "city": {
+        "all_seasons": [
+            "Paris balcony Eiffel Tower view",
+            "Milan fashion district Via Montenapoleone",
+            "Monaco harbor promenade",
+            "Rome Spanish Steps area",
+            "New York Manhattan penthouse rooftop",
+            "London Mayfair elegant townhouse",
+            "Dubai Marina skyline penthouse",
+            "Barcelona Gothic Quarter",
+            "Vienna Opera House steps",
+            "Florence Ponte Vecchio sunset",
+            "Los Angeles Beverly Hills mansion",
+            "Singapore Marina Bay Sands infinity pool",
+            "Tokyo Ginza luxury district",
+            "Sydney Harbour Bridge penthouse view",
+        ]
+    },
+    "nature": {
+        "spring": [
+            "Provence lavender fields France",
+            "Japanese cherry blossom garden",
+            "English countryside manor spring",
+            "Tulip fields Netherlands",
+        ],
+        "summer": [
+            "Tuscan vineyard golden hour",
+            "Napa Valley wine estate summer",
+            "Greek olive grove sunset",
+            "Mediterranean terraced garden",
+            "California palm tree paradise",
+        ],
+        "fall": [
+            "Tuscan vineyard harvest season",
+            "Napa Valley autumn colors",
+            "English countryside manor fall",
+            "Swiss Alps autumn panorama",
+        ],
+        "winter": [
+            "Swiss Alps luxury chalet",
+            "Aspen ski resort terrace",
+            "Austrian Alps cozy lodge",
+        ],
+    },
+    "evening": {
+        "all_seasons": [
+            "Monte Carlo Casino entrance",
+            "Paris Opera Garnier steps",
+            "Milan La Scala opening night",
+            "Cannes Film Festival red carpet",
+            "New York Met Gala entrance",
+            "London Royal Albert Hall",
+            "Dubai Burj Al Arab terrace",
+            "Monaco Grand Prix gala",
+            "Venice Film Festival premiere",
+            "Art Basel Miami VIP party",
+        ]
+    },
 }
 
 
 # ============================================
-# TENUES GLAMOUR
+# 👗 TENUES GLAMOUR SEXY PAR SAISON
 # ============================================
 
 GLAMOROUS_OUTFITS = {
-    "beach": [
-        "elegant white one-piece swimsuit",
-        "chic bikini with flowing sarong",
-        "luxury resort wear cover-up",
-        "designer beach dress",
-        "silk caftan",
+    "beach_summer": [
+        "elegant high-cut one-piece swimsuit showing curves",
+        "chic designer bikini with flowing sheer sarong",
+        "barely-there string bikini with gold accents",
+        "sexy cutout one-piece revealing toned body",
+        "designer white bikini with see-through cover-up",
+        "Brazilian cut bikini flattering silhouette",
     ],
     "evening": [
-        "flowing red silk evening gown",
-        "elegant black cocktail dress",
-        "champagne silk maxi dress",
-        "designer backless dress",
-        "sequined glamorous gown",
+        "flowing red silk backless evening gown",
+        "elegant black plunging neckline cocktail dress",
+        "champagne silk body-hugging maxi dress",
+        "designer sequined gown with thigh-high slit",
+        "stunning red carpet backless dress",
+        "form-fitting velvet gown showing curves",
     ],
-    "daytime": [
-        "chic white sundress",
-        "elegant linen outfit",
-        "sophisticated casual cream ensemble",
-        "designer summer dress",
-        "silk blouse and wide pants",
+    "daytime_summer": [
+        "chic white mini sundress",
+        "elegant silk slip dress",
+        "sophisticated short summer dress showing legs",
+        "designer flowy maxi dress with deep neckline",
+        "sexy off-shoulder top with flowing pants",
     ],
-    "luxury": [
-        "haute couture inspired dress",
-        "red carpet style gown",
-        "designer elegant outfit",
-        "exclusive fashion piece",
-    ]
+    "daytime_spring": [
+        "elegant trench coat over silk dress",
+        "chic pastel designer dress",
+        "sophisticated floral midi dress",
+        "light cashmere sweater dress",
+    ],
+    "daytime_fall": [
+        "elegant sweater dress hugging curves",
+        "chic leather pants with cashmere top",
+        "sophisticated wool coat over silk blouse",
+        "designer fall dress with boots",
+    ],
+    "winter_outdoor": [
+        "luxurious fur coat showing elegant figure",
+        "designer cashmere coat with sexy boots",
+        "chic ski outfit showing silhouette",
+        "elegant wool coat with fur trim",
+    ],
+    "winter_indoor": [
+        "cozy cashmere sweater dress",
+        "elegant silk robe by fireplace",
+        "chic loungewear showing figure",
+    ],
 }
 
 
 # ============================================
-# DESCRIPTIONS CHEVEUX LUXURA
+# 💇 DESCRIPTIONS CHEVEUX LUXURA - DIVERSIFIÉS
 # ============================================
 
 LUXURA_HAIR_DESCRIPTIONS = [
-    "incredibly voluminous thick hair extensions with dramatic body and movement",
-    "luxurious full-bodied bouncy hair with stunning volume cascading naturally",
-    "gorgeous thick voluminous hair extensions with glamorous waves and body",
-    "dramatic Hollywood-style voluminous hair with incredible fullness and shine",
-    "stunning thick bouncy hair extensions with red carpet worthy volume",
-    "voluminous glamorous hair with incredible body and natural movement",
-    "full thick luxurious hair extensions with dramatic volume and bounce",
-    "breathtakingly voluminous silky hair with show-stopping body and shine",
-    # V3 ULTRA-GLAMOUR - Plus de variété
+    # BLONDES
     "spectacular platinum blonde flowing mane with incredible volume and movement",
+    "sun-kissed honey blonde waves cascading past shoulders",
+    "cool ash blonde hair with editorial-worthy volume and shine",
+    "golden highlighted extensions catching light beautifully",
+    "creamy blonde balayage with beachy textured waves",
+    
+    # BRUNETTES
     "rich chocolate brown cascading waves with stunning natural shine",
-    "fiery auburn hair extensions flowing dramatically in the breeze",
     "deep espresso brown voluminous curls with Hollywood glamour",
-    "honey blonde ombre hair with beachy waves and incredible body",
-    "sleek jet black hair with mirror-like shine and dramatic length",
-    "caramel highlighted extensions with sun-kissed natural movement",
-    "dimensional balayage hair with sophisticated volume and texture",
-    "mermaid-length flowing hair with romantic soft waves",
-    "glossy chestnut hair extensions catching light beautifully",
-    "warm copper tones in thick voluminous waves",
-    "cool ash blonde hair with editorial-worthy volume",
+    "glossy chestnut hair extensions flowing dramatically",
+    "dimensional brunette balayage with sophisticated volume",
+    "warm caramel highlights through thick brown waves",
+    
+    # AUBURN/RED
+    "fiery auburn hair extensions flowing dramatically in the breeze",
+    "warm copper tones in thick voluminous sensual waves",
     "rich burgundy tinted hair with luxurious body",
-    "natural brunette extensions with effortless glamour",
-    "golden highlighted waves cascading past shoulders",
+    "strawberry blonde waves with romantic soft curls",
+    
+    # BLACK
+    "sleek jet black hair with mirror-like shine and dramatic length",
+    "raven black voluminous waves with blue undertones",
+    "silky black Asian-inspired straight extensions",
+    
+    # OMBRE/SPECIAL
+    "honey blonde ombre fading from dark roots beautifully",
+    "mermaid-length flowing hair with romantic soft waves",
+    "natural brunette extensions with effortless glamour and body",
+    "dimensional balayage hair with sophisticated volume and texture",
 ]
 
 
 # ============================================
-# POSES ET ACTIONS VARIÉES
+# 🌍 DIVERSITÉ BEAUTÉ
 # ============================================
 
-GLAMOROUS_POSES = [
-    "running fingers through her hair",
-    "hair caught in a gentle breeze",
-    "tossing hair with elegant movement",
-    "wind-swept hair moment",
-    "touching her hair softly",
-    "hair dramatically blowing",
-    "tucking hair behind ear elegantly",
-    "shaking hair with confidence",
-    "hair flowing in natural motion",
-    "holding hair up showing length",
+BEAUTY_DIVERSITY = {
+    "ethnicities": [
+        "Caucasian",
+        "Mediterranean olive skin",
+        "Latina sun-kissed complexion",
+        "Light-skinned Black woman",
+        "Asian with flawless porcelain skin",
+        "Middle Eastern exotic beauty",
+        "Mixed race stunning features",
+    ],
+    "ages": [
+        "young woman in her 20s",
+        "sophisticated woman in her early 30s",
+        "elegant woman in her late 30s",
+        "glamorous woman in her 40s",
+    ],
+    "body_types": [
+        "slim toned figure",
+        "curvy sensual silhouette",
+        "athletic elegant body",
+        "naturally feminine curves",
+    ],
+}
+
+
+# ============================================
+# 📸 STYLES PHOTO ARTISTIQUES
+# ============================================
+
+PHOTO_STYLES = {
+    "editorial": [
+        "Vogue magazine editorial style photography",
+        "Harper's Bazaar high fashion aesthetic",
+        "Elle magazine glamour shoot style",
+        "Italian fashion editorial la dolce vita",
+    ],
+    "cinematic": [
+        "cinematic film still aesthetic",
+        "Hollywood golden age glamour lighting",
+        "French cinema nouvelle vague style",
+    ],
+    "lifestyle": [
+        "aspirational luxury lifestyle photography",
+        "candid glamorous moment captured",
+        "natural elegant lifestyle shot",
+    ],
+    "portrait": [
+        "studio glamour portrait lighting",
+        "natural light beauty portrait",
+        "dramatic chiaroscuro portrait style",
+    ],
+}
+
+
+# ============================================
+# 💃 POSES SENSUELLES
+# ============================================
+
+SENSUAL_POSES = [
+    "running fingers seductively through her hair",
+    "hair caught in a gentle breeze revealing neck",
+    "tossing hair back with confident sexy movement",
+    "wind-swept hair moment eyes half-closed",
+    "touching her hair softly biting lip",
+    "hair dramatically blowing looking over shoulder",
+    "arching back showing curves hair flowing down",
+    "hand on hip hair cascading sensually",
+    "turning head with smoldering gaze",
+    "walking away hair bouncing showing figure",
 ]
 
 
 # ============================================
-# EXPRESSIONS ET MOODS
+# 😏 EXPRESSIONS SENSUELLES
 # ============================================
 
-MOOD_EXPRESSIONS = [
-    "mysterious confident smile",
-    "serene elegant expression",
-    "playful sophisticated look",
-    "dreamy romantic gaze",
-    "confident radiant smile",
-    "sultry mysterious expression",
-    "natural candid moment",
-    "joyful carefree mood",
-    "elegant contemplative look",
-    "passionate sensual expression",
+SENSUAL_EXPRESSIONS = [
+    "mysterious confident smirk",
+    "sultry bedroom eyes",
+    "playful seductive look",
+    "dreamy sensual gaze",
+    "confident radiant smile showing teeth",
+    "intense passionate expression",
+    "natural candid sexy moment",
+    "joyful carefree laughing",
+    "smoldering come-hither look",
+    "innocent yet knowing expression",
 ]
 
 
 # ============================================
-# ANGLES PHOTO
+# 📐 ANGLES PHOTO SENSUELS
 # ============================================
 
-PHOTO_ANGLES = [
-    "from 3/4 back angle",
-    "in semi-profile",
-    "looking over her shoulder",
-    "turning her head with hair in motion",
-    "from behind showing hair length",
-    "side profile with hair flowing",
+SENSUAL_ANGLES = [
+    "from 3/4 back angle showing curves and hair",
+    "in semi-profile highlighting silhouette",
+    "looking over her bare shoulder seductively",
+    "turning her head with hair in dramatic motion",
+    "from behind showing hair length and figure",
+    "side profile with hair flowing down back",
+    "slightly from below highlighting jawline and hair",
 ]
 
 
 # ============================================
-# GÉNÉRATEUR DE PROMPTS
+# 🎯 GÉNÉRATEUR DE PROMPTS V4
 # ============================================
 
 def generate_luxura_image_prompt(
     context: str = "general",
-    location_type: str = None,
-    outfit_type: str = None,
-    specific_location: str = None
+    force_season: str = None,
+    location_preference: str = None,  # "quebec", "international", "mixed"
+    sexy_level: str = "elegant_sexy",  # "elegant", "elegant_sexy", "sensual"
 ) -> str:
     """
-    Génère un prompt d'image style Luxura.
+    Génère un prompt d'image style Luxura V4.
     
     Args:
         context: Type de contenu (product, educational, weekend, magazine, etc.)
-        location_type: Type de lieu (beach, sunset, city, nature, evening)
-        outfit_type: Type de tenue (beach, evening, daytime, luxury)
-        specific_location: Lieu spécifique optionnel
+        force_season: Force une saison spécifique (sinon auto-détection)
+        location_preference: "quebec" pour prioriser Québec/Canada
+        sexy_level: Niveau de sensualité
     
     Returns:
         Prompt complet pour génération d'image
     """
     
-    # Sélectionner le type de lieu si non spécifié
-    if location_type is None:
-        location_type = random.choice(list(LUXURY_LOCATIONS.keys()))
+    # Auto-détection de la saison
+    season = force_season or get_current_season()
+    seasonal_ctx = get_seasonal_context()
     
-    # Sélectionner le lieu
-    if specific_location:
-        location = specific_location
+    # Déterminer le type de lieu
+    if location_preference == "quebec" or random.random() < 0.6:  # 60% Québec
+        # Prioriser Québec/Canada
+        quebec_locs = QUEBEC_CANADA_LOCATIONS.get(season, QUEBEC_CANADA_LOCATIONS["summer"])
+        location = random.choice(quebec_locs)
     else:
-        location = random.choice(LUXURY_LOCATIONS.get(location_type, LUXURY_LOCATIONS["city"]))
+        # International selon saison
+        location_types = ["beach", "yacht", "city", "nature", "evening"]
+        loc_type = random.choice(location_types)
+        
+        loc_data = LUXURY_LOCATIONS.get(loc_type, {})
+        seasonal_locs = loc_data.get(season, loc_data.get("all_seasons", []))
+        
+        if not seasonal_locs:
+            # Fallback
+            seasonal_locs = loc_data.get("all_seasons", ["luxury resort terrace"])
+        
+        location = random.choice(seasonal_locs)
     
-    # Sélectionner la tenue appropriée
-    if outfit_type is None:
-        outfit_type = location_type if location_type in GLAMOROUS_OUTFITS else "daytime"
-    outfit = random.choice(GLAMOROUS_OUTFITS.get(outfit_type, GLAMOROUS_OUTFITS["daytime"]))
+    # Sélectionner la tenue appropriée à la saison
+    if season == "summer":
+        if "beach" in location.lower() or "yacht" in location.lower():
+            outfit = random.choice(GLAMOROUS_OUTFITS["beach_summer"])
+        else:
+            outfit = random.choice(GLAMOROUS_OUTFITS["daytime_summer"])
+    elif season == "winter":
+        if any(x in location.lower() for x in ["chalet", "ski", "outdoor", "snow"]):
+            outfit = random.choice(GLAMOROUS_OUTFITS["winter_outdoor"])
+        else:
+            outfit = random.choice(GLAMOROUS_OUTFITS.get("winter_indoor", GLAMOROUS_OUTFITS["evening"]))
+    elif season == "spring":
+        outfit = random.choice(GLAMOROUS_OUTFITS["daytime_spring"])
+    else:  # fall
+        outfit = random.choice(GLAMOROUS_OUTFITS["daytime_fall"])
+    
+    # Contexte soirée override
+    if "gala" in location.lower() or "casino" in location.lower() or "opera" in location.lower():
+        outfit = random.choice(GLAMOROUS_OUTFITS["evening"])
     
     # Sélectionner description cheveux
     hair = random.choice(LUXURA_HAIR_DESCRIPTIONS)
     
+    # Sélectionner diversité (parfois)
+    if random.random() < 0.3:  # 30% diversité explicite
+        ethnicity = random.choice(BEAUTY_DIVERSITY["ethnicities"])
+        body = random.choice(BEAUTY_DIVERSITY["body_types"])
+        diversity = f", {ethnicity} with {body}"
+    else:
+        diversity = ""
+    
+    # Sélectionner style photo
+    photo_style = random.choice(PHOTO_STYLES[random.choice(list(PHOTO_STYLES.keys()))])
+    
+    # Sélectionner pose et expression selon niveau sexy
+    if sexy_level == "sensual":
+        pose = random.choice(SENSUAL_POSES)
+        expression = random.choice(SENSUAL_EXPRESSIONS)
+        mood = "seductive sensual"
+    elif sexy_level == "elegant_sexy":
+        pose = random.choice(SENSUAL_POSES[:6])  # Poses plus sages
+        expression = random.choice(SENSUAL_EXPRESSIONS[:6])
+        mood = "elegant yet seductive"
+    else:
+        pose = random.choice(["hair flowing naturally", "elegant confident stance"])
+        expression = random.choice(["confident smile", "serene elegant expression"])
+        mood = "sophisticated elegant"
+    
     # Sélectionner angle
-    angle = random.choice(PHOTO_ANGLES)
+    angle = random.choice(SENSUAL_ANGLES)
     
-    # V3: Ajouter pose et expression pour plus de variété
-    pose = random.choice(GLAMOROUS_POSES)
-    expression = random.choice(MOOD_EXPRESSIONS)
-    
-    # Construire le prompt avec plus de variété
-    prompt = f"Real photograph of a glamorous woman {angle} at {location}, {pose}, {hair}, wearing {outfit}, {expression}, golden hour natural lighting, seductive elegant mood, aspirational luxury lifestyle, no text, no watermarks"
+    # Construire le prompt V4
+    prompt = f"Real photograph of a sensual glamorous woman{diversity} {angle} at {location}, {pose}, {hair}, wearing {outfit}, {expression}, {seasonal_ctx['weather'][0] if seasonal_ctx['weather'] else 'golden hour'} natural lighting, {mood} mood, {photo_style}, aspirational luxury lifestyle, no text, no watermarks"
     
     return prompt
 
 
 def get_prompt_for_content_type(content_type: str) -> str:
     """
-    Retourne un prompt adapté au type de contenu.
-    
-    Args:
-        content_type: product, educational, weekend, testimonial, b2b, magazine
-    
-    Returns:
-        Prompt d'image approprié
+    Retourne un prompt adapté au type de contenu V4.
     """
+    season = get_current_season()
     
     content_configs = {
         "product": {
-            "location_types": ["city", "evening", "sunset"],
-            "outfit_types": ["luxury", "evening", "daytime"],
+            "location_preference": "mixed",
+            "sexy_level": "elegant_sexy",
         },
         "educational": {
-            "location_types": ["city", "nature", "sunset"],
-            "outfit_types": ["daytime", "luxury"],
+            "location_preference": "quebec",
+            "sexy_level": "elegant",
         },
         "weekend": {
-            "location_types": ["beach", "sunset", "nature"],
-            "outfit_types": ["beach", "daytime"],
+            "location_preference": "mixed",
+            "sexy_level": "sensual",
         },
         "testimonial": {
-            "location_types": ["city", "nature", "evening"],
-            "outfit_types": ["daytime", "evening"],
+            "location_preference": "quebec",
+            "sexy_level": "elegant_sexy",
         },
         "b2b": {
-            "location_types": ["city", "evening"],
-            "outfit_types": ["luxury", "daytime"],
+            "location_preference": "quebec",
+            "sexy_level": "elegant",
         },
         "magazine": {
-            "location_types": ["beach", "evening", "city", "sunset"],
-            "outfit_types": ["luxury", "evening", "beach"],
+            "location_preference": "international",
+            "sexy_level": "sensual",
         },
     }
     
     config = content_configs.get(content_type, content_configs["product"])
     
-    location_type = random.choice(config["location_types"])
-    outfit_type = random.choice(config["outfit_types"])
-    
     return generate_luxura_image_prompt(
         context=content_type,
-        location_type=location_type,
-        outfit_type=outfit_type
+        location_preference=config["location_preference"],
+        sexy_level=config["sexy_level"]
     )
 
 
 # ============================================
-# PROMPTS PRÉ-DÉFINIS PAR TYPE
+# PROMPTS CONTEXTUELS V4
 # ============================================
-
-PRESET_PROMPTS = {
-    "product": [
-        "Real photograph of glamorous woman from 3/4 back on Monaco yacht deck, long voluminous silky hair extensions flowing in Mediterranean breeze, elegant white designer dress, golden sunset light, luxury lifestyle",
-        "Real photo of sensual woman looking over shoulder in Milan fashion district, luxurious thick hair cascading down her back, chic cream outfit, warm natural light, Italian glamour",
-        "Real photograph of elegant woman on Paris hotel balcony with Eiffel Tower, long gorgeous hair catching golden hour light, black silk dress, romantic Parisian mood",
-    ],
-    "educational": [
-        "Real photograph of glamorous woman in semi-profile at Tuscan vineyard, voluminous flowing hair extensions in gentle breeze, elegant linen sundress, golden hour, sophisticated lifestyle",
-        "Real photo of elegant woman turning head in London Mayfair, long silky hair in natural movement, designer casual outfit, soft afternoon light, refined beauty",
-    ],
-    "weekend": [
-        "Real photograph of glamorous woman from behind on Amalfi Coast beach, long voluminous hair flowing in sea breeze, elegant white swimsuit, golden sunset, Mediterranean paradise",
-        "Real photo of sensual woman looking over shoulder at infinity pool Maldives, luxurious thick hair wet and flowing, chic one-piece swimsuit, tropical sunset glow",
-        "Real photograph of elegant woman at Santorini white terrace, gorgeous flowing hair catching sunset light, flowing summer dress, breathtaking ocean view backdrop",
-    ],
-    "testimonial": [
-        "Real photograph of glamorous woman in semi-profile at French cafe terrace, long voluminous silky hair with natural movement, chic Parisian outfit, warm golden light, confident elegant mood",
-        "Real photo of radiant woman looking over shoulder in beautiful garden, luxurious flowing hair extensions, elegant sundress, natural soft lighting, happy confident expression",
-    ],
-    "b2b": [
-        "Real photograph of sophisticated woman from 3/4 back at luxury hotel lobby, long voluminous professional hair extensions, elegant business chic outfit, refined lighting, premium salon quality",
-        "Real photo of elegant woman in semi-profile at upscale salon setting, gorgeous flowing hair showcasing extensions, designer outfit, professional yet glamorous mood",
-    ],
-    "magazine": [
-        "Real photograph of glamorous woman from 3/4 back at Monaco Grand Prix terrace, long voluminous hair flowing dramatically, stunning red evening gown, golden hour, high fashion editorial",
-        "Real photo of sensual woman looking over shoulder on Positano beach, luxurious thick hair cascading in wind, designer bikini with sarong, Italian Riviera sunset, Vogue editorial style",
-        "Real photograph of elegant woman at Paris Fashion Week, gorgeous long hair in motion, haute couture dress, sophisticated urban backdrop, magazine cover worthy",
-    ],
-}
-
-
-def get_preset_prompt(content_type: str) -> str:
-    """Retourne un prompt pré-défini aléatoire pour le type de contenu."""
-    prompts = PRESET_PROMPTS.get(content_type, PRESET_PROMPTS["product"])
-    return random.choice(prompts)
-
 
 def get_contextual_prompt(title: str, content: str = "") -> str:
     """
-    Génère un prompt basé sur le titre et contenu de l'article.
-    
-    RÈGLES CRITIQUES CHEVEUX:
-    - Maximum mi-dos (entre omoplates et taille)
-    - JAMAIS plus long que la taille
-    - JAMAIS jusqu'aux hanches, fesses ou genoux
+    Génère un prompt basé sur le titre et contenu de l'article V4.
+    Avec détection de saison automatique.
     """
     full_text = f"{title} {content}".lower()
+    season = get_current_season()
+    seasonal_ctx = get_seasonal_context()
     
-    # Contrainte STRICTE pour la longueur des cheveux - RENFORCÉE
-    HAIR_CONSTRAINT = "CRITICAL HAIR LENGTH RULE: Hair MUST end at MID-BACK level only, between shoulder blades and waist. Hair must NEVER extend below the waist. Hair must NEVER reach the hips. Hair must NEVER reach the buttocks or knees. Maximum length is bra-strap level. This constraint is absolutely critical and non-negotiable."
+    # Contrainte STRICTE pour la longueur des cheveux
+    HAIR_CONSTRAINT = "CRITICAL: Hair ends at MID-BACK level only, NEVER below waist."
+    
+    # Choisir les lieux Québec selon saison
+    quebec_locs = QUEBEC_CANADA_LOCATIONS.get(season, QUEBEC_CANADA_LOCATIONS["summer"])
+    quebec_loc = random.choice(quebec_locs)
     
     # Déterminer le contexte basé sur les mots-clés
-    if any(w in full_text for w in ["salon", "coiffeuse", "styliste", "professionnel", "partenaire", "affilié"]):
-        base = random.choice([
-            "Real photograph of a glamorous hairstylist working on a client's voluminous hair extensions in an ultra-luxury salon with crystal chandeliers. Hair at mid-back length only. Both women beautiful. Soft professional lighting.",
-            "Real photograph of two women in an exclusive Beverly Hills hair salon, one styling the other's thick voluminous extensions at shoulder-blade length. Elegant mirrors, marble counters. Soft professional lighting.",
-            "Real photograph of a glamorous woman in an ultra-luxurious high-end hair salon with crystal chandeliers. Hair ending at mid-back. Shot from 3/4 back angle. Soft professional lighting."
-        ])
+    if any(w in full_text for w in ["salon", "coiffeuse", "styliste", "professionnel", "partenaire"]):
+        base = f"Real photograph of a glamorous hairstylist in an ultra-luxury Montreal salon with crystal chandeliers, sensual {random.choice(LUXURA_HAIR_DESCRIPTIONS)}, {random.choice(SENSUAL_EXPRESSIONS)}, professional yet seductive atmosphere"
     
-    elif any(w in full_text for w in ["mariage", "wedding", "mariée", "bride", "cérémonie"]):
-        base = random.choice([
-            "Real photograph of three bridesmaids with matching gorgeous voluminous hair extensions at a luxury wedding venue. Romantic golden hour lighting. Ultra-realistic luxury photography.",
-            "Real photograph of a glamorous bride at an Italian villa wedding venue in Tuscany, with stunning voluminous hair extensions. Shot from 3/4 back angle. Golden hour romantic lighting.",
-            "Real photograph of elegant woman at a French château wedding reception, with thick flowing hair extensions, wearing a stunning evening gown. Golden hour lighting."
-        ])
+    elif any(w in full_text for w in ["mariage", "wedding", "mariée", "bride"]):
+        venue = quebec_loc if "château" in quebec_loc.lower() else "Château Frontenac Quebec City"
+        base = f"Real photograph of glamorous bride at {venue}, stunning voluminous bridal hair extensions, {random.choice(GLAMOROUS_OUTFITS['evening'])}, romantic golden hour"
     
-    elif any(w in full_text for w in ["plage", "beach", "été", "summer", "vacances", "vacation", "yacht"]):
-        base = random.choice([
-            "Real photograph of two glamorous women on a luxury yacht deck at sunset, both with thick voluminous extensions blowing in the Mediterranean breeze. Golden hour lighting.",
-            "Real photograph of a glamorous woman on the white sand beach of Santorini at golden hour, with luxurious bouncy hair. Elegant white one-piece swimsuit. Shot from 3/4 back angle.",
-            "Real photograph of elegant woman at an exclusive Amalfi Coast beach club, with gorgeous thick hair extensions. Chic designer bikini with flowing silk sarong. Golden sunset lighting."
-        ])
+    elif any(w in full_text for w in ["plage", "beach", "été", "summer", "yacht"]) and season == "summer":
+        base = f"Real photograph of sensual woman on {quebec_loc}, {random.choice(LUXURA_HAIR_DESCRIPTIONS)} blowing in breeze, {random.choice(GLAMOROUS_OUTFITS['beach_summer'])}, {random.choice(SENSUAL_POSES)}, summer golden hour"
     
-    elif any(w in full_text for w in ["soirée", "gala", "événement", "party", "fête", "red carpet"]):
-        base = random.choice([
-            "Real photograph of two glamorous women in evening gowns at a gala event, both with spectacular voluminous hair extensions. Red carpet elegance, dramatic lighting. Ultra-realistic photography.",
-            "Real photograph of elegant woman on the red carpet at a film premiere, with stunning thick bouncy hair extensions. Designer backless sequined gown. Shot looking over shoulder.",
-            "Real photograph of glamorous woman at a Cannes Film Festival gala, with voluminous Hollywood-style hair. Stunning red silk evening gown with open back. Golden hour lighting."
-        ])
+    elif any(w in full_text for w in ["soirée", "gala", "événement", "party"]):
+        base = f"Real photograph of glamorous woman at {random.choice(LUXURY_LOCATIONS['evening']['all_seasons'])}, {random.choice(LUXURA_HAIR_DESCRIPTIONS)}, {random.choice(GLAMOROUS_OUTFITS['evening'])}, {random.choice(SENSUAL_EXPRESSIONS)}"
     
-    elif any(w in full_text for w in ["entretien", "soin", "routine", "laver", "brush", "shampoo"]):
-        base = random.choice([
-            "Real photograph of a glamorous woman at a luxury spa resort in Bali, with voluminous silky hair extensions. Elegant silk robe. Natural soft lighting highlighting hair shine.",
-            "Real photograph of elegant woman in a Swiss Alps wellness retreat with mountain views, with stunning thick healthy hair extensions. Chic spa outfit. Soft natural lighting."
-        ])
+    elif any(w in full_text for w in ["hiver", "winter", "neige", "ski"]) and season == "winter":
+        winter_loc = random.choice(QUEBEC_CANADA_LOCATIONS["winter"])
+        base = f"Real photograph of elegant woman at {winter_loc}, {random.choice(LUXURA_HAIR_DESCRIPTIONS)}, {random.choice(GLAMOROUS_OUTFITS['winter_outdoor'])}, cozy glamour winter mood"
     
-    elif any(w in full_text for w in ["tendance", "trend", "mode", "fashion", "style", "2025", "2026"]):
-        base = random.choice([
-            "Real photograph of glamorous woman strolling through Milan's fashion district, with gorgeous thick voluminous hair extensions. Chic designer summer dress. Golden hour natural lighting.",
-            "Real photograph of elegant woman at a Paris haute couture show, with stunning voluminous hair in motion. Sophisticated designer outfit. Fashion week atmosphere."
-        ])
+    elif any(w in full_text for w in ["automne", "fall", "feuilles"]) and season == "fall":
+        fall_loc = random.choice(QUEBEC_CANADA_LOCATIONS["fall"])
+        base = f"Real photograph of sensual woman at {fall_loc}, {random.choice(LUXURA_HAIR_DESCRIPTIONS)}, {random.choice(GLAMOROUS_OUTFITS['daytime_fall'])}, autumn golden light"
     
     else:
-        base = random.choice([
-            "Real photograph of a glamorous woman on the deck of a luxury superyacht at sunset Mediterranean, with voluminous thick hair extensions. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting.",
-            "Real photograph of two glamorous best friends with matching voluminous hair extensions, laughing together at a luxurious rooftop bar at sunset. Golden hour lighting.",
-            "Real photograph of elegant woman on a Paris rooftop terrace with Eiffel Tower view at dusk, with stunning thick bouncy hair extensions. Chic Parisian outfit. Shot looking over shoulder.",
-            "Real photograph of a glamorous woman at a prestigious Milan salon with modern minimalist design, with gorgeous voluminous hair extensions. Elegant casual outfit. Soft professional lighting."
-        ])
+        # Prompt général selon saison actuelle
+        base = f"Real photograph of sensual glamorous woman {random.choice(SENSUAL_ANGLES)} at {quebec_loc}, {random.choice(SENSUAL_POSES)}, {random.choice(LUXURA_HAIR_DESCRIPTIONS)}, {random.choice(seasonal_ctx['clothing_style'])}, {random.choice(SENSUAL_EXPRESSIONS)}, {random.choice(seasonal_ctx['mood'])} atmosphere"
     
-    # Ajouter la contrainte stricte de longueur
-    return f"{base} {HAIR_CONSTRAINT} No text, no watermarks."
+    return f"{base}. {HAIR_CONSTRAINT} No text, no watermarks."
+
+
+# ============================================
+# TEST DE GÉNÉRATION
+# ============================================
+
+if __name__ == "__main__":
+    print(f"Saison actuelle: {get_current_season()}")
+    print("\n--- PROMPTS EXEMPLES ---\n")
+    
+    for content_type in ["product", "weekend", "magazine", "educational"]:
+        print(f"\n[{content_type.upper()}]")
+        print(get_prompt_for_content_type(content_type))
+        print("-" * 50)

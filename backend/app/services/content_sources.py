@@ -100,6 +100,23 @@ SEARCH_QUERIES = [
     "coiffure femme Montréal tendance 2026",
     "extensions cheveux Québec salons",
     "beauté femme canadienne tendances",
+    
+    # ==== V4 🇪🇺 MARQUES EXTENSIONS EUROPÉENNES ====
+    "Great Lengths extensions trends 2026",
+    "Hairdreams extensions techniques nouvelles",
+    "Balmain Hair Couture collection 2026",
+    "Gold Fever Hair UK trends",
+    "Beauty Works extensions celebrity news",
+    "SHE Hair Extensions Italy professional",
+    "Racoon International UK extensions news",
+    "Euro SoCap extensions professional trends",
+    
+    # ==== V4 🇦🇺 MARQUES EXTENSIONS AUSTRALIENNES ====
+    "ZALA Hair Extensions Australia trends",
+    "Showpony Professional Australia news",
+    "Amazing Hair Australia extensions 2026",
+    "Bohyme extensions Australia professional",
+    "Australian hair extensions industry news",
 ]
 
 def get_randomized_queries(max_queries: int = 10) -> List[str]:
@@ -141,6 +158,110 @@ INTERNATIONAL_QUERIES = {
         "Kate Middleton hair style",
         "UK beauty hair trends",
     ],
+    # V4 NOUVEAU - Sources Européennes Extensions
+    "europe_extensions": [
+        "Great Lengths extensions news 2026",
+        "Hairdreams extensions trends Europe",
+        "Balmain Hair Couture new collection",
+        "She Hair Extensions Europe",
+        "Gold Fever Hair extensions trends",
+        "Socap Original extensions Italy",
+        "Racoon International UK extensions",
+        "Cinderella Hair Extensions news",
+        "Euro SoCap extensions professional",
+        "Beauty Works extensions UK trends",
+    ],
+    # V4 NOUVEAU - Sources Australiennes Extensions
+    "australia_extensions": [
+        "ZALA hair extensions Australia trends",
+        "Showpony Professional Australia news",
+        "EVY Professional extensions Australia",
+        "Bellami Hair Australia collection",
+        "Hairlocs Australia extensions trends",
+        "Amazing Hair extensions Perth",
+        "Bohyme Australia hair extensions",
+        "Hotheads Australia professional",
+    ],
+}
+
+# ============================================
+# 🌍 V4 - MARQUES D'EXTENSIONS EUROPÉENNES/AUSTRALIENNES À SUIVRE
+# ============================================
+
+EXTENSION_BRANDS_TO_MONITOR = {
+    "europe": {
+        "great_lengths": {
+            "name": "Great Lengths",
+            "country": "Italy/Germany",
+            "website": "greatlengths.com",
+            "blog": "greatlengths.com/blog",
+            "specialty": "Fusion kératine premium",
+        },
+        "hairdreams": {
+            "name": "Hairdreams",
+            "country": "Austria",
+            "website": "hairdreams.com",
+            "specialty": "Extensions scientifiques haute qualité",
+        },
+        "balmain": {
+            "name": "Balmain Hair Couture",
+            "country": "Netherlands/France",
+            "website": "balmainhair.com",
+            "specialty": "Luxury fashion extensions",
+        },
+        "she_hair": {
+            "name": "SHE Hair Extensions",
+            "country": "Italy",
+            "website": "she-hair.com",
+            "specialty": "Extensions professionnelles italiennes",
+        },
+        "gold_fever": {
+            "name": "Gold Fever",
+            "country": "UK",
+            "website": "goldfeverhair.com",
+            "specialty": "Luxury ethical hair",
+        },
+        "beauty_works": {
+            "name": "Beauty Works",
+            "country": "UK",
+            "website": "beautyworksonline.com",
+            "blog": "beautyworksonline.com/blogs/news",
+            "specialty": "Celebrity-loved extensions UK",
+        },
+        "racoon": {
+            "name": "Racoon International",
+            "country": "UK",
+            "website": "racooninternational.com",
+            "specialty": "Professional salon extensions",
+        },
+    },
+    "australia": {
+        "zala": {
+            "name": "ZALA Hair Extensions",
+            "country": "Australia",
+            "website": "zalahairextensions.com.au",
+            "blog": "zalahairextensions.com.au/blogs",
+            "specialty": "Clip-in extensions populaires",
+        },
+        "showpony": {
+            "name": "Showpony Professional",
+            "country": "Australia",
+            "website": "showponyhair.com",
+            "specialty": "Tape-in professionnels",
+        },
+        "amazing_hair": {
+            "name": "Amazing Hair",
+            "country": "Australia",
+            "website": "amazinghair.com.au",
+            "specialty": "Extensions naturelles remy",
+        },
+        "bohyme": {
+            "name": "Bohyme",
+            "country": "Australia/USA",
+            "website": "bohyme.com",
+            "specialty": "Premium weave extensions",
+        },
+    },
 }
 
 # ============================================
@@ -217,6 +338,26 @@ TRUSTED_SOURCES = [
     "vogue.co.jp",
     "elle.co.kr",
     "harpersbazaar.com.hk",
+    
+    # ==== V4 🇪🇺 MARQUES EXTENSIONS EUROPÉENNES ====
+    "greatlengths.com",
+    "greatlengthsusa.com",
+    "hairdreams.com",
+    "balmainhair.com",
+    "goldfeverhair.com",
+    "beautyworksonline.com",
+    "racooninternational.com",
+    "she-hair.com",
+    "eurosocap.com",
+    "cinderellahair.com",
+    
+    # ==== V4 🇦🇺 AUSTRALIE - MARQUES EXTENSIONS ====
+    "zalahairextensions.com.au",
+    "showponyhair.com",
+    "amazinghair.com.au",
+    "bohyme.com",
+    "hairlocs.com.au",
+    "hotheadshairextensions.com.au",
 ]
 
 # ============================================
