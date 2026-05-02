@@ -794,55 +794,203 @@ PRODUCT_HAIR_COLORS = {
     "ombre": ["Ombré Balayage", "Cachemire Oriental", "Cristal Polaire"],
 }
 
-# Contextes selfie glamour
-SELFIE_CONTEXTS = {
-    "mirror": [
-        "taking a mirror selfie in her luxurious bathroom",
-        "mirror selfie showing her new hair transformation",
-        "bathroom vanity mirror selfie revealing gorgeous hair",
-        "full-length mirror selfie flaunting her new look",
+# ============================================
+# 📸 TYPES DE POSES SELFIE LUXURA V5.2
+# 3 styles: arrière, bras tendu, entre amies
+# ============================================
+
+SELFIE_POSE_TYPES = {
+    "back_view": {
+        "name": "Vue Arrière",
+        "description": "Regard par-dessus l'épaule, cheveux en vedette",
+        "prompt_template": "Real photograph from behind of a gorgeous glamorous woman showing off her long {hair_color} {product_type} hair extensions, back view selfie angle, looking over her shoulder seductively at camera, at {location}, thick luxurious hair flowing down her back, {lighting} lighting, authentic Instagram hair reveal style, hair is the main focus taking most of frame, no phone visible in shot",
+        "weight": 0.35,  # 35% des photos
+    },
+    "front_selfie": {
+        "name": "Selfie Bras Tendu",
+        "description": "POV du téléphone, vue frontale authentique",
+        "prompt_template": "POV selfie photograph taken from phone camera perspective, gorgeous glamorous woman with long {hair_color} {product_type} hair extensions taking selfie with extended arm at {location}, looking directly at camera with {expression}, her face and flowing hair filling the frame, {lighting} lighting, authentic iPhone selfie perspective, background in soft blur, hair looking incredibly thick and shiny",
+        "weight": 0.40,  # 40% des photos
+    },
+    "friends_selfie": {
+        "name": "Selfie Entre Amies",
+        "description": "Groupe de copines, ambiance fun",
+        "prompt_template": "POV group selfie photograph from phone perspective, three gorgeous glamorous girlfriends taking selfie together at {location}, main woman in center with long {hair_color} {product_type} hair extensions, friends on each side also with beautiful long hair, all {expression} at camera, authentic best friends selfie moment, all their gorgeous hair visible in frame, {lighting} lighting, girls trip vibes",
+        "weight": 0.25,  # 25% des photos
+    },
+}
+
+# Expressions pour chaque type de pose
+POSE_EXPRESSIONS = {
+    "back_view": [
+        "looking seductively over shoulder",
+        "turning head with mysterious smile",
+        "glancing back with confident gaze",
+        "peeking over shoulder playfully",
     ],
-    "car": [
-        "car selfie with perfect lighting showing her hair",
-        "driving seat selfie with hair cascading over shoulder",
-        "golden hour car selfie with stunning hair",
+    "front_selfie": [
+        "confident sexy smile",
+        "playful seductive expression",
+        "joyful radiant smile",
+        "sultry confident gaze",
+        "natural happy expression",
     ],
-    "outdoor": [
-        "outdoor selfie with wind in her beautiful hair",
-        "terrasse selfie with hair glowing in sunset",
-        "balcony selfie showing her glamorous mane",
-    ],
-    "event": [
-        "getting ready selfie before her big night out",
-        "pre-event selfie showing her special occasion hair",
-        "date night ready selfie with perfect hair",
-    ],
-    "casual": [
-        "casual cozy selfie with gorgeous flowing hair",
-        "morning coffee selfie with effortlessly beautiful hair",
-        "work from home selfie still looking glamorous",
+    "friends_selfie": [
+        "smiling joyfully",
+        "laughing together happily",
+        "looking excited and happy",
+        "beaming with joy",
     ],
 }
 
-# Expressions selfie
-SELFIE_EXPRESSIONS = [
-    "confident smile showing off her transformation",
-    "sultry look into camera with hair framing face",
-    "playful hair flip captured mid-motion",
-    "serene confident gaze with perfect hair",
-    "joyful candid moment touching her new hair",
-    "mysterious half-smile with hair draped sensually",
-    "proud confident expression showing results",
-]
+# Lieux spécifiques pour selfies Québec
+SELFIE_LOCATIONS_QUEBEC = {
+    "terrasse": [
+        "Grande Allée Quebec City terrace bar",
+        "Vieux-Port Montreal terrace restaurant",
+        "Mont-Tremblant village terrace",
+        "Vieux-Québec charming cobblestone terrace",
+        "Charlevoix scenic terrace with mountain view",
+        "Saint-Denis street Montreal terrace",
+        "Petit Champlain Quebec City terrace",
+        "Laurentides lakeside terrace",
+    ],
+    "rooftop": [
+        "Montreal downtown rooftop bar sunset",
+        "W Montreal rooftop terrace",
+        "Vieux-Montreal rooftop with skyline view",
+        "Quebec City rooftop Château Frontenac view",
+    ],
+    "nature": [
+        "Charlevoix scenic mountain viewpoint",
+        "Mont-Tremblant gondola station",
+        "Laurentides lake dock",
+        "Îles-de-la-Madeleine beach",
+        "Tadoussac whale watching terrace",
+        "Gaspésie Percé Rock viewpoint",
+    ],
+    "urban": [
+        "Old Montreal cobblestone street",
+        "Plateau Mont-Royal colorful stairs",
+        "Quebec City fortifications",
+        "Mile End Montreal cafe",
+        "Saint-Jean street Quebec City",
+    ],
+}
 
-# Angles selfie
-SELFIE_ANGLES = [
-    "front-facing selfie angle",
-    "slightly angled showing hair length",
-    "side profile selfie showing volume",
-    "looking over shoulder selfie",
-    "hair flip action shot selfie",
-]
+def get_random_selfie_pose() -> str:
+    """Retourne un type de pose aléatoire selon les poids."""
+    import random
+    poses = list(SELFIE_POSE_TYPES.keys())
+    weights = [SELFIE_POSE_TYPES[p]["weight"] for p in poses]
+    return random.choices(poses, weights=weights, k=1)[0]
+
+
+def generate_selfie_prompt_v2(
+    category: str,
+    pose_type: str = None,
+    location_type: str = None,
+    hair_color_type: str = None,
+) -> dict:
+    """
+    Génère un prompt selfie V5.2 avec les 3 types de poses.
+    
+    Args:
+        category: genius, tape, halo, i-tip
+        pose_type: back_view, front_selfie, friends_selfie (ou None pour random)
+        location_type: terrasse, rooftop, nature, urban (ou None pour random)
+        hair_color_type: blonde, brunette, black, auburn, ombre
+    
+    Returns:
+        dict avec prompt, pose_type, location, etc.
+    """
+    import random
+    
+    # Sélection du type de pose
+    if pose_type is None:
+        pose_type = get_random_selfie_pose()
+    
+    pose_config = SELFIE_POSE_TYPES.get(pose_type, SELFIE_POSE_TYPES["front_selfie"])
+    
+    # Sélection du produit
+    if category not in PRODUCT_CATEGORIES:
+        category = random.choice(list(PRODUCT_CATEGORIES.keys()))
+    product = PRODUCT_CATEGORIES[category]
+    
+    # Sélection couleur cheveux
+    if hair_color_type is None:
+        hair_color_type = random.choice(list(PRODUCT_HAIR_COLORS.keys()))
+    hair_color = random.choice(PRODUCT_HAIR_COLORS.get(hair_color_type, ["beautiful"]))
+    
+    # Sélection du lieu
+    if location_type is None:
+        location_type = random.choice(list(SELFIE_LOCATIONS_QUEBEC.keys()))
+    location = random.choice(SELFIE_LOCATIONS_QUEBEC.get(location_type, SELFIE_LOCATIONS_QUEBEC["terrasse"]))
+    
+    # Sélection expression
+    expression = random.choice(POSE_EXPRESSIONS.get(pose_type, ["confident smile"]))
+    
+    # Sélection éclairage selon saison
+    season = get_current_season()
+    if season == "summer":
+        lighting = random.choice(["golden hour", "summer sunset", "warm natural"])
+    elif season == "winter":
+        lighting = random.choice(["soft winter", "cozy warm", "golden indoor"])
+    else:
+        lighting = random.choice(["golden hour", "natural daylight", "soft afternoon"])
+    
+    # Générer le prompt
+    prompt = pose_config["prompt_template"].format(
+        hair_color=f"{hair_color_type} {hair_color}",
+        product_type=product["name"],
+        location=location,
+        expression=expression,
+        lighting=lighting,
+    )
+    
+    # Caption Instagram
+    captions = [
+        f"Obsédée par mes {product['name']} 😍 #{product['collection']} #Luxura",
+        f"Le secret? {product['name']} Collection {product['collection']} 💁‍♀️ #CheveuxDeReve",
+        f"Mon chum: \"WOW!\" 😏 {' '.join(product['hashtags'])}",
+        f"Meilleure décision ever 💫 {product['name']} #TransformationCapillaire",
+    ]
+    
+    if pose_type == "friends_selfie":
+        captions = [
+            f"Girls trip + {product['name']} = 🔥 #Copines #Luxura",
+            f"Mes girls comprennent 💁‍♀️ {' '.join(product['hashtags'])}",
+            f"Quand toute la gang a des cheveux de rêve 😍 #BestiesGoals",
+        ]
+    
+    return {
+        "prompt": prompt,
+        "pose_type": pose_type,
+        "pose_name": pose_config["name"],
+        "category": category,
+        "product_name": product["name"],
+        "collection": product["collection"],
+        "hair_color": hair_color,
+        "location": location,
+        "location_type": location_type,
+        "caption": random.choice(captions),
+        "hashtags": product["hashtags"] + ["#Luxura", "#QuebecGlamour", "#ExtensionsQuebec"],
+        "product_link": f"/products?category={category}",
+    }
+
+
+def generate_complete_product_campaign(category: str) -> list:
+    """
+    Génère une campagne complète pour un produit avec les 3 types de poses.
+    
+    Returns:
+        list de 3 prompts (un par type de pose)
+    """
+    campaign = []
+    for pose_type in SELFIE_POSE_TYPES.keys():
+        selfie = generate_selfie_prompt_v2(category, pose_type=pose_type)
+        campaign.append(selfie)
+    return campaign
 
 
 def generate_product_selfie_prompt(
