@@ -108,16 +108,43 @@ def _wix_headers() -> Dict[str, str]:
     }
 
 
-def _fetch_products_v1(limit: int) -> List[Dict[str, Any]]:
+def _fetch_products_v1(limit: int, max_retries: int = 3) -> List[Dict[str, Any]]:
+    """Fetch products from Wix with retry logic for 503 errors."""
+    import time
+    
     url = f"{WIX_BASE_URL}/stores/v1/products/query"
     payload = {"query": {"paging": {"limit": limit}}}
-
-    resp = requests.post(url, headers=_wix_headers(), json=payload, timeout=30)
-    if resp.status_code != 200:
-        raise RuntimeError(resp.text)
-
-    data = resp.json() or {}
-    return data.get("products") or data.get("items") or []
+    
+    for attempt in range(max_retries):
+        try:
+            resp = requests.post(url, headers=_wix_headers(), json=payload, timeout=60)
+            
+            if resp.status_code == 200:
+                data = resp.json() or {}
+                return data.get("products") or data.get("items") or []
+            
+            # Retry on 503 (Service Unavailable) or 502 (Bad Gateway)
+            if resp.status_code in [502, 503, 504]:
+                wait_time = (attempt + 1) * 5  # 5, 10, 15 seconds
+                print(f"⚠️ Wix API {resp.status_code}, retry {attempt+1}/{max_retries} dans {wait_time}s...")
+                time.sleep(wait_time)
+                continue
+            
+            # Other errors - raise immediately
+            raise RuntimeError(f"Wix reader v1 products/query: {resp.status_code} {resp.text[:200]}")
+            
+        except requests.exceptions.Timeout:
+            wait_time = (attempt + 1) * 5
+            print(f"⚠️ Wix API timeout, retry {attempt+1}/{max_retries} dans {wait_time}s...")
+            time.sleep(wait_time)
+            continue
+        except requests.exceptions.ConnectionError as e:
+            wait_time = (attempt + 1) * 5
+            print(f"⚠️ Wix connexion error, retry {attempt+1}/{max_retries} dans {wait_time}s...")
+            time.sleep(wait_time)
+            continue
+    
+    raise RuntimeError(f"Wix API inaccessible après {max_retries} tentatives")
 
 
 # ---------------------------------------------------------
