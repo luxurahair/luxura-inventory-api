@@ -1,35 +1,26 @@
 #!/usr/bin/env python3
 """
-LUXURA BLOG CRON v1
-===================
+LUXURA BLOG CRON v2 - ÉVÉNEMENTS QUÉBEC
+=======================================
 Cron dédié à la génération automatique de blogs SEO.
-Séparé du sync Wix pour plus de flexibilité.
+Intègre maintenant les ÉVÉNEMENTS QUÉBEC/CANADA féminins.
+
+V2 NOUVEAUTÉS:
+- Détection automatique des événements (Fête des Mères, Saint-Jean, etc.)
+- Priorité aux événements CRITIQUES sur le calendrier éditorial
+- Contenu adapté aux occasions féminines québécoises
 
 Fonctionnement:
-1. Vérifie si c'est l'heure de publication (calendrier éditorial)
-2. Génère un blog en mode BROUILLON sur Wix
-3. Envoie un email d'approbation
-4. Ne publie PAS automatiquement
+1. Vérifie si un événement CRITIQUE est actif
+2. Si oui: génère du contenu événementiel
+3. Sinon: suit le calendrier éditorial normal
+4. Envoie un email d'approbation
 
 === CONFIGURATION RENDER CRON JOB ===
 
 Build Command: pip install requests
 Start Command: python scripts/blog_cron.py
-Schedule: 0 7,12,19 * * * (7h, 12h, 19h Montréal)
-
-=== VARIABLES D'ENVIRONNEMENT (CRON) ===
-
-API_URL = https://luxura-inventory-api.onrender.com
-
-=== VARIABLES REQUISES SUR L'API luxura-inventory-api ===
-(Ces variables doivent être sur le service API, pas sur le cron)
-
-- EMERGENT_LLM_KEY ou OPENAI_API_KEY : Pour générer le contenu du blog
-- WIX_API_KEY : Token OAuth Wix pour créer les brouillons
-- WIX_SITE_ID : ID de votre site Wix
-- LUXURA_APP_USER : Email Gmail pour envoyer les approbations
-- LUXURA_APP_PASSWORD : Mot de passe app Gmail
-- BLOG_APPROVAL_EMAIL : Email qui recevra les demandes d'approbation
+Schedule: 0 11,16,23 * * * (11h, 16h, 23h UTC = 7h, 12h, 19h Montréal)
 
 """
 
@@ -40,6 +31,76 @@ from datetime import datetime
 
 # Configuration
 API_URL = os.getenv("API_URL", "https://luxura-inventory-api.onrender.com").rstrip("/")
+
+# =====================================================
+# 🎉 ÉVÉNEMENTS QUÉBEC - PRIORITÉ HAUTE
+# =====================================================
+
+# Import du module événements (sera disponible via l'API)
+def get_current_event_from_api():
+    """Récupère l'événement actuel depuis l'API."""
+    try:
+        resp = requests.get(f"{API_URL}/api/events/current", timeout=30)
+        if resp.status_code == 200:
+            return resp.json()
+    except:
+        pass
+    return None
+
+
+# Événements hardcodés comme fallback
+QUEBEC_EVENTS_FALLBACK = {
+    # Format: (month, day_start, day_end): event_config
+    (5, 1, 15): {  # 1-15 mai = Fête des Mères
+        "name": "Fête des Mères",
+        "category": "fete_meres",
+        "priority": "critical",
+        "themes": ["cadeau maman", "mère-fille", "spa day"],
+        "hashtags": ["#FêteDesMères", "#MerciMaman", "#CadeauMaman"],
+    },
+    (6, 17, 25): {  # 17-25 juin = Saint-Jean
+        "name": "Saint-Jean-Baptiste",
+        "category": "saint_jean",
+        "priority": "high",
+        "themes": ["fierté québécoise", "été", "festival"],
+        "hashtags": ["#SaintJean", "#FêteNationale", "#Québec"],
+    },
+    (6, 1, 30): {  # Juin = Mariages
+        "name": "Saison des mariages",
+        "category": "mariages",
+        "priority": "high",
+        "themes": ["mariée", "demoiselle d'honneur"],
+        "hashtags": ["#MariageQuébec", "#Mariée2026"],
+    },
+    (12, 1, 24): {  # Décembre = Noël/Partys
+        "name": "Temps des Fêtes",
+        "category": "fetes",
+        "priority": "critical",
+        "themes": ["party", "famille", "cadeaux"],
+        "hashtags": ["#TempsDesFêtes", "#Noël"],
+    },
+    (2, 7, 14): {  # 7-14 février = Saint-Valentin
+        "name": "Saint-Valentin",
+        "category": "saint_valentin",
+        "priority": "high",
+        "themes": ["romantique", "date night"],
+        "hashtags": ["#SaintValentin", "#DateNight"],
+    },
+}
+
+
+def check_active_event():
+    """Vérifie si un événement est actif."""
+    today = datetime.now()
+    month = today.month
+    day = today.day
+    
+    for (m, d_start, d_end), event in QUEBEC_EVENTS_FALLBACK.items():
+        if month == m and d_start <= day <= d_end:
+            return event
+    
+    return None
+
 
 # =====================================================
 # CALENDRIER ÉDITORIAL - FEMMES QUÉBEC
@@ -108,7 +169,26 @@ def get_rotation_week():
 
 
 def get_todays_schedule():
-    """Retourne le planning du jour"""
+    """
+    Retourne le planning du jour.
+    PRIORITÉ: Événements Québec > Calendrier éditorial
+    """
+    # 1. Vérifier si un événement CRITIQUE est actif
+    active_event = check_active_event()
+    
+    if active_event and active_event.get("priority") in ["critical", "high"]:
+        log(f"🎉 ÉVÉNEMENT ACTIF: {active_event['name']}")
+        return {
+            "day": get_current_day(),
+            "week": get_rotation_week(),
+            "hour": PEAK_HOURS.get(get_current_day(), 12),
+            "category": active_event["category"],
+            "description": f"🎉 {active_event['name']}",
+            "is_event": True,
+            "event_data": active_event
+        }
+    
+    # 2. Sinon, calendrier éditorial normal
     day = get_current_day()
     week = get_rotation_week()
     hour = PEAK_HOURS.get(day, 12)
@@ -120,7 +200,8 @@ def get_todays_schedule():
             "week": week,
             "hour": hour,
             "category": schedule["category"],
-            "description": schedule["desc"]
+            "description": schedule["desc"],
+            "is_event": False
         }
     return None
 
@@ -137,9 +218,14 @@ def should_generate_now(schedule):
     return abs(current_hour - target_hour) <= 1
 
 
-def generate_blog(category):
+def generate_blog(category, event_data=None):
     """Appelle l'API pour générer un blog"""
-    log(f"📝 Génération blog catégorie: {category}")
+    if event_data:
+        log(f"🎉 Génération blog ÉVÉNEMENT: {event_data.get('name', category)}")
+        log(f"   Thèmes: {', '.join(event_data.get('themes', []))}")
+        log(f"   Hashtags: {' '.join(event_data.get('hashtags', []))}")
+    else:
+        log(f"📝 Génération blog catégorie: {category}")
     
     url = f"{API_URL}/api/blog/auto-generate"
     
@@ -149,6 +235,12 @@ def generate_blog(category):
         "publish_to_facebook": False,  # PAS de publication FB auto
         "category": category
     }
+    
+    # Ajouter les données événement si disponibles
+    if event_data:
+        payload["event_name"] = event_data.get("name")
+        payload["event_themes"] = event_data.get("themes", [])
+        payload["event_hashtags"] = event_data.get("hashtags", [])
     
     try:
         resp = requests.post(url, json=payload, timeout=300)
@@ -188,7 +280,7 @@ def main():
     schedule = get_todays_schedule()
     
     log("=" * 60)
-    log("🚀 LUXURA BLOG CRON v1")
+    log("🚀 LUXURA BLOG CRON v2 - ÉVÉNEMENTS QUÉBEC")
     log(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}")
     log(f"🕐 Heure Montréal: {get_montreal_hour()}h")
     log(f"📆 Jour: {get_current_day().capitalize()}")
@@ -197,7 +289,11 @@ def main():
     log("=" * 60)
     
     if schedule:
-        log(f"📋 Planning du jour:")
+        if schedule.get("is_event"):
+            log(f"🎉 ÉVÉNEMENT DÉTECTÉ: {schedule['description']}")
+            log(f"   - Priorité: HAUTE (override calendrier)")
+        else:
+            log(f"📋 Planning du jour (calendrier éditorial):")
         log(f"   - Heure cible: {schedule['hour']}h")
         log(f"   - Catégorie: {schedule['category']}")
         log(f"   - Sujet: {schedule['description']}")
@@ -208,8 +304,12 @@ def main():
     # Vérifier si c'est l'heure
     if should_generate_now(schedule):
         log("")
-        log(f"✅ C'est l'heure de publication!")
-        generate_blog(schedule["category"])
+        if schedule.get("is_event"):
+            log(f"🎉 GÉNÉRATION ÉVÉNEMENT: {schedule['description']}")
+            generate_blog(schedule["category"], event_data=schedule.get("event_data"))
+        else:
+            log(f"✅ C'est l'heure de publication!")
+            generate_blog(schedule["category"])
     else:
         log("")
         log(f"⏰ Pas l'heure de publication")
