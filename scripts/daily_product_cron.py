@@ -4,6 +4,7 @@
 ===============================================
 Publication automatique quotidienne à 18h00 (heure Montréal).
 Sélectionne un produit aléatoire et une mise en scène variée.
+SAUVEGARDE TOUTES LES IMAGES DANS WIX MEDIA MANAGER!
 
 Configuration Render Cron:
   - Name: daily-product-18h
@@ -13,22 +14,158 @@ Configuration Render Cron:
 Variables requises:
   - XAI_API_KEY: Pour images Grok
   - FB_PAGE_ACCESS_TOKEN + FB_PAGE_ID: Pour Facebook
+  - WIX_API_KEY + WIX_SITE_ID: Pour sauvegarder les images
+  - DATABASE_URL: Pour stocker les métadonnées
 """
 
 import os
 import sys
 import random
 import requests
+import asyncio
+import uuid
 from datetime import datetime
+
+# Ajouter le chemin backend pour les imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
 # Configuration
 XAI_API_KEY = os.getenv("XAI_API_KEY", "").strip()
 FB_PAGE_ACCESS_TOKEN = os.getenv("FB_PAGE_ACCESS_TOKEN", "").strip()
 FB_PAGE_ID = os.getenv("FB_PAGE_ID", "1838415193042352")
+WIX_API_KEY = os.getenv("WIX_API_KEY", "").strip()
+WIX_SITE_ID = os.getenv("WIX_SITE_ID", "").strip()
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 
 def log(msg):
     print(f"[DAILY 18H] {datetime.now().strftime('%H:%M:%S')} {msg}")
+
+
+# ============================================
+# 🖼️ SAUVEGARDE IMAGES DANS WIX
+# ============================================
+
+async def save_image_to_wix(grok_url: str, product: dict, scene: dict) -> str:
+    """
+    Sauvegarde l'image Grok dans Wix Media Manager et retourne l'URL permanente.
+    Stocke aussi les métadonnées dans Supabase.
+    """
+    import httpx
+    import asyncpg
+    
+    if not WIX_API_KEY or not WIX_SITE_ID:
+        log("⚠️ WIX_API_KEY ou WIX_SITE_ID manquant - utilisation URL Grok temporaire")
+        return grok_url
+    
+    try:
+        # Générer un nom de fichier descriptif
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M")
+        scene_slug = scene['name'].lower().replace(' ', '-').replace("'", "")
+        unique_id = uuid.uuid4().hex[:6]
+        file_name = f"luxura-{product['id']}-{scene_slug}-{timestamp}-{unique_id}.jpg"
+        
+        log(f"📤 Upload vers Wix Media Manager: {file_name}")
+        
+        async with httpx.AsyncClient(timeout=90.0) as client:
+            # 1. Importer l'image depuis l'URL Grok
+            import_response = await client.post(
+                "https://www.wixapis.com/site-media/v1/files/import",
+                headers={
+                    "Authorization": WIX_API_KEY,
+                    "wix-site-id": WIX_SITE_ID,
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "url": grok_url,
+                    "displayName": file_name,
+                    "mediaType": "IMAGE",
+                    "mimeType": "image/jpeg",
+                    "filePath": f"/luxura-ai-images/{file_name}"
+                }
+            )
+            
+            if import_response.status_code not in (200, 201):
+                log(f"⚠️ Erreur import Wix: {import_response.status_code}")
+                return grok_url  # Fallback sur URL Grok
+            
+            data = import_response.json()
+            file_id = data.get("file", {}).get("id") or data.get("id")
+            
+            if not file_id:
+                log("⚠️ Pas de file_id - utilisation URL Grok")
+                return grok_url
+            
+            # 2. Attendre que l'image soit prête (max 45 sec)
+            wix_url = None
+            for attempt in range(45):
+                check = await client.get(
+                    f"https://www.wixapis.com/site-media/v1/files/{file_id}",
+                    headers={
+                        "Authorization": WIX_API_KEY,
+                        "wix-site-id": WIX_SITE_ID,
+                    }
+                )
+                if check.status_code == 200:
+                    file_data = check.json().get("file", {})
+                    if file_data.get("operationStatus") == "READY":
+                        wix_url = f"https://static.wixstatic.com/media/{file_id}"
+                        break
+                await asyncio.sleep(1)
+            
+            if not wix_url:
+                wix_url = f"https://static.wixstatic.com/media/{file_id}"
+            
+            log(f"✅ Image sauvegardée dans Wix: {wix_url[:60]}...")
+            
+            # 3. Sauvegarder dans Supabase (métadonnées)
+            if DATABASE_URL:
+                try:
+                    conn = await asyncpg.connect(DATABASE_URL)
+                    
+                    # Créer la table si nécessaire
+                    await conn.execute("""
+                        CREATE TABLE IF NOT EXISTS generated_images (
+                            id SERIAL PRIMARY KEY,
+                            grok_url TEXT NOT NULL,
+                            wix_url TEXT NOT NULL,
+                            product_id VARCHAR(100) NOT NULL,
+                            product_name VARCHAR(255),
+                            color_name VARCHAR(100),
+                            scene VARCHAR(100),
+                            post_type VARCHAR(50),
+                            created_at TIMESTAMP DEFAULT NOW(),
+                            used_count INTEGER DEFAULT 1
+                        )
+                    """)
+                    
+                    # Insérer l'image
+                    await conn.execute("""
+                        INSERT INTO generated_images 
+                        (grok_url, wix_url, product_id, product_name, color_name, scene, post_type)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    """, grok_url, wix_url, product['id'], product['name'], 
+                        product['color_name'], scene['name'], "facebook")
+                    
+                    await conn.close()
+                    log(f"✅ Métadonnées sauvegardées dans DB")
+                except Exception as db_err:
+                    log(f"⚠️ Erreur DB: {db_err}")
+            
+            return wix_url
+            
+    except Exception as e:
+        log(f"⚠️ Exception sauvegarde Wix: {e}")
+        return grok_url  # Fallback sur URL Grok
+
+
+def save_image_sync(grok_url: str, product: dict, scene: dict) -> str:
+    """Wrapper synchrone pour la sauvegarde async."""
+    try:
+        return asyncio.run(save_image_to_wix(grok_url, product, scene))
+    except Exception as e:
+        log(f"⚠️ Erreur async: {e}")
+        return grok_url
 
 
 # ============================================
@@ -621,6 +758,13 @@ def main():
     log(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log("=" * 60)
     
+    # Vérifier les clés
+    log(f"\n🔑 Clés configurées:")
+    log(f"   XAI_API_KEY: {'✅' if XAI_API_KEY else '❌'}")
+    log(f"   FB_PAGE_ACCESS_TOKEN: {'✅' if FB_PAGE_ACCESS_TOKEN else '❌'}")
+    log(f"   WIX_API_KEY: {'✅' if WIX_API_KEY else '⚠️ (images non sauvegardées)'}")
+    log(f"   DATABASE_URL: {'✅' if DATABASE_URL else '⚠️ (métadonnées non sauvées)'}")
+    
     # 1. Sélection aléatoire
     product = get_random_product()
     scene = get_random_scene()
@@ -630,21 +774,31 @@ def main():
     log(f"💰 Prix: {product['price']}")
     log(f"🎬 Scène: {scene['name']}")
     
-    # 2. Générer l'image
+    # 2. Générer l'image avec Grok
     log("")
-    image_url = generate_image(product, scene)
+    grok_image_url = generate_image(product, scene)
     
-    if not image_url:
+    if not grok_image_url:
         log("❌ Échec génération image")
         sys.exit(1)
     
-    # 3. Générer le texte
+    # 3. SAUVEGARDER DANS WIX MEDIA MANAGER
+    log("")
+    log("🖼️ Sauvegarde de l'image dans Wix...")
+    final_image_url = save_image_sync(grok_image_url, product, scene)
+    
+    if final_image_url.startswith("https://static.wixstatic.com"):
+        log(f"✅ Image permanente Wix prête!")
+    else:
+        log(f"⚠️ Utilisation de l'URL Grok temporaire")
+    
+    # 4. Générer le texte
     post_text = generate_post_text(product)
     log(f"\n📝 Post généré ({len(post_text)} chars)")
     
-    # 4. Publier
+    # 5. Publier sur Facebook (avec l'URL Wix permanente!)
     log("")
-    success = post_to_facebook(post_text, image_url)
+    success = post_to_facebook(post_text, final_image_url)
     
     log("\n" + "=" * 60)
     if success:
@@ -652,6 +806,7 @@ def main():
         log(f"   📦 {product['name']}")
         log(f"   🎬 {scene['name']}")
         log(f"   🔗 {product['url']}")
+        log(f"   🖼️ Image: {final_image_url[:60]}...")
     else:
         log("❌ PUBLICATION ÉCHOUÉE")
     log("=" * 60)
