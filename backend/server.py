@@ -1926,11 +1926,12 @@ async def get_products(
                                 break
                 
                 if db_images and len(db_images) > 0 and db_images[0]:
-                    # Utiliser la vraie image Wix depuis la DB
-                    image = db_images[0]
+                    # Utiliser TOUTES les images Wix depuis la DB (carrousel complet)
+                    all_images = [img for img in db_images if img]  # Filtrer les images vides
                 else:
-                    # Fallback: mapping statique par code couleur
+                    # Fallback: mapping statique par code couleur (une seule image)
                     image = get_product_image(best_handle, product_category, color_code)
+                    all_images = [image] if image else []
                 
                 # Build Wix URL using the best handle
                 wix_url = f"https://www.luxuradistribution.com/product-page/{best_handle}" if best_handle else "https://www.luxuradistribution.com"
@@ -1992,7 +1993,7 @@ async def get_products(
                     "description": clean_html(parent.get('description', '')),
                     "category": product_category,
                     "series": series_map.get(product_category, "Luxura"),
-                    "images": [image],
+                    "images": all_images,  # TOUTES les images du carrousel Wix
                     "in_stock": data['total_quantity'] > 0,  # Basé sur la quantité réelle, pas sur Wix
                     "is_in_stock": data['total_quantity'] > 0,
                     "total_quantity": data['total_quantity'],
@@ -2087,8 +2088,25 @@ async def get_product(product_handle: str):
             # Detect category from handle
             category = detect_category_from_handle(handle, name)
             
-            # Get image from Wix mapping
-            image = get_product_image(handle, category)
+            # Get images from Wix - try to get ALL images from product options
+            p_options = p.get('options', {}) if isinstance(p.get('options'), dict) else {}
+            db_images = p_options.get('images', [])
+            
+            if db_images and len(db_images) > 0:
+                # Utiliser TOUTES les images du carrousel Wix
+                all_images = [img for img in db_images if img]
+            else:
+                # Fallback: chercher dans les produits correspondants
+                for prod in matching_products:
+                    prod_options = prod.get('options', {}) if isinstance(prod.get('options'), dict) else {}
+                    prod_images = prod_options.get('images', [])
+                    if prod_images and len(prod_images) > 0:
+                        all_images = [img for img in prod_images if img]
+                        break
+                else:
+                    # Dernier fallback: mapping statique
+                    image = get_product_image(handle, category)
+                    all_images = [image] if image else []
             
             # Build Wix URL
             wix_url = f"https://www.luxuradistribution.com/product-page/{handle}" if handle else "https://www.luxuradistribution.com"
@@ -2164,7 +2182,7 @@ async def get_product(product_handle: str):
                     "description": description,
                     "category": category,
                     "series": series_map.get(category, "Luxura"),
-                    "images": [image],
+                    "images": all_images,  # TOUTES les images du carrousel Wix
                     "in_stock": any_in_stock,
                     "total_quantity": total_quantity,
                     "sku": p.get('sku'),
@@ -2192,7 +2210,7 @@ async def get_product(product_handle: str):
                 "description": clean_html(p.get('description', '')),
                 "category": category,
                 "series": series_map_fallback.get(category, "Luxura"),
-                "images": [image],
+                "images": all_images,  # TOUTES les images du carrousel Wix
                 "in_stock": p.get('is_in_stock', False) or p.get('quantity', 0) > 0,
                 "total_quantity": p.get('quantity', 0),
                 "sku": p.get('sku'),
