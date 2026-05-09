@@ -132,8 +132,64 @@ Quelle méthode choisir?
 
 📍 6+ salons partenaires au Québec
 
+🔗 https://luxuradistribution.com
+
 #LuxuraDistribution #TapeIn #GeniusWeft #ExtensionsQuebec""",
-            "image_prompt": "Split comparison image showing two types of hair extensions side by side, tape-in extensions on left and weft extensions on right, clean professional product photography, white background, beauty industry aesthetic, no text"
+            "image_prompt": "comparison_v1"
+        },
+        {
+            "title": "Tape-in ou Genius Weft - Le guide",
+            "text": """💇‍♀️ GUIDE EXPERT | Tape-in ou Genius Weft?
+
+On vous aide à choisir!
+
+✂️ TAPE-IN - Parfait si vous voulez:
+• Changer de look souvent (réajustable)
+• Pose salon rapide
+• Budget accessible
+• Cheveux plus fins
+
+🌟 GENIUS WEFT - L'idéal si:
+• Vous cherchez la discrétion absolue
+• Cheveux plus épais
+• Moins de visites salon
+• Investissement long terme
+
+🎯 Le verdict? Les deux sont excellents - ça dépend de VOS besoins!
+
+💬 Questions? Écrivez-nous en privé!
+
+🔗 https://luxuradistribution.com
+
+#LuxuraDistribution #Comparatif #Extensions #Quebec""",
+            "image_prompt": "comparison_v2"
+        },
+        {
+            "title": "Battle des extensions: Tape vs Weft",
+            "text": """⚔️ BATTLE | Tape-in VS Genius Weft
+
+Le match que vous attendiez! 🥊
+
+🏆 TAPE-IN remporte si:
+• Vos cheveux sont fins/délicats
+• Vous aimez changer de style souvent
+• Budget: 💰💰
+• Entretien: toutes les 6-8 sem
+
+🏆 GENIUS WEFT gagne si:
+• Vous voulez du volume MAXIMAL
+• Vous préférez moins de rendez-vous
+• Budget: 💰💰💰
+• Entretien: tous les 3-4 mois
+
+🤝 Ex æquo: Les deux utilisent des cheveux 100% Remy de qualité supérieure!
+
+📞 Besoin d'aide pour choisir? On est là!
+
+🔗 https://luxuradistribution.com
+
+#LuxuraDistribution #TapeIn #GeniusWeft #ExtensionsCheveux""",
+            "image_prompt": "comparison_v3"
         }
     ],
     "product": [
@@ -317,10 +373,14 @@ Génère un prompt d'image qui capture l'essence et le contexte de ce post."""
         return f"Professional hair extensions photography, beautiful long flowing hair, premium beauty brand aesthetic, luxury salon setting, soft lighting, no text"
 
 
-def generate_image_grok(post_type: str) -> Optional[str]:
+def generate_image_grok(post_type: str, image_prompt_key: str = None) -> Optional[str]:
     """
     Génère une image avec GROK et les prompts v3 Ultra-Glamour.
     TOUJOURS des femmes glamour, JAMAIS des produits sur table.
+    
+    Args:
+        post_type: educational, product, weekend
+        image_prompt_key: Clé spécifique du prompt (comparison_v1, comparison_v2, etc.)
     """
     xai_api_key = os.getenv("XAI_API_KEY")
     if not xai_api_key:
@@ -329,23 +389,56 @@ def generate_image_grok(post_type: str) -> Optional[str]:
     
     log(f"🎨 Génération image GROK v3 Ultra-Glamour...")
     
-    # Import des prompts v3 Luxura
-    try:
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
-        from app.services.luxura_image_prompts import get_preset_prompt
-        
-        # Mapper le post_type vers le preset
-        preset_mapping = {
-            "educational": "educational",
-            "product": "product",  # Utilise les prompts v3 avec FEMMES
-            "weekend": "weekend"
-        }
-        preset = preset_mapping.get(post_type, "product")
-        base_prompt = get_preset_prompt(preset)
-        
-    except Exception as e:
-        log(f"⚠️ Import prompts échoué, utilisation fallback: {e}")
-        base_prompt = "Real photograph of a glamorous woman on a luxury yacht deck at sunset, with voluminous thick hair extensions flowing in the breeze. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting."
+    # === PROMPTS VARIÉS POUR LES COMPARATIFS ===
+    COMPARISON_PROMPTS = [
+        # v1: Salon professionnel
+        "Real photograph of a professional hairstylist in an elegant Quebec salon showing hair extension samples to a client, warm wooden interior, both women with gorgeous long hair, soft professional lighting, authentic consultation moment, no text",
+        # v2: Transformation miroir  
+        "Real photograph of a glamorous woman admiring her new long voluminous hair extensions in a luxurious salon mirror, golden hour lighting through window, elegant reflection shot, Quebec City skyline visible, no text",
+        # v3: Terrasse Montréal
+        "Real photograph of two stylish girlfriends on a chic Montreal rooftop terrace at sunset, both showing off their stunning hair extensions, one with tape-in the other with weft, golden hour light, city skyline background, no text",
+        # v4: Comparaison côte à côte naturelle
+        "Real photograph from behind of two elegant women walking arm in arm on a cobblestone street in Old Montreal, showing their different hair extension styles, one slightly wavy one straight, golden autumn light, no text",
+        # v5: Spa Charlevoix
+        "Real photograph of a relaxed woman at a Charlevoix spa terrace touching her beautiful long hair extensions, mountain view in background, soft natural lighting, serene atmosphere, no text"
+    ]
+    
+    # === PROMPTS GÉNÉRAUX VARIÉS ===
+    GENERAL_PROMPTS = [
+        "Real photograph of glamorous woman on a luxury yacht deck at sunset with voluminous thick hair extensions, elegant white designer dress, shot from 3/4 back angle, golden hour lighting",
+        "Real photograph of elegant woman at an outdoor wine tasting in Quebec wine country, gorgeous flowing hair caught in breeze, sophisticated casual style, warm afternoon light",
+        "Real photograph of stylish woman at a trendy Montreal cafe terrace, beautiful long hair extensions, reading a fashion magazine, European city vibes, soft natural lighting",
+        "Real photograph of confident woman walking down Grande Allée Quebec City at golden hour, stunning hair flowing behind her, chic summer dress, historic architecture backdrop",
+        "Real photograph of glamorous woman at a Mont-Tremblant resort spa, luxurious robe, beautiful hair swept to one side, mountain view through window, serene atmosphere",
+        "Real photograph of two best friends taking a selfie at Vieux-Port Montreal, both with gorgeous long hair extensions, summer dresses, sunset over water, fun authentic moment"
+    ]
+    
+    # Sélectionner le prompt approprié
+    if image_prompt_key and image_prompt_key.startswith("comparison_"):
+        # Utiliser un prompt de comparaison spécifique
+        version = image_prompt_key.split("_")[1]  # v1, v2, v3
+        version_index = {"v1": 0, "v2": 1, "v3": 2, "v4": 3, "v5": 4}.get(version, 0)
+        base_prompt = COMPARISON_PROMPTS[version_index % len(COMPARISON_PROMPTS)]
+        log(f"   📊 Utilisation prompt comparaison: {version}")
+    else:
+        # Import des prompts v3 Luxura ou fallback sur prompts généraux variés
+        try:
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+            from app.services.luxura_image_prompts import get_preset_prompt
+            
+            preset_mapping = {
+                "educational": "educational",
+                "product": "product",
+                "weekend": "weekend"
+            }
+            preset = preset_mapping.get(post_type, "product")
+            base_prompt = get_preset_prompt(preset)
+            
+        except Exception as e:
+            log(f"⚠️ Import prompts échoué, utilisation prompts variés: {e}")
+            # Rotation basée sur le jour pour variété
+            day_index = datetime.now().day % len(GENERAL_PROMPTS)
+            base_prompt = GENERAL_PROMPTS[day_index]
     
     # Ajouter la contrainte de longueur des cheveux
     hair_constraint = "Hair length MUST end at the natural waist level, approximately three-quarters down the back. Hair must NOT extend below the waist, NOT reach the hips or knees. This is critical."
@@ -468,8 +561,10 @@ def main():
     
     # Générer l'image avec GROK et prompts v3 Ultra-Glamour
     # TOUJOURS des femmes glamour, JAMAIS des produits sur table
+    # Passe la clé du prompt d'image si disponible (pour les comparatifs notamment)
     log(f"")
-    image_url = generate_image_grok(post_type)
+    image_prompt_key = content.get("image_prompt")
+    image_url = generate_image_grok(post_type, image_prompt_key)
     
     # Publier sur Facebook
     log(f"")
