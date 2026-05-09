@@ -700,8 +700,33 @@ def get_contextual_prompt(title: str, content: str = "") -> str:
     
     # Contexte selon mots-clés
     if any(w in full_text for w in ["mariage", "wedding", "mariée"]):
-        outfit = random.choice(GLAMOROUS_OUTFITS["evening"])
-        mood = "romantic bridal elegance"
+        # MARIAGE: Mariée en plein événement dans les plus beaux lieux du Québec
+        wedding_venues = [
+            "at a luxury golf club wedding reception in the Laurentians, elegant outdoor terrace with mountain view",
+            "at a grand wedding banquet hall in Montreal, crystal chandeliers and elegant decor",
+            "at a romantic Fairmont Le Château Frontenac wedding, historic ballroom with stunning views",
+            "at a beautiful vineyard wedding in the Eastern Townships, rolling hills backdrop",
+            "at a chic Château Montebello wedding, rustic elegance with log architecture",
+            "at a stunning waterfront wedding venue on Lac Memphrémagog, sunset over the lake",
+            "at a glamorous wedding reception at Club de Golf Royal Montreal, prestigious setting",
+            "at an elegant Ritz-Carlton Montreal wedding, sophisticated urban luxury",
+            "at a magical wedding under a tent at Domaine Château-Bromont, countryside charm",
+            "at a romantic wedding at Auberge Saint-Antoine Quebec City, heritage elegance",
+        ]
+        wedding_scenes = [
+            "the bride dancing with her husband, hair flowing beautifully as they spin",
+            "the bride laughing with her bridesmaids, showing off her stunning bridal hair",
+            "the bride and groom sharing their first dance, her gorgeous hair catching the light",
+            "the bride posing with family, radiant with her perfect wedding day hair",
+            "the bride walking through the venue, her luxurious hair extensions trailing elegantly",
+            "the bride surrounded by loved ones at the reception, hair styled perfectly",
+        ]
+        location = random.choice(wedding_venues)
+        scene = random.choice(wedding_scenes)
+        outfit = "stunning white designer wedding gown"
+        mood = "romantic bridal elegance, joyful celebration"
+        
+        return f"Real photograph of {scene}, {location}, wearing {outfit}, her voluminous long {hair} looking absolutely perfect, {mood}, soft romantic lighting with bokeh, professional wedding photography, no text, no watermarks"
     elif any(w in full_text for w in ["spa", "scandinave", "bain", "piscine"]):
         outfit = random.choice(GLAMOROUS_OUTFITS["spa"])
         mood = "relaxed sensual spa vibes"
