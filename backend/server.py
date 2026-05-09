@@ -1147,6 +1147,135 @@ def clean_html(text: str) -> str:
 # Système de mapping d'images basé sur les codes couleur
 # Les images sont organisées par catégorie et code couleur pour garantir la cohérence
 
+# ==================== ORDRE DES PRODUITS WIX ====================
+# Ordre EXACT tel qu'affiché sur le site Wix - par handle
+# Ces ordres correspondent à l'affichage sur luxuradistribution.com
+WIX_PRODUCT_ORDER = {
+    # GENIUS WEFT - https://www.luxuradistribution.com/genius
+    "genius-trame-invisible-série-vivian-noir-foncé-1": 1,
+    "genius-trame-invisible-serie-vivian-noir-fonce-1": 1,
+    "genius-trame-invisible-série-vivian-dark-chocolate-dc": 2,
+    "genius-trame-invisible-serie-vivian-dark-chocolate-dc": 2,
+    "genius-trame-invisible-série-vivian-brun-2": 3,
+    "genius-trame-invisible-serie-vivian-brun-2": 3,
+    "genius-ssd-trame-invisible-série-vivian-brun-cacao": 4,
+    "genius-ssd-trame-invisible-serie-vivian-brun-cacao": 4,
+    "genius-trame-invisible-série-vivian-brun-moyen-3": 5,
+    "genius-trame-invisible-serie-vivian-brun-moyen-3": 5,
+    "genius-série-vivian-brun-lumineux-blond-foncé-6": 6,
+    "genius-serie-vivian-brun-lumineux-blond-fonce-6": 6,
+    "genius-trame-invisible-série-vivian-foochow": 7,
+    "genius-trame-invisible-serie-vivian-foochow": 7,
+    "genius-trame-invisible-série-vivian-t14-p14-24": 8,
+    "genius-trame-invisible-serie-vivian-t14-p14-24": 8,
+    "genius-trame-invisible-série-vivian-blond-platine-60a": 9,
+    "genius-trame-invisible-serie-vivian-blond-platine-60a": 9,
+    "genius-trame-invisible-série-vivian-5atp18b62": 10,
+    "genius-trame-invisible-serie-vivian-5atp18b62": 10,
+    "genius-ssd-série-vivian-ombré-blond-cendré-5at60": 11,
+    "genius-ssd-serie-vivian-ombre-blond-cendre-5at60": 11,
+    "genius-sdd-série-vivian-ombré-2btp18-1006": 12,
+    "genius-sdd-serie-vivian-ombre-2btp18-1006": 12,
+    "genius-trame-invisible-série-vivian-blanc-polar-ivory": 13,
+    "genius-trame-invisible-serie-vivian-blanc-polar-ivory": 13,
+    "genius-trame-invisible-série-vivian-perfect-highlift-ash-pha": 14,
+    "genius-trame-invisible-serie-vivian-perfect-highlift-ash-pha": 14,
+    "genius-nouvelle-trame-invisible-série-vivian-cannelle-cinnamon": 15,
+    "genius-nouvelle-trame-invisible-serie-vivian-cannelle-cinnamon": 15,
+    "genius-trame-invisible-série-vivian-balayage-blond-beige-18-22": 16,
+    "genius-trame-invisible-serie-vivian-balayage-blond-beige-18-22": 16,
+    "genius-trame-invisible-série-vivian-balayage-blond-foncé-6-24": 17,
+    "genius-trame-invisible-serie-vivian-balayage-blond-fonce-6-24": 17,
+    "genius-série-vivian-balayage-blond-cendré-613-18a": 18,
+    "genius-serie-vivian-balayage-blond-cendre-613-18a": 18,
+    "genius-trame-invisible-série-vivian-chengtu": 19,
+    "genius-trame-invisible-serie-vivian-chengtu": 19,
+    "genius-série-vivian-ombré-blond-miel-cb": 20,
+    "genius-serie-vivian-ombre-blond-miel-cb": 20,
+    
+    # HALO - https://www.luxuradistribution.com/halo
+    "halo-série-everly-noir-doux-brun-foncé-1b": 1,
+    "halo-serie-everly-noir-doux-brun-fonce-1b": 1,
+    "halo-série-everly-brun-2": 2,
+    "halo-serie-everly-brun-2": 2,
+    "halo-série-everly-brun-moyen-3": 3,
+    "halo-serie-everly-brun-moyen-3": 3,
+    "halo-série-everly-brun-lumineux-blond-foncé-6": 4,
+    "halo-serie-everly-brun-lumineux-blond-fonce-6": 4,
+    "halo-série-everly-blond-platine-60a": 5,
+    "halo-serie-everly-blond-platine-60a": 5,
+    "halo-série-everly-balayage-blond-foncé-6-24": 6,
+    "halo-serie-everly-balayage-blond-fonce-6-24": 6,
+    "halo-série-everly-balayage-blond-beige-18-22": 7,
+    "halo-serie-everly-balayage-blond-beige-18-22": 7,
+    "halo-série-everly-ombré-blond-miel-cb": 8,
+    "halo-serie-everly-ombre-blond-miel-cb": 8,
+    
+    # TAPE - https://www.luxuradistribution.com/tape
+    "bande-adhésive-série-aurora-noir-foncé-1-jet-black": 1,
+    "bande-adhesive-serie-aurora-noir-fonce-1-jet-black": 1,
+    "bande-adhésive-série-aurora-brun-foncé-noir-doux-1b": 2,
+    "bande-adhesive-serie-aurora-brun-fonce-noir-doux-1b": 2,
+    "bande-adhésive-série-aurora-dark-chocolate-dc": 3,
+    "bande-adhesive-serie-aurora-dark-chocolate-dc": 3,
+    "bande-adhésive-série-aurora-brun-2": 4,
+    "bande-adhesive-serie-aurora-brun-2": 4,
+    "bande-adhésive-série-aurora-brun-moyen-3": 5,
+    "bande-adhesive-serie-aurora-brun-moyen-3": 5,
+    "bande-adhésive-série-aurora-brun-lumineux-blond-foncé-6": 6,
+    "bande-adhesive-serie-aurora-brun-lumineux-blond-fonce-6": 6,
+    "bande-adhésive-série-aurora-blond-platine-60a": 7,
+    "bande-adhesive-serie-aurora-blond-platine-60a": 7,
+    "bande-adhésive-série-aurora-balayage-blond-foncé-6-24": 8,
+    "bande-adhesive-serie-aurora-balayage-blond-fonce-6-24": 8,
+    "bande-adhésive-série-aurora-balayage-blond-beige-18-22": 9,
+    "bande-adhesive-serie-aurora-balayage-blond-beige-18-22": 9,
+    "bande-adhésive-série-aurora-balayage-blond-cendré-613-18a": 10,
+    "bande-adhesive-serie-aurora-balayage-blond-cendre-613-18a": 10,
+    "bande-adhésive-série-aurora-ombré-blond-miel-cb": 11,
+    "bande-adhesive-serie-aurora-ombre-blond-miel-cb": 11,
+    
+    # I-TIP - https://www.luxuradistribution.com/i-tip
+    "i-tips-série-eleanor-brun-foncé-noir-doux-1b": 1,
+    "i-tips-serie-eleanor-brun-fonce-noir-doux-1b": 1,
+    "i-tips-série-eleanor-brun-moyen-3": 2,
+    "i-tips-serie-eleanor-brun-moyen-3": 2,
+    "i-tips-série-eleanor-brun-lumineux-blond-foncé-6": 3,
+    "i-tips-serie-eleanor-brun-lumineux-blond-fonce-6": 3,
+    "i-tips-série-eleanor-blond-platine-60a": 4,
+    "i-tips-serie-eleanor-blond-platine-60a": 4,
+    "i-tips-série-eleanor-balayage-blond-foncé-6-24": 5,
+    "i-tips-serie-eleanor-balayage-blond-fonce-6-24": 5,
+    "i-tips-série-eleanor-balayage-blond-beige-18-22": 6,
+    "i-tips-serie-eleanor-balayage-blond-beige-18-22": 6,
+    "i-tips-série-eleanor-balayage-blond-cendré-613-18a": 7,
+    "i-tips-serie-eleanor-balayage-blond-cendre-613-18a": 7,
+    "i-tips-série-eleanor-ombré-blond-miel-cb": 8,
+    "i-tips-serie-eleanor-ombre-blond-miel-cb": 8,
+}
+
+def get_wix_product_order(handle: str) -> int:
+    """Retourne l'ordre d'affichage Wix pour un produit (par handle)."""
+    if not handle:
+        return 999
+    # Normaliser le handle (enlever accents, lowercase)
+    import unicodedata
+    normalized = unicodedata.normalize('NFD', handle.lower())
+    normalized = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+    
+    # Chercher dans le mapping
+    if handle.lower() in WIX_PRODUCT_ORDER:
+        return WIX_PRODUCT_ORDER[handle.lower()]
+    if normalized in WIX_PRODUCT_ORDER:
+        return WIX_PRODUCT_ORDER[normalized]
+    
+    # Fallback: essayer de matcher partiellement
+    for key, order in WIX_PRODUCT_ORDER.items():
+        if key in handle.lower() or handle.lower() in key:
+            return order
+    
+    return 999  # Non trouvé = à la fin
+
 # Images par code couleur - mapping universel basé sur la teinte
 # Ces images sont les vraies photos des produits Luxura
 COLOR_CODE_IMAGES = {
@@ -2013,12 +2142,12 @@ async def get_products(
                 
                 result.append(product_data)
             
-            # Sort by category order, then by Wix sort order DESC (numericId)
-            # DESC = les plus récents en premier, comme affiché sur Wix (#1, #1B, #3, #6...)
+            # Sort by category order, then by Wix display order (from mapping)
+            # Utilise le mapping WIX_PRODUCT_ORDER pour respecter l'ordre du site
             category_order = {'genius': 0, 'halo': 1, 'tape': 2, 'i-tip': 3, 'ponytail': 4, 'clip-in': 5, 'essentiels': 6}
             result.sort(key=lambda x: (
                 category_order.get(x['category'], 99),
-                -x.get('wix_sort_order', 0)  # Négatif = ordre DESC (comme Wix)
+                get_wix_product_order(x.get('handle', '')),  # Ordre Wix par handle
             ))
             
             return result
