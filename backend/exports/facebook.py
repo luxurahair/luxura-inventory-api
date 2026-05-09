@@ -118,6 +118,9 @@ def post_to_facebook(request: FacebookPostRequest):
         success: bool
         post_id: ID du post créé
         page_url: Lien vers la page Facebook
+    
+    NOTE: Ajoute automatiquement l'URL Luxura si le message contient 
+    un appel à l'action mais pas de lien cliquable.
     """
     fb_token = os.getenv("FB_PAGE_ACCESS_TOKEN")
     
@@ -127,6 +130,22 @@ def post_to_facebook(request: FacebookPostRequest):
             detail="FB_PAGE_ACCESS_TOKEN non configuré dans les variables d'environnement Render"
         )
     
+    # === AJOUT URL AUTOMATIQUE ===
+    message = request.message
+    LUXURA_URL = "https://luxuradistribution.com"
+    message_lower = message.lower()
+    
+    cta_keywords = ["lien en bio", "lien dans la bio", "découvrez", "visitez", 
+                    "luxuradistribution.com", "notre site", "notre boutique", 
+                    "cliquez", "en savoir plus", "voir nos"]
+    
+    has_cta = any(kw in message_lower for kw in cta_keywords)
+    already_has_url = "https://" in message or "http://" in message or request.link
+    
+    if has_cta and not already_has_url:
+        message = f"{message}\n\n🔗 {LUXURA_URL}"
+    # === FIN AJOUT URL ===
+    
     try:
         # Si image_url fournie, poster comme photo
         if request.image_url:
@@ -134,7 +153,7 @@ def post_to_facebook(request: FacebookPostRequest):
                 f"https://graph.facebook.com/v25.0/{FB_PAGE_ID}/photos",
                 data={
                     "url": request.image_url,
-                    "caption": request.message,
+                    "caption": message,  # Utilise message modifié avec URL
                     "access_token": fb_token
                 },
                 timeout=30
@@ -142,7 +161,7 @@ def post_to_facebook(request: FacebookPostRequest):
         else:
             # Post texte/lien standard
             data = {
-                "message": request.message,
+                "message": message,  # Utilise message modifié avec URL
                 "access_token": fb_token
             }
             if request.link:

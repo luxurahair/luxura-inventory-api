@@ -14,9 +14,11 @@ ACTUALITÉ MAI-JUIN 2026:
 TENDANCES BEAUTÉ 2026:
 - Frange rideau style années 70
 - Ondulations bohèmes gaufrées
-- Cheveux très longs avec foulard
+- Cheveux ultra-longs glamour
 - Balayage lumineux
 - Prix Contessa 2026 - coiffure couture canadienne
+
+NOTE: JAMAIS de foulard/scarf dans les prompts d'images.
 """
 
 import random
@@ -234,7 +236,7 @@ TRENDS_2026 = {
     "hair": [
         "frange rideau style années 70",
         "ondulations bohèmes gaufrées",
-        "cheveux très longs avec foulard noué",
+        "cheveux ultra-longs ondulés glamour",
         "balayage lumineux dimension",
         "clavicut épaules Hailey Bieber",
         "texture spray anti-humidité",

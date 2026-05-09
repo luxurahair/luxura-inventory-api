@@ -218,7 +218,11 @@ def save_to_db(post_id: str, post_data: dict):
 
 
 def publish_to_facebook(post_data: dict):
-    """Publie directement sur Facebook (plus d'approbation email)"""
+    """Publie directement sur Facebook (plus d'approbation email)
+    
+    IMPORTANT: Ajoute automatiquement l'URL du site si le texte contient 
+    un appel à l'action comme 'lien en bio' ou 'luxuradistribution.com'
+    """
     FB_PAGE_ID = os.getenv("FB_PAGE_ID", "").strip()
     FB_PAGE_ACCESS_TOKEN = os.getenv("FB_PAGE_ACCESS_TOKEN", "").strip()
     
@@ -228,6 +232,23 @@ def publish_to_facebook(post_data: dict):
     
     message = post_data.get('full_text', post_data.get('text', ''))
     image_url = post_data.get('image_url')
+    
+    # === AJOUT URL AUTOMATIQUE ===
+    # Si le message mentionne un lien mais n'a pas d'URL cliquable, on l'ajoute
+    LUXURA_URL = "https://luxuradistribution.com"
+    message_lower = message.lower()
+    
+    cta_keywords = ["lien en bio", "lien dans la bio", "découvrez", "visitez", 
+                    "luxuradistribution.com", "notre site", "notre boutique", 
+                    "cliquez", "en savoir plus", "voir nos"]
+    
+    has_cta = any(kw in message_lower for kw in cta_keywords)
+    already_has_url = "https://" in message or "http://" in message
+    
+    if has_cta and not already_has_url:
+        message = f"{message}\n\n🔗 {LUXURA_URL}"
+        log(f"✅ URL ajoutée automatiquement au post")
+    # === FIN AJOUT URL ===
     
     try:
         if image_url:

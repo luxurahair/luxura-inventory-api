@@ -15,7 +15,7 @@ SEASONS = {
         "colors": ["blanc", "argenté", "bleu glacé", "bordeaux"],
         "atmosphere": "cozy winter scene, soft snow, warm indoor lighting, elegant winter fashion",
         "keywords": ["hiver", "fêtes", "Noël", "nouvel an", "cocooning"],
-        "image_elements": "winter coat, scarf, cozy cafe window, soft snow outside, warm tones"
+        "image_elements": "elegant winter coat, cozy cafe window, soft snow outside, warm tones, cashmere sweater"
     },
     "spring": {
         "name_fr": "Printemps",
