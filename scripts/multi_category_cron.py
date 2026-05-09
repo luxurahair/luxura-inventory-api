@@ -51,6 +51,75 @@ def log(msg):
 
 
 # ============================================
+# 🖼️ SAUVEGARDE IMAGES DANS WIX
+# ============================================
+
+async def save_to_wix(grok_url: str, product: dict, scene: dict, category: str) -> str:
+    """Sauvegarde l'image dans Wix Media Manager."""
+    import httpx
+    
+    if not WIX_API_KEY or not WIX_SITE_ID:
+        log("⚠️ Clés Wix manquantes - URL Grok utilisée")
+        return grok_url
+    
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M")
+        scene_slug = scene['name'].lower().replace(' ', '-').replace("'", "")
+        file_name = f"luxura-{category}-{product['id']}-{scene_slug}-{timestamp}-{uuid.uuid4().hex[:4]}.jpg"
+        
+        log(f"📤 Upload Wix: {file_name}")
+        
+        async with httpx.AsyncClient(timeout=90.0) as client:
+            resp = await client.post(
+                "https://www.wixapis.com/site-media/v1/files/import",
+                headers={
+                    "Authorization": WIX_API_KEY,
+                    "wix-site-id": WIX_SITE_ID,
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "url": grok_url,
+                    "displayName": file_name,
+                    "mediaType": "IMAGE",
+                    "mimeType": "image/jpeg",
+                    "filePath": f"/luxura-ai-{category}/{file_name}"
+                }
+            )
+            
+            if resp.status_code in (200, 201):
+                file_id = resp.json().get("file", {}).get("id") or resp.json().get("id")
+                if file_id:
+                    # Attendre READY
+                    for _ in range(30):
+                        check = await client.get(
+                            f"https://www.wixapis.com/site-media/v1/files/{file_id}",
+                            headers={"Authorization": WIX_API_KEY, "wix-site-id": WIX_SITE_ID}
+                        )
+                        if check.status_code == 200:
+                            if check.json().get("file", {}).get("operationStatus") == "READY":
+                                wix_url = f"https://static.wixstatic.com/media/{file_id}"
+                                log(f"✅ Sauvegardé dans Wix!")
+                                return wix_url
+                        await asyncio.sleep(1)
+                    return f"https://static.wixstatic.com/media/{file_id}"
+            
+            log(f"⚠️ Erreur Wix {resp.status_code}")
+            return grok_url
+            
+    except Exception as e:
+        log(f"⚠️ Exception Wix: {e}")
+        return grok_url
+
+
+def save_to_wix_sync(grok_url: str, product: dict, scene: dict, category: str) -> str:
+    """Wrapper synchrone."""
+    try:
+        return asyncio.run(save_to_wix(grok_url, product, scene, category))
+    except:
+        return grok_url
+
+
+# ============================================
 # 📦 CATALOGUES PAR CATÉGORIE
 # ============================================
 
@@ -127,6 +196,7 @@ CATEGORY_INFO = {
         "maintenance": "remontage aux 4-8 semaines",
         "highlight": "La trame la plus discrète du marché",
         "base_url": "https://www.luxuradistribution.com/genius",
+        "guide_image": None,  # Pas de guide spécifique
     },
     "halo": {
         "name": "Halo",
@@ -137,6 +207,7 @@ CATEGORY_INFO = {
         "maintenance": "aucun remontage requis - clipser/déclipper!",
         "highlight": "Volume instantané sans engagement",
         "base_url": "https://www.luxuradistribution.com/halo",
+        "guide_image": "https://static.wixstatic.com/media/f1b961_ab68d2899ded456b8bb7599e972621fa~mv2.jpeg",  # Guide installation
     },
     "itip": {
         "name": "I-Tip",
@@ -147,6 +218,7 @@ CATEGORY_INFO = {
         "maintenance": "remontage aux 4-8 semaines",
         "highlight": "Cheveux russes de très haute qualité",
         "base_url": "https://www.luxuradistribution.com/i-tip",
+        "guide_image": None,
     },
     "tape": {
         "name": "Tape-in",
@@ -157,6 +229,7 @@ CATEGORY_INFO = {
         "maintenance": "remontage aux 4-8 semaines",
         "highlight": "La pose la plus rapide en salon",
         "base_url": "https://www.luxuradistribution.com/tape",
+        "guide_image": None,
     },
 }
 
@@ -226,7 +299,7 @@ def generate_post_text(product: dict, category: str) -> str:
     
     # Templates spécifiques par catégorie
     if category == "halo":
-        # Halo: Mettre en avant l'installation 2 minutes
+        # Halo: Mettre en avant l'installation 2 minutes + GUIDE
         templates = [
             f"""{product['emoji']} HALO | {product['name']}
 
@@ -235,20 +308,46 @@ def generate_post_text(product: dict, category: str) -> str:
 🎨 Teinte: {product['color_name']} ({product['shade']})
 💰 Prix: {product['price']}
 
+📖 INSTALLATION FACILE:
+1️⃣ Ajuster le fil invisible
+2️⃣ Positionner les pinces
+3️⃣ Clipser sous vos cheveux
+C'est TOUT! 🎉
+
 Ce que nos clientes adorent:
 ⚡ S'installe en 2 minutes chrono
 ⚡ Aucun outil requis
 ⚡ Clipser le matin, retirer le soir
 ⚡ Durée de vie: 8+ mois
 
-Parfait pour: événements, sorties, ou tous les jours!
-
-🛒 DÉCOUVREZ:
+🛒 DÉCOUVREZ + Guide complet:
 {product['url']}
 
 📍 Luxura Distribution - St-Georges, Beauce
 
-#LuxuraDistribution #HaloExtensions #VolumeInstantané #Quebec""",
+#LuxuraDistribution #HaloExtensions #VolumeInstantané #2Minutes #Quebec""",
+            
+            f"""⚡ 2 MINUTES pour des cheveux de RÊVE! ⚡
+
+{product['emoji']} {product['name']}
+
+🎨 Teinte: {product['color_name']}
+💰 Seulement {product['price']}
+
+💡 POURQUOI LE HALO?
+✅ Installation SANS OUTILS
+✅ Fil invisible = ZÉRO dommage
+✅ Retirez-le quand vous voulez
+✅ Durée: 8+ mois
+
+Étape 1: Ajuster le fil
+Étape 2: Positionner les pinces
+Étape 3: Admirer le résultat! 💫
+
+🛒 COMMANDEZ:
+{product['url']}
+
+#LuxuraDistribution #Halo #ExtensionsFaciles #Quebec""",
         ]
     elif category == "itip":
         # I-Tip: Mettre en avant la qualité cheveux russes
@@ -391,25 +490,31 @@ def main(category: str):
     
     # 2. Générer l'image
     log("")
-    image_url = generate_image(product, scene, category)
+    grok_image_url = generate_image(product, scene, category)
     
-    if not image_url:
+    if not grok_image_url:
         log("❌ Échec génération image")
         sys.exit(1)
     
-    # 3. Générer le texte
+    # 3. SAUVEGARDER DANS WIX MEDIA MANAGER
+    log("")
+    log("🖼️ Sauvegarde dans Wix Media Manager...")
+    final_image_url = save_to_wix_sync(grok_image_url, product, scene, category)
+    
+    # 4. Générer le texte
     post_text = generate_post_text(product, category)
     log(f"\n📝 Post généré ({len(post_text)} chars)")
     
-    # 4. Publier
+    # 5. Publier sur Facebook
     log("")
-    success = post_to_facebook(post_text, image_url)
+    success = post_to_facebook(post_text, final_image_url)
     
     log("\n" + "=" * 60)
     if success:
         log("✅ PUBLICATION RÉUSSIE!")
         log(f"   📦 {info['name']}: {product['name']}")
         log(f"   🔗 {product['url']}")
+        log(f"   🖼️ Image Wix: {final_image_url[:60]}...")
     else:
         log("❌ PUBLICATION ÉCHOUÉE")
     log("=" * 60)
