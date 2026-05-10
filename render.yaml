@@ -1,0 +1,46 @@
+# =====================================================
+# RENDER.YAML - Configuration des Cron Jobs Luxura
+# =====================================================
+# 4 publications par jour, une par catégorie
+# Heures optimales pour femmes QC 20-45 ans
+#
+# HORAIRE (Heure Montréal → UTC):
+# - 07h30 MTL = 11h30 UTC (été) / 12h30 UTC (hiver) → TAPE
+# - 12h00 MTL = 16h00 UTC (été) / 17h00 UTC (hiver) → HALO  
+# - 18h00 MTL = 22h00 UTC (été) / 23h00 UTC (hiver) → GENIUS
+# - 20h30 MTL = 00h30 UTC+1 (été) / 01h30 UTC+1 (hiver) → I-TIP
+# =====================================================
+
+services:
+  - type: web
+    name: luxura-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+# =====================================================
+# CRON JOBS - 4 Publications Quotidiennes
+# =====================================================
+crons:
+  # 07h30 Montréal - TAPE (Bande adhésive)
+  - name: daily-tape-0730
+    schedule: "30 11 * * *"  # 11h30 UTC = 07h30 MTL (été)
+    command: "cd /opt/render/project/src && python scripts/multi_category_cron.py tape"
+    
+  # 12h00 Montréal - HALO (Pause lunch)  
+  - name: daily-halo-1200
+    schedule: "0 16 * * *"   # 16h00 UTC = 12h00 MTL (été)
+    command: "cd /opt/render/project/src && python scripts/multi_category_cron.py halo"
+    
+  # 18h00 Montréal - GENIUS (Retour maison)
+  - name: daily-genius-1800
+    schedule: "0 22 * * *"   # 22h00 UTC = 18h00 MTL (été)
+    command: "cd /opt/render/project/src && python scripts/multi_category_cron.py genius"
+    
+  # 20h30 Montréal - I-TIP (Prime time soirée)
+  - name: daily-itip-2030
+    schedule: "30 0 * * *"   # 00h30 UTC+1 = 20h30 MTL (été)
+    command: "cd /opt/render/project/src && python scripts/multi_category_cron.py itip"
