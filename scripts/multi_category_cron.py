@@ -35,7 +35,25 @@ import uuid
 from datetime import datetime
 
 # Ajouter le chemin backend
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.join(SCRIPT_DIR, '..')
+BACKEND_DIR = os.path.join(ROOT_DIR, 'backend')
+sys.path.insert(0, BACKEND_DIR)
+
+# Charger les variables d'environnement depuis TOUS les fichiers .env
+from dotenv import load_dotenv
+
+# 1. Charger .secrets.env (clés API principales)
+secrets_env = os.path.join(ROOT_DIR, '.secrets.env')
+if os.path.exists(secrets_env):
+    load_dotenv(secrets_env)
+    print(f"[LUXURA] ✅ Secrets chargés depuis .secrets.env")
+
+# 2. Charger backend/.env (override si nécessaire)
+backend_env = os.path.join(BACKEND_DIR, '.env')
+if os.path.exists(backend_env):
+    load_dotenv(backend_env, override=True)
+    print(f"[LUXURA] ✅ Variables chargées depuis backend/.env")
 
 # Configuration
 XAI_API_KEY = os.getenv("XAI_API_KEY", "").strip()
@@ -294,134 +312,84 @@ No text, no watermarks."""
 
 
 def generate_post_text(product: dict, category: str) -> str:
-    """Génère le texte du post selon la catégorie."""
+    """
+    Génère le texte du post - FORMAT COURT (2-3 lignes max).
+    Référence: Publication "PLACEMENT DES EXTENSIONS" de Luxura.
+    """
     info = CATEGORY_INFO[category]
     
-    # Templates spécifiques par catégorie
+    # Templates COURTS par catégorie
     if category == "halo":
-        # Halo: Mettre en avant l'installation 2 minutes + GUIDE
         templates = [
-            f"""{product['emoji']} HALO | {product['name']}
+            f"""{product['emoji']} HALO | {product['color_name']}
 
-✨ Volume instantané en 2 MINUTES! ✨
+Volume instantané en 2 MINUTES. Fil invisible, aucun outil requis. Clipser le matin, retirer le soir.
 
-🎨 Teinte: {product['color_name']} ({product['shade']})
-💰 Prix: {product['price']}
-
-📖 INSTALLATION FACILE:
-1️⃣ Ajuster le fil invisible
-2️⃣ Positionner les pinces
-3️⃣ Clipser sous vos cheveux
-C'est TOUT! 🎉
-
-Ce que nos clientes adorent:
-⚡ S'installe en 2 minutes chrono
-⚡ Aucun outil requis
-⚡ Clipser le matin, retirer le soir
-⚡ Durée de vie: 8+ mois
-
-🛒 DÉCOUVREZ + Guide complet:
 {product['url']}
 
-📍 Luxura Distribution - St-Georges, Beauce
-
-#LuxuraDistribution #HaloExtensions #VolumeInstantané #2Minutes #Quebec""",
+#LuxuraDistribution #Halo #Quebec""",
             
-            f"""⚡ 2 MINUTES pour des cheveux de RÊVE! ⚡
+            f"""{product['emoji']} HALO EVERLY | {product['shade']}
 
-{product['emoji']} {product['name']}
+S'installe en 2 minutes chrono. Zéro dommage, résultat immédiat. Durée de vie: 8+ mois.
 
-🎨 Teinte: {product['color_name']}
-💰 Seulement {product['price']}
-
-💡 POURQUOI LE HALO?
-✅ Installation SANS OUTILS
-✅ Fil invisible = ZÉRO dommage
-✅ Retirez-le quand vous voulez
-✅ Durée: 8+ mois
-
-Étape 1: Ajuster le fil
-Étape 2: Positionner les pinces
-Étape 3: Admirer le résultat! 💫
-
-🛒 COMMANDEZ:
 {product['url']}
 
-#LuxuraDistribution #Halo #ExtensionsFaciles #Quebec""",
+#LuxuraDistribution #HaloExtensions #Quebec""",
         ]
     elif category == "itip":
-        # I-Tip: Mettre en avant la qualité cheveux russes
         templates = [
-            f"""{product['emoji']} I-TIP PREMIUM | {product['name']}
+            f"""{product['emoji']} I-TIP | {product['color_name']}
 
-💎 Cheveux Russes de Très Haute Qualité 💎
+Cheveux russes premium. Pose microbilles ultra-discrète. Durée de vie: 8+ mois.
 
-🎨 Teinte: {product['color_name']} ({product['shade']})
-💰 Prix: {product['price']} (paquet)
-
-Pourquoi choisir I-Tip:
-✨ Pose microbilles ultra-discrète
-✨ Cheveux russes 100% naturels
-✨ Durée de vie: 8+ mois
-✨ Remontage: aux 4-8 semaines
-
-L'option premium pour les perfectionnistes!
-
-🛒 COMMANDER:
 {product['url']}
 
-📍 Luxura Distribution
+#LuxuraDistribution #ITip #Quebec""",
+            
+            f"""{product['emoji']} I-TIP ELEANOR | {product['shade']}
 
-#LuxuraDistribution #ITip #CheveuxRusses #Microbilles #Quebec""",
+Pose mèche par mèche pour un résultat ultra-naturel. Cheveux russes 100% naturels.
+
+{product['url']}
+
+#LuxuraDistribution #Microbilles #Quebec""",
         ]
     elif category == "tape":
-        # Tape: Mettre en avant la pose rapide
         templates = [
-            f"""{product['emoji']} TAPE-IN | {product['name']}
+            f"""{product['emoji']} TAPE-IN | {product['color_name']}
 
-⚡ La pose la plus RAPIDE en salon! ⚡
+La pose la plus rapide en salon (30-45 min). Bande adhésive ultra-discrète. Durée: 8+ mois.
 
-🎨 Teinte: {product['color_name']} ({product['shade']})
-💰 Prix: {product['price']} (paquet)
-
-Avantages Tape-in:
-✅ Pose en 30-45 minutes
-✅ Bande adhésive ultra-discrète
-✅ Durée de vie: 8+ mois
-✅ Remontage: aux 4-8 semaines
-
-Idéal pour les cheveux fins à moyens!
-
-🛒 ACHETEZ:
 {product['url']}
 
-📍 Luxura Distribution
+#LuxuraDistribution #TapeIn #Quebec""",
+            
+            f"""{product['emoji']} TAPE AURORA | {product['shade']}
 
-#LuxuraDistribution #TapeIn #BandeAdhésive #Extensions #Quebec""",
+Idéal cheveux fins à moyens. Pose rapide, résultat naturel. Remontage aux 4-8 semaines.
+
+{product['url']}
+
+#LuxuraDistribution #BandeAdhésive #Quebec""",
         ]
     else:  # genius
         templates = [
-            f"""{product['emoji']} GENIUS WEFT | {product['name']}
+            f"""{product['emoji']} GENIUS WEFT | {product['color_name']}
 
-🌟 La trame INVISIBLE par excellence 🌟
+Trame invisible ultra-fine (0.78mm). Cheveux 100% Remy naturels. Durée de vie: 8+ mois.
 
-🎨 Teinte: {product['color_name']} ({product['shade']})
-💰 Prix: {product['price']}
-
-Caractéristiques:
-✨ Trame ultra-fine indétectable
-✨ Cheveux 100% Remy naturels
-✨ Durée de vie: 8+ mois
-✨ Remontage: aux 4-8 semaines
-
-Le choix des professionnelles!
-
-🛒 COMMANDER:
 {product['url']}
 
-📍 Luxura Distribution - St-Georges, Beauce
+#LuxuraDistribution #GeniusWeft #Quebec""",
+            
+            f"""{product['emoji']} GENIUS VIVIAN | {product['shade']}
 
-#LuxuraDistribution #GeniusWeft #TrameInvisible #Quebec""",
+La trame la plus discrète du marché. Coupe sans effilochage. Le choix des professionnelles.
+
+{product['url']}
+
+#LuxuraDistribution #TrameInvisible #Quebec""",
         ]
     
     return random.choice(templates)
