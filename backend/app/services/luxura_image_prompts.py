@@ -421,34 +421,34 @@ GLAMOROUS_OUTFITS = {
 # ============================================
 
 LUXURA_HAIR_DESCRIPTIONS = [
-    # BLONDES
-    "spectacular platinum blonde flowing mane with incredible volume",
-    "sun-kissed honey blonde waves cascading past shoulders",
-    "cool ash blonde hair with editorial-worthy volume",
-    "golden highlighted extensions catching light beautifully",
-    "creamy blonde balayage with beachy textured waves",
+    # BLONDES - LONGUEUR MAX 3/4 DOS
+    "spectacular platinum blonde flowing mane ending at mid-back",
+    "sun-kissed honey blonde waves ending between shoulder blades and waist",
+    "cool ash blonde hair ending at bra-strap level with editorial volume",
+    "golden highlighted extensions at mid-back length catching light",
+    "creamy blonde balayage with beachy waves ending at mid-back",
     
-    # BRUNETTES
-    "rich chocolate brown cascading waves with stunning shine",
-    "deep espresso brown voluminous curls Hollywood glamour",
-    "glossy chestnut hair extensions flowing dramatically",
-    "dimensional brunette balayage with sophisticated volume",
-    "warm caramel highlights through thick brown waves",
+    # BRUNETTES - LONGUEUR MAX 3/4 DOS
+    "rich chocolate brown waves ending at mid-back with stunning shine",
+    "deep espresso brown curls at mid-back level Hollywood glamour",
+    "glossy chestnut hair extensions ending between shoulders and waist",
+    "dimensional brunette balayage at bra-strap length with volume",
+    "warm caramel highlights through thick brown waves at mid-back",
     
-    # AUBURN/RED
-    "fiery auburn hair extensions flowing in the breeze",
-    "warm copper tones in thick voluminous sensual waves",
-    "rich burgundy tinted hair with luxurious body",
-    "strawberry blonde waves with romantic soft curls",
+    # AUBURN/RED - LONGUEUR MAX 3/4 DOS
+    "fiery auburn hair extensions ending at mid-back in the breeze",
+    "warm copper tones in thick voluminous waves at bra-strap level",
+    "rich burgundy hair ending at mid-back with luxurious body",
+    "strawberry blonde waves with romantic curls at mid-back length",
     
-    # BLACK
-    "sleek jet black hair with mirror-like shine dramatic length",
-    "raven black voluminous waves with blue undertones",
+    # BLACK - LONGUEUR MAX 3/4 DOS
+    "sleek jet black hair with mirror shine ending at mid-back",
+    "raven black voluminous waves at mid-back with blue undertones",
     
-    # SPECIAL
-    "honey blonde ombre fading from dark roots beautifully",
-    "mermaid-length flowing hair romantic soft waves",
-    "natural brunette extensions with effortless glamour",
+    # SPECIAL - LONGUEUR MAX 3/4 DOS
+    "honey blonde ombre ending at mid-back fading from dark roots",
+    "gorgeous flowing hair at mid-back length with romantic waves",
+    "natural brunette extensions at bra-strap level with effortless glamour",
 ]
 
 

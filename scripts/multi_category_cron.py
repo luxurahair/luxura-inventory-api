@@ -276,10 +276,17 @@ CRITICAL HAIR COLOR - MUST MATCH EXACTLY:
 - Hair color: {product['prompt_color']}
 - This specific shade is MANDATORY
 
+CRITICAL HAIR LENGTH - STRICT RULE:
+- Hair MUST end at MID-BACK level (approximately 3/4 down the back)
+- Hair ends between shoulder blades and natural waist
+- Hair MUST NOT go below the waist
+- Hair MUST NOT reach hips, thighs, or knees
+- Maximum length: bra-strap to waist level
+
 Hair style:
-- Long flowing waves past shoulders, ending at mid-back
-- Thick, voluminous, incredibly shiny
-- Natural movement and shine
+- Long flowing waves, thick and voluminous
+- Incredibly shiny with natural movement
+- Glamorous but REALISTIC length
 
 Woman:
 - Québécoise in her 30s
@@ -288,7 +295,7 @@ Woman:
 - Golden hour lighting
 
 The hair showcases the {product['color_name']} shade of {info['name']} extensions.
-Professional beauty photography. Hair ends at mid-back, NOT below waist.
+Professional beauty photography.
 No text, no watermarks."""
 
     log(f"🎨 Génération image: {product['color_name']} @ {scene['name']}")

@@ -58,10 +58,10 @@ MAGAZINE_THEMES = [
     {"country": "Grèce", "topic": "Beauté intemporelle des îles grecques", "vibe": "déesse moderne"},
 ]
 
-# Prompts v3 Ultra-Glamour pour images - LONGUEUR STRICTE
+# Prompts v3 Ultra-Glamour pour images - LONGUEUR STRICTE 3/4 DOS MAXIMUM
 MAGAZINE_IMAGE_PROMPTS = [
-    "Real photograph of glamorous woman on luxury yacht deck at sunset, with voluminous thick hair extensions ending at mid-back level ONLY. Hair must stop at bra-strap level, NEVER longer than waist. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting. No text, no watermarks.",
-    "Real photograph of two elegant women at exclusive rooftop bar, both with stunning voluminous hair extensions at mid-back length maximum. Hair STOPS at shoulder blade level, NOT below waist. Chic evening wear. Golden hour lighting. No text.",
+    "Real photograph of glamorous woman on luxury yacht deck at sunset, with voluminous thick hair extensions ending at MID-BACK level ONLY. Hair MUST stop between shoulder blades and waist, NEVER below waist, NEVER at hips or knees. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting. No text, no watermarks.",
+    "Real photograph of two elegant women at exclusive rooftop bar, both with stunning voluminous hair extensions at MID-BACK length. Hair ends at bra-strap level maximum, NOT below waist. Chic evening wear. Golden hour lighting. No text.",
     "Real photograph of glamorous woman at fashion week backstage, with gorgeous thick bouncy hair extensions. Hair length at MID-BACK only, ending between shoulder blades and waist. NEVER reaching hips or below. Soft professional lighting. No text.",
 ]
 

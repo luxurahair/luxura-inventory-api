@@ -212,13 +212,25 @@ def generate_glamour_image(product: Dict, setting: Dict) -> Optional[str]:
     
     prompt = f"""Real photograph of a glamorous Québec woman in her early 30s {setting['desc']}.
 
-She has stunning {product['color_desc']} hair extensions - the exact shade of {product['prompt_color']}. Her thick, voluminous hair flows past her shoulders in soft glamorous waves, catching the golden sunlight beautifully.
+She has stunning {product['color_desc']} hair extensions - the exact shade of {product['prompt_color']}. 
+
+CRITICAL HAIR LENGTH - STRICT RULE:
+- Hair MUST end at MID-BACK level (3/4 down the back)
+- Hair ends between shoulder blades and natural waist
+- Hair MUST NOT go below the waist
+- Hair MUST NOT reach hips, thighs, or knees
+
+Hair style:
+- Thick, voluminous with soft glamorous waves
+- Catching the golden sunlight beautifully
+- Natural shine and movement
 
 She's wearing elegant casual-chic attire, looking confident with a radiant smile. The overall mood is aspirational luxury lifestyle.
 
 The hair is the HERO of the image - showcasing the natural shine, seamless blend, and luxurious volume of premium Genius Weft extensions in the {product['color_name']} shade.
 
-Professional beauty photography, warm golden tones, authentic Quebec lifestyle aesthetic. Hair MUST end at mid-back level, NOT below waist. No text, no watermarks, no logos."""
+Professional beauty photography, warm golden tones, authentic Quebec lifestyle aesthetic.
+No text, no watermarks, no logos."""
 
     log(f"🎨 Génération image Grok pour {product['color_name']}...")
     log(f"   Décor: {setting['key']}")

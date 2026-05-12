@@ -658,11 +658,17 @@ CRITICAL HAIR COLOR - MUST MATCH EXACTLY:
 - This specific shade is MANDATORY - do not deviate
 - The hair color must be EXACTLY as described, no variations
 
+CRITICAL HAIR LENGTH - STRICT RULE:
+- Hair MUST end at MID-BACK level (3/4 down the back)
+- Hair ends between shoulder blades and natural waist
+- Hair MUST NOT go below the waist
+- Hair MUST NOT reach hips, thighs, or knees
+- Maximum length: bra-strap to waist level
+
 Hair style:
-- Long flowing waves past shoulders, ending at mid-back level
-- Thick, voluminous, incredibly shiny and healthy-looking
+- Long flowing waves, thick and voluminous
+- Incredibly shiny and healthy-looking
 - Soft glamorous waves catching the light beautifully
-- Hair MUST end at mid-back, NOT below waist, NOT at hips
 
 Woman:
 - Québécoise in her early 30s
