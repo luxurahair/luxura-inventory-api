@@ -656,19 +656,18 @@ def generate_image(product, scene):
 CRITICAL HAIR COLOR - MUST MATCH EXACTLY:
 - Hair color: {product['prompt_color']}
 - This specific shade is MANDATORY - do not deviate
-- The hair color must be EXACTLY as described, no variations
 
-CRITICAL HAIR LENGTH - STRICT RULE:
-- Hair MUST end at MID-BACK level (3/4 down the back)
-- Hair ends between shoulder blades and natural waist
-- Hair MUST NOT go below the waist
-- Hair MUST NOT reach hips, thighs, or knees
-- Maximum length: bra-strap to waist level
+ABSOLUTELY CRITICAL HAIR LENGTH - READ CAREFULLY:
+The hair MUST be MEDIUM-LONG, NOT ULTRA-LONG.
+Hair length: ENDS AT BRA-STRAP LEVEL ONLY.
+Hair DOES NOT reach the waist.
+Hair DOES NOT reach the hips.
+Hair DOES NOT reach the thighs.
+Hair ends approximately 3/4 down her back - NO LONGER.
 
 Hair style:
-- Long flowing waves, thick and voluminous
-- Incredibly shiny and healthy-looking
-- Soft glamorous waves catching the light beautifully
+- Soft flowing waves with volume and shine
+- Thick, healthy-looking, incredibly shiny
 
 Woman:
 - Québécoise in her early 30s
@@ -676,7 +675,8 @@ Woman:
 - Confident radiant smile, looking natural and happy
 - Golden hour warm lighting on her face
 
-The hair is the HERO of the image - showcasing the exact {product['color_name']} shade of premium Genius Weft extensions.
+This is a REALISTIC hair extension advertisement - extensions are typically 16-20 inches.
+The hair is the HERO of the image - showcasing the exact {product['color_name']} shade.
 
 Professional beauty photography, warm golden tones, authentic Quebec lifestyle.
 No text, no watermarks, no logos."""

@@ -441,7 +441,7 @@ def generate_image_grok(post_type: str, image_prompt_key: str = None) -> Optiona
             base_prompt = GENERAL_PROMPTS[day_index]
     
     # Ajouter la contrainte de longueur des cheveux - RÈGLE STRICTE 3/4 DOS
-    hair_constraint = "CRITICAL HAIR LENGTH: Hair MUST end at MID-BACK level (3/4 down the back, between shoulder blades and waist). Hair MUST NOT go below waist. Hair MUST NOT reach hips, thighs, or knees. This is MANDATORY."
+    hair_constraint = "ABSOLUTELY CRITICAL HAIR LENGTH: Hair MUST end at BRA-STRAP LEVEL ONLY. Hair DOES NOT reach waist. Hair DOES NOT reach hips. Hair DOES NOT reach thighs. Hair ends 3/4 down the back - NO LONGER. This is a realistic 16-20 inch extension advertisement."
     prompt = f"{base_prompt} {hair_constraint} No text, no watermarks, no logos."
     
     log(f"   Prompt: {prompt[:100]}...")

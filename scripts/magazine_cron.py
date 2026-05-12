@@ -60,9 +60,9 @@ MAGAZINE_THEMES = [
 
 # Prompts v3 Ultra-Glamour pour images - LONGUEUR STRICTE 3/4 DOS MAXIMUM
 MAGAZINE_IMAGE_PROMPTS = [
-    "Real photograph of glamorous woman on luxury yacht deck at sunset, with voluminous thick hair extensions ending at MID-BACK level ONLY. Hair MUST stop between shoulder blades and waist, NEVER below waist, NEVER at hips or knees. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting. No text, no watermarks.",
-    "Real photograph of two elegant women at exclusive rooftop bar, both with stunning voluminous hair extensions at MID-BACK length. Hair ends at bra-strap level maximum, NOT below waist. Chic evening wear. Golden hour lighting. No text.",
-    "Real photograph of glamorous woman at fashion week backstage, with gorgeous thick bouncy hair extensions. Hair length at MID-BACK only, ending between shoulder blades and waist. NEVER reaching hips or below. Soft professional lighting. No text.",
+    "Real photograph of glamorous woman on luxury yacht deck at sunset. CRITICAL HAIR LENGTH: Hair ENDS AT BRA-STRAP LEVEL ONLY. Hair DOES NOT reach waist. Hair DOES NOT reach hips. Hair ends 3/4 down her back - NO LONGER. Soft flowing waves with volume. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting. No text, no watermarks.",
+    "Real photograph of two elegant women at exclusive rooftop bar. CRITICAL: Both have hair ending at MID-BACK level only, NOT below waist, NOT at hips. Bra-strap length maximum. Chic evening wear. Golden hour lighting. No text.",
+    "Real photograph of glamorous woman at fashion week backstage. ABSOLUTELY CRITICAL: Hair length ENDS AT BRA-STRAP LEVEL. Hair DOES NOT reach waist or hips. Hair ends 3/4 down back - NO LONGER. Soft professional lighting. No text.",
 ]
 
 
