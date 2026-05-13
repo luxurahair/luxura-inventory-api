@@ -704,13 +704,13 @@ No text, no watermarks, no logos."""
 
 
 def generate_post_text(product):
-    """Génère le texte du post avec un template aléatoire."""
+    """Génère le texte du post avec un template aléatoire et identifiant."""
     template = random.choice(POST_TEMPLATES)
     
     # Créer le hashtag à partir du nom de couleur
     hashtag = product['color_name'].replace(' ', '').replace('é', 'e').replace('è', 'e').replace('ô', 'o')
     
-    return template.format(
+    text = template.format(
         emoji=product['emoji'],
         name=product['name'],
         color_name=product['color_name'],
@@ -721,6 +721,9 @@ def generate_post_text(product):
         color_desc_cap=product['color_desc'].capitalize(),
         hashtag=hashtag,
     )
+    
+    # Ajouter identifiant pour traçabilité
+    return f"{text}\n📌 LUX-DAILY-18H"
 
 
 def post_to_facebook(message, image_url):

@@ -323,8 +323,18 @@ def generate_post_text(product: dict, category: str) -> str:
     """
     Génère le texte du post - FORMAT COURT (2-3 lignes max).
     Référence: Publication "PLACEMENT DES EXTENSIONS" de Luxura.
+    Inclut un identifiant pour traçabilité.
     """
     info = CATEGORY_INFO[category]
+    
+    # Identifiants par catégorie pour traçabilité
+    CRON_IDS = {
+        "halo": "LUX-HALO-12H",
+        "genius": "LUX-GENIUS-18H",
+        "itip": "LUX-ITIP-2030",
+        "tape": "LUX-TAPE-0730"
+    }
+    cron_id = CRON_IDS.get(category, "LUX-MULTI")
     
     # Templates COURTS par catégorie
     if category == "halo":
@@ -335,7 +345,8 @@ Volume instantané en 2 MINUTES. Fil invisible, aucun outil requis. Clipser le m
 
 {product['url']}
 
-#LuxuraDistribution #Halo #Quebec""",
+#LuxuraDistribution #Halo #Quebec
+📌 {cron_id}""",
             
             f"""{product['emoji']} HALO EVERLY | {product['shade']}
 
@@ -343,7 +354,8 @@ S'installe en 2 minutes chrono. Zéro dommage, résultat immédiat. Durée de vi
 
 {product['url']}
 
-#LuxuraDistribution #HaloExtensions #Quebec""",
+#LuxuraDistribution #HaloExtensions #Quebec
+📌 {cron_id}""",
         ]
     elif category == "itip":
         templates = [
@@ -353,7 +365,8 @@ Cheveux russes premium. Pose microbilles ultra-discrète. Durée de vie: 8+ mois
 
 {product['url']}
 
-#LuxuraDistribution #ITip #Quebec""",
+#LuxuraDistribution #ITip #Quebec
+📌 {cron_id}""",
             
             f"""{product['emoji']} I-TIP ELEANOR | {product['shade']}
 
@@ -361,7 +374,8 @@ Pose mèche par mèche pour un résultat ultra-naturel. Cheveux russes 100% natu
 
 {product['url']}
 
-#LuxuraDistribution #Microbilles #Quebec""",
+#LuxuraDistribution #Microbilles #Quebec
+📌 {cron_id}""",
         ]
     elif category == "tape":
         templates = [
@@ -371,7 +385,8 @@ La pose la plus rapide en salon (30-45 min). Bande adhésive ultra-discrète. Du
 
 {product['url']}
 
-#LuxuraDistribution #TapeIn #Quebec""",
+#LuxuraDistribution #TapeIn #Quebec
+📌 {cron_id}""",
             
             f"""{product['emoji']} TAPE AURORA | {product['shade']}
 
@@ -379,7 +394,8 @@ Idéal cheveux fins à moyens. Pose rapide, résultat naturel. Remontage aux 4-8
 
 {product['url']}
 
-#LuxuraDistribution #BandeAdhésive #Quebec""",
+#LuxuraDistribution #BandeAdhésive #Quebec
+📌 {cron_id}""",
         ]
     else:  # genius
         templates = [
@@ -389,7 +405,8 @@ Trame invisible ultra-fine (0.78mm). Cheveux 100% Remy naturels. Durée de vie: 
 
 {product['url']}
 
-#LuxuraDistribution #GeniusWeft #Quebec""",
+#LuxuraDistribution #GeniusWeft #Quebec
+📌 {cron_id}""",
             
             f"""{product['emoji']} GENIUS VIVIAN | {product['shade']}
 
@@ -397,7 +414,8 @@ La trame la plus discrète du marché. Coupe sans effilochage. Le choix des prof
 
 {product['url']}
 
-#LuxuraDistribution #TrameInvisible #Quebec""",
+#LuxuraDistribution #TrameInvisible #Quebec
+📌 {cron_id}""",
         ]
     
     return random.choice(templates)

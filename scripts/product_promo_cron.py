@@ -335,7 +335,10 @@ Quelle est VOTRE teinte préférée? 👇
     
     # Rotation basée sur le jour
     template_index = datetime.now().day % len(templates)
-    return templates[template_index]
+    text = templates[template_index]
+    
+    # Ajouter identifiant pour traçabilité
+    return f"{text}\n📌 LUX-PROMO"
 
 
 def post_to_facebook_with_images(

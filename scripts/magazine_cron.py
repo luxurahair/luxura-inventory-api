@@ -473,10 +473,10 @@ def main():
         log("❌ Échec génération texte - arrêt")
         sys.exit(1)
     
-    # 4. Créer le post data
+    # 4. Créer le post data avec identifiant
     post_id = str(uuid.uuid4())
     hashtags = ["#LuxuraDistribution", "#ExtensionsCheveux", "#Québec", f"#{theme['country']}", "#Magazine"]
-    full_text = text + "\n\n" + " ".join(hashtags) + "\n\n🌐 luxuradistribution.com"
+    full_text = text + "\n\n" + " ".join(hashtags) + "\n\n🌐 luxuradistribution.com\n📌 LUX-MAGAZINE"
     
     post_data = {
         "post_id": post_id,

@@ -479,10 +479,14 @@ def generate_image_grok(post_type: str, image_prompt_key: str = None) -> Optiona
 def post_to_facebook(message: str, image_url: Optional[str] = None) -> bool:
     """
     Publie sur Facebook avec ou sans image.
+    Ajoute automatiquement l'identifiant LUX-EDITORIAL pour traçabilité.
     """
     if not FB_PAGE_ACCESS_TOKEN:
         log("❌ FB_PAGE_ACCESS_TOKEN non configuré")
         return False
+    
+    # Ajouter identifiant pour traçabilité
+    message_with_id = f"{message}\n📌 LUX-EDITORIAL"
     
     log(f"📘 Publication Facebook...")
     
@@ -494,7 +498,7 @@ def post_to_facebook(message: str, image_url: Optional[str] = None) -> bool:
                 f"https://graph.facebook.com/{FB_API_VERSION}/{FB_PAGE_ID}/photos",
                 data={
                     "url": image_url,
-                    "caption": message,
+                    "caption": message_with_id,
                     "access_token": FB_PAGE_ACCESS_TOKEN
                 },
                 timeout=60
@@ -505,7 +509,7 @@ def post_to_facebook(message: str, image_url: Optional[str] = None) -> bool:
             response = requests.post(
                 f"https://graph.facebook.com/{FB_API_VERSION}/{FB_PAGE_ID}/feed",
                 data={
-                    "message": message,
+                    "message": message_with_id,
                     "access_token": FB_PAGE_ACCESS_TOKEN
                 },
                 timeout=60
