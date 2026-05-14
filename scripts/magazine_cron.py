@@ -58,11 +58,17 @@ MAGAZINE_THEMES = [
     {"country": "Grèce", "topic": "Beauté intemporelle des îles grecques", "vibe": "déesse moderne"},
 ]
 
-# Prompts v3 Ultra-Glamour pour images - LONGUEUR STRICTE 3/4 DOS MAXIMUM
+# Prompts v3 Ultra-Glamour pour images - LONGUEUR STRICTE MID-BACK
 MAGAZINE_IMAGE_PROMPTS = [
-    "Real photograph of glamorous woman on luxury yacht deck at sunset. CRITICAL HAIR LENGTH: Hair ENDS AT BRA-STRAP LEVEL ONLY. Hair DOES NOT reach waist. Hair DOES NOT reach hips. Hair ends 3/4 down her back - NO LONGER. Soft flowing waves with volume. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting. No text, no watermarks.",
-    "Real photograph of two elegant women at exclusive rooftop bar. CRITICAL: Both have hair ending at MID-BACK level only, NOT below waist, NOT at hips. Bra-strap length maximum. Chic evening wear. Golden hour lighting. No text.",
-    "Real photograph of glamorous woman at fashion week backstage. ABSOLUTELY CRITICAL: Hair length ENDS AT BRA-STRAP LEVEL. Hair DOES NOT reach waist or hips. Hair ends 3/4 down back - NO LONGER. Soft professional lighting. No text.",
+    """Real photograph of glamorous woman on luxury yacht deck at sunset.
+HAIR LENGTH RULE: Hair MUST end at BRA-STRAP level (middle of back). Hair is ABOVE waist, NOT touching waist. Hair does NOT reach hips or thighs. Think medium-long NOT ultra-long.
+Soft flowing waves with volume. Elegant white designer dress. Shot from 3/4 back angle. Golden hour lighting. No text, no watermarks.""",
+    """Real photograph of two elegant women at exclusive rooftop bar.
+HAIR LENGTH RULE: Both have hair ending at MID-BACK level only. Hair ABOVE waist, NOT at hips. BRA-STRAP length maximum.
+Chic evening wear. Golden hour lighting. No text.""",
+    """Real photograph of glamorous woman at fashion week backstage.
+HAIR LENGTH RULE: Hair MUST end at BRA-STRAP level. Hair does NOT reach waist or hips. MEDIUM-LONG only, not ultra-long.
+Soft professional lighting. No text.""",
 ]
 
 

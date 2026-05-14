@@ -272,31 +272,28 @@ def generate_image(product: dict, scene: dict, category: str) -> str:
     
     prompt = f"""Real photograph of a glamorous Québec woman in her early 30s {scene['desc']}.
 
-CRITICAL HAIR COLOR - MUST MATCH EXACTLY:
-- Hair color: {product['prompt_color']}
-- This specific shade is MANDATORY
+HAIR COLOR (MANDATORY - MUST MATCH EXACTLY):
+{product['prompt_color']}
 
-ABSOLUTELY CRITICAL HAIR LENGTH - READ CAREFULLY:
-The hair MUST be MEDIUM-LONG, NOT ULTRA-LONG.
-Hair length: ENDS AT BRA-STRAP LEVEL ONLY.
-Hair DOES NOT reach the waist.
-Hair DOES NOT reach the hips.
-Hair DOES NOT reach the thighs.
-Hair ends approximately 3/4 down her back - NO LONGER.
+HAIR LENGTH - THIS IS THE MOST IMPORTANT RULE:
+⚠️ HAIR MUST BE SHOULDER-LENGTH TO MID-BACK MAXIMUM ⚠️
+- Hair ends at BRA-STRAP level (middle of back)
+- Hair is ABOVE the waist - NOT touching waist
+- Hair is SHORT OF the hips - nowhere near hips
+- Hair length is approximately 18-20 inches from scalp
+- DO NOT generate long mermaid hair
+- DO NOT generate hair past the waist
+- DO NOT generate hair reaching hips or thighs
+- Think "medium-long" NOT "ultra-long"
 
-Hair style:
-- Soft flowing waves with volume and shine
-- Thick, healthy-looking, glamorous
+CORRECT LENGTH: Hair tips end between shoulder blades and waist.
+WRONG LENGTH: Hair going to waist, hips, thighs, or knees.
 
-Woman:
-- Québécoise in her 30s
-- Elegant casual-chic attire
-- Confident radiant smile
-- Golden hour lighting
+Hair style: Soft waves, voluminous, healthy shine
 
-This is a REALISTIC hair extension advertisement - extensions are typically 16-20 inches.
-The hair showcases the {product['color_name']} shade of {info['name']} extensions.
-Professional beauty photography.
+Woman: Québécoise 30s, elegant casual attire, confident smile, golden hour lighting.
+
+The hair showcases {product['color_name']} shade. Professional photography.
 No text, no watermarks."""
 
     log(f"🎨 Génération image: {product['color_name']} @ {scene['name']}")

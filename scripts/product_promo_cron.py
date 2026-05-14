@@ -212,27 +212,29 @@ def generate_glamour_image(product: Dict, setting: Dict) -> Optional[str]:
     
     prompt = f"""Real photograph of a glamorous Québec woman in her early 30s {setting['desc']}.
 
-She has stunning {product['color_desc']} hair extensions - the exact shade of {product['prompt_color']}. 
+HAIR COLOR (MANDATORY - MUST MATCH EXACTLY):
+{product['prompt_color']} - {product['color_desc']}
 
-ABSOLUTELY CRITICAL HAIR LENGTH - READ CAREFULLY:
-The hair MUST be MEDIUM-LONG, NOT ULTRA-LONG.
-Hair length: ENDS AT BRA-STRAP LEVEL ONLY.
-Hair DOES NOT reach the waist.
-Hair DOES NOT reach the hips.
-Hair DOES NOT reach the thighs.
-Hair ends approximately 3/4 down her back - NO LONGER.
+HAIR LENGTH - THIS IS THE MOST IMPORTANT RULE:
+⚠️ HAIR MUST BE SHOULDER-LENGTH TO MID-BACK MAXIMUM ⚠️
+- Hair ends at BRA-STRAP level (middle of back)
+- Hair is ABOVE the waist - NOT touching waist
+- Hair is SHORT OF the hips - nowhere near hips
+- Hair length is approximately 18-20 inches from scalp
+- DO NOT generate long mermaid hair
+- DO NOT generate hair past the waist
+- DO NOT generate hair reaching hips or thighs
+- Think "medium-long" NOT "ultra-long"
 
-Hair style:
-- Soft flowing waves with volume and shine
-- Thick, healthy-looking, catching the golden sunlight
+CORRECT LENGTH: Hair tips end between shoulder blades and waist.
+WRONG LENGTH: Hair going to waist, hips, thighs, or knees.
 
-She's wearing elegant casual-chic attire, looking confident with a radiant smile. The overall mood is aspirational luxury lifestyle.
+Hair style: Soft waves, voluminous, healthy shine
 
-This is a REALISTIC hair extension advertisement - extensions are typically 16-20 inches.
-The hair is the HERO of the image - showcasing the natural shine and luxurious volume of premium Genius Weft extensions in the {product['color_name']} shade.
+Woman: Québécoise 30s, elegant casual attire, confident smile, golden hour lighting.
 
-Professional beauty photography, warm golden tones, authentic Quebec lifestyle aesthetic.
-No text, no watermarks, no logos."""
+The hair showcases {product['color_name']} shade. Professional photography.
+No text, no watermarks."""
 
     log(f"🎨 Génération image Grok pour {product['color_name']}...")
     log(f"   Décor: {setting['key']}")
