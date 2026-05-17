@@ -232,42 +232,133 @@ Transformez votre look en un instant! ✨
         }
     ],
     "weekend": [
+        # SAMEDI - Rotation variée (Self-care, Brunch, Shopping, Nature)
         {
-            "title": "Inspiration Weekend",
-            "text": """🌸 INSPIRATION WEEKEND
+            "title": "Self-Care Saturday",
+            "text": """🌸 SELF-CARE SATURDAY
 
-Parce que vous méritez de vous sentir belle chaque jour! ✨
+Parce que vous méritez de vous sentir belle!
 
 Ce weekend, prenez soin de vous:
 • Un masque capillaire nourrissant
-• Une coiffure qui vous fait sourire
 • Un moment rien que pour vous
 
-💕 La beauté commence par se sentir bien dans sa peau.
+💕 La beauté commence par se sentir bien.
 
-Bon weekend les beautés! 🥰
-
-📍 Luxura Distribution - Pour des cheveux de rêve
-
-#LuxuraDistribution #WeekendVibes #SelfCare #BeautéQuebec #Inspiration""",
-            "image_prompt": "Relaxing self-care scene with woman brushing beautiful long hair near window, soft natural morning light, cozy bedroom aesthetic, lifestyle photography, peaceful and feminine atmosphere, no face clearly visible, no text"
+#LuxuraDistribution #SelfCare #BeautéQuebec
+📌 LUX-EDITORIAL""",
+            "image_prompt": "Single glamorous woman relaxing at luxurious spa, wearing white robe, beautiful mid-back length hair, serene expression, soft lighting, peaceful atmosphere, Quebec spa resort setting, no text"
         },
         {
-            "title": "Transformation du dimanche",
+            "title": "Brunch Glam",
+            "text": """☕ BRUNCH GOALS
+
+Le weekend parfait commence par un bon brunch et des cheveux parfaits!
+
+Où allez-vous bruncher ce weekend? 👇
+
+#LuxuraDistribution #BrunchQuebec #WeekendVibes
+📌 LUX-EDITORIAL""",
+            "image_prompt": "Single elegant woman at trendy Montreal brunch cafe, sitting alone at table, beautiful mid-back hair catching morning light, casual chic outfit, coffee and croissant, urban Quebec aesthetic, no text"
+        },
+        {
+            "title": "Shopping Day",
+            "text": """🛍️ SHOPPING DAY
+
+Un look parfait pour une journée shopping au centre-ville!
+
+Quel est votre quartier préféré pour magasiner? 👇
+
+#LuxuraDistribution #ShoppingQuebec #MontréalStyle
+📌 LUX-EDITORIAL""",
+            "image_prompt": "Single stylish woman walking on Rue Sainte-Catherine Montreal, shopping bags, beautiful mid-back flowing hair, chic urban outfit, sunny day, city lifestyle photography, no text"
+        },
+        {
+            "title": "Nature Escape",
+            "text": """🌲 NATURE ESCAPE
+
+Cheveux au vent dans la nature québécoise!
+
+Quel est votre coin de nature préféré? 👇
+
+#LuxuraDistribution #NatureQuebec #PleinAir
+📌 LUX-EDITORIAL""",
+            "image_prompt": "Single woman hiking in Laurentian mountains Quebec, mid-back length hair flowing in breeze, athletic casual wear, scenic forest backdrop, golden hour, adventurous spirit, no text"
+        },
+        # DIMANCHE - Rotation variée (Transformation, Detente, Preparation semaine)
+        {
+            "title": "Transformation Sunday",
             "text": """🦋 TRANSFORMATION SUNDAY
 
-Nouvelle semaine, nouveau look? 
+Nouvelle semaine, nouveau look?
 
-Nos clientes nous inspirent chaque jour avec leurs transformations incroyables!
+De cheveux fins à volume spectaculaire... La magie des extensions! ✨
 
-De cheveux fins à volume spectaculaire...
-La magie des extensions Luxura! ✨
+Quel look rêvez-vous d'essayer? 👇
 
-💭 Quel look rêvez-vous d'essayer?
-Dites-nous en commentaire! 👇
+#LuxuraDistribution #Transformation #Quebec
+📌 LUX-EDITORIAL""",
+            "image_prompt": "BEFORE AND AFTER hair transformation, split image concept, left side showing thin short hair, right side showing voluminous mid-back length hair, same woman from behind, salon setting, dramatic difference, no text"
+        },
+        {
+            "title": "Lazy Sunday",
+            "text": """☀️ LAZY SUNDAY
 
-#LuxuraDistribution #Transformation #AvantAprès #ExtensionsCheveux #Quebec""",
-            "image_prompt": "Dramatic before and after hair transformation concept, split image showing thin hair transforming to voluminous long hair, artistic beauty photography, elegant salon setting, inspirational and aspirational mood, no text"
+Le dimanche parfait: pyjama, café, cheveux détachés.
+
+Comment passez-vous votre dimanche? 👇
+
+#LuxuraDistribution #LazySunday #Détente
+📌 LUX-EDITORIAL""",
+            "image_prompt": "Single woman in cozy home setting, Sunday morning vibes, wearing comfortable loungewear, beautiful natural mid-back hair, reading book near window, soft morning light, Quebec home interior, no text"
+        },
+        {
+            "title": "Sunday Prep",
+            "text": """💼 PREP YOUR WEEK
+
+Dimanche = préparation pour une semaine réussie!
+
+Cheveux parfaits, confiance maximale. 💪
+
+#LuxuraDistribution #SundayPrep #ConfidenceBoost
+📌 LUX-EDITORIAL""",
+            "image_prompt": "Single professional woman styling her mid-back length hair in mirror, getting ready for the week, modern bathroom or vanity setting, confident expression, natural light, aspirational mood, no text"
+        },
+        {
+            "title": "Sunset Vibes",
+            "text": """🌅 SUNSET VIBES
+
+Profiter du coucher de soleil avec des cheveux parfaits.
+
+Quel est votre spot préféré pour admirer le sunset? 👇
+
+#LuxuraDistribution #SunsetQuebec #GoldenHour
+📌 LUX-EDITORIAL""",
+            "image_prompt": "Single woman watching sunset at Old Port Montreal, silhouette with beautiful mid-back hair flowing, romantic golden hour lighting, waterfront setting, peaceful and dreamy atmosphere, no text"
+        },
+        {
+            "title": "Yoga & Wellness",
+            "text": """🧘‍♀️ MIND, BODY, HAIR
+
+Le bien-être commence de l'intérieur.
+
+Prenez soin de vous ce weekend! 🙏
+
+#LuxuraDistribution #Wellness #YogaQuebec
+📌 LUX-EDITORIAL""",
+            "image_prompt": "Single woman doing yoga outdoors in Quebec park, athletic wear, beautiful mid-back ponytail, morning light, peaceful zen atmosphere, healthy lifestyle aesthetic, no text"
+        },
+        {
+            "title": "Marché Weekend",
+            "text": """🍎 MARCHÉ DU WEEKEND
+
+Rien de mieux qu'un tour au marché local!
+
+Quel est votre marché préféré? Jean-Talon? Atwater? 👇
+
+#LuxuraDistribution #MarchéQuebec #LocalLove
+📌 LUX-EDITORIAL""",
+            "image_prompt": "Single woman shopping at Jean-Talon Market Montreal, beautiful mid-back hair, casual summer dress, browsing fresh produce, vibrant market atmosphere, authentic Quebec lifestyle, no text"
         }
     ]
 }
@@ -299,11 +390,22 @@ def determine_post_type() -> str:
 
 
 def get_content_for_type(post_type: str) -> Dict:
-    """Retourne le contenu approprié pour le type de post"""
+    """
+    Retourne le contenu approprié pour le type de post.
+    Utilise une rotation basée sur la SEMAINE de l'année pour plus de diversité.
+    """
     templates = CONTENT_TEMPLATES.get(post_type, CONTENT_TEMPLATES["educational"])
-    # Rotation basée sur le jour du mois
-    day = datetime.now().day
-    return templates[day % len(templates)]
+    
+    # Rotation basée sur la semaine de l'année + jour (pour diversité maximale)
+    week_of_year = datetime.now().isocalendar()[1]  # Semaine 1-52
+    day_of_week = datetime.now().weekday()  # 0-6
+    
+    # Combine semaine + jour pour une rotation unique
+    rotation_index = (week_of_year * 7 + day_of_week) % len(templates)
+    
+    log(f"📅 Rotation: Semaine {week_of_year}, Jour {day_of_week} → Template #{rotation_index + 1}/{len(templates)}")
+    
+    return templates[rotation_index]
 
 
 def generate_image_prompt_from_text(post_text: str, post_type: str) -> str:
@@ -403,14 +505,25 @@ def generate_image_grok(post_type: str, image_prompt_key: str = None) -> Optiona
         "Real photograph of a relaxed woman at a Charlevoix spa terrace touching her beautiful long hair extensions, mountain view in background, soft natural lighting, serene atmosphere, no text"
     ]
     
-    # === PROMPTS GÉNÉRAUX VARIÉS ===
+    # === PROMPTS GÉNÉRAUX VARIÉS - FEMME SEULE, LIEUX VARIÉS ===
     GENERAL_PROMPTS = [
-        "Real photograph of glamorous woman on a luxury yacht deck at sunset with voluminous thick hair extensions, elegant white designer dress, shot from 3/4 back angle, golden hour lighting",
-        "Real photograph of elegant woman at an outdoor wine tasting in Quebec wine country, gorgeous flowing hair caught in breeze, sophisticated casual style, warm afternoon light",
-        "Real photograph of stylish woman at a trendy Montreal cafe terrace, beautiful long hair extensions, reading a fashion magazine, European city vibes, soft natural lighting",
-        "Real photograph of confident woman walking down Grande Allée Quebec City at golden hour, stunning hair flowing behind her, chic summer dress, historic architecture backdrop",
-        "Real photograph of glamorous woman at a Mont-Tremblant resort spa, luxurious robe, beautiful hair swept to one side, mountain view through window, serene atmosphere",
-        "Real photograph of two best friends taking a selfie at Vieux-Port Montreal, both with gorgeous long hair extensions, summer dresses, sunset over water, fun authentic moment"
+        # Lifestyle urbain
+        "Real photograph of single elegant woman walking down Grande Allée Quebec City at golden hour, stunning mid-back hair flowing behind her, chic summer dress, historic architecture backdrop",
+        "Real photograph of single stylish woman at a trendy Montreal cafe terrace, beautiful mid-back hair extensions, enjoying coffee alone, European city vibes, soft natural lighting",
+        "Real photograph of single confident woman shopping on Rue Saint-Denis Montreal, beautiful mid-back hair, casual chic outfit, authentic urban lifestyle moment",
+        # Nature/Outdoor
+        "Real photograph of single woman at Mont-Tremblant lookout point, mid-back hair caught in mountain breeze, athletic casual wear, stunning autumn foliage backdrop",
+        "Real photograph of single woman on a peaceful morning walk along Vieux-Port Montreal, mid-back hair gently moving, casual elegant style, water and city skyline",
+        "Real photograph of single woman doing yoga in a Quebec park at sunrise, mid-back ponytail, athletic wear, serene peaceful atmosphere",
+        # Spa/Wellness
+        "Real photograph of single woman at a luxury Charlevoix spa, white robe, touching her beautiful mid-back hair, mountain view through window, serene atmosphere",
+        "Real photograph of single woman in cozy home setting brushing her mid-back hair near window, Sunday morning vibes, soft natural light, peaceful moment",
+        # Social/Events
+        "Real photograph of single elegant woman at an outdoor wine tasting in Quebec wine country, gorgeous mid-back hair, sophisticated casual style, warm afternoon light",
+        "Real photograph of single glamorous woman at a Montreal art gallery opening, stunning mid-back hair, elegant black dress, modern art backdrop",
+        # Seasonal
+        "Real photograph of single woman walking through autumn leaves in Parc Mont-Royal, mid-back hair flowing, cozy fall fashion, golden hour lighting",
+        "Real photograph of single woman at a summer terrasse in Old Montreal, mid-back hair catching sunset light, relaxed elegant style, cobblestone street visible"
     ]
     
     # Sélectionner le prompt approprié
