@@ -189,14 +189,23 @@ TAPE_PRODUCTS = [
 # ============================================
 
 SCENES = [
-    {"name": "Rooftop Montréal", "desc": "at a chic Montreal downtown rooftop terrace during golden hour sunset, city skyline in background"},
-    {"name": "Château Frontenac", "desc": "on the Dufferin Terrace with majestic Château Frontenac castle in background, romantic Quebec City"},
-    {"name": "Café Plateau", "desc": "at a trendy Plateau Mont-Royal café terrace, colorful spiral staircases visible"},
-    {"name": "Spa Charlevoix", "desc": "at a luxury Charlevoix spa terrace, serene mountain view in background"},
-    {"name": "Vignoble Estrie", "desc": "at a Quebec Eastern Townships vineyard during golden hour, rolling hills"},
-    {"name": "Village Tremblant", "desc": "in the colorful European-style pedestrian village of Mont-Tremblant"},
-    {"name": "Vieux-Port", "desc": "at Montreal's Old Port waterfront at sunset, historic buildings"},
-    {"name": "Petit Champlain", "desc": "on charming cobblestone Petit Champlain street, European fairy-tale atmosphere"},
+    # 🍸 BARS & COCKTAILS - 5 à 7 entre copines
+    {"name": "Cocktail Bar", "desc": "with her best girlfriend at a trendy Montreal cocktail bar, both holding fancy drinks, dim romantic lighting, chic lounge atmosphere"},
+    {"name": "5 à 7 Copines", "desc": "at happy hour (5 à 7) with two girlfriends at a stylish downtown bar, laughing together, cocktails on table, warm ambient lighting"},
+    {"name": "Rooftop Lounge", "desc": "with her friend at a glamorous Montreal rooftop lounge at sunset, champagne glasses, city skyline backdrop, VIP atmosphere"},
+    {"name": "Wine Bar", "desc": "at an upscale wine bar with a close friend, elegant wine glasses, sophisticated decor, intimate conversation moment"},
+    
+    # 🍣 RESTAURANTS CHIC
+    {"name": "Sushi Bar", "desc": "at a trendy Montreal sushi restaurant with friends, modern Japanese decor, enjoying omakase experience, elegant ambiance"},
+    {"name": "Steakhouse", "desc": "at a high-end Quebec steakhouse with her girlfriend, leather booths, warm lighting, celebrating a special occasion"},
+    {"name": "Terrasse Restaurant", "desc": "at an upscale Old Montreal restaurant terrace with friends, al fresco dining, string lights, evening atmosphere"},
+    {"name": "Brunch Chic", "desc": "at a trendy brunch spot with girlfriends, mimosas on table, bright modern interior, weekend vibes"},
+    
+    # 🎉 SORTIES & NIGHTLIFE
+    {"name": "Girls Night", "desc": "on a girls night out with two friends at a chic Montreal nightclub lounge, VIP booth, glamorous setting"},
+    {"name": "Bachelorette", "desc": "at a bachelorette party with friends, festive atmosphere, champagne toast, stylish venue"},
+    {"name": "Birthday Dinner", "desc": "celebrating a birthday dinner with close friends at an elegant restaurant, candles, joyful moment"},
+    {"name": "After Work", "desc": "at an after-work gathering with colleagues at a trendy bar, relaxed professional atmosphere, end of day drinks"},
 ]
 
 
@@ -270,30 +279,33 @@ def generate_image(product: dict, scene: dict, category: str) -> str:
     
     info = CATEGORY_INFO[category]
     
-    prompt = f"""Real photograph of a glamorous Québec woman in her early 30s {scene['desc']}.
+    prompt = f"""Real photograph of glamorous Québec women in their early 30s {scene['desc']}.
 
-HAIR COLOR (MANDATORY - MUST MATCH EXACTLY):
+SCENE REQUIREMENT:
+- Show 2-3 girlfriends together enjoying the moment
+- Social, fun, luxurious atmosphere
+- Natural interaction between friends
+
+HAIR COLOR FOR MAIN SUBJECT (MANDATORY):
 {product['prompt_color']}
+- Other women can have different hair colors
 
 HAIR LENGTH - THIS IS THE MOST IMPORTANT RULE:
-⚠️ HAIR MUST BE SHOULDER-LENGTH TO MID-BACK MAXIMUM ⚠️
+⚠️ ALL WOMEN: HAIR MUST BE SHOULDER-LENGTH TO MID-BACK MAXIMUM ⚠️
 - Hair ends at BRA-STRAP level (middle of back)
 - Hair is ABOVE the waist - NOT touching waist
 - Hair is SHORT OF the hips - nowhere near hips
-- Hair length is approximately 18-20 inches from scalp
 - DO NOT generate long mermaid hair
 - DO NOT generate hair past the waist
-- DO NOT generate hair reaching hips or thighs
-- Think "medium-long" NOT "ultra-long"
 
-CORRECT LENGTH: Hair tips end between shoulder blades and waist.
-WRONG LENGTH: Hair going to waist, hips, thighs, or knees.
+Hair style: Soft waves, voluminous, healthy shine, glamorous styling
 
-Hair style: Soft waves, voluminous, healthy shine
+Setting: Upscale, trendy, Quebec nightlife/restaurant scene
+Lighting: Warm ambient, flattering
+Mood: Fun, confident, aspirational, social
 
-Woman: Québécoise 30s, elegant casual attire, confident smile, golden hour lighting.
-
-The hair showcases {product['color_name']} shade. Professional photography.
+The hair showcases {product['color_name']} shade.
+Professional lifestyle photography.
 No text, no watermarks."""
 
     log(f"🎨 Génération image: {product['color_name']} @ {scene['name']}")
