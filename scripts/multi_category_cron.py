@@ -286,25 +286,31 @@ SCENE REQUIREMENT:
 - Social, fun, luxurious atmosphere
 - Natural interaction between friends
 
-HAIR COLOR FOR MAIN SUBJECT (MANDATORY):
-{product['prompt_color']}
-- Other women can have different hair colors
+DIVERSITY REQUIREMENT - VERY IMPORTANT:
+⚠️ Each woman MUST look like a DIFFERENT PERSON ⚠️
+- Different face shapes (oval, round, square, heart)
+- Different nose shapes and sizes
+- Different eye shapes and colors
+- Mix of ethnicities is welcome (Québécoise can be diverse)
+- NOT clones or twins - they are DIFFERENT individuals
+- Variety in body types is natural
 
-HAIR LENGTH - THIS IS THE MOST IMPORTANT RULE:
-⚠️ ALL WOMEN: HAIR MUST BE SHOULDER-LENGTH TO MID-BACK MAXIMUM ⚠️
-- Hair ends at BRA-STRAP level (middle of back)
-- Hair is ABOVE the waist - NOT touching waist
-- Hair is SHORT OF the hips - nowhere near hips
-- DO NOT generate long mermaid hair
+HAIR COLOR FOR MAIN SUBJECT:
+{product['prompt_color']}
+- Other women should have DIFFERENT hair colors (variety!)
+
+HAIR LENGTH - STRICT RULE:
+⚠️ ALL WOMEN: HAIR MUST BE MID-BACK MAXIMUM ⚠️
+- Hair ends at BRA-STRAP level
+- Hair is ABOVE the waist
 - DO NOT generate hair past the waist
 
-Hair style: Soft waves, voluminous, healthy shine, glamorous styling
+Hair style: Soft waves, voluminous, glamorous
 
-Setting: Upscale, trendy, Quebec nightlife/restaurant scene
+Setting: Upscale, trendy, Quebec nightlife/restaurant
 Lighting: Warm ambient, flattering
-Mood: Fun, confident, aspirational, social
+Mood: Fun, confident, aspirational
 
-The hair showcases {product['color_name']} shade.
 Professional lifestyle photography.
 No text, no watermarks."""
 
