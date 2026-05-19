@@ -7435,6 +7435,14 @@ try:
 except Exception:
     logger.exception("❌ Failed to mount status_dashboard router")
 
+# ==================== PROMPTS API (Accès aux prompts des crons) ====================
+try:
+    from app.routes.prompts import router as prompts_router
+    app.include_router(prompts_router)
+    logger.info("✅ Mounted app/routes/prompts.py router (/api/prompts)")
+except Exception:
+    logger.exception("❌ Failed to mount prompts router")
+
 
 # ==================== WIX TOKEN ROUTES (compatibilité avec anciennes versions) ====================
 
